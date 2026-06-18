@@ -8,7 +8,7 @@ const Layout: React.FC = () => {
         <Link to="/dashboard">Dashboard</Link>
         <Link to="/favorites">Избранное</Link>
         <Link to="/invitations">Приглашения</Link>
-		<Link to="/trash">Корзина</Link>
+        <Link to="/trash">Корзина</Link>
       </nav>
       <div className="page">
         <Outlet />
