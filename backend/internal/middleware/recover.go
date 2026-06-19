@@ -3,6 +3,8 @@ package middleware
 import (
 	"log"
 	"net/http"
+
+	"sharedspace/internal/apperror"
 )
 
 func Recover(next http.Handler) http.Handler {
@@ -10,9 +12,7 @@ func Recover(next http.Handler) http.Handler {
 		defer func() {
 			if rec := recover(); rec != nil {
 				log.Printf("panic: %v", rec)
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte(`{"error":"internal server error"}`))
+				apperror.Write(w, apperror.Internal(http.StatusText(http.StatusInternalServerError)))
 			}
 		}()
 		next.ServeHTTP(w, r)
