@@ -6,11 +6,12 @@ import (
 )
 
 const (
-	CodeNotFound   = "not_found"
-	CodeForbidden  = "forbidden"
-	CodeConflict   = "conflict"
-	CodeValidation = "validation"
-	CodeInternal   = "internal"
+	CodeNotFound     = "not_found"
+	CodeForbidden    = "forbidden"
+	CodeUnauthorized = "unauthorized"
+	CodeConflict     = "conflict"
+	CodeValidation   = "validation"
+	CodeInternal     = "internal"
 )
 
 type Error struct {
@@ -46,6 +47,10 @@ func NotFound(message string) error {
 
 func Forbidden(message string) error {
 	return newError(message, CodeForbidden, http.StatusForbidden, nil)
+}
+
+func Unauthorized(message string) error {
+	return newError(message, CodeUnauthorized, http.StatusUnauthorized, nil)
 }
 
 func Conflict(message string) error {

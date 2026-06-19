@@ -33,8 +33,9 @@ type Config struct {
 	MinIOSecretKey string
 	MinIOBucket    string
 
-	JWTSecret string
-	JWTTTL    time.Duration
+	JWTSecret     string
+	JWTTTL        time.Duration
+	RefreshJWTTTL time.Duration
 
 	Port string
 }
@@ -47,6 +48,10 @@ func Load() (*Config, error) {
 	ttl, err := strconv.Atoi(getEnv("JWT_TTL", "3600"))
 	if err != nil {
 		return nil, fmt.Errorf("invalid JWT_TTL: %w", err)
+	}
+	refreshTTL, err := strconv.Atoi(getEnv("REFRESH_JWT_TTL", "2592000"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid REFRESH_JWT_TTL: %w", err)
 	}
 
 	dsn := getEnv("DATABASE_URL", "")
@@ -67,8 +72,9 @@ func Load() (*Config, error) {
 		MinIOSecretKey: getEnv("MINIO_ROOT_PASSWORD", "minioadmin"),
 		MinIOBucket:    getEnv("MINIO_BUCKET", "sharedspace"),
 
-		JWTSecret: secret,
-		JWTTTL:    time.Duration(ttl) * time.Second,
+		JWTSecret:     secret,
+		JWTTTL:        time.Duration(ttl) * time.Second,
+		RefreshJWTTTL: time.Duration(refreshTTL) * time.Second,
 
 		Port: getEnv("PORT", "8080"),
 	}, nil
