@@ -9,6 +9,7 @@ import (
 	"sharedspace/internal/config"
 	"sharedspace/internal/database"
 	"sharedspace/internal/server"
+	"sharedspace/internal/storage"
 )
 
 func main() {
@@ -17,7 +18,9 @@ func main() {
 		log.Fatalf("config: %v", err)
 	}
 
-	pool, err := database.NewPool(context.Background(), cfg.DBDSN)
+	ctx := context.Background()
+
+	pool, err := database.NewPool(ctx, cfg.DBDSN)
 	if err != nil {
 		log.Fatalf("database: %v", err)
 	}
@@ -25,10 +28,17 @@ func main() {
 
 	migrationsDir := filepath.Join("internal", "database", "migrations")
 	if _, err := os.Stat(migrationsDir); err == nil {
-		if err := database.Migrate(context.Background(), pool, migrationsDir); err != nil {
+		if err := database.Migrate(ctx, pool, migrationsDir); err != nil {
 			log.Fatalf("migrations: %v", err)
 		}
 	}
+
+	store, err := storage.New(ctx, cfg.MinIOEndpoint, cfg.MinIOAccessKey,
+		cfg.MinIOSecretKey, cfg.MinIOBucket, false)
+	if err != nil {
+		log.Fatalf("storage: %v", err)
+	}
+	_ = store
 
 	router := server.NewRouter()
 
@@ -36,3 +46,4 @@ func main() {
 		log.Fatalf("server: %v", err)
 	}
 }
+
