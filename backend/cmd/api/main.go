@@ -20,7 +20,7 @@ func main() {
 
 	ctx := context.Background()
 
-	pool, err := database.NewPool(context.Background(), cfg.DBDSN)
+	pool, err := database.NewPool(ctx, cfg.DBDSN)
 	if err != nil {
 		log.Fatalf("database: %v", err)
 	}
@@ -28,7 +28,7 @@ func main() {
 
 	migrationsDir := filepath.Join("internal", "database", "migrations")
 	if _, err := os.Stat(migrationsDir); err == nil {
-		if err := database.Migrate(context.Background(), pool, migrationsDir); err != nil {
+		if err := database.Migrate(ctx, pool, migrationsDir); err != nil {
 			log.Fatalf("migrations: %v", err)
 		}
 	}
