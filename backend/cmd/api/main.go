@@ -4,7 +4,6 @@ import (
 	"context"
 	"log"
 	"os"
-	"path/filepath"
 
 	"sharedspace/internal/config"
 	"sharedspace/internal/database"
@@ -23,7 +22,7 @@ func main() {
 	}
 	defer pool.Close()
 
-	migrationsDir := filepath.Join("internal", "database", "migrations")
+	migrationsDir := "migrations"
 	if _, err := os.Stat(migrationsDir); err == nil {
 		if err := database.Migrate(context.Background(), pool, migrationsDir); err != nil {
 			log.Fatalf("migrations: %v", err)
