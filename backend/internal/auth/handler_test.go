@@ -16,11 +16,11 @@ type mockService struct {
 	loginFn    func(LoginRequest, loginMeta) (LoginResponse, error)
 	refreshFn  func(string, loginMeta) (RefreshResponse, error)
 
-	registerReq RegisterRequest
-	loginReq    LoginRequest
-	loginMeta   loginMeta
+	registerReq  RegisterRequest
+	loginReq     LoginRequest
+	loginMeta    loginMeta
 	refreshToken string
-	refreshMeta loginMeta
+	refreshMeta  loginMeta
 }
 
 func (m *mockService) Register(_ context.Context, req RegisterRequest) (RegisterResponse, error) {
