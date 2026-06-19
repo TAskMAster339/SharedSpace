@@ -6,10 +6,11 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"sharedspace/internal/auth"
 	"sharedspace/internal/middleware"
 )
 
-func NewRouter() http.Handler {
+func NewRouter(authHandler *auth.Handler) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Recover)
@@ -22,7 +23,13 @@ func NewRouter() http.Handler {
 	})
 
 	r.Route("/api/v1", func(r chi.Router) {
-		// r.Mount("/auth", ...)
+		if authHandler != nil {
+			r.Route("/auth", func(r chi.Router) {
+				r.Post("/register", middleware.AppError(authHandler.Register))
+				r.Post("/login", middleware.AppError(authHandler.Login))
+				r.Post("/refresh", middleware.AppError(authHandler.Refresh))
+			})
+		}
 		// r.Mount("/files", ...)
 	})
 

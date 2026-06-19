@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"sharedspace/internal/auth"
 	"sharedspace/internal/config"
 	"sharedspace/internal/database"
 	"sharedspace/internal/server"
@@ -39,7 +40,10 @@ func main() {
 	}
 	_ = store
 
-	router := server.NewRouter()
+	authRepository := auth.NewRepository()
+	authService := auth.NewService(pool, authRepository, cfg.JWTSecret, cfg.JWTTTL, cfg.RefreshJWTTTL)
+	authHandler := auth.NewHandler(authService)
+	router := server.NewRouter(authHandler)
 
 	if err := server.New(cfg.Port, router).Run(); err != nil {
 		log.Fatalf("server: %v", err)
