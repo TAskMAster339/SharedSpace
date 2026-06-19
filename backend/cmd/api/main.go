@@ -46,4 +46,3 @@ func main() {
 		log.Fatalf("server: %v", err)
 	}
 }
-
