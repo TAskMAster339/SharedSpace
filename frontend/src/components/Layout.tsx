@@ -13,15 +13,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-[#fcfcfc] flex flex-col font-sans">
-      <Header /> 
-      
-      <div className="flex flex-1 overflow-hidden"> 
+      <Header />
+
+      <div className="flex flex-1 overflow-hidden">
         {isAuthenticated && <Sidebar />}
-        
+
         <main className={`flex-1 overflow-y-auto p-6 ${isAuthenticated ? 'ml-0' : ''}`}>
-          <div className="max-w-6xl mx-auto">
-            {children ? children : <Outlet />}
-          </div>
+          <div className="max-w-6xl mx-auto">{children ? children : <Outlet />}</div>
         </main>
       </div>
     </div>

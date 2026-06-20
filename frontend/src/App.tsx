@@ -29,14 +29,17 @@ const App: React.FC = () => {
             </PublicRoute>
           }
         >
-          <Route path="/login" element={ <LoginPage /> } />
-          <Route path="/register" element={ <RegisterPage /> } />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
         </Route>
-        <Route path="/share/:token" element={
-          <Layout>
-            <SharePage />
-          </Layout>
-        } />
+        <Route
+          path="/share/:token"
+          element={
+            <Layout>
+              <SharePage />
+            </Layout>
+          }
+        />
 
         {/* Защищённые маршруты */}
         <Route
@@ -58,11 +61,14 @@ const App: React.FC = () => {
         </Route>
 
         {/* Редирект по умолчанию */}
-        <Route path="*" element={
-          <Layout>
-            <Error404Page />
-          </Layout>
-        } />
+        <Route
+          path="*"
+          element={
+            <Layout>
+              <Error404Page />
+            </Layout>
+          }
+        />
       </Routes>
     </Router>
   );

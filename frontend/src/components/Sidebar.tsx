@@ -11,11 +11,13 @@ const StorageIndicator = ({ used, total }: { used: number; total: number }) => {
         <span className="flex items-center gap-1.5 text-sm font-medium">
           <HardDrive size={14} className="text-gray-500" /> Storage
         </span>
-        <span className="text-sm" >{used.toFixed(1)} / {total} GB</span>
+        <span className="text-sm">
+          {used.toFixed(1)} / {total} GB
+        </span>
       </div>
       <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
-        <div 
-          className="h-full bg-blue-500 rounded-full transition-all duration-300" 
+        <div
+          className="h-full bg-blue-500 rounded-full transition-all duration-300"
           style={{ width: `${percentage}%` }}
         />
       </div>
@@ -24,13 +26,13 @@ const StorageIndicator = ({ used, total }: { used: number; total: number }) => {
 };
 
 interface SidebarProps {
-  hasUnreadInvites ?: boolean;
+  hasUnreadInvites?: boolean;
 }
 
 // Пока моки, прописать логику получения кол-ва непрочитанных приглашений и заполненности
-const unreadCount = 0
-const spaceUsed = 12.5
-const spaceTotal = 50
+const unreadCount = 0;
+const spaceUsed = 12.5;
+const spaceTotal = 50;
 const personalStorageId = 'personal';
 
 const Sidebar: React.FC<SidebarProps> = ({ hasUnreadInvites = unreadCount > 0 }) => {
@@ -59,9 +61,7 @@ const Sidebar: React.FC<SidebarProps> = ({ hasUnreadInvites = unreadCount > 0 })
               key={item.path}
               to={item.path}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors relative ${
-                isActive 
-                  ? 'bg-blue-50 text-blue-600' 
-                  : 'text-gray-600 hover:bg-gray-50'
+                isActive ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'
               }`}
             >
               <item.icon size={18} className={isActive ? 'text-blue-500' : 'text-gray-400'} />
