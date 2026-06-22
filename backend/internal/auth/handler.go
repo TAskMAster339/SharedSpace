@@ -69,7 +69,16 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) error {
 	return writeJSON(w, http.StatusOK, resp)
 }
 
-
+// Logout invalidates the current refresh token.
+// @Summary Logout a user
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body RefreshRequest true "Refresh token to invalidate"
+// @Success 204 "No Content"
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router /api/v1/auth/logout [post]
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) error {
 	var req RefreshRequest
 	if err := decodeJSON(r.Body, &req); err != nil {
