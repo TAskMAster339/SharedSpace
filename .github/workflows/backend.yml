@@ -49,17 +49,8 @@ jobs:
           echo "MinIO did not become ready in time"
           exit 1
 
-      - name: Check formatting
-        run: |
-          unformatted=$(gofmt -l .)
-          if [ -n "$unformatted" ]; then
-            echo "Unformatted files:"
-            echo "$unformatted"
-            exit 1
-          fi
-
-      - name: Run go vet
-        run: go vet ./...
+      - name: Lint
+        run: make lint
 
       - name: Run tests
         env:
@@ -67,3 +58,12 @@ jobs:
           MINIO_ACCESS_KEY: minioadmin
           MINIO_SECRET_KEY: minioadmin
         run: go test ./...
+
+      - name: Install Swagger generator
+        run: go install github.com/swaggo/swag/cmd/swag@v1.16.6
+
+      - name: Generate Swagger docs
+        run: make swagger
+
+      - name: Verify Swagger docs are up to date
+        run: git diff --exit-code -- docs

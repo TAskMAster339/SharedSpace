@@ -12,6 +12,14 @@ import (
 	"sharedspace/internal/storage"
 )
 
+// @title SharedSpace API
+// @version 1.0
+// @description HTTP API for SharedSpace backend.
+// @BasePath /
+// @schemes http
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
