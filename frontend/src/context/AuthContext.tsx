@@ -1,5 +1,10 @@
 import React, { createContext, useContext, useState } from 'react';
-import { AuthUser, TokenPair, login as loginRequest, register as registerRequest } from '../api/auth';
+import {
+  AuthUser,
+  TokenPair,
+  login as loginRequest,
+  register as registerRequest,
+} from '../api/auth';
 
 interface AuthContextValue {
   user: AuthUser | null;
