@@ -203,5 +203,3 @@ func TestHandlerSearchUsers(t *testing.T) {
 		t.Fatalf("unexpected search call: user=%q query=%q limit=%d", svc.searchUserID, svc.searchQuery, svc.searchLimit)
 	}
 }
-
-

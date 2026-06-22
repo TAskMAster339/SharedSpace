@@ -70,31 +70,31 @@ func (t *mockTx) Rollback(context.Context) error {
 }
 
 type mockRepo struct {
-	userByID          record
-	userByIDErr       error
-	findUserByEmailInput   string
-	findUserByEmailResult  record
-	findUserByEmailErr     error
-	findUserByUsernameInput string
+	userByID                 record
+	userByIDErr              error
+	findUserByEmailInput     string
+	findUserByEmailResult    record
+	findUserByEmailErr       error
+	findUserByUsernameInput  string
 	findUserByUsernameResult record
-	findUserByUsernameErr   error
-	updateProfileUserID     string
-	updateProfileInput      UpdateProfileInput
-	updatedProfileUser      record
-	updateProfileErr        error
-	updatePasswordUserID    string
-	updatePasswordHash      string
-	updatePasswordErr       error
-	refreshRecord           refreshTokenRecord
-	refreshRecordErr        error
-	revokeAllUserID         string
-	revokeAllExceptToken    string
-	revokeAllErr            error
-	searchRequesterID       string
-	searchQuery             string
-	searchLimit             int
-	searchResult            []record
-	searchErr               error
+	findUserByUsernameErr    error
+	updateProfileUserID      string
+	updateProfileInput       UpdateProfileInput
+	updatedProfileUser       record
+	updateProfileErr         error
+	updatePasswordUserID     string
+	updatePasswordHash       string
+	updatePasswordErr        error
+	refreshRecord            refreshTokenRecord
+	refreshRecordErr         error
+	revokeAllUserID          string
+	revokeAllExceptToken     string
+	revokeAllErr             error
+	searchRequesterID        string
+	searchQuery              string
+	searchLimit              int
+	searchResult             []record
+	searchErr                error
 }
 
 func (m *mockRepo) FindUserByID(_ context.Context, _ dbTX, userID string) (record, error) {

@@ -120,7 +120,6 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) error {
 	return writeJSON(w, http.StatusOK, resp)
 }
 
-
 func decodeJSON(body io.ReadCloser, dst any) error {
 	defer body.Close()
 	dec := json.NewDecoder(body)

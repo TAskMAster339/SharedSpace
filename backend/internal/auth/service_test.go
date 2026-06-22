@@ -361,5 +361,3 @@ func TestRegisterResponseJSONShape(t *testing.T) {
 		t.Fatalf("unexpected json: %s", encoded)
 	}
 }
-
-

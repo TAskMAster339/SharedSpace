@@ -24,7 +24,7 @@ type mockService struct {
 	refreshToken   string
 	refreshMeta    loginMeta
 	rawAccessToken string
-	logoutToken  string
+	logoutToken    string
 }
 
 func (m *mockService) Register(_ context.Context, req RegisterRequest) (RegisterResponse, error) {
@@ -134,5 +134,3 @@ func TestHandlerLoginInvalidJSON(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
-
-

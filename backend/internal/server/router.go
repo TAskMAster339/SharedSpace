@@ -8,30 +8,20 @@ import (
 
 	"sharedspace/internal/auth"
 	"sharedspace/internal/middleware"
+	"sharedspace/internal/swagger"
 	"sharedspace/internal/users"
 )
 
-func NewRouter(authHandler *auth.Handler, usersHandler *users.Handler) http.Handler {
-	"sharedspace/internal/swagger"
-)
-
-// HealthResponse is returned by the health check endpoint.
 type HealthResponse struct {
 	Status string `json:"status"`
 }
 
-// healthHandler reports service liveness.
-// @Summary Check service health
-// @Tags health
-// @Produce json
-// @Success 200 {object} HealthResponse
-// @Router /health [get]
 func healthHandler(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(HealthResponse{Status: "ok"})
 }
 
-func NewRouter(authHandler *auth.Handler) http.Handler {
+func NewRouter(authHandler *auth.Handler, usersHandler *users.Handler) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Recover)
