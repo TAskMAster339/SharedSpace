@@ -19,6 +19,14 @@ func NewHandler(service ServiceInterface, authnSvc AuthIdentity) *Handler {
 	return &Handler{service: service, authnSvc: authnSvc}
 }
 
+// GetMe returns the profile of the currently authenticated user.
+// @Summary Get current user profile
+// @Tags users
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} UserResponse
+// @Failure 401 {object} apperror.Error
+// @Router /api/v1/users/me [get]
 func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) error {
 	userID, err := h.userIDFromRequest(r)
 	if err != nil {
@@ -33,6 +41,17 @@ func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) error {
 	return writeJSON(w, http.StatusOK, resp)
 }
 
+// UpdateMe updates profile fields of the currently authenticated user.
+// @Summary Update current user profile
+// @Tags users
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param request body UpdateProfileRequest true "Profile fields to update"
+// @Success 200 {object} UserResponse
+// @Failure 400 {object} apperror.Error
+// @Failure 401 {object} apperror.Error
+// @Router /api/v1/users/me [patch]
 func (h *Handler) UpdateMe(w http.ResponseWriter, r *http.Request) error {
 	userID, err := h.userIDFromRequest(r)
 	if err != nil {
@@ -52,6 +71,16 @@ func (h *Handler) UpdateMe(w http.ResponseWriter, r *http.Request) error {
 	return writeJSON(w, http.StatusOK, resp)
 }
 
+// ChangePassword changes the password of the currently authenticated user.
+// @Summary Change current user password
+// @Tags users
+// @Security BearerAuth
+// @Accept json
+// @Param request body ChangePasswordRequest true "Current and new password"
+// @Success 204 "No Content"
+// @Failure 400 {object} apperror.Error
+// @Failure 401 {object} apperror.Error
+// @Router /api/v1/users/me/password [patch]
 func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) error {
 	userID, err := h.userIDFromRequest(r)
 	if err != nil {
@@ -71,6 +100,17 @@ func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// SearchUsers searches for users by a free-text query.
+// @Summary Search users
+// @Tags users
+// @Security BearerAuth
+// @Produce json
+// @Param query query string false "Search query"
+// @Param limit query int false "Maximum number of results" default(20)
+// @Success 200 {object} SearchUsersResponse
+// @Failure 400 {object} apperror.Error
+// @Failure 401 {object} apperror.Error
+// @Router /api/v1/users/search [get]
 func (h *Handler) SearchUsers(w http.ResponseWriter, r *http.Request) error {
 	userID, err := h.userIDFromRequest(r)
 	if err != nil {
