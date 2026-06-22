@@ -53,3 +53,21 @@ export function login(payload: LoginPayload): Promise<LoginResult> {
     body: JSON.stringify(payload),
   });
 }
+
+export interface RefreshResult {
+  tokens: TokenPair;
+}
+
+export function refresh(refreshToken: string): Promise<RefreshResult> {
+  return apiRequest<RefreshResult>('/auth/refresh', {
+    method: 'POST',
+    body: JSON.stringify({ refresh_token: refreshToken }),
+  });
+}
+
+export function logout(refreshToken: string): Promise<void> {
+  return apiRequest<void>('/auth/logout', {
+    method: 'POST',
+    body: JSON.stringify({ refresh_token: refreshToken }),
+  });
+}
