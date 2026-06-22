@@ -38,8 +38,9 @@ go run ./cmd/api
 Lint and static checks:
 
 ```bash
-gofmt -w .
-go vet ./...
+cd backend
+make lint
+make fmt
 ```
 
 Tests:
