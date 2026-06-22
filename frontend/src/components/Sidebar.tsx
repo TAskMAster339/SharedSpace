@@ -6,20 +6,17 @@ import { LayoutDashboard, Folder, Users, Star, Mail, Trash2, HardDrive } from 'l
 const StorageIndicator = ({ used, total }: { used: number; total: number }) => {
   const percentage = Math.min((used / total) * 100, 100);
   return (
-    <div className="w-full">
-      <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
-        <span className="flex items-center gap-1.5 text-sm font-medium">
+    <div className="storage-indicator">
+      <div className="storage-indicator-header">
+        <span className="storage-indicator-label">
           <HardDrive size={14} className="text-gray-500" /> Хранилище
         </span>
-        <span className="text-sm">
+        <span className="storage-indicator-value">
           {used.toFixed(1)} / {total} ГБ
         </span>
       </div>
-      <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
-        <div
-          className="h-full bg-blue-500 rounded-full transition-all duration-300"
-          style={{ width: `${percentage}%` }}
-        />
+      <div className="storage-indicator-bar">
+        <div className="storage-indicator-fill" style={{ width: `${percentage}%` }} />
       </div>
     </div>
   );
@@ -49,34 +46,31 @@ const Sidebar: React.FC<SidebarProps> = ({ hasUnreadInvites = unreadCount > 0 })
   ];
 
   return (
-    <div className="w-64 h-[calc(100vh-4rem)] flex flex-col bg-white border-r border-gray-100 sticky top-0 shrink-0 px-4 py-2">
-      <div className="flex-1 flex flex-col space-y-1 mt-2">
-        <div className="px-3 mb-2 text-sm font-medium text-gray-400 uppercase tracking-wider">
-          Меню
-        </div>
+    <div className="sidebar">
+      <div className="sidebar-menu">
+        <div className="sidebar-menu-label">Меню</div>
         {menuItems.map((item) => {
           const isActive = currentPath === item.path;
           return (
             <Link
               key={item.path}
               to={item.path}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors relative ${
-                isActive ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'
-              }`}
+              className={`sidebar-link ${isActive ? 'sidebar-link-active' : 'sidebar-link-inactive'}`}
             >
-              <item.icon size={18} className={isActive ? 'text-blue-500' : 'text-gray-400'} />
+              <item.icon
+                size={18}
+                className={`sidebar-link-icon ${isActive ? 'sidebar-link-icon-active' : 'sidebar-link-icon-inactive'}`}
+              />
               {item.label}
-              {item.badge && (
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-blue-500 rounded-full" />
-              )}
+              {item.badge && <span className="sidebar-link-badge" />}
             </Link>
           );
         })}
       </div>
 
       {/* Индикатор места внизу */}
-      <div className="mt-auto mb-6 pt-6 border-t border-gray-200">
-        <div className="bg-gray-50/80 rounded-2xl p-4 shadow-sm border border-gray-100/50">
+      <div className="sidebar-storage">
+        <div className="sidebar-storage-card">
           <StorageIndicator used={spaceUsed} total={spaceTotal} />
         </div>
       </div>

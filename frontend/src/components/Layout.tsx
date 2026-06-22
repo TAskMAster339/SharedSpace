@@ -12,14 +12,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { isAuthenticated } = useAuth();
 
   return (
-    <div className="min-h-screen bg-[#fcfcfc] flex flex-col font-sans">
+    <div className="layout">
       <Header />
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="layout-body">
         {isAuthenticated && <Sidebar />}
 
-        <main className={`flex-1 overflow-y-auto p-6 ${isAuthenticated ? 'ml-0' : ''}`}>
-          <div className="max-w-6xl mx-auto">{children ? children : <Outlet />}</div>
+        <main className={`layout-main ${isAuthenticated ? 'layout-main-full' : ''}`}>
+          <div className="layout-content">{children ? children : <Outlet />}</div>
         </main>
       </div>
     </div>
