@@ -67,3 +67,12 @@ jobs:
           MINIO_ACCESS_KEY: minioadmin
           MINIO_SECRET_KEY: minioadmin
         run: go test ./...
+
+      - name: Install Swagger generator
+        run: go install github.com/swaggo/swag/cmd/swag@v1.16.6
+
+      - name: Generate Swagger docs
+        run: make swagger
+
+      - name: Verify Swagger docs are up to date
+        run: git diff --exit-code -- docs
