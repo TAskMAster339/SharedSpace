@@ -210,6 +210,22 @@ func (s *Service) Refresh(ctx context.Context, rawRefreshToken string, meta logi
 	return RefreshResponse{Tokens: tokens}, nil
 }
 
+func (s *Service) Logout(ctx context.Context, rawRefreshToken string) error {
+	if strings.TrimSpace(rawRefreshToken) == "" {
+		return apperror.Validation("refresh token is required")
+	}
+
+	if _, err := s.parseRefreshToken(rawRefreshToken); err != nil {
+		return apperror.Unauthorized("invalid refresh token")
+	}
+
+	if err := s.repo.RevokeRefreshToken(ctx, s.db, rawRefreshToken); err != nil {
+		return apperror.WrapInternal("revoke refresh token", err)
+	}
+
+	return nil
+}
+
 func normalizeRegisterRequest(req RegisterRequest) (RegisterRequest, error) {
 	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
 	req.Username = strings.TrimSpace(req.Username)
