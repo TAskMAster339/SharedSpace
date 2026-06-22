@@ -1,0 +1,191 @@
+package files
+
+import (
+	"bytes"
+	"context"
+	"io"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+
+	"sharedspace/internal/apperror"
+)
+
+type mockRepo struct {
+	dir     directoryRecord2
+	dirErr  error
+	saveErr error
+}
+
+func (m *mockRepo) FindDirectoryByID(_ context.Context, _ dbTX, _ string) (directoryRecord2, error) {
+	return m.dir, m.dirErr
+}
+
+func (m *mockRepo) Save(_ context.Context, _ dbTX, f fileRecord) (fileRecord, error) {
+	if m.saveErr != nil {
+		return fileRecord{}, m.saveErr
+	}
+	f.ID = "file-1"
+	f.CreatedAt = time.Unix(100, 0).UTC()
+	f.UpdatedAt = time.Unix(100, 0).UTC()
+	return f, nil
+}
+
+type mockStorage struct {
+	uploadedKey string
+	err         error
+}
+
+func (m *mockStorage) Upload(_ context.Context, objectKey string, _ io.Reader, _ int64, _ string) error {
+	m.uploadedKey = objectKey
+	return m.err
+}
+
+type mockTx struct{}
+
+func (m *mockTx) QueryRow(_ context.Context, _ string, _ ...any) pgx.Row {
+	return mockRow{}
+}
+
+func (m *mockTx) Query(_ context.Context, _ string, _ ...any) (pgx.Rows, error) {
+	return nil, nil
+}
+
+func (m *mockTx) Exec(_ context.Context, _ string, _ ...any) (pgconn.CommandTag, error) {
+	return pgconn.CommandTag{}, nil
+}
+
+func (m *mockTx) Commit(_ context.Context) error   { return nil }
+func (m *mockTx) Rollback(_ context.Context) error { return nil }
+
+type mockRow struct{}
+
+func (r mockRow) Scan(_ ...any) error { return nil }
+
+func newTestService(repo RepositoryInterface, storage StorageClient) *Service {
+	tx := &mockTx{}
+	return &Service{
+		beginTx: func(_ context.Context, _ pgx.TxOptions) (transaction, error) {
+			return tx, nil
+		},
+		db:      tx,
+		repo:    repo,
+		storage: storage,
+	}
+}
+
+func TestServiceUpload_Success(t *testing.T) {
+	repo := &mockRepo{
+		dir: directoryRecord2{ID: "dir-1", OwnerID: "user-1"},
+	}
+	storage := &mockStorage{}
+	svc := newTestService(repo, storage)
+
+	resp, err := svc.Upload(context.Background(), "user-1", "dir-1", []FileUpload{
+		{
+			Filename:  "hello.txt",
+			Extension: "txt",
+			MimeType:  "text/plain",
+			Size:      5,
+			Content:   strings.NewReader("hello"),
+		},
+	})
+	if err != nil {
+		t.Fatalf("Upload returned error: %v", err)
+	}
+	if len(resp.Files) != 1 {
+		t.Fatalf("expected 1 file, got %d", len(resp.Files))
+	}
+	if resp.Files[0].Filename != "hello.txt" {
+		t.Fatalf("unexpected filename: %q", resp.Files[0].Filename)
+	}
+	if storage.uploadedKey == "" {
+		t.Fatal("expected storage.Upload to be called")
+	}
+}
+
+func TestServiceUpload_NoFiles(t *testing.T) {
+	svc := newTestService(&mockRepo{}, &mockStorage{})
+
+	_, err := svc.Upload(context.Background(), "user-1", "dir-1", []FileUpload{})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	appErr, ok := apperror.From(err)
+	if !ok || appErr.Code() != apperror.CodeValidation {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestServiceUpload_DirectoryNotFound(t *testing.T) {
+	repo := &mockRepo{dirErr: pgx.ErrNoRows}
+	svc := newTestService(repo, &mockStorage{})
+
+	_, err := svc.Upload(context.Background(), "user-1", "dir-1", []FileUpload{
+		{Filename: "f.txt", Extension: "txt", MimeType: "text/plain", Size: 1, Content: bytes.NewReader([]byte("x"))},
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	appErr, ok := apperror.From(err)
+	if !ok || appErr.Code() != apperror.CodeNotFound {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestServiceUpload_AccessDenied(t *testing.T) {
+	repo := &mockRepo{
+		dir: directoryRecord2{ID: "dir-1", OwnerID: "other-user"},
+	}
+	svc := newTestService(repo, &mockStorage{})
+
+	_, err := svc.Upload(context.Background(), "user-1", "dir-1", []FileUpload{
+		{Filename: "f.txt", Extension: "txt", MimeType: "text/plain", Size: 1, Content: bytes.NewReader([]byte("x"))},
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	appErr, ok := apperror.From(err)
+	if !ok || appErr.Code() != apperror.CodeForbidden {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestServiceUpload_FileTooLarge(t *testing.T) {
+	repo := &mockRepo{
+		dir: directoryRecord2{ID: "dir-1", OwnerID: "user-1"},
+	}
+	svc := newTestService(repo, &mockStorage{})
+
+	_, err := svc.Upload(context.Background(), "user-1", "dir-1", []FileUpload{
+		{Filename: "big.bin", Extension: "bin", MimeType: "application/octet-stream", Size: maxFileSize + 1, Content: bytes.NewReader([]byte("x"))},
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	appErr, ok := apperror.From(err)
+	if !ok || appErr.Code() != apperror.CodeValidation {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestExtractExtension(t *testing.T) {
+	cases := []struct {
+		filename string
+		want     string
+	}{
+		{"hello.txt", "txt"},
+		{"image.PNG", "png"},
+		{"archive.tar.gz", "gz"},
+		{"noext", ""},
+	}
+	for _, c := range cases {
+		got := ExtractExtension(c.filename)
+		if got != c.want {
+			t.Fatalf("ExtractExtension(%q) = %q, want %q", c.filename, got, c.want)
+		}
+	}
+}
