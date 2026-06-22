@@ -13,7 +13,6 @@ type AuthService interface {
 	Refresh(context.Context, string, loginMeta) (RefreshResponse, error)
 	UserIDFromAccessToken(context.Context, string) (string, error)
 	Logout(context.Context, string) error
-	Me(context.Context, *Claims) (MeResponse, error)
 	ParseAccessToken(string) (*Claims, error)
 }
 

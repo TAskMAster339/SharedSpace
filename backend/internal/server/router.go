@@ -44,10 +44,6 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.JWTAuth(authService))
 
-			if authHandler != nil {
-				r.Get("/auth/me", middleware.AppError(authHandler.Me))
-			}
-
 			if usersHandler != nil {
 				r.Route("/users", func(r chi.Router) {
 					r.Get("/me", middleware.AppError(usersHandler.GetMe))

@@ -80,8 +80,3 @@ type loginMeta struct {
 	UserAgent string
 	IPAddress string
 }
-
-// MeResponse contains the profile of the currently authorized user.
-type MeResponse struct {
-	User UserResponse `json:"user"`
-}
