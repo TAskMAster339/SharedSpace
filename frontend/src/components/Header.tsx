@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Bell, Settings, LogOut, ChevronDown, MoonStar } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
@@ -15,10 +15,17 @@ interface HeaderProps {
 const unreadCount = 0;
 
 export const Header: React.FC<HeaderProps> = ({ hasUnreadInvites = unreadCount > 0 }) => {
-  const { isAuthenticated, firstName, lastName, avatar } = useAuth();
+  const { isAuthenticated, firstName, lastName, avatar, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const lastNameInitial = lastName ? lastName.charAt(0).toUpperCase() + '.' : '';
+
+  const handleLogout = () => {
+    setDropdownOpen(false);
+    logout();
+    navigate('/login');
+  };
 
   return (
     <header className="h-16 bg-theme-secondary border-b border-theme flex items-center justify-between px-4 sm:px-6 sticky top-0 z-10 w-full shrink-0">
@@ -97,7 +104,7 @@ export const Header: React.FC<HeaderProps> = ({ hasUnreadInvites = unreadCount >
                   </Link>
                   <button
                     className="flex items-center gap-3 px-4 py-2.5 text-sm text-danger w-full text-left hover:bg-danger-light transition-colors"
-                    onClick={() => setDropdownOpen(false)}
+                    onClick={handleLogout}
                   >
                     <LogOut size={16} /> Выход
                   </button>
