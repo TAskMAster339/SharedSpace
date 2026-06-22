@@ -2,65 +2,232 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ============================================
-   Базовые переменные для светлой темы
-   ============================================ */
+/* Светлая тема (по умолчанию) */
 :root {
-	/* Цвета */
-	--color-bg-primary: #fcfcfc;
-	--color-bg-secondary: #ffffff;
-	--color-bg-tertiary: #f8fafc;
-	--color-bg-hover: #f1f5f9;
-	--color-bg-active: #eff6ff;
+	/* Фоны */
+	--bg-primary: #fcfcfc;
+	--bg-secondary: #ffffff;
+	--bg-tertiary: #f8fafc;
+	--bg-hover: #f1f5f9;
+	--bg-active: #eff6ff;
 
-	--color-text-primary: #1e293b;
-	--color-text-secondary: #64748b;
-	--color-text-muted: #94a3b8;
-	--color-text-on-brand: #ffffff;
+	/* Текст */
+	--text-primary: #1e293b;
+	--text-secondary: #64748b;
+	--text-muted: #94a3b8;
+	--text-on-brand: #ffffff;
 
-	--color-brand: #3b82f6;
-	--color-brand-hover: #2563eb;
-	--color-brand-light: #eff6ff;
-	--color-brand-dark: #1e3a8a;
+	/* Бренд */
+	--brand: #3b82f6;
+	--brand-hover: #2563eb;
+	--brand-light: #eff6ff;
+	--brand-dark: #1e3a8a;
 
-	--color-border: #f1f5f9;
-	--color-border-hover: #e2e8f0;
-	--color-border-dashed: #e2e8f0;
+	/* Границы */
+	--border: #e2e8f0;
+	--border-hover: #cbd5e1;
+	--border-dashed: #cbd5e1;
 
-	--color-danger: #ef4444;
-	--color-danger-hover: #dc2626;
-	--color-danger-light: #fef2f2;
+	/* Статусы */
+	--danger: #ef4444;
+	--danger-hover: #dc2626;
+	--danger-light: #fdecec;
+	--success: #22c55e;
+	--warning: #f59e0b;
 
-	--color-success: #22c55e;
-	--color-warning: #f59e0b;
+	/* Тени */
+	--shadow-card: 0 2px 10px -3px rgba(0, 0, 0, 0.05);
+	--shadow-dropdown: 0 10px 40px -8px rgba(0, 0, 0, 0.1);
 
-	/* Размеры */
+	/* Скругления */
 	--radius-sm: 8px;
 	--radius-md: 12px;
 	--radius-lg: 16px;
 	--radius-xl: 20px;
 	--radius-full: 9999px;
+}
 
-	--shadow-card: 0 2px 10px -3px rgba(0, 0, 0, 0.05);
-	--shadow-dropdown: 0 10px 40px -8px rgba(0, 0, 0, 0.1);
+/* Тёмная тема */
+.dark {
+	/* Фоны */
+	--bg-primary: #0f172a;
+	--bg-secondary: #1e293b;
+	--bg-tertiary: #1a2332;
+	--bg-hover: #2d3a52;
+	--bg-active: #1e3a5f;
 
-	/* Отступы */
-	--space-xs: 4px;
-	--space-sm: 8px;
-	--space-md: 12px;
-	--space-lg: 16px;
-	--space-xl: 20px;
-	--space-2xl: 24px;
-	--space-3xl: 32px;
-	--space-4xl: 40px;
+	/* Текст */
+	--text-primary: #f1f5f9;
+	--text-secondary: #94a3b8;
+	--text-muted: #64748b;
+	--text-on-brand: #ffffff;
+
+	/* Бренд */
+	--brand: #3b82f6;
+	--brand-hover: #60a5fa;
+	--brand-light: #1e3a5f;
+	--brand-dark: #1e3a8a;
+
+	/* Границы */
+	--border: #334155;
+	--border-hover: #475569;
+	--border-dashed: #334155;
+
+	/* Статусы - переопределяем для тёмной темы */
+	--danger: #ef4444;
+	--danger-hover: #f87171;
+	--danger-light: #502a2a;
+
+	/* Тени */
+	--shadow-card: 0 2px 10px -3px rgba(0, 0, 0, 0.3);
+	--shadow-dropdown: 0 10px 40px -8px rgba(0, 0, 0, 0.5);
 }
 
 /* ============================================
-   Базовые стили элементов
+   Глобальные стили
    ============================================ */
 @layer base {
 	body {
-		@apply bg-[#fcfcfc] font-sans text-gray-800;
+		background-color: var(--bg-primary);
+		color: var(--text-primary);
+		font-family: 'Inter', system-ui, -apple-system, sans-serif;
+	}
+
+	* {
+		border-color: var(--border);
+	}
+}
+
+/* ============================================
+   Utility-классы для использования в компонентах
+   ============================================ */
+@layer utilities {
+
+	/* Фоны */
+	.bg-theme-primary {
+		background-color: var(--bg-primary);
+	}
+
+	.bg-theme-secondary {
+		background-color: var(--bg-secondary);
+	}
+
+	.bg-theme-tertiary {
+		background-color: var(--bg-tertiary);
+	}
+
+	.bg-theme-hover {
+		background-color: var(--bg-hover);
+	}
+
+	.bg-theme-active {
+		background-color: var(--bg-active);
+	}
+
+	.bg-theme-border {
+		background-color: var(--border);
+	}
+
+	/* Текст */
+	.text-theme-primary {
+		color: var(--text-primary);
+	}
+
+	.text-theme-secondary {
+		color: var(--text-secondary);
+	}
+
+	.text-theme-muted {
+		color: var(--text-muted);
+	}
+
+	.text-theme-on-brand {
+		color: var(--text-on-brand);
+	}
+
+	/* Бренд */
+	.text-brand {
+		color: var(--brand);
+	}
+
+	.text-brand-hover {
+		color: var(--brand-hover);
+	}
+
+	.bg-brand {
+		background-color: var(--brand);
+	}
+
+	.bg-brand-hover {
+		background-color: var(--brand-hover);
+	}
+
+	.bg-brand-light {
+		background-color: var(--brand-light);
+	}
+
+	.hover\:bg-brand-hover:hover {
+		background-color: var(--brand-hover);
+	}
+
+	/* Границы */
+	.border-theme {
+		border-color: var(--border);
+	}
+
+	.border-theme-hover {
+		border-color: var(--border-hover);
+	}
+
+	.border-theme-dashed {
+		border-color: var(--border-dashed);
+	}
+
+	/* Статусы */
+	.text-danger {
+		color: var(--danger);
+	}
+
+	.text-danger-hover {
+		color: var(--danger-hover);
+	}
+
+	.bg-danger-light {
+		background-color: var(--danger-light);
+	}
+
+	.hover\:bg-danger-light:hover {
+		background-color: var(--danger-light);
+	}
+
+	/* Тени */
+	.shadow-theme-card {
+		box-shadow: var(--shadow-card);
+	}
+
+	.shadow-theme-dropdown {
+		box-shadow: var(--shadow-dropdown);
+	}
+
+	/* Скругления */
+	.rounded-theme-sm {
+		border-radius: var(--radius-sm);
+	}
+
+	.rounded-theme-md {
+		border-radius: var(--radius-md);
+	}
+
+	.rounded-theme-lg {
+		border-radius: var(--radius-lg);
+	}
+
+	.rounded-theme-xl {
+		border-radius: var(--radius-xl);
+	}
+
+	.rounded-theme-full {
+		border-radius: var(--radius-full);
 	}
 
 	/* Скрытие скроллбара */
@@ -72,490 +239,4 @@
 	.scrollbar-hide::-webkit-scrollbar {
 		display: none;
 	}
-}
-
-/* ============================================
-   КОМПОНЕНТЫ - всё переиспользуемое здесь
-   ============================================ */
-@layer components {
-
-	/* ----- Хедер ----- */
-	.header {
-		@apply h-16 bg-white border-b border-gray-100 flex items-center justify-between px-4 sm:px-6 sticky top-0 z-10 w-full shrink-0;
-	}
-
-	.header-logo {
-		@apply flex items-center gap-2 cursor-pointer;
-	}
-
-	.header-logo-img {
-		@apply w-8 h-8 rounded-md shadow-sm;
-	}
-
-	.header-logo-text {
-		@apply text-xl font-semibold tracking-tight;
-	}
-
-	.header-logo-brand {
-		@apply text-[#1e3a8a];
-	}
-
-	.header-logo-accent {
-		@apply text-[#60a5fa];
-	}
-
-	.header-search {
-		@apply flex-1 max-w-2xl mx-4 sm:mx-8 hidden md:block;
-	}
-
-	.header-search-wrapper {
-		@apply relative;
-	}
-
-	.header-search-icon {
-		@apply absolute left-3 top-1/2 -translate-y-1/2 text-gray-400;
-	}
-
-	.header-search-input {
-		@apply w-full pl-10 pr-4 py-2 bg-gray-50/80 border border-transparent focus:border-blue-300 rounded-lg text-sm outline-none transition-all;
-	}
-
-	.header-actions {
-		@apply flex items-center gap-2 sm:gap-4;
-	}
-
-	.header-notification {
-		@apply relative p-2 rounded-full hover:bg-gray-100 transition-colors;
-	}
-
-	.header-notification-dot {
-		@apply absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-white;
-	}
-
-	.header-profile-btn {
-		@apply flex items-center gap-2 p-1 rounded-full hover:bg-gray-50 transition-colors outline-none;
-	}
-
-	.header-profile-avatar {
-		@apply w-8 h-8 rounded-full border border-gray-200;
-	}
-
-	.header-profile-name {
-		@apply text-sm font-medium text-gray-700 hidden sm:block;
-	}
-
-	.header-profile-chevron {
-		@apply text-gray-500 transition-transform duration-200;
-	}
-
-	.header-profile-chevron-open {
-		@apply rotate-180;
-	}
-
-	.header-dropdown {
-		@apply absolute right-0 top-12 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-20 animate-in fade-in slide-in-from-top-2;
-	}
-
-	.header-dropdown-item {
-		@apply flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50;
-	}
-
-	.header-dropdown-danger {
-		@apply flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 w-full text-left hover:bg-red-50;
-	}
-
-	.header-auth {
-		@apply flex items-center gap-4;
-	}
-
-	.header-auth-link {
-		@apply text-sm font-medium text-gray-600 hover:text-gray-900 px-4 py-2 rounded-lg transition-colors;
-	}
-
-	.header-auth-btn {
-		@apply text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg transition-colors;
-	}
-
-	/* ----- Лейаут ----- */
-	.layout {
-		@apply min-h-screen bg-[#fcfcfc] flex flex-col font-sans;
-	}
-
-	.layout-body {
-		@apply flex flex-1 overflow-hidden;
-	}
-
-	.layout-main {
-		@apply flex-1 overflow-y-auto p-4 sm:p-6;
-	}
-
-	.layout-main-full {
-		@apply ml-0;
-	}
-
-	.layout-content {
-		@apply max-w-6xl mx-auto;
-	}
-
-	/* ----- Сайдбар ----- */
-	.sidebar {
-		@apply w-64 h-[calc(100vh-4rem)] flex flex-col bg-white border-r border-gray-100 sticky top-0 shrink-0 px-4 py-2 hidden md:flex;
-	}
-
-	.sidebar-menu-label {
-		@apply px-3 mb-2 text-sm font-medium text-gray-400 uppercase tracking-wider;
-	}
-
-	.sidebar-menu {
-		@apply flex-1 flex flex-col space-y-1 mt-2;
-	}
-
-	.sidebar-link {
-		@apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors relative;
-	}
-
-	.sidebar-link-active {
-		@apply bg-blue-50 text-blue-600;
-	}
-
-	.sidebar-link-inactive {
-		@apply text-gray-600 hover:bg-gray-50;
-	}
-
-	.sidebar-link-icon {
-		@apply size-[18px];
-	}
-
-	.sidebar-link-icon-active {
-		@apply text-blue-500;
-	}
-
-	.sidebar-link-icon-inactive {
-		@apply text-gray-400;
-	}
-
-	.sidebar-link-badge {
-		@apply absolute right-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-blue-500 rounded-full;
-	}
-
-	.sidebar-storage {
-		@apply mt-auto mb-6 pt-6 border-t border-gray-200;
-	}
-
-	.sidebar-storage-card {
-		@apply bg-gray-50/80 rounded-2xl p-4 shadow-sm border border-gray-100/50;
-	}
-
-	.storage-indicator {
-		@apply w-full;
-	}
-
-	.storage-indicator-header {
-		@apply flex items-center justify-between text-xs text-gray-500 mb-3;
-	}
-
-	.storage-indicator-label {
-		@apply flex items-center gap-1.5 text-sm font-medium;
-	}
-
-	.storage-indicator-value {
-		@apply text-sm;
-	}
-
-	.storage-indicator-bar {
-		@apply w-full h-1.5 bg-gray-200 rounded-full overflow-hidden;
-	}
-
-	.storage-indicator-fill {
-		@apply h-full bg-blue-500 rounded-full transition-all duration-300;
-	}
-
-	/* ----- Страницы ----- */
-	.page-container {
-		@apply space-y-8 pb-10;
-	}
-
-	.page-heading {
-		@apply text-2xl font-semibold text-gray-800 mb-1;
-	}
-
-	.page-subheading {
-		@apply text-sm text-gray-500;
-	}
-
-	/* ----- Карточки ----- */
-	.card {
-		@apply bg-white rounded-2xl p-4 sm:p-5 border border-gray-50;
-		box-shadow: var(--shadow-card);
-	}
-
-	.card-dark {
-		@apply bg-gray-50/80 rounded-2xl p-4 shadow-sm border border-gray-100/50;
-	}
-
-	.card-empty {
-		@apply py-12 text-center text-gray-400 text-sm border-2 border-dashed border-gray-200 rounded-2xl bg-white;
-	}
-
-	.card-empty-sm {
-		@apply py-8 text-center text-gray-400 text-sm border-2 border-dashed border-gray-200 rounded-xl;
-	}
-
-	.card-header {
-		@apply flex justify-between items-center mb-4;
-	}
-
-	.card-title {
-		@apply font-medium text-gray-700;
-	}
-
-	/* ----- Сетки ----- */
-	.grid-2 {
-		@apply grid grid-cols-1 lg:grid-cols-2 gap-6;
-	}
-
-	.grid-3 {
-		@apply grid grid-cols-1 sm:grid-cols-3 gap-4;
-	}
-
-	.grid-4 {
-		@apply grid grid-cols-2 md:grid-cols-4 gap-4;
-	}
-
-	/* ----- Элементы списков ----- */
-	.item-row {
-		@apply flex items-center justify-between bg-gray-50 p-3 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer;
-	}
-
-	.item-row-content {
-		@apply flex items-center gap-3;
-	}
-
-	.item-icon-box {
-		@apply p-2 bg-white rounded-lg shadow-sm shrink-0;
-	}
-
-	.item-icon-brand {
-		@apply p-2 rounded-lg bg-blue-100 flex items-center justify-center text-blue-500 shrink-0;
-	}
-
-	.item-name {
-		@apply text-sm text-gray-700 font-medium;
-	}
-
-	.item-date {
-		@apply text-xs text-gray-400;
-	}
-
-	.item-size {
-		@apply text-xs text-gray-400;
-	}
-
-	.item-card {
-		@apply flex items-center gap-3 bg-gray-50 p-3 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer;
-	}
-
-	/* ----- Кнопки ----- */
-	.btn-primary {
-		@apply text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg transition-colors;
-	}
-
-	.btn-secondary {
-		@apply text-sm font-medium text-gray-600 hover:text-gray-900 px-4 py-2 rounded-lg transition-colors;
-	}
-
-	.btn-icon {
-		@apply p-2 rounded-full hover:bg-gray-100 transition-colors;
-	}
-
-	.btn-danger {
-		@apply text-sm text-red-600 hover:bg-red-50 px-4 py-2.5 rounded-lg transition-colors flex items-center gap-3 w-full text-left;
-	}
-
-	/* ----- Ссылки ----- */
-	.link {
-		@apply text-sm text-blue-500 hover:text-blue-600 font-medium;
-	}
-
-	/* ----- Пустые состояния ----- */
-	.empty-icon {
-		@apply mx-auto mb-2 text-gray-300;
-	}
-
-	.empty-text {
-		@apply text-gray-400 text-sm;
-	}
-
-	.empty-action {
-		@apply text-blue-500 cursor-pointer;
-	}
-}
-
-/* ============================================
-   Тёмная тема
-   ============================================ */
-.dark {
-	--color-bg-primary: #0f172a;
-	--color-bg-secondary: #1e293b;
-	--color-bg-tertiary: #1e293b;
-	--color-bg-hover: #334155;
-	--color-bg-active: #1e3a5f;
-
-	--color-text-primary: #f1f5f9;
-	--color-text-secondary: #94a3b8;
-	--color-text-muted: #64748b;
-	--color-text-on-brand: #ffffff;
-
-	--color-border: #334155;
-	--color-border-hover: #475569;
-	--color-border-dashed: #334155;
-
-	--shadow-card: 0 2px 10px -3px rgba(0, 0, 0, 0.3);
-	--shadow-dropdown: 0 10px 40px -8px rgba(0, 0, 0, 0.5);
-}
-
-/* Применение переменных к базовым элементам */
-body {
-	background-color: var(--color-bg-primary);
-	color: var(--color-text-primary);
-}
-
-.dark body {
-	background-color: var(--color-bg-primary);
-	color: var(--color-text-primary);
-}
-
-/* Переопределение для тёмной темы */
-.dark .header,
-.dark .sidebar,
-.dark .card {
-	@apply bg-[#1e293b] border-[#334155];
-}
-
-.dark .card-dark,
-.dark .sidebar-storage-card {
-	@apply bg-[#1e293b] border-[#334155];
-}
-
-.dark .card-empty,
-.dark .card-empty-sm {
-	@apply bg-[#1e293b] border-[#334155] text-[#64748b];
-}
-
-.dark .item-row,
-.dark .item-card {
-	@apply bg-[#1e293b] hover:bg-[#334155];
-}
-
-.dark .item-icon-box {
-	@apply bg-[#0f172a];
-}
-
-.dark .item-icon-brand {
-	@apply bg-[#1e3a5f] text-blue-400;
-}
-
-.dark .page-heading,
-.dark .card-title,
-.dark .item-name,
-.dark .header-profile-name {
-	@apply text-gray-200;
-}
-
-.dark .page-subheading,
-.dark .item-date,
-.dark .item-size {
-	@apply text-[#64748b];
-}
-
-.dark .header-search-input {
-	@apply bg-[#0f172a] border-[#334155] text-gray-200 placeholder:text-[#64748b];
-}
-
-.dark .header-search-input:focus {
-	@apply border-blue-500;
-}
-
-.dark .btn-secondary {
-	@apply text-gray-300 hover:text-white;
-}
-
-.dark .btn-icon {
-	@apply hover:bg-[#334155];
-}
-
-.dark .btn-danger {
-	@apply text-red-400 hover:bg-[#331a1a];
-}
-
-.dark .storage-indicator-bar {
-	@apply bg-[#334155];
-}
-
-.dark .header-logo-brand {
-	@apply text-[#60a5fa];
-}
-
-.dark .header-logo-accent {
-	@apply text-[#93bbfc];
-}
-
-.dark .header-dropdown {
-	@apply bg-[#1e293b] border-[#334155];
-}
-
-.dark .header-dropdown-item {
-	@apply text-gray-200 hover:bg-[#334155];
-}
-
-.dark .sidebar-link-active {
-	@apply bg-[#1e3a5f] text-blue-400;
-}
-
-.dark .sidebar-link-inactive {
-	@apply text-gray-300 hover:bg-[#334155];
-}
-
-.dark .sidebar-link-icon-active {
-	@apply text-blue-400;
-}
-
-.dark .sidebar-link-icon-inactive {
-	@apply text-gray-500;
-}
-
-.dark .sidebar-menu-label {
-	@apply text-gray-500;
-}
-
-.dark .sidebar {
-	@apply border-[#334155];
-}
-
-.dark .sidebar-storage {
-	@apply border-[#334155];
-}
-
-.dark .storage-indicator-label {
-	@apply text-gray-300;
-}
-
-.dark .storage-indicator-value {
-	@apply text-gray-300;
-}
-
-.dark .storage-indicator-bar {
-	@apply bg-[#334155];
-}
-
-.dark .storage-indicator-fill {
-	@apply bg-blue-400;
-}
-
-.dark .storage-indicator-header {
-	@apply text-gray-300;
-}
-
-.dark .layout {
-	@apply bg-[#0f172a];
 }

@@ -1,12 +1,12 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Layout from './components/Layout';
+import { Layout } from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicRoute from './components/PublicRoute';
 import MainPage from './pages/MainPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
-import DashboardPage from './pages/DashboardPage';
+import { DashboardPage } from './pages/DashboardPage';
 import ProfileSettingsPage from './pages/ProfileSettingsPage';
 import SharedDirListPage from './pages/SharedDirListPage';
 import DirectoryPage from './pages/DirectoryPage';

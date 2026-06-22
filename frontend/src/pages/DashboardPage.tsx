@@ -1,7 +1,11 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { Image, FileText, Video, File, Music, Folder, Star, Table } from 'lucide-react';
+import { Folder, Star } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { Card, CardHeader, CardTitle } from '../components/ui/Card';
+import { FileItem } from '../components/ui/FileItem';
+import { DirectoryItem } from '../components/ui/DirectoryItem';
+import { EmptyState } from '../components/ui/EmptyState';
+import { Link as UILink } from '../components/ui/Link';
 
 // Мок-данные для демонстрации
 
@@ -58,142 +62,122 @@ const personalStorageId = 'personal';
 
 // Конец мока
 
-const getIcon = (type: string) => {
-  switch (type) {
-    case 'img':
-      return <Image size={20} className="text-gray-500" />;
-    case 'pdf':
-      return <FileText size={20} className="text-gray-500" />;
-    case 'video':
-      return <Video size={20} className="text-gray-500" />;
-    case 'text':
-      return <File size={20} className="text-gray-500" />;
-    case 'audio':
-      return <Music size={20} className="text-gray-500" />;
-    case 'xlsx':
-      return <Table size={20} className="text-gray-500" />;
-    default:
-      return <File size={20} className="text-gray-500" />;
-  }
-};
-
-const DashboardPage: React.FC = () => {
+export const DashboardPage: React.FC = () => {
   const { firstName } = useAuth();
 
   return (
-    <div className="page-container">
+    <div className="space-y-8 pb-10">
       {/* Приветствие */}
       <div>
-        <h1 className="page-heading">С возвращением, {firstName} ✦</h1>
-        <p className="page-subheading">SharedSpace — просторный как космос</p>
+        <h1 className="text-2xl font-semibold text-theme-primary mb-1">
+          С возвращением, {firstName} ✦
+        </h1>
+        <p className="text-sm text-theme-muted">SharedSpace — просторный как космос</p>
       </div>
 
-      <div className="grid-2">
-        {/* Если файлов нет, показываем заглушку */}
+      {/* Недавние файлы */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {recentFiles.length === 0 ? (
-          <div className="lg:col-span-2 card-empty">
-            <Folder className="empty-icon" size={32} />
-            <p className="empty-text">
-              Нет загруженных файлов.{' '}
-              <span className="empty-action">Загрузи первый файл,</span> чтобы начать.
-            </p>
+          <div className="lg:col-span-2">
+            <EmptyState
+              icon={<Folder />}
+              description="Нет загруженных файлов."
+              action={{
+                label: 'Загрузи первый файл',
+                onClick: () => console.log('Upload file'),
+              }}
+            />
           </div>
         ) : (
-          // Левая колонка: Недавние файлы (ограничение 5)
-          <div className="card flex flex-col">
-            <div className="card-header">
-              <h3 className="card-title">Недавние файлы</h3>
-              <Link to={`/directories/${personalStorageId}`} className="link">
-                Смотреть все
-              </Link>
-            </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Недавние файлы</CardTitle>
+              <UILink to={`/directories/${personalStorageId}`}>Смотреть все</UILink>
+            </CardHeader>
             <div className="space-y-4">
               {recentFiles.slice(0, 5).map((file) => (
-                <Link key={file.id} to={`/files/${file.id}`} className="item-row">
-                  <div className="item-row-content">
-                    <div className="item-icon-box">{getIcon(file.type)}</div>
-                    <div>
-                      <p className="item-name">{file.name}</p>
-                      <p className="item-date">{file.date}</p>
-                    </div>
-                  </div>
-                  <span className="item-size">{file.size}</span>
-                </Link>
+                <FileItem
+                  key={file.id}
+                  id={file.id}
+                  name={file.name}
+                  date={file.date}
+                  size={file.size}
+                  type={file.type}
+                  to={`/files/${file.id}`}
+                />
               ))}
             </div>
-          </div>
+          </Card>
         )}
 
         {/* Правая колонка: Общие директории (ограничение 5) */}
-        <div className="card h-fit flex flex-col">
-          <div className="card-header">
-            <h3 className="card-title">Общие директории</h3>
-            <Link to="/directories" className="link">
-              Смотреть все
-            </Link>
-          </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Общие директории</CardTitle>
+            <UILink to="/directories">Смотреть все</UILink>
+          </CardHeader>
           {sharedDirectories.length === 0 ? (
-            <div className="card-empty-sm">
-              <Folder className="empty-icon" size={24} />
-              <p className="empty-text">
-                Нет общих директорий.{' '}
-                <span className="empty-action">Создай первую</span>{' '}
-                чтобы делиться файлами.
-              </p>
-            </div>
+            <EmptyState
+              icon={<Folder size={24} />}
+              description="Нет общих директорий."
+              action={{
+                label: 'Создай первую',
+                onClick: () => console.log('Create directory'),
+              }}
+              size="sm"
+            />
           ) : (
             <div className="space-y-4">
               {sharedDirectories.slice(0, 5).map((dir) => (
-                <Link key={dir.id} to={`/directories/${dir.id}`} className="item-card">
-                  <div className="item-icon-brand">
-                    <Folder size={18} />
-                  </div>
-                  <div>
-                    <p className="item-name">{dir.name}</p>
-                    <p className="item-date">{dir.members} участников</p>
-                  </div>
-                </Link>
+                <DirectoryItem
+                  key={dir.id}
+                  id={dir.id}
+                  name={dir.name}
+                  members={dir.members}
+                  to={`/directories/${dir.id}`}
+                />
               ))}
             </div>
           )}
-        </div>
+        </Card>
 
         {/* Блок Избранного (ограничение 3) */}
         {recentFiles.length > 0 && (
-          <div className="lg:col-span-2 card">
-            <div className="card-header">
-              <h3 className="card-title">Избранное</h3>
-              <Link to="/favorites" className="link">
-                Смотреть все
-              </Link>
-            </div>
-
-            {favorites.length > 0 ? (
-              <div className="grid-3">
-                {favorites.slice(0, 3).map((fav) => (
-                  <Link key={fav.id} to={`/files/${fav.id}`} className="item-card">
-                    <div className="item-icon-box">{getIcon(fav.type)}</div>
-                    <div>
-                      <p className="item-name">{fav.name}</p>
-                      <p className="item-date">{fav.date}</p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <div className="card-empty-sm">
-                <Star className="empty-icon" size={24} />
-                <p className="empty-text">
-                  Избранных нет. <span className="empty-action">Отметь файл</span>{' '}
-                  для быстрого доступа.
-                </p>
-              </div>
-            )}
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Избранное</CardTitle>
+                <UILink to="/favorites">Смотреть все</UILink>
+              </CardHeader>
+              {favorites.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {favorites.slice(0, 3).map((fav) => (
+                    <FileItem
+                      key={fav.id}
+                      id={fav.id}
+                      name={fav.name}
+                      date={fav.date}
+                      size={fav.size}
+                      type={fav.type}
+                      to={`/files/${fav.id}`}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <EmptyState
+                  icon={<Star size={24} />}
+                  description="Избранных нет."
+                  action={{
+                    label: 'Отметь файл',
+                    onClick: () => console.log('Go to favorites'),
+                  }}
+                  size="sm"
+                />
+              )}
+            </Card>
           </div>
         )}
       </div>
     </div>
   );
 };
-
-export default DashboardPage;
