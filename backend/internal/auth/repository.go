@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -20,6 +21,13 @@ type refreshTokenRecord struct {
 	UserID    string
 	ExpiresAt time.Time
 	RevokedAt *time.Time
+}
+
+type UpdateProfileInput struct {
+	Email      *string
+	Username   *string
+	FirstName  *string
+	SecondName *string
 }
 
 func NewRepository() *Repository {
@@ -94,6 +102,105 @@ func (r *Repository) FindUserByID(ctx context.Context, db dbTX, userID string) (
 		return authUser{}, err
 	}
 	return user, nil
+}
+
+func (r *Repository) FindUserByEmail(ctx context.Context, db dbTX, email string) (authUser, error) {
+	var user authUser
+	err := db.QueryRow(ctx, `
+		SELECT id, username, first_name, second_name, email, password_hash, created_at
+		FROM users
+		WHERE email = $1
+		LIMIT 1
+	`, email).Scan(&user.ID, &user.Username, &user.FirstName, &user.SecondName, &user.Email, &user.PasswordHash, &user.CreatedAt)
+	if err != nil {
+		return authUser{}, err
+	}
+	return user, nil
+}
+
+func (r *Repository) FindUserByUsername(ctx context.Context, db dbTX, username string) (authUser, error) {
+	var user authUser
+	err := db.QueryRow(ctx, `
+		SELECT id, username, first_name, second_name, email, password_hash, created_at
+		FROM users
+		WHERE username = $1
+		LIMIT 1
+	`, username).Scan(&user.ID, &user.Username, &user.FirstName, &user.SecondName, &user.Email, &user.PasswordHash, &user.CreatedAt)
+	if err != nil {
+		return authUser{}, err
+	}
+	return user, nil
+}
+
+func (r *Repository) UpdateUserProfile(ctx context.Context, db dbTX, userID string, input UpdateProfileInput) (authUser, error) {
+	var user authUser
+	err := db.QueryRow(ctx, `
+		UPDATE users
+		SET
+			email = CASE WHEN $2::text IS NULL THEN email ELSE $2 END,
+			username = CASE WHEN $3::text IS NULL THEN username ELSE $3 END,
+			first_name = CASE WHEN $4::text IS NULL THEN first_name ELSE $4 END,
+			second_name = CASE WHEN $5::text IS NULL THEN second_name ELSE $5 END,
+			updated_at = now()
+		WHERE id = $1
+		RETURNING id, username, first_name, second_name, email, password_hash, created_at
+	`, userID, input.Email, input.Username, input.FirstName, input.SecondName).Scan(
+		&user.ID, &user.Username, &user.FirstName, &user.SecondName, &user.Email, &user.PasswordHash, &user.CreatedAt,
+	)
+	if err != nil {
+		return authUser{}, err
+	}
+	return user, nil
+}
+
+func (r *Repository) UpdateUserPassword(ctx context.Context, db dbTX, userID, passwordHash string) error {
+	_, err := db.Exec(ctx, `UPDATE users SET password_hash = $2, updated_at = now() WHERE id = $1`, userID, passwordHash)
+	return err
+}
+
+func (r *Repository) RevokeAllRefreshTokensExcept(ctx context.Context, db dbTX, userID, exceptRawToken string) error {
+	_, err := db.Exec(ctx, `
+		UPDATE refresh_tokens
+		SET revoked_at = now()
+		WHERE user_id = $1 AND token_hash <> $2 AND revoked_at IS NULL
+	`, userID, hashToken(exceptRawToken))
+	return err
+}
+
+func (r *Repository) SearchUsers(ctx context.Context, db dbTX, requesterID, query string, limit int) ([]authUser, error) {
+	queryer, ok := db.(interface {
+		Query(context.Context, string, ...any) (pgx.Rows, error)
+	})
+	if !ok {
+		return nil, fmt.Errorf("db transaction does not support query")
+	}
+
+	rows, err := queryer.Query(ctx, `
+		SELECT id, username, first_name, second_name, email, password_hash, created_at
+		FROM users
+		WHERE id <> $1
+		  AND (username ILIKE '%' || $2 || '%' OR email ILIKE '%' || $2 || '%')
+		ORDER BY username ASC
+		LIMIT $3
+	`, requesterID, query, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	users := make([]authUser, 0, limit)
+	for rows.Next() {
+		var user authUser
+		if err := rows.Scan(&user.ID, &user.Username, &user.FirstName, &user.SecondName, &user.Email, &user.PasswordHash, &user.CreatedAt); err != nil {
+			return nil, err
+		}
+		users = append(users, user)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return users, nil
 }
 
 func (r *Repository) StoreRefreshToken(ctx context.Context, db dbTX, userID, rawToken, userAgent, ipAddress string, expiresAt time.Time) error {

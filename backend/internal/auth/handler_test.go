@@ -15,12 +15,26 @@ type mockService struct {
 	registerFn func(RegisterRequest) (RegisterResponse, error)
 	loginFn    func(LoginRequest, loginMeta) (LoginResponse, error)
 	refreshFn  func(string, loginMeta) (RefreshResponse, error)
+	getMeFn    func(string) (UserResponse, error)
+	updateMeFn func(string, UpdateProfileRequest) (UserResponse, error)
+	changePassFn func(string, ChangePasswordRequest) error
+	searchFn   func(string, string, int) (SearchUsersResponse, error)
+	userIDFn   func(string) (string, error)
 
 	registerReq  RegisterRequest
 	loginReq     LoginRequest
 	loginMeta    loginMeta
 	refreshToken string
 	refreshMeta  loginMeta
+	getMeUserID  string
+	updateUserID string
+	updateReq    UpdateProfileRequest
+	changeUserID string
+	changeReq    ChangePasswordRequest
+	searchUserID string
+	searchQuery  string
+	searchLimit  int
+	rawAccessToken string
 }
 
 func (m *mockService) Register(_ context.Context, req RegisterRequest) (RegisterResponse, error) {
@@ -47,6 +61,50 @@ func (m *mockService) Refresh(_ context.Context, token string, meta loginMeta) (
 		return m.refreshFn(token, meta)
 	}
 	return RefreshResponse{}, nil
+}
+
+func (m *mockService) GetMe(_ context.Context, userID string) (UserResponse, error) {
+	m.getMeUserID = userID
+	if m.getMeFn != nil {
+		return m.getMeFn(userID)
+	}
+	return UserResponse{}, nil
+}
+
+func (m *mockService) UpdateMe(_ context.Context, userID string, req UpdateProfileRequest) (UserResponse, error) {
+	m.updateUserID = userID
+	m.updateReq = req
+	if m.updateMeFn != nil {
+		return m.updateMeFn(userID, req)
+	}
+	return UserResponse{}, nil
+}
+
+func (m *mockService) ChangePassword(_ context.Context, userID string, req ChangePasswordRequest) error {
+	m.changeUserID = userID
+	m.changeReq = req
+	if m.changePassFn != nil {
+		return m.changePassFn(userID, req)
+	}
+	return nil
+}
+
+func (m *mockService) SearchUsers(_ context.Context, userID, query string, limit int) (SearchUsersResponse, error) {
+	m.searchUserID = userID
+	m.searchQuery = query
+	m.searchLimit = limit
+	if m.searchFn != nil {
+		return m.searchFn(userID, query, limit)
+	}
+	return SearchUsersResponse{}, nil
+}
+
+func (m *mockService) UserIDFromAccessToken(_ context.Context, rawAccessToken string) (string, error) {
+	m.rawAccessToken = rawAccessToken
+	if m.userIDFn != nil {
+		return m.userIDFn(rawAccessToken)
+	}
+	return "", apperror.Unauthorized("invalid access token")
 }
 
 func TestHandlerRegister(t *testing.T) {
@@ -92,5 +150,29 @@ func TestHandlerLoginInvalidJSON(t *testing.T) {
 	appErr, ok := apperror.From(err)
 	if !ok || appErr.Code() != apperror.CodeValidation {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestHandlerSearchUsers(t *testing.T) {
+	service := &mockService{
+		userIDFn: func(_ string) (string, error) { return "me-1", nil },
+		searchFn: func(userID, query string, limit int) (SearchUsersResponse, error) {
+			return SearchUsersResponse{Users: []UserResponse{{ID: "u1", Username: "ivanov", Email: "ivan@example.com"}}}, nil
+		},
+	}
+	handler := NewHandler(service)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/users/search?query=iva&limit=10", nil)
+	req.Header.Set("Authorization", "Bearer access-token")
+	rec := httptest.NewRecorder()
+
+	if err := handler.SearchUsers(rec, req); err != nil {
+		t.Fatalf("handler returned error: %v", err)
+	}
+	if rec.Code != http.StatusOK {
+		t.Fatalf("unexpected status: %d", rec.Code)
+	}
+	if service.searchUserID != "me-1" || service.searchQuery != "iva" || service.searchLimit != 10 {
+		t.Fatalf("unexpected search call: user=%q query=%q limit=%d", service.searchUserID, service.searchQuery, service.searchLimit)
 	}
 }

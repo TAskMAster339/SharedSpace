@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"sharedspace/internal/apperror"
@@ -66,6 +67,82 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) error {
 	return writeJSON(w, http.StatusOK, resp)
 }
 
+func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) error {
+	userID, err := h.userIDFromRequest(r)
+	if err != nil {
+		return err
+	}
+
+	resp, err := h.service.GetMe(r.Context(), userID)
+	if err != nil {
+		return err
+	}
+
+	return writeJSON(w, http.StatusOK, resp)
+}
+
+func (h *Handler) UpdateMe(w http.ResponseWriter, r *http.Request) error {
+	userID, err := h.userIDFromRequest(r)
+	if err != nil {
+		return err
+	}
+
+	var req UpdateProfileRequest
+	if err := decodeJSON(r.Body, &req); err != nil {
+		return err
+	}
+
+	resp, err := h.service.UpdateMe(r.Context(), userID, req)
+	if err != nil {
+		return err
+	}
+
+	return writeJSON(w, http.StatusOK, resp)
+}
+
+func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) error {
+	userID, err := h.userIDFromRequest(r)
+	if err != nil {
+		return err
+	}
+
+	var req ChangePasswordRequest
+	if err := decodeJSON(r.Body, &req); err != nil {
+		return err
+	}
+
+	if err := h.service.ChangePassword(r.Context(), userID, req); err != nil {
+		return err
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
+
+func (h *Handler) SearchUsers(w http.ResponseWriter, r *http.Request) error {
+	userID, err := h.userIDFromRequest(r)
+	if err != nil {
+		return err
+	}
+
+	query := strings.TrimSpace(r.URL.Query().Get("query"))
+	limit := 20
+	if rawLimit := strings.TrimSpace(r.URL.Query().Get("limit")); rawLimit != "" {
+		parsedLimit, err := strconv.Atoi(rawLimit)
+		if err != nil {
+			return apperror.Validation("limit must be a number")
+		}
+		limit = parsedLimit
+	}
+
+	resp, err := h.service.SearchUsers(r.Context(), userID, query, limit)
+	if err != nil {
+		return err
+	}
+
+	return writeJSON(w, http.StatusOK, resp)
+}
+
 func decodeJSON(body io.ReadCloser, dst any) error {
 	defer body.Close()
 	dec := json.NewDecoder(body)
@@ -100,4 +177,18 @@ func clientIP(r *http.Request) string {
 		return r.RemoteAddr
 	}
 	return host
+}
+
+func (h *Handler) userIDFromRequest(r *http.Request) (string, error) {
+	authHeader := strings.TrimSpace(r.Header.Get("Authorization"))
+	if authHeader == "" {
+		return "", apperror.Unauthorized("authorization header is required")
+	}
+
+	parts := strings.SplitN(authHeader, " ", 2)
+	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+		return "", apperror.Unauthorized("invalid authorization header")
+	}
+
+	return h.service.UserIDFromAccessToken(r.Context(), strings.TrimSpace(parts[1]))
 }

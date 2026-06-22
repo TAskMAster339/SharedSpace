@@ -29,6 +29,12 @@ func NewRouter(authHandler *auth.Handler) http.Handler {
 				r.Post("/login", middleware.AppError(authHandler.Login))
 				r.Post("/refresh", middleware.AppError(authHandler.Refresh))
 			})
+			r.Route("/users", func(r chi.Router) {
+				r.Get("/me", middleware.AppError(authHandler.GetMe))
+				r.Patch("/me", middleware.AppError(authHandler.UpdateMe))
+				r.Patch("/me/password", middleware.AppError(authHandler.ChangePassword))
+				r.Get("/search", middleware.AppError(authHandler.SearchUsers))
+			})
 		}
 		// r.Mount("/files", ...)
 	})
