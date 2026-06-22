@@ -1,11 +1,14 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicRoute from './components/PublicRoute';
+import MainPage from './pages/MainPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
+import ProfileSettingsPage from './pages/ProfileSettingsPage';
+import SharedDirListPage from './pages/SharedDirListPage';
 import DirectoryPage from './pages/DirectoryPage';
 import FileViewPage from './pages/FileViewPage';
 import SharedSettingsPage from './pages/SharedSettingsPage';
@@ -23,15 +26,13 @@ const App: React.FC = () => {
       <Routes>
         {/* Публичные маршруты */}
         <Route
+          path="/"
           element={
-            <PublicRoute>
-              <Layout />
-            </PublicRoute>
+            <Layout>
+              <MainPage />
+            </Layout>
           }
-        >
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-        </Route>
+        />
         <Route
           path="/share/:token"
           element={
@@ -41,6 +42,18 @@ const App: React.FC = () => {
           }
         />
 
+        {/* Только гостевые маршруты */}
+        <Route
+          element={
+            <PublicRoute>
+              <Layout />
+            </PublicRoute>
+          }
+        >
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+        </Route>
+
         {/* Защищённые маршруты */}
         <Route
           element={
@@ -49,8 +62,9 @@ const App: React.FC = () => {
             </ProtectedRoute>
           }
         >
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/settings" element={<ProfileSettingsPage />} />
+          <Route path="/directories" element={<SharedDirListPage />} />
           <Route path="/directories/:id" element={<DirectoryPage />} />
           <Route path="/files/:id" element={<FileViewPage />} />
           <Route path="/shared/:id/settings" element={<SharedSettingsPage />} />

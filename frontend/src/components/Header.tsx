@@ -20,7 +20,7 @@ const Header: React.FC<HeaderProps> = ({ hasUnreadInvites = unreadCount > 0 }) =
   return (
     <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-6 sticky top-0 z-10 w-full shrink-0">
       {/* Логотип + Название */}
-      <Link to="/dashboard" className="flex items-center gap-2 cursor-pointer group">
+      <Link to="/" className="flex items-center gap-2 cursor-pointer group">
         <img src={logo} alt="SharedSpace" className="w-8 h-8 rounded-md shadow-sm" />
         <span className="text-xl font-semibold tracking-tight">
           <span className="text-[#1e3a8a]">Shared</span>
@@ -39,7 +39,7 @@ const Header: React.FC<HeaderProps> = ({ hasUnreadInvites = unreadCount > 0 }) =
               />
               <input
                 type="text"
-                placeholder="Search files, folders, people..."
+                placeholder="Поиск файлов, папок, людей..."
                 className="w-full pl-10 pr-4 py-2 bg-gray-50/80 border border-transparent focus:border-blue-300 rounded-lg text-sm outline-none transition-all"
               />
             </div>
@@ -85,7 +85,7 @@ const Header: React.FC<HeaderProps> = ({ hasUnreadInvites = unreadCount > 0 }) =
                     className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
                     onClick={() => setDropdownOpen(false)}
                   >
-                    <Settings size={16} className="text-gray-400" /> Settings
+                    <Settings size={16} className="text-gray-400" /> Настройки
                   </Link>
                   <button
                     className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 w-full text-left hover:bg-red-50"
@@ -94,7 +94,7 @@ const Header: React.FC<HeaderProps> = ({ hasUnreadInvites = unreadCount > 0 }) =
                       // Логика выхода...
                     }}
                   >
-                    <LogOut size={16} /> Logout
+                    <LogOut size={16} /> Выход
                   </button>
                 </div>
               )}
