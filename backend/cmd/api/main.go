@@ -51,7 +51,7 @@ func main() {
 	authRepository := auth.NewRepository()
 	authService := auth.NewService(pool, authRepository, cfg.JWTSecret, cfg.JWTTTL, cfg.RefreshJWTTTL)
 	authHandler := auth.NewHandler(authService)
-	router := server.NewRouter(authHandler)
+	router := server.NewRouter(authHandler, authService)
 
 	if err := server.New(cfg.Port, router).Run(); err != nil {
 		log.Fatalf("server: %v", err)

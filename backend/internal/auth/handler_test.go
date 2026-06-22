@@ -16,6 +16,7 @@ type mockService struct {
 	loginFn    func(LoginRequest, loginMeta) (LoginResponse, error)
 	refreshFn  func(string, loginMeta) (RefreshResponse, error)
 	logoutFn   func(string) error
+	meFn       func(*Claims) (MeResponse, error)
 
 	registerReq  RegisterRequest
 	loginReq     LoginRequest
@@ -57,6 +58,17 @@ func (m *mockService) Logout(_ context.Context, token string) error {
 		return m.logoutFn(token)
 	}
 	return nil
+}
+
+func (m *mockService) Me(_ context.Context, claims *Claims) (MeResponse, error) {
+	if m.meFn != nil {
+		return m.meFn(claims)
+	}
+	return MeResponse{User: UserResponse{ID: claims.UserID, Email: claims.Email}}, nil
+}
+
+func (m *mockService) ParseAccessToken(_ string) (*Claims, error) {
+	return nil, nil
 }
 
 func TestHandlerLogout(t *testing.T) {
@@ -122,5 +134,29 @@ func TestHandlerLoginInvalidJSON(t *testing.T) {
 	appErr, ok := apperror.From(err)
 	if !ok || appErr.Code() != apperror.CodeValidation {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestHandlerMe(t *testing.T) {
+	svc := &mockService{}
+	handler := NewHandler(svc)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/me", nil)
+	ctx := SetClaims(req.Context(), &Claims{UserID: "user-1", Email: "ivan@example.com"})
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	if err := handler.Me(rec, req); err != nil {
+		t.Fatalf("handler returned error: %v", err)
+	}
+	if rec.Code != http.StatusOK {
+		t.Fatalf("unexpected status: %d", rec.Code)
+	}
+	var resp MeResponse
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.User.ID != "user-1" {
+		t.Fatalf("unexpected user: %+v", resp.User)
 	}
 }

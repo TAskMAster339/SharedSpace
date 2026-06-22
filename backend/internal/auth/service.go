@@ -226,6 +226,21 @@ func (s *Service) Logout(ctx context.Context, rawRefreshToken string) error {
 	return nil
 }
 
+func (s *Service) Me(_ context.Context, claims *Claims) (MeResponse, error) {
+	if claims == nil {
+		return MeResponse{}, apperror.Unauthorized("unauthorized")
+	}
+	return MeResponse{
+		User: UserResponse{
+			ID:         claims.UserID,
+			Email:      claims.Email,
+			Username:   claims.Username,
+			FirstName:  claims.FirstName,
+			SecondName: claims.SecondName,
+		},
+	}, nil
+}
+
 func normalizeRegisterRequest(req RegisterRequest) (RegisterRequest, error) {
 	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
 	req.Username = strings.TrimSpace(req.Username)

@@ -27,7 +27,7 @@ func healthHandler(w http.ResponseWriter, _ *http.Request) {
 	json.NewEncoder(w).Encode(HealthResponse{Status: "ok"})
 }
 
-func NewRouter(authHandler *auth.Handler) http.Handler {
+func NewRouter(authHandler *auth.Handler, authService auth.AuthService) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Recover)
@@ -45,8 +45,13 @@ func NewRouter(authHandler *auth.Handler) http.Handler {
 				r.Post("/refresh", middleware.AppError(authHandler.Refresh))
 				r.Post("/logout", middleware.AppError(authHandler.Logout))
 			})
+
+			r.Group(func(r chi.Router) {
+				r.Use(middleware.JWTAuth(authService))
+				r.Get("/auth/me", middleware.AppError(authHandler.Me))
+				// r.Mount("/files", ...)
+			})
 		}
-		// r.Mount("/files", ...)
 	})
 
 	return r
