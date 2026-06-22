@@ -11,6 +11,7 @@ type AuthService interface {
 	Register(context.Context, RegisterRequest) (RegisterResponse, error)
 	Login(context.Context, LoginRequest, loginMeta) (LoginResponse, error)
 	Refresh(context.Context, string, loginMeta) (RefreshResponse, error)
+	Logout(context.Context, string) error
 }
 
 type AuthRepository interface {
