@@ -101,28 +101,6 @@ type mockRepo struct {
 	findIdentifier        string
 	findUserID            string
 	loadToken             string
-
-	findUserByEmailInput    string
-	findUserByEmailResult   authUser
-	findUserByEmailErr      error
-	findUserByUsernameInput string
-	findUserByUsernameResult authUser
-	findUserByUsernameErr   error
-	updateProfileUserID     string
-	updateProfileInput      UpdateProfileInput
-	updatedProfileUser      authUser
-	updateProfileErr        error
-	updatePasswordUserID    string
-	updatePasswordHash      string
-	updatePasswordErr       error
-	revokeAllUserID         string
-	revokeAllExceptToken    string
-	revokeAllErr            error
-	searchRequesterID       string
-	searchQuery             string
-	searchLimit             int
-	searchResult            []authUser
-	searchErr               error
 }
 
 func (m *mockRepo) EmailExists(_ context.Context, _ dbTX, _ string) (bool, error) {
@@ -152,41 +130,6 @@ func (m *mockRepo) FindUserByIdentifier(_ context.Context, _ dbTX, identifier st
 func (m *mockRepo) FindUserByID(_ context.Context, _ dbTX, userID string) (authUser, error) {
 	m.findUserID = userID
 	return m.userByID, m.userByIDErr
-}
-
-func (m *mockRepo) FindUserByEmail(_ context.Context, _ dbTX, email string) (authUser, error) {
-	m.findUserByEmailInput = email
-	return m.findUserByEmailResult, m.findUserByEmailErr
-}
-
-func (m *mockRepo) FindUserByUsername(_ context.Context, _ dbTX, username string) (authUser, error) {
-	m.findUserByUsernameInput = username
-	return m.findUserByUsernameResult, m.findUserByUsernameErr
-}
-
-func (m *mockRepo) UpdateUserProfile(_ context.Context, _ dbTX, userID string, input UpdateProfileInput) (authUser, error) {
-	m.updateProfileUserID = userID
-	m.updateProfileInput = input
-	return m.updatedProfileUser, m.updateProfileErr
-}
-
-func (m *mockRepo) UpdateUserPassword(_ context.Context, _ dbTX, userID, passwordHash string) error {
-	m.updatePasswordUserID = userID
-	m.updatePasswordHash = passwordHash
-	return m.updatePasswordErr
-}
-
-func (m *mockRepo) RevokeAllRefreshTokensExcept(_ context.Context, _ dbTX, userID, exceptRawToken string) error {
-	m.revokeAllUserID = userID
-	m.revokeAllExceptToken = exceptRawToken
-	return m.revokeAllErr
-}
-
-func (m *mockRepo) SearchUsers(_ context.Context, _ dbTX, requesterID, query string, limit int) ([]authUser, error) {
-	m.searchRequesterID = requesterID
-	m.searchQuery = query
-	m.searchLimit = limit
-	return m.searchResult, m.searchErr
 }
 
 func (m *mockRepo) StoreRefreshToken(_ context.Context, _ dbTX, userID, rawToken, userAgent, ipAddress string, expiresAt time.Time) error {
@@ -419,62 +362,4 @@ func TestRegisterResponseJSONShape(t *testing.T) {
 	}
 }
 
-func TestServiceChangePasswordRevokesOtherRefreshTokens(t *testing.T) {
-	oldHash, err := bcrypt.GenerateFromPassword([]byte("OldPass1!"), bcrypt.DefaultCost)
-	if err != nil {
-		t.Fatalf("bcrypt old: %v", err)
-	}
 
-	repo := &mockRepo{
-		userByID:      authUser{ID: "user-1", PasswordHash: string(oldHash)},
-		refreshRecord: refreshTokenRecord{UserID: "user-1", ExpiresAt: time.Now().UTC().Add(time.Hour)},
-	}
-	service, tx := newTestService(repo)
-
-	err = service.ChangePassword(context.Background(), "user-1", ChangePasswordRequest{
-		OldPassword:         "OldPass1!",
-		NewPassword:         "NewPass1!",
-		CurrentRefreshToken: "current-token",
-	})
-	if err != nil {
-		t.Fatalf("ChangePassword returned error: %v", err)
-	}
-
-	if repo.updatePasswordUserID != "user-1" {
-		t.Fatalf("password updated for wrong user: %q", repo.updatePasswordUserID)
-	}
-	if repo.revokeAllUserID != "user-1" || repo.revokeAllExceptToken != "current-token" {
-		t.Fatalf("refresh revoke not called with expected args: user=%q token=%q", repo.revokeAllUserID, repo.revokeAllExceptToken)
-	}
-	if tx.commitCount != 1 {
-		t.Fatalf("commit count = %d, want 1", tx.commitCount)
-	}
-}
-
-func TestServiceSearchUsersByUsernameAndEmail(t *testing.T) {
-	repo := &mockRepo{
-		searchResult: []authUser{
-			{ID: "u1", Username: "ivanov", Email: "ivanov@example.com", FirstName: "Ivan", CreatedAt: time.Unix(1, 0).UTC()},
-			{ID: "u2", Username: "petya", Email: "petya.ivan@example.com", FirstName: "Petr", CreatedAt: time.Unix(2, 0).UTC()},
-		},
-	}
-	service, _ := newTestService(repo)
-
-	resp, err := service.SearchUsers(context.Background(), "me-1", "ivan", 20)
-	if err != nil {
-		t.Fatalf("SearchUsers returned error: %v", err)
-	}
-
-	if repo.searchRequesterID != "me-1" || repo.searchQuery != "ivan" {
-		t.Fatalf("unexpected search args: requester=%q query=%q", repo.searchRequesterID, repo.searchQuery)
-	}
-	if len(resp.Users) != 2 {
-		t.Fatalf("unexpected users length: got %d, want 2", len(resp.Users))
-	}
-	if resp.Users[0].Username != "ivanov" {
-		t.Fatalf("expected username match user, got %q", resp.Users[0].Username)
-	}
-	if resp.Users[1].Email != "petya.ivan@example.com" {
-		t.Fatalf("expected email match user, got %q", resp.Users[1].Email)
-	}
-}

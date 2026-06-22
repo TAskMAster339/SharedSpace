@@ -10,6 +10,7 @@ import (
 	"sharedspace/internal/database"
 	"sharedspace/internal/server"
 	"sharedspace/internal/storage"
+	"sharedspace/internal/users"
 )
 
 func main() {
@@ -43,7 +44,12 @@ func main() {
 	authRepository := auth.NewRepository()
 	authService := auth.NewService(pool, authRepository, cfg.JWTSecret, cfg.JWTTTL, cfg.RefreshJWTTTL)
 	authHandler := auth.NewHandler(authService)
-	router := server.NewRouter(authHandler)
+
+	usersRepository := users.NewRepository()
+	usersService := users.NewService(pool, usersRepository)
+	usersHandler := users.NewHandler(usersService, authService)
+
+	router := server.NewRouter(authHandler, usersHandler)
 
 	if err := server.New(cfg.Port, router).Run(); err != nil {
 		log.Fatalf("server: %v", err)
