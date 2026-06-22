@@ -29,9 +29,11 @@ type mockTx struct {
 	commitCount   int
 	rollbackCount int
 	queryRowCount int
+	queryCount    int
 	execCount     int
 
 	queryRowFn func(sql string, args ...any) mockRow
+	queryFn    func(sql string, args ...any) (pgx.Rows, error)
 	execFn     func(sql string, args ...any) (pgconn.CommandTag, error)
 }
 
@@ -49,6 +51,14 @@ func (t *mockTx) Exec(_ context.Context, sql string, args ...any) (pgconn.Comman
 		return t.execFn(sql, args...)
 	}
 	return pgconn.CommandTag{}, nil
+}
+
+func (t *mockTx) Query(_ context.Context, sql string, args ...any) (pgx.Rows, error) {
+	t.queryCount++
+	if t.queryFn != nil {
+		return t.queryFn(sql, args...)
+	}
+	return nil, nil
 }
 
 func (t *mockTx) Commit(context.Context) error {

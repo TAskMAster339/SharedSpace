@@ -210,6 +210,23 @@ func (s *Service) Refresh(ctx context.Context, rawRefreshToken string, meta logi
 	return RefreshResponse{Tokens: tokens}, nil
 }
 
+func (s *Service) UserIDFromAccessToken(_ context.Context, rawAccessToken string) (string, error) {
+	rawAccessToken = strings.TrimSpace(rawAccessToken)
+	if rawAccessToken == "" {
+		return "", apperror.Unauthorized("access token is required")
+	}
+
+	claims, err := s.parseAccessToken(rawAccessToken)
+	if err != nil {
+		return "", apperror.Unauthorized("invalid access token")
+	}
+	if strings.TrimSpace(claims.Subject) == "" {
+		return "", apperror.Unauthorized("invalid access token")
+	}
+
+	return claims.Subject, nil
+}
+
 func (s *Service) Logout(ctx context.Context, rawRefreshToken string) error {
 	if strings.TrimSpace(rawRefreshToken) == "" {
 		return apperror.Validation("refresh token is required")
@@ -225,7 +242,6 @@ func (s *Service) Logout(ctx context.Context, rawRefreshToken string) error {
 
 	return nil
 }
-
 func normalizeRegisterRequest(req RegisterRequest) (RegisterRequest, error) {
 	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
 	req.Username = strings.TrimSpace(req.Username)

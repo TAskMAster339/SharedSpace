@@ -15,14 +15,16 @@ type mockService struct {
 	registerFn func(RegisterRequest) (RegisterResponse, error)
 	loginFn    func(LoginRequest, loginMeta) (LoginResponse, error)
 	refreshFn  func(string, loginMeta) (RefreshResponse, error)
+	userIDFn   func(string) (string, error)
 	logoutFn   func(string) error
 
-	registerReq  RegisterRequest
-	loginReq     LoginRequest
-	loginMeta    loginMeta
-	refreshToken string
-	refreshMeta  loginMeta
-	logoutToken  string
+	registerReq    RegisterRequest
+	loginReq       LoginRequest
+	loginMeta      loginMeta
+	refreshToken   string
+	refreshMeta    loginMeta
+	rawAccessToken string
+	logoutToken    string
 }
 
 func (m *mockService) Register(_ context.Context, req RegisterRequest) (RegisterResponse, error) {
@@ -49,6 +51,14 @@ func (m *mockService) Refresh(_ context.Context, token string, meta loginMeta) (
 		return m.refreshFn(token, meta)
 	}
 	return RefreshResponse{}, nil
+}
+
+func (m *mockService) UserIDFromAccessToken(_ context.Context, rawAccessToken string) (string, error) {
+	m.rawAccessToken = rawAccessToken
+	if m.userIDFn != nil {
+		return m.userIDFn(rawAccessToken)
+	}
+	return "", apperror.Unauthorized("invalid access token")
 }
 
 func (m *mockService) Logout(_ context.Context, token string) error {
