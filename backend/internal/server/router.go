@@ -7,6 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"sharedspace/internal/auth"
+	"sharedspace/internal/dirs"
 	"sharedspace/internal/middleware"
 	"sharedspace/internal/swagger"
 	"sharedspace/internal/users"
@@ -21,7 +22,7 @@ func healthHandler(w http.ResponseWriter, _ *http.Request) {
 	json.NewEncoder(w).Encode(HealthResponse{Status: "ok"})
 }
 
-func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHandler *users.Handler) http.Handler {
+func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHandler *users.Handler, dirsHandler *dirs.Handler) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Recover)
@@ -53,6 +54,16 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 				})
 			}
 			// r.Mount("/files", ...)
+
+			if dirsHandler != nil {
+				r.Route("/directories", func(r chi.Router) {
+					r.Get("/root/contents", middleware.AppError(dirsHandler.GetRootContents))
+					r.Get("/{id}/contents", middleware.AppError(dirsHandler.GetContents))
+					r.Get("/{id}", middleware.AppError(dirsHandler.GetByID))
+					r.Post("/", middleware.AppError(dirsHandler.Create))
+					r.Patch("/{id}", middleware.AppError(dirsHandler.Update))
+				})
+			}
 		})
 	})
 

@@ -8,6 +8,7 @@ import (
 	"sharedspace/internal/auth"
 	"sharedspace/internal/config"
 	"sharedspace/internal/database"
+	"sharedspace/internal/dirs"
 	"sharedspace/internal/server"
 	"sharedspace/internal/storage"
 	"sharedspace/internal/users"
@@ -48,15 +49,20 @@ func main() {
 		log.Fatalf("storage: %v", err)
 	}
 	_ = store
-
+	// auth
 	authRepository := auth.NewRepository()
 	authService := auth.NewService(pool, authRepository, cfg.JWTSecret, cfg.JWTTTL, cfg.RefreshJWTTTL)
 	authHandler := auth.NewHandler(authService)
+	// users
 	usersRepository := users.NewRepository()
 	usersService := users.NewService(pool, usersRepository)
 	usersHandler := users.NewHandler(usersService, authService)
+	// dirs
+	dirsRepository := dirs.NewRepository()
+	dirsService := dirs.NewService(pool, dirsRepository)
+	dirsHandler := dirs.NewHandler(dirsService)
 
-	router := server.NewRouter(authHandler, authService, usersHandler)
+	router := server.NewRouter(authHandler, authService, usersHandler, dirsHandler)
 
 	if err := server.New(cfg.Port, router).Run(); err != nil {
 		log.Fatalf("server: %v", err)
