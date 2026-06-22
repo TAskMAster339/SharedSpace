@@ -98,6 +98,36 @@
                 }
             }
         },
+        "/api/v1/auth/me": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Get current user profile",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_auth.MeResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_auth.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/auth/refresh": {
             "post": {
                 "consumes": [
@@ -397,6 +427,14 @@
                 "tokens": {
                     "$ref": "#/definitions/internal_auth.TokenPair"
                 },
+                "user": {
+                    "$ref": "#/definitions/internal_auth.UserResponse"
+                }
+            }
+        },
+        "internal_auth.MeResponse": {
+            "type": "object",
+            "properties": {
                 "user": {
                     "$ref": "#/definitions/internal_auth.UserResponse"
                 }

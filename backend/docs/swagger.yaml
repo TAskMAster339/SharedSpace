@@ -1,0 +1,253 @@
+basePath: /
+definitions:
+  internal_auth.ErrorResponse:
+    properties:
+      code:
+        type: string
+      error:
+        type: string
+    type: object
+  internal_auth.LoginRequest:
+    properties:
+      email:
+        type: string
+      identifier:
+        type: string
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  internal_auth.LoginResponse:
+    properties:
+      tokens:
+        $ref: '#/definitions/internal_auth.TokenPair'
+      user:
+        $ref: '#/definitions/internal_auth.UserResponse'
+    type: object
+  internal_auth.MeResponse:
+    properties:
+      user:
+        $ref: '#/definitions/internal_auth.UserResponse'
+    type: object
+  internal_auth.RefreshRequest:
+    properties:
+      refresh_token:
+        type: string
+    type: object
+  internal_auth.RefreshResponse:
+    properties:
+      tokens:
+        $ref: '#/definitions/internal_auth.TokenPair'
+    type: object
+  internal_auth.RegisterRequest:
+    properties:
+      email:
+        type: string
+      first_name:
+        type: string
+      password:
+        type: string
+      second_name:
+        type: string
+      username:
+        type: string
+    type: object
+  internal_auth.RegisterResponse:
+    properties:
+      root_directory_id:
+        type: string
+      user:
+        $ref: '#/definitions/internal_auth.UserResponse'
+    type: object
+  internal_auth.TokenPair:
+    properties:
+      access_expires_in:
+        type: integer
+      access_token:
+        type: string
+      refresh_expires_in:
+        type: integer
+      refresh_token:
+        type: string
+      token_type:
+        type: string
+    type: object
+  internal_auth.UserResponse:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      first_name:
+        type: string
+      id:
+        type: string
+      second_name:
+        type: string
+      username:
+        type: string
+    type: object
+  internal_server.HealthResponse:
+    properties:
+      status:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: HTTP API for SharedSpace backend.
+  title: SharedSpace API
+  version: "1.0"
+paths:
+  /api/v1/auth/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Login request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_auth.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_auth.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_auth.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_auth.ErrorResponse'
+      summary: Authenticate a user
+      tags:
+      - auth
+  /api/v1/auth/logout:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Refresh token to invalidate
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_auth.RefreshRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_auth.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_auth.ErrorResponse'
+      summary: Logout a user
+      tags:
+      - auth
+  /api/v1/auth/me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_auth.MeResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_auth.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get current user profile
+      tags:
+      - auth
+  /api/v1/auth/refresh:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Refresh request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_auth.RefreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_auth.RefreshResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_auth.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_auth.ErrorResponse'
+      summary: Refresh access and refresh tokens
+      tags:
+      - auth
+  /api/v1/auth/register:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Registration request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_auth.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_auth.RegisterResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_auth.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/internal_auth.ErrorResponse'
+      summary: Register a new user
+      tags:
+      - auth
+  /health:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_server.HealthResponse'
+      summary: Check service health
+      tags:
+      - health
+schemes:
+- http
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

@@ -87,6 +87,33 @@ func (s *Service) signToken(claims tokenClaims) (string, error) {
 	return token.SignedString(s.jwtSecret)
 }
 
+func (s *Service) ParseAccessToken(raw string) (*Claims, error) {
+	token, err := jwt.ParseWithClaims(raw, &tokenClaims{}, func(token *jwt.Token) (any, error) {
+		if token.Method.Alg() != jwt.SigningMethodHS256.Alg() {
+			return nil, fmt.Errorf("unexpected signing method: %s", token.Method.Alg())
+		}
+		return s.jwtSecret, nil
+	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
+	if err != nil {
+		return nil, err
+	}
+
+	tc, ok := token.Claims.(*tokenClaims)
+	if !ok || !token.Valid {
+		return nil, errors.New("invalid access token")
+	}
+	if tc.TokenType != tokenTypeAccess {
+		return nil, errors.New("wrong token type")
+	}
+	return &Claims{
+		UserID:     tc.Subject,
+		Email:      tc.Email,
+		Username:   tc.Username,
+		FirstName:  tc.FirstName,
+		SecondName: tc.SecondName,
+	}, nil
+}
+
 func (s *Service) parseRefreshToken(raw string) (*tokenClaims, error) {
 	token, err := jwt.ParseWithClaims(raw, &tokenClaims{}, func(token *jwt.Token) (any, error) {
 		if token.Method.Alg() != jwt.SigningMethodHS256.Alg() {
