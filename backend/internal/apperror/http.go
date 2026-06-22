@@ -11,6 +11,12 @@ type response struct {
 	Code  string `json:"code"`
 }
 
+// Response is the standard JSON payload returned by API errors.
+type Response struct {
+	Error string `json:"error"`
+	Code  string `json:"code"`
+}
+
 func Write(w http.ResponseWriter, err error) {
 	if err == nil {
 		return
@@ -30,7 +36,7 @@ func Write(w http.ResponseWriter, err error) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(appErr.Status())
 
-	if encodeErr := json.NewEncoder(w).Encode(response{
+	if encodeErr := json.NewEncoder(w).Encode(Response{
 		Error: appErr.Error(),
 		Code:  appErr.Code(),
 	}); encodeErr != nil {

@@ -1,7 +1,8 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
+import PublicRoute from './components/PublicRoute';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
@@ -13,6 +14,7 @@ import FavoritesPage from './pages/FavoritesPage';
 import TrashPage from './pages/TrashPage';
 import SharePage from './pages/SharePage';
 import ConvertPage from './pages/ConvertPage';
+import Error404Page from './pages/Error404Page';
 import './styles.css';
 
 const App: React.FC = () => {
@@ -20,9 +22,24 @@ const App: React.FC = () => {
     <Router>
       <Routes>
         {/* Публичные маршруты */}
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/share/:token" element={<SharePage />} />
+        <Route
+          element={
+            <PublicRoute>
+              <Layout />
+            </PublicRoute>
+          }
+        >
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+        </Route>
+        <Route
+          path="/share/:token"
+          element={
+            <Layout>
+              <SharePage />
+            </Layout>
+          }
+        />
 
         {/* Защищённые маршруты */}
         <Route
@@ -32,6 +49,7 @@ const App: React.FC = () => {
             </ProtectedRoute>
           }
         >
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/directories/:id" element={<DirectoryPage />} />
           <Route path="/files/:id" element={<FileViewPage />} />
@@ -43,7 +61,14 @@ const App: React.FC = () => {
         </Route>
 
         {/* Редирект по умолчанию */}
-        <Route path="*" element={<LoginPage />} />
+        <Route
+          path="*"
+          element={
+            <Layout>
+              <Error404Page />
+            </Layout>
+          }
+        />
       </Routes>
     </Router>
   );

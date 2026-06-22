@@ -1,17 +1,10 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
 }
-
-// Заглушка — в реальном проекте здесь будет проверка токена/сессии
-const useAuth = () => {
-  // Пока возвращаем мокового пользователя
-  return {
-    isAuthenticated: true,
-  };
-};
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { isAuthenticated } = useAuth();
