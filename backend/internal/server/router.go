@@ -9,25 +9,19 @@ import (
 	"sharedspace/internal/auth"
 	"sharedspace/internal/middleware"
 	"sharedspace/internal/swagger"
+	"sharedspace/internal/users"
 )
 
-// HealthResponse is returned by the health check endpoint.
 type HealthResponse struct {
 	Status string `json:"status"`
 }
 
-// healthHandler reports service liveness.
-// @Summary Check service health
-// @Tags health
-// @Produce json
-// @Success 200 {object} HealthResponse
-// @Router /health [get]
 func healthHandler(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(HealthResponse{Status: "ok"})
 }
 
-func NewRouter(authHandler *auth.Handler, authService auth.AuthService) http.Handler {
+func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHandler *users.Handler) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Recover)
@@ -45,13 +39,25 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService) http.Han
 				r.Post("/refresh", middleware.AppError(authHandler.Refresh))
 				r.Post("/logout", middleware.AppError(authHandler.Logout))
 			})
-
-			r.Group(func(r chi.Router) {
-				r.Use(middleware.JWTAuth(authService))
-				r.Get("/auth/me", middleware.AppError(authHandler.Me))
-				// r.Mount("/files", ...)
-			})
 		}
+
+		r.Group(func(r chi.Router) {
+			r.Use(middleware.JWTAuth(authService))
+
+			if authHandler != nil {
+				r.Get("/auth/me", middleware.AppError(authHandler.Me))
+			}
+
+			if usersHandler != nil {
+				r.Route("/users", func(r chi.Router) {
+					r.Get("/me", middleware.AppError(usersHandler.GetMe))
+					r.Patch("/me", middleware.AppError(usersHandler.UpdateMe))
+					r.Patch("/me/password", middleware.AppError(usersHandler.ChangePassword))
+					r.Get("/search", middleware.AppError(usersHandler.SearchUsers))
+				})
+			}
+			// r.Mount("/files", ...)
+		})
 	})
 
 	return r

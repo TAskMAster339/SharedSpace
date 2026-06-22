@@ -135,6 +135,27 @@ func (s *Service) parseRefreshToken(raw string) (*tokenClaims, error) {
 	return claims, nil
 }
 
+func (s *Service) parseAccessToken(raw string) (*tokenClaims, error) {
+	token, err := jwt.ParseWithClaims(raw, &tokenClaims{}, func(token *jwt.Token) (any, error) {
+		if token.Method.Alg() != jwt.SigningMethodHS256.Alg() {
+			return nil, fmt.Errorf("unexpected signing method: %s", token.Method.Alg())
+		}
+		return s.jwtSecret, nil
+	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
+	if err != nil {
+		return nil, err
+	}
+
+	claims, ok := token.Claims.(*tokenClaims)
+	if !ok || !token.Valid {
+		return nil, errors.New("invalid access token")
+	}
+	if claims.TokenType != tokenTypeAccess {
+		return nil, errors.New("wrong token type")
+	}
+	return claims, nil
+}
+
 func hashToken(raw string) string {
 	sum := sha256.Sum256([]byte(raw))
 	return hex.EncodeToString(sum[:])
