@@ -2,6 +2,7 @@ package auth
 
 import "time"
 
+// RegisterRequest describes the payload used to create a new account.
 type RegisterRequest struct {
 	Email      string `json:"email"`
 	Username   string `json:"username"`
@@ -10,6 +11,7 @@ type RegisterRequest struct {
 	Password   string `json:"password"`
 }
 
+// LoginRequest describes the payload used to authenticate a user.
 type LoginRequest struct {
 	Identifier string `json:"identifier"`
 	Email      string `json:"email"`
@@ -17,10 +19,18 @@ type LoginRequest struct {
 	Password   string `json:"password"`
 }
 
+// RefreshRequest describes the refresh token exchange payload.
 type RefreshRequest struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
+// ErrorResponse mirrors the standard API error payload.
+type ErrorResponse struct {
+	Error string `json:"error"`
+	Code  string `json:"code"`
+}
+
+// UserResponse contains the public user profile returned by auth endpoints.
 type UserResponse struct {
 	ID         string    `json:"id"`
 	Email      string    `json:"email"`
@@ -30,11 +40,13 @@ type UserResponse struct {
 	CreatedAt  time.Time `json:"created_at"`
 }
 
+// RegisterResponse contains the created user and their root directory ID.
 type RegisterResponse struct {
 	User            UserResponse `json:"user"`
 	RootDirectoryID string       `json:"root_directory_id"`
 }
 
+// TokenPair contains the issued access and refresh tokens.
 type TokenPair struct {
 	AccessToken      string `json:"access_token"`
 	RefreshToken     string `json:"refresh_token"`
@@ -43,11 +55,13 @@ type TokenPair struct {
 	RefreshExpiresIn int64  `json:"refresh_expires_in"`
 }
 
+// LoginResponse contains the authenticated user and token pair.
 type LoginResponse struct {
 	User   UserResponse `json:"user"`
 	Tokens TokenPair    `json:"tokens"`
 }
 
+// RefreshResponse contains a renewed token pair.
 type RefreshResponse struct {
 	Tokens TokenPair `json:"tokens"`
 }

@@ -18,6 +18,16 @@ func NewHandler(service AuthService) *Handler {
 	return &Handler{service: service}
 }
 
+// Register handles user registration.
+// @Summary Register a new user
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body RegisterRequest true "Registration request"
+// @Success 201 {object} RegisterResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 409 {object} ErrorResponse
+// @Router /api/v1/auth/register [post]
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) error {
 	var req RegisterRequest
 	if err := decodeJSON(r.Body, &req); err != nil {
@@ -32,6 +42,16 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) error {
 	return writeJSON(w, http.StatusCreated, resp)
 }
 
+// Login handles user authentication.
+// @Summary Authenticate a user
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body LoginRequest true "Login request"
+// @Success 200 {object} LoginResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router /api/v1/auth/login [post]
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) error {
 	var req LoginRequest
 	if err := decodeJSON(r.Body, &req); err != nil {
@@ -49,6 +69,16 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) error {
 	return writeJSON(w, http.StatusOK, resp)
 }
 
+// Refresh handles refresh token rotation.
+// @Summary Refresh access and refresh tokens
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body RefreshRequest true "Refresh request"
+// @Success 200 {object} RefreshResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router /api/v1/auth/refresh [post]
 func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) error {
 	var req RefreshRequest
 	if err := decodeJSON(r.Body, &req); err != nil {
