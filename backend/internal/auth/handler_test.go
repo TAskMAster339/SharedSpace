@@ -59,6 +59,8 @@ func (m *mockService) UserIDFromAccessToken(_ context.Context, rawAccessToken st
 		return m.userIDFn(rawAccessToken)
 	}
 	return "", apperror.Unauthorized("invalid access token")
+}
+
 func (m *mockService) Logout(_ context.Context, token string) error {
 	m.logoutToken = token
 	if m.logoutFn != nil {
