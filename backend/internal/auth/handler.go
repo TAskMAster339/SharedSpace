@@ -120,28 +120,6 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) error {
 	return writeJSON(w, http.StatusOK, resp)
 }
 
-// Me returns the profile of the currently authenticated user.
-// @Summary Get current user profile
-// @Tags auth
-// @Produce json
-// @Security BearerAuth
-// @Success 200 {object} MeResponse
-// @Failure 401 {object} ErrorResponse
-// @Router /api/v1/auth/me [get]
-func (h *Handler) Me(w http.ResponseWriter, r *http.Request) error {
-	claims, ok := ClaimsFromCtx(r.Context())
-	if !ok {
-		return apperror.Unauthorized("unauthorized")
-	}
-
-	resp, err := h.service.Me(r.Context(), claims)
-	if err != nil {
-		return err
-	}
-
-	return writeJSON(w, http.StatusOK, resp)
-}
-
 func decodeJSON(body io.ReadCloser, dst any) error {
 	defer body.Close()
 	dec := json.NewDecoder(body)
