@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
 import { Layout } from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicRoute from './components/PublicRoute';
@@ -22,69 +23,71 @@ import './styles.css';
 
 const App: React.FC = () => {
   return (
-    <Router>
-      <Routes>
-        {/* Публичные маршруты */}
-        <Route
-          path="/"
-          element={
-            <Layout>
-              <MainPage />
-            </Layout>
-          }
-        />
-        <Route
-          path="/share/:token"
-          element={
-            <Layout>
-              <SharePage />
-            </Layout>
-          }
-        />
+    <AuthProvider>
+      <Router>
+        <Routes>
+          {/* Публичные маршруты */}
+          <Route
+            path="/"
+            element={
+              <Layout>
+                <MainPage />
+              </Layout>
+            }
+          />
+          <Route
+            path="/share/:token"
+            element={
+              <Layout>
+                <SharePage />
+              </Layout>
+            }
+          />
 
-        {/* Только гостевые маршруты */}
-        <Route
-          element={
-            <PublicRoute>
-              <Layout />
-            </PublicRoute>
-          }
-        >
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-        </Route>
+          {/* Только гостевые маршруты */}
+          <Route
+            element={
+              <PublicRoute>
+                <Layout />
+              </PublicRoute>
+            }
+          >
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+          </Route>
 
-        {/* Защищённые маршруты */}
-        <Route
-          element={
-            <ProtectedRoute>
-              <Layout />
-            </ProtectedRoute>
-          }
-        >
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/settings" element={<ProfileSettingsPage />} />
-          <Route path="/directories" element={<SharedDirListPage />} />
-          <Route path="/directories/:id" element={<DirectoryPage />} />
-          <Route path="/files/:id" element={<FileViewPage />} />
-          <Route path="/shared/:id/settings" element={<SharedSettingsPage />} />
-          <Route path="/invitations" element={<InvitationsPage />} />
-          <Route path="/favorites" element={<FavoritesPage />} />
-          <Route path="/trash" element={<TrashPage />} />
-          <Route path="/files/:id/convert" element={<ConvertPage />} />
-        </Route>
+          {/* Защищённые маршруты */}
+          <Route
+            element={
+              <ProtectedRoute>
+                <Layout />
+              </ProtectedRoute>
+            }
+          >
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/settings" element={<ProfileSettingsPage />} />
+            <Route path="/directories" element={<SharedDirListPage />} />
+            <Route path="/directories/:id" element={<DirectoryPage />} />
+            <Route path="/files/:id" element={<FileViewPage />} />
+            <Route path="/shared/:id/settings" element={<SharedSettingsPage />} />
+            <Route path="/invitations" element={<InvitationsPage />} />
+            <Route path="/favorites" element={<FavoritesPage />} />
+            <Route path="/trash" element={<TrashPage />} />
+            <Route path="/files/:id/convert" element={<ConvertPage />} />
+          </Route>
 
-        {/* Редирект по умолчанию */}
-        <Route
-          path="*"
-          element={
-            <Layout>
-              <Error404Page />
-            </Layout>
-          }
-        />
-      </Routes>
-    </Router>
+          {/* Редирект по умолчанию */}
+          <Route
+            path="*"
+            element={
+              <Layout>
+                <Error404Page />
+              </Layout>
+            }
+          />
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 };
 
