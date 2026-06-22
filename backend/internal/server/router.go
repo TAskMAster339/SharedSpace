@@ -28,6 +28,7 @@ func NewRouter(authHandler *auth.Handler) http.Handler {
 				r.Post("/register", middleware.AppError(authHandler.Register))
 				r.Post("/login", middleware.AppError(authHandler.Login))
 				r.Post("/refresh", middleware.AppError(authHandler.Refresh))
+				r.Post("/logout", middleware.AppError(authHandler.Logout))
 			})
 			r.Route("/users", func(r chi.Router) {
 				r.Get("/me", middleware.AppError(authHandler.GetMe))

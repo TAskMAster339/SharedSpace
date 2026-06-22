@@ -368,6 +368,17 @@ func (s *Service) ChangePassword(ctx context.Context, userID string, req ChangeP
 
 	if err := tx.Commit(ctx); err != nil {
 		return apperror.WrapInternal("commit password change", err)
+func (s *Service) Logout(ctx context.Context, rawRefreshToken string) error {
+	if strings.TrimSpace(rawRefreshToken) == "" {
+		return apperror.Validation("refresh token is required")
+	}
+
+	if _, err := s.parseRefreshToken(rawRefreshToken); err != nil {
+		return apperror.Unauthorized("invalid refresh token")
+	}
+
+	if err := s.repo.RevokeRefreshToken(ctx, s.db, rawRefreshToken); err != nil {
+		return apperror.WrapInternal("revoke refresh token", err)
 	}
 
 	return nil

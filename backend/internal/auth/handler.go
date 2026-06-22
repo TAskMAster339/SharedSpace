@@ -50,6 +50,20 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) error {
 	return writeJSON(w, http.StatusOK, resp)
 }
 
+func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) error {
+	var req RefreshRequest
+	if err := decodeJSON(r.Body, &req); err != nil {
+		return err
+	}
+
+	if err := h.service.Logout(r.Context(), req.RefreshToken); err != nil {
+		return err
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
+
 func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) error {
 	var req RefreshRequest
 	if err := decodeJSON(r.Body, &req); err != nil {

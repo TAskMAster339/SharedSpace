@@ -344,6 +344,51 @@ func TestServiceRefresh(t *testing.T) {
 	}
 }
 
+func TestServiceLogout(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		repo := &mockRepo{
+			userByID: authUser{ID: "user-1", Username: "ivan", Email: "ivan@example.com"},
+		}
+		service, _ := newTestService(repo)
+
+		seedTokenPair, err := service.issueTokenPair(authUser{ID: "user-1", Username: "ivan", Email: "ivan@example.com"})
+		if err != nil {
+			t.Fatalf("issueTokenPair: %v", err)
+		}
+
+		if err := service.Logout(context.Background(), seedTokenPair.RefreshToken); err != nil {
+			t.Fatalf("Logout returned error: %v", err)
+		}
+		if repo.revokeToken == "" {
+			t.Fatal("expected refresh token to be revoked")
+		}
+	})
+
+	t.Run("empty token", func(t *testing.T) {
+		service, _ := newTestService(&mockRepo{})
+		err := service.Logout(context.Background(), "")
+		if err == nil {
+			t.Fatal("expected error for empty token")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeValidation {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("invalid token", func(t *testing.T) {
+		service, _ := newTestService(&mockRepo{})
+		err := service.Logout(context.Background(), "not.a.valid.token")
+		if err == nil {
+			t.Fatal("expected error for invalid token")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeUnauthorized {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+}
+
 func TestValidatePassword(t *testing.T) {
 	if err := validatePassword("weak"); err == nil {
 		t.Fatal("expected weak password to fail")

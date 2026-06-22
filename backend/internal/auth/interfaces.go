@@ -16,6 +16,7 @@ type AuthService interface {
 	ChangePassword(context.Context, string, ChangePasswordRequest) error
 	SearchUsers(context.Context, string, string, int) (SearchUsersResponse, error)
 	UserIDFromAccessToken(context.Context, string) (string, error)
+	Logout(context.Context, string) error
 }
 
 type AuthRepository interface {

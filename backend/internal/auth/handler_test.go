@@ -20,6 +20,7 @@ type mockService struct {
 	changePassFn func(string, ChangePasswordRequest) error
 	searchFn   func(string, string, int) (SearchUsersResponse, error)
 	userIDFn   func(string) (string, error)
+	logoutFn   func(string) error
 
 	registerReq  RegisterRequest
 	loginReq     LoginRequest
@@ -35,6 +36,7 @@ type mockService struct {
 	searchQuery  string
 	searchLimit  int
 	rawAccessToken string
+	logoutToken  string
 }
 
 func (m *mockService) Register(_ context.Context, req RegisterRequest) (RegisterResponse, error) {
@@ -105,6 +107,32 @@ func (m *mockService) UserIDFromAccessToken(_ context.Context, rawAccessToken st
 		return m.userIDFn(rawAccessToken)
 	}
 	return "", apperror.Unauthorized("invalid access token")
+func (m *mockService) Logout(_ context.Context, token string) error {
+	m.logoutToken = token
+	if m.logoutFn != nil {
+		return m.logoutFn(token)
+	}
+	return nil
+}
+
+func TestHandlerLogout(t *testing.T) {
+	svc := &mockService{}
+	handler := NewHandler(svc)
+
+	body := bytes.NewBufferString(`{"refresh_token":"some-token"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/logout", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	if err := handler.Logout(rec, req); err != nil {
+		t.Fatalf("handler returned error: %v", err)
+	}
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("unexpected status: %d", rec.Code)
+	}
+	if svc.logoutToken != "some-token" {
+		t.Fatalf("unexpected token passed to service: %q", svc.logoutToken)
+	}
 }
 
 func TestHandlerRegister(t *testing.T) {
