@@ -43,15 +43,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ hasUnreadInvites = unreadCount
                 'flex items-center gap-3 px-3 py-2.5 rounded-theme-xl text-sm font-medium transition-colors relative',
                 isActive
                   ? 'bg-brand-light text-brand dark:bg-brand-light'
-                  : 'text-theme-secondary hover:bg-theme-hover'
+                  : 'text-theme-secondary hover:bg-theme-hover',
               )}
             >
               <item.icon
                 size={18}
-                className={cn(
-                  'size-[18px]',
-                  isActive ? 'text-brand' : 'text-theme-muted'
-                )}
+                className={cn('size-[18px]', isActive ? 'text-brand' : 'text-theme-muted')}
               />
               {item.label}
               {item.badge && (

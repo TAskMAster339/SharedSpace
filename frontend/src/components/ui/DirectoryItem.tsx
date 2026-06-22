@@ -24,7 +24,7 @@ export const DirectoryItem: React.FC<DirectoryItemProps> = ({
     className={cn(
       'flex items-center gap-3 p-3 rounded-theme-md transition-colors cursor-pointer',
       'bg-theme-tertiary hover:bg-theme-hover',
-      className
+      className,
     )}
   >
     <div className="p-2 rounded-theme-sm bg-brand-light flex items-center justify-center text-brand shrink-0">

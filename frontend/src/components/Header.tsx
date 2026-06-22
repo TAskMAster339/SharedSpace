@@ -47,14 +47,17 @@ export const Header: React.FC<HeaderProps> = ({ hasUnreadInvites = unreadCount >
               className="p-2 rounded-theme-full hover:bg-theme-hover transition-colors"
               aria-label="Переключить тему"
             >
-              <MoonStar 
-                size={20} 
-                className={theme === 'dark' ? 'text-brand' : 'text-theme-secondary'} 
+              <MoonStar
+                size={20}
+                className={theme === 'dark' ? 'text-brand' : 'text-theme-secondary'}
               />
             </button>
 
             {/* Колокольчик */}
-            <Link to="/invitations" className="relative p-2 rounded-theme-full hover:bg-theme-hover transition-colors">
+            <Link
+              to="/invitations"
+              className="relative p-2 rounded-theme-full hover:bg-theme-hover transition-colors"
+            >
               <Bell size={20} className="text-theme-secondary" />
               {hasUnreadInvites && (
                 <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-brand rounded-theme-full border-2 border-theme-secondary" />
@@ -67,7 +70,11 @@ export const Header: React.FC<HeaderProps> = ({ hasUnreadInvites = unreadCount >
                 onClick={() => setDropdownOpen(!dropdownOpen)}
                 className="flex items-center gap-2 p-1 rounded-theme-full hover:bg-theme-hover transition-colors outline-none"
               >
-                <img src={avatar} alt="User" className="w-8 h-8 rounded-theme-full border border-theme" />
+                <img
+                  src={avatar}
+                  alt="User"
+                  className="w-8 h-8 rounded-theme-full border border-theme"
+                />
                 <span className="text-sm font-medium text-theme-primary hidden sm:block">
                   {firstName} {lastNameInitial}
                 </span>
@@ -107,15 +114,21 @@ export const Header: React.FC<HeaderProps> = ({ hasUnreadInvites = unreadCount >
             className="p-2 rounded-theme-full hover:bg-theme-hover transition-colors"
             aria-label="Переключить тему"
           >
-            <MoonStar 
-              size={20} 
-              className={theme === 'dark' ? 'text-brand' : 'text-theme-secondary'} 
+            <MoonStar
+              size={20}
+              className={theme === 'dark' ? 'text-brand' : 'text-theme-secondary'}
             />
           </button>
-          <Link to="/login" className="text-sm font-medium text-theme-secondary hover:text-theme-primary px-4 py-2 rounded-theme-md transition-colors">
+          <Link
+            to="/login"
+            className="text-sm font-medium text-theme-secondary hover:text-theme-primary px-4 py-2 rounded-theme-md transition-colors"
+          >
             Войти
           </Link>
-          <Link to="/register" className="text-sm font-medium text-theme-on-brand bg-brand hover:bg-brand-hover px-4 py-2 rounded-theme-md transition-colors">
+          <Link
+            to="/register"
+            className="text-sm font-medium text-theme-on-brand bg-brand hover:bg-brand-hover px-4 py-2 rounded-theme-md transition-colors"
+          >
             Зарегестрироваться
           </Link>
         </div>

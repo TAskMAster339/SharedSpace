@@ -15,7 +15,7 @@ export const Button: React.FC<ButtonProps> = ({
   ...props
 }) => {
   const baseStyles = 'font-medium rounded-theme-md transition-colors';
-  
+
   const variants = {
     primary: 'bg-brand text-theme-on-brand hover:bg-brand-hover',
     secondary: 'text-theme-secondary hover:text-theme-primary hover:bg-theme-hover',
@@ -30,10 +30,7 @@ export const Button: React.FC<ButtonProps> = ({
   };
 
   return (
-    <button
-      className={cn(baseStyles, variants[variant], sizes[size], className)}
-      {...props}
-    >
+    <button className={cn(baseStyles, variants[variant], sizes[size], className)} {...props}>
       {children}
     </button>
   );

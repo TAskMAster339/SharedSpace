@@ -28,7 +28,7 @@ export const FileItem: React.FC<FileItemProps> = ({
     className={cn(
       'flex items-center justify-between p-3 rounded-theme-md transition-colors cursor-pointer',
       'bg-theme-tertiary hover:bg-theme-hover',
-      className
+      className,
     )}
   >
     <div className="flex items-center gap-3">

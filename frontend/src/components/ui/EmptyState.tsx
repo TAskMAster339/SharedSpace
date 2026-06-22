@@ -35,7 +35,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   // Создаем иконку с правильным размером
   const renderIcon = () => {
     if (!icon) return null;
-    
+
     return React.cloneElement(icon, {
       size: iconSizes[size],
       className: cn('mx-auto mb-2 text-theme-muted', icon.props.className),
@@ -47,7 +47,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       className={cn(
         'text-center text-theme-muted border-2 border-theme-dashed rounded-theme-lg bg-theme-secondary',
         sizes[size],
-        className
+        className,
       )}
     >
       {renderIcon()}

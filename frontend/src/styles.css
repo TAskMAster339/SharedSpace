@@ -4,239 +4,242 @@
 
 /* Светлая тема (по умолчанию) */
 :root {
-	/* Фоны */
-	--bg-primary: #fcfcfc;
-	--bg-secondary: #ffffff;
-	--bg-tertiary: #f8fafc;
-	--bg-hover: #f1f5f9;
-	--bg-active: #eff6ff;
+  /* Фоны */
+  --bg-primary: #fcfcfc;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f8fafc;
+  --bg-hover: #f1f5f9;
+  --bg-active: #eff6ff;
 
-	/* Текст */
-	--text-primary: #1e293b;
-	--text-secondary: #64748b;
-	--text-muted: #94a3b8;
-	--text-on-brand: #ffffff;
+  /* Текст */
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+  --text-on-brand: #ffffff;
 
-	/* Бренд */
-	--brand: #3b82f6;
-	--brand-hover: #2563eb;
-	--brand-light: #eff6ff;
-	--brand-dark: #1e3a8a;
+  /* Бренд */
+  --brand: #3b82f6;
+  --brand-hover: #2563eb;
+  --brand-light: #eff6ff;
+  --brand-dark: #1e3a8a;
 
-	/* Границы */
-	--border: #e2e8f0;
-	--border-hover: #cbd5e1;
-	--border-dashed: #cbd5e1;
+  /* Границы */
+  --border: #e2e8f0;
+  --border-hover: #cbd5e1;
+  --border-dashed: #cbd5e1;
 
-	/* Статусы */
-	--danger: #ef4444;
-	--danger-hover: #dc2626;
-	--danger-light: #fdecec;
-	--success: #22c55e;
-	--warning: #f59e0b;
+  /* Статусы */
+  --danger: #ef4444;
+  --danger-hover: #dc2626;
+  --danger-light: #fdecec;
+  --success: #22c55e;
+  --warning: #f59e0b;
 
-	/* Тени */
-	--shadow-card: 0 2px 10px -3px rgba(0, 0, 0, 0.05);
-	--shadow-dropdown: 0 10px 40px -8px rgba(0, 0, 0, 0.1);
+  /* Тени */
+  --shadow-card: 0 2px 10px -3px rgba(0, 0, 0, 0.05);
+  --shadow-dropdown: 0 10px 40px -8px rgba(0, 0, 0, 0.1);
 
-	/* Скругления */
-	--radius-sm: 8px;
-	--radius-md: 12px;
-	--radius-lg: 16px;
-	--radius-xl: 20px;
-	--radius-full: 9999px;
+  /* Скругления */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
 }
 
 /* Тёмная тема */
 .dark {
-	/* Фоны */
-	--bg-primary: #0f172a;
-	--bg-secondary: #1e293b;
-	--bg-tertiary: #1a2332;
-	--bg-hover: #2d3a52;
-	--bg-active: #1e3a5f;
+  /* Фоны */
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #1a2332;
+  --bg-hover: #2d3a52;
+  --bg-active: #1e3a5f;
 
-	/* Текст */
-	--text-primary: #f1f5f9;
-	--text-secondary: #94a3b8;
-	--text-muted: #64748b;
-	--text-on-brand: #ffffff;
+  /* Текст */
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --text-on-brand: #ffffff;
 
-	/* Бренд */
-	--brand: #3b82f6;
-	--brand-hover: #60a5fa;
-	--brand-light: #1e3a5f;
-	--brand-dark: #1e3a8a;
+  /* Бренд */
+  --brand: #3b82f6;
+  --brand-hover: #60a5fa;
+  --brand-light: #1e3a5f;
+  --brand-dark: #1e3a8a;
 
-	/* Границы */
-	--border: #334155;
-	--border-hover: #475569;
-	--border-dashed: #334155;
+  /* Границы */
+  --border: #334155;
+  --border-hover: #475569;
+  --border-dashed: #334155;
 
-	/* Статусы - переопределяем для тёмной темы */
-	--danger: #ef4444;
-	--danger-hover: #f87171;
-	--danger-light: #502a2a;
+  /* Статусы - переопределяем для тёмной темы */
+  --danger: #ef4444;
+  --danger-hover: #f87171;
+  --danger-light: #502a2a;
 
-	/* Тени */
-	--shadow-card: 0 2px 10px -3px rgba(0, 0, 0, 0.3);
-	--shadow-dropdown: 0 10px 40px -8px rgba(0, 0, 0, 0.5);
+  /* Тени */
+  --shadow-card: 0 2px 10px -3px rgba(0, 0, 0, 0.3);
+  --shadow-dropdown: 0 10px 40px -8px rgba(0, 0, 0, 0.5);
 }
 
 /* ============================================
    Глобальные стили
    ============================================ */
 @layer base {
-	body {
-		background-color: var(--bg-primary);
-		color: var(--text-primary);
-		font-family: 'Inter', system-ui, -apple-system, sans-serif;
-	}
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family:
+      'Inter',
+      system-ui,
+      -apple-system,
+      sans-serif;
+  }
 
-	* {
-		border-color: var(--border);
-	}
+  * {
+    border-color: var(--border);
+  }
 }
 
 /* ============================================
    Utility-классы для использования в компонентах
    ============================================ */
 @layer utilities {
+  /* Фоны */
+  .bg-theme-primary {
+    background-color: var(--bg-primary);
+  }
 
-	/* Фоны */
-	.bg-theme-primary {
-		background-color: var(--bg-primary);
-	}
+  .bg-theme-secondary {
+    background-color: var(--bg-secondary);
+  }
 
-	.bg-theme-secondary {
-		background-color: var(--bg-secondary);
-	}
+  .bg-theme-tertiary {
+    background-color: var(--bg-tertiary);
+  }
 
-	.bg-theme-tertiary {
-		background-color: var(--bg-tertiary);
-	}
+  .bg-theme-hover {
+    background-color: var(--bg-hover);
+  }
 
-	.bg-theme-hover {
-		background-color: var(--bg-hover);
-	}
+  .bg-theme-active {
+    background-color: var(--bg-active);
+  }
 
-	.bg-theme-active {
-		background-color: var(--bg-active);
-	}
+  .bg-theme-border {
+    background-color: var(--border);
+  }
 
-	.bg-theme-border {
-		background-color: var(--border);
-	}
+  /* Текст */
+  .text-theme-primary {
+    color: var(--text-primary);
+  }
 
-	/* Текст */
-	.text-theme-primary {
-		color: var(--text-primary);
-	}
+  .text-theme-secondary {
+    color: var(--text-secondary);
+  }
 
-	.text-theme-secondary {
-		color: var(--text-secondary);
-	}
+  .text-theme-muted {
+    color: var(--text-muted);
+  }
 
-	.text-theme-muted {
-		color: var(--text-muted);
-	}
+  .text-theme-on-brand {
+    color: var(--text-on-brand);
+  }
 
-	.text-theme-on-brand {
-		color: var(--text-on-brand);
-	}
+  /* Бренд */
+  .text-brand {
+    color: var(--brand);
+  }
 
-	/* Бренд */
-	.text-brand {
-		color: var(--brand);
-	}
+  .text-brand-hover {
+    color: var(--brand-hover);
+  }
 
-	.text-brand-hover {
-		color: var(--brand-hover);
-	}
+  .bg-brand {
+    background-color: var(--brand);
+  }
 
-	.bg-brand {
-		background-color: var(--brand);
-	}
+  .bg-brand-hover {
+    background-color: var(--brand-hover);
+  }
 
-	.bg-brand-hover {
-		background-color: var(--brand-hover);
-	}
+  .bg-brand-light {
+    background-color: var(--brand-light);
+  }
 
-	.bg-brand-light {
-		background-color: var(--brand-light);
-	}
+  .hover\:bg-brand-hover:hover {
+    background-color: var(--brand-hover);
+  }
 
-	.hover\:bg-brand-hover:hover {
-		background-color: var(--brand-hover);
-	}
+  /* Границы */
+  .border-theme {
+    border-color: var(--border);
+  }
 
-	/* Границы */
-	.border-theme {
-		border-color: var(--border);
-	}
+  .border-theme-hover {
+    border-color: var(--border-hover);
+  }
 
-	.border-theme-hover {
-		border-color: var(--border-hover);
-	}
+  .border-theme-dashed {
+    border-color: var(--border-dashed);
+  }
 
-	.border-theme-dashed {
-		border-color: var(--border-dashed);
-	}
+  /* Статусы */
+  .text-danger {
+    color: var(--danger);
+  }
 
-	/* Статусы */
-	.text-danger {
-		color: var(--danger);
-	}
+  .text-danger-hover {
+    color: var(--danger-hover);
+  }
 
-	.text-danger-hover {
-		color: var(--danger-hover);
-	}
+  .bg-danger-light {
+    background-color: var(--danger-light);
+  }
 
-	.bg-danger-light {
-		background-color: var(--danger-light);
-	}
+  .hover\:bg-danger-light:hover {
+    background-color: var(--danger-light);
+  }
 
-	.hover\:bg-danger-light:hover {
-		background-color: var(--danger-light);
-	}
+  /* Тени */
+  .shadow-theme-card {
+    box-shadow: var(--shadow-card);
+  }
 
-	/* Тени */
-	.shadow-theme-card {
-		box-shadow: var(--shadow-card);
-	}
+  .shadow-theme-dropdown {
+    box-shadow: var(--shadow-dropdown);
+  }
 
-	.shadow-theme-dropdown {
-		box-shadow: var(--shadow-dropdown);
-	}
+  /* Скругления */
+  .rounded-theme-sm {
+    border-radius: var(--radius-sm);
+  }
 
-	/* Скругления */
-	.rounded-theme-sm {
-		border-radius: var(--radius-sm);
-	}
+  .rounded-theme-md {
+    border-radius: var(--radius-md);
+  }
 
-	.rounded-theme-md {
-		border-radius: var(--radius-md);
-	}
+  .rounded-theme-lg {
+    border-radius: var(--radius-lg);
+  }
 
-	.rounded-theme-lg {
-		border-radius: var(--radius-lg);
-	}
+  .rounded-theme-xl {
+    border-radius: var(--radius-xl);
+  }
 
-	.rounded-theme-xl {
-		border-radius: var(--radius-xl);
-	}
+  .rounded-theme-full {
+    border-radius: var(--radius-full);
+  }
 
-	.rounded-theme-full {
-		border-radius: var(--radius-full);
-	}
+  /* Скрытие скроллбара */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 
-	/* Скрытие скроллбара */
-	.scrollbar-hide {
-		-ms-overflow-style: none;
-		scrollbar-width: none;
-	}
-
-	.scrollbar-hide::-webkit-scrollbar {
-		display: none;
-	}
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
 }

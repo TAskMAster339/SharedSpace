@@ -8,11 +8,7 @@ interface StorageIndicatorProps {
   className?: string;
 }
 
-export const StorageIndicator: React.FC<StorageIndicatorProps> = ({
-  used,
-  total,
-  className,
-}) => {
+export const StorageIndicator: React.FC<StorageIndicatorProps> = ({ used, total, className }) => {
   const percentage = Math.min((used / total) * 100, 100);
 
   return (
