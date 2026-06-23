@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { GitFork } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
-const logo = '/logo.jpg';
+const logo = '/logo-mark.png';
 
 const GITHUB_URL = 'https://github.com/TAskMAster339/SharedSpace';
 

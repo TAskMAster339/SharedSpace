@@ -5,7 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { SearchBar } from './ui/SearchBar';
 
-const logo = '/logo.jpg';
+const logo = '/logo-mark.png';
 
 interface HeaderProps {
   hasUnreadInvites?: boolean;
