@@ -1,5 +1,16 @@
 import React, { useState } from 'react';
-import { User, AtSign, Mail, Lock, Pencil, Check, X, KeyRound, Trash2, AlertTriangle } from 'lucide-react';
+import {
+  User,
+  AtSign,
+  Mail,
+  Lock,
+  Pencil,
+  Check,
+  X,
+  KeyRound,
+  Trash2,
+  AlertTriangle,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { ApiError } from '../api/client';
@@ -418,15 +429,12 @@ const ProfileSettingsPage: React.FC = () => {
         </CardHeader>
         <div className="border border-danger/20 rounded-theme-md p-4 bg-danger-light/10">
           <p className="text-sm text-theme-secondary mb-3">
-            Удаление аккаунта приведёт к безвозвратному удалению всех ваших файлов, директорий и данных.
+            Удаление аккаунта приведёт к безвозвратному удалению всех ваших файлов, директорий и
+            данных.
             <br />
             Это действие нельзя отменить.
           </p>
-          <Button
-            variant="danger"
-            onClick={openDeleteModal}
-            className="flex items-center gap-2"
-          >
+          <Button variant="danger" onClick={openDeleteModal} className="flex items-center gap-2">
             <Trash2 size={16} />
             Удалить аккаунт
           </Button>
@@ -436,7 +444,10 @@ const ProfileSettingsPage: React.FC = () => {
       {/* Модальное окно подтверждения */}
       {isDeleteModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={closeDeleteModal} />
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={closeDeleteModal}
+          />
           <div className="relative bg-theme-secondary rounded-theme-xl max-w-md w-full p-6 shadow-theme-dropdown border border-theme">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-3 rounded-theme-full bg-danger-light/20 text-danger">
@@ -447,17 +458,15 @@ const ProfileSettingsPage: React.FC = () => {
                 <p className="text-sm text-theme-muted">Это действие нельзя будет отменить</p>
               </div>
             </div>
-            
+
             <p className="text-sm text-theme-secondary mb-6">
               Вы уверены, что хотите полностью удалить свой аккаунт?
               <br />
               Все ваши файлы, директории и данные будут безвозвратно удалены.
             </p>
-            
-            {deleteError && (
-              <p className="text-danger text-sm mb-4">{deleteError}</p>
-            )}
-            
+
+            {deleteError && <p className="text-danger text-sm mb-4">{deleteError}</p>}
+
             <div className="flex gap-3">
               <Button
                 variant="secondary"
@@ -473,7 +482,9 @@ const ProfileSettingsPage: React.FC = () => {
                 disabled={isDeleting}
                 className="flex-1 flex items-center justify-center gap-2"
               >
-                {isDeleting ? 'Удаление...' : (
+                {isDeleting ? (
+                  'Удаление...'
+                ) : (
                   <>
                     <Trash2 size={16} />
                     Удалить

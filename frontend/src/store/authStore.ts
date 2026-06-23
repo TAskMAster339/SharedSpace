@@ -126,12 +126,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (!refreshToken) {
       throw new Error('No refresh token');
     }
-    
+
     const { accessToken } = get();
     if (!accessToken) {
       throw new Error('Not authenticated');
     }
-    
+
     await deleteAccountRequest(accessToken, { current_refresh_token: refreshToken });
     removeCookie(REFRESH_COOKIE);
     set({ user: null, accessToken: null, isAuthenticated: false });
