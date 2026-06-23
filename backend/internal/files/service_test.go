@@ -15,12 +15,12 @@ import (
 )
 
 type mockRepo struct {
-	dir     directoryRecord2
+	dir     directoryRecord
 	dirErr  error
 	saveErr error
 }
 
-func (m *mockRepo) FindDirectoryByID(_ context.Context, _ dbTX, _ string) (directoryRecord2, error) {
+func (m *mockRepo) FindDirectoryByID(_ context.Context, _ dbTX, _ string) (directoryRecord, error) {
 	return m.dir, m.dirErr
 }
 
@@ -42,6 +42,10 @@ type mockStorage struct {
 func (m *mockStorage) Upload(_ context.Context, objectKey string, _ io.Reader, _ int64, _ string) error {
 	m.uploadedKey = objectKey
 	return m.err
+}
+
+func (m *mockStorage) Delete(_ context.Context, _ string) error {
+	return nil
 }
 
 type mockTx struct{}
@@ -79,7 +83,7 @@ func newTestService(repo RepositoryInterface, storage StorageClient) *Service {
 
 func TestServiceUpload_Success(t *testing.T) {
 	repo := &mockRepo{
-		dir: directoryRecord2{ID: "dir-1", OwnerID: "user-1"},
+		dir: directoryRecord{ID: "dir-1", OwnerID: "user-1"},
 	}
 	storage := &mockStorage{}
 	svc := newTestService(repo, storage)
@@ -138,7 +142,7 @@ func TestServiceUpload_DirectoryNotFound(t *testing.T) {
 
 func TestServiceUpload_AccessDenied(t *testing.T) {
 	repo := &mockRepo{
-		dir: directoryRecord2{ID: "dir-1", OwnerID: "other-user"},
+		dir: directoryRecord{ID: "dir-1", OwnerID: "other-user"},
 	}
 	svc := newTestService(repo, &mockStorage{})
 
@@ -156,7 +160,7 @@ func TestServiceUpload_AccessDenied(t *testing.T) {
 
 func TestServiceUpload_FileTooLarge(t *testing.T) {
 	repo := &mockRepo{
-		dir: directoryRecord2{ID: "dir-1", OwnerID: "user-1"},
+		dir: directoryRecord{ID: "dir-1", OwnerID: "user-1"},
 	}
 	svc := newTestService(repo, &mockStorage{})
 

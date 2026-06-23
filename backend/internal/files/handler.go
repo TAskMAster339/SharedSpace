@@ -2,13 +2,17 @@ package files
 
 import (
 	"encoding/json"
+	"mime/multipart"
 	"net/http"
 
 	"sharedspace/internal/apperror"
 	"sharedspace/internal/auth"
 )
 
-const maxMemory = 32 << 20
+const (
+	maxMemory       = 32 << 20
+	maxRequestBytes = 1 << 30
+)
 
 type Handler struct {
 	service ServiceInterface
@@ -52,13 +56,20 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) error {
 		return apperror.Validation("at least one file is required")
 	}
 
+	var opened []multipart.File
+	defer func() {
+		for _, f := range opened {
+			f.Close()
+		}
+	}()
+
 	uploads := make([]FileUpload, 0, len(formFiles))
 	for _, fh := range formFiles {
 		f, err := fh.Open()
 		if err != nil {
 			return apperror.WrapInternal("open uploaded file", err)
 		}
-		defer f.Close()
+		opened = append(opened, f)
 
 		mimeType := fh.Header.Get("Content-Type")
 		if mimeType == "" {

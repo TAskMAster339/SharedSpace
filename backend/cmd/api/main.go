@@ -49,7 +49,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("storage: %v", err)
 	}
-	_ = store
+
 	// auth
 	authRepository := auth.NewRepository()
 	authService := auth.NewService(pool, authRepository, cfg.JWTSecret, cfg.JWTTTL, cfg.RefreshJWTTTL)

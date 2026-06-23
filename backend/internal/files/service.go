@@ -2,13 +2,14 @@ package files
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"errors"
 	"fmt"
+	"log"
 	"path/filepath"
 	"strings"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -32,17 +33,19 @@ func NewService(pool *pgxpool.Pool, repo RepositoryInterface, storage StorageCli
 		}
 		return txWrapper{Tx: tx}, nil
 	}
-	return &Service{
-		beginTx: beginTx,
-		db:      pool,
-		repo:    repo,
-		storage: storage,
-	}
+	return &Service{beginTx: beginTx, db: pool, repo: repo, storage: storage}
 }
 
 func (s *Service) Upload(ctx context.Context, userID, directoryID string, uploads []FileUpload) (UploadFilesResponse, error) {
 	if len(uploads) == 0 {
 		return UploadFilesResponse{}, apperror.Validation("at least one file is required")
+	}
+
+	for _, u := range uploads {
+		if u.Size > maxFileSize {
+			return UploadFilesResponse{}, apperror.Validation(
+				fmt.Sprintf("file %q exceeds maximum size of 100MB", u.Filename))
+		}
 	}
 
 	dir, err := s.repo.FindDirectoryByID(ctx, s.db, directoryID)
@@ -56,31 +59,16 @@ func (s *Service) Upload(ctx context.Context, userID, directoryID string, upload
 		return UploadFilesResponse{}, apperror.Forbidden("access denied")
 	}
 
-	results := make([]UploadResponse, 0, len(uploads))
-
+	uploadedKeys := make([]string, 0, len(uploads))
+	records := make([]fileRecord, 0, len(uploads))
 	for _, u := range uploads {
-		if u.Size > maxFileSize {
-			return UploadFilesResponse{}, apperror.Validation(
-				fmt.Sprintf("file %q exceeds maximum size of 100MB", u.Filename),
-			)
-		}
-
-		randID, err := randomID()
-		if err != nil {
-			return UploadFilesResponse{}, apperror.WrapInternal("generate object key", err)
-		}
-		objectKey := fmt.Sprintf("%s/%s/%s_%s", userID, directoryID, randID, u.Filename)
-
+		objectKey := uuid.NewString()
 		if err := s.storage.Upload(ctx, objectKey, u.Content, u.Size, u.MimeType); err != nil {
+			s.cleanupObjects(uploadedKeys)
 			return UploadFilesResponse{}, apperror.WrapInternal("upload to storage", err)
 		}
-
-		tx, err := s.beginTx(ctx, pgx.TxOptions{})
-		if err != nil {
-			return UploadFilesResponse{}, apperror.WrapInternal("begin transaction", err)
-		}
-
-		saved, err := s.repo.Save(ctx, tx, fileRecord{
+		uploadedKeys = append(uploadedKeys, objectKey)
+		records = append(records, fileRecord{
 			DirectoryID: directoryID,
 			OwnerID:     userID,
 			Filename:    u.Filename,
@@ -89,19 +77,44 @@ func (s *Service) Upload(ctx context.Context, userID, directoryID string, upload
 			Size:        u.Size,
 			ObjectKey:   objectKey,
 		})
+	}
+
+	tx, err := s.beginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		s.cleanupObjects(uploadedKeys)
+		return UploadFilesResponse{}, apperror.WrapInternal("begin transaction", err)
+	}
+	defer tx.Rollback(ctx) // после Commit — no-op
+
+	results := make([]UploadResponse, 0, len(records))
+	for _, rec := range records {
+		saved, err := s.repo.Save(ctx, tx, rec)
 		if err != nil {
-			tx.Rollback(ctx)
+			s.cleanupObjects(uploadedKeys)
 			return UploadFilesResponse{}, apperror.WrapInternal("save file metadata", err)
 		}
-
-		if err := tx.Commit(ctx); err != nil {
-			return UploadFilesResponse{}, apperror.WrapInternal("commit file upload", err)
-		}
-
 		results = append(results, toUploadResponse(saved))
 	}
 
+	if err := tx.Commit(ctx); err != nil {
+		s.cleanupObjects(uploadedKeys)
+		return UploadFilesResponse{}, apperror.WrapInternal("commit file upload", err)
+	}
+
 	return UploadFilesResponse{Files: results}, nil
+}
+
+func (s *Service) cleanupObjects(keys []string) {
+	if len(keys) == 0 {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	for _, k := range keys {
+		if err := s.storage.Delete(ctx, k); err != nil {
+			log.Printf("cleanup orphan object %s: %v", k, err)
+		}
+	}
 }
 
 func toUploadResponse(f fileRecord) UploadResponse {
@@ -117,14 +130,6 @@ func toUploadResponse(f fileRecord) UploadResponse {
 		CreatedAt:   f.CreatedAt,
 		UpdatedAt:   f.UpdatedAt,
 	}
-}
-
-func randomID() (string, error) {
-	var buf [8]byte
-	if _, err := rand.Read(buf[:]); err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(buf[:]), nil
 }
 
 func ExtractExtension(filename string) string {

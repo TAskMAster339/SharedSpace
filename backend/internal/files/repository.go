@@ -8,8 +8,8 @@ func NewRepository() *Repository {
 	return &Repository{}
 }
 
-func (r *Repository) FindDirectoryByID(ctx context.Context, db dbTX, id string) (directoryRecord2, error) {
-	var d directoryRecord2
+func (r *Repository) FindDirectoryByID(ctx context.Context, db dbTX, id string) (directoryRecord, error) {
+	var d directoryRecord
 	err := db.QueryRow(ctx, `
 		SELECT id, owner_id FROM directories
 		WHERE id = $1 AND deleted_at IS NULL
