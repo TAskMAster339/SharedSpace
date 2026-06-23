@@ -6,6 +6,8 @@ export interface AuthUser {
   username: string;
   first_name?: string;
   second_name?: string;
+  storage_quota: number;
+  storage_used: number;
   created_at: string;
 }
 

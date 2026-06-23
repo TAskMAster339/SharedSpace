@@ -7,6 +7,8 @@ import { Card } from '../components/ui/Card';
 
 const MIN_PASSWORD_LENGTH = 8;
 
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
 const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
   const { register } = useAuth();
@@ -30,6 +32,8 @@ const RegisterPage: React.FC = () => {
     }
     if (!email.trim()) {
       errors.email = 'Введите email';
+    } else if (!EMAIL_REGEX.test(email.trim())) {
+      errors.email = 'Некорректный формат email';
     }
     if (password.length < MIN_PASSWORD_LENGTH) {
       errors.password = `Пароль должен быть не короче ${MIN_PASSWORD_LENGTH} символов`;

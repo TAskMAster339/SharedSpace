@@ -9,7 +9,7 @@ interface StorageIndicatorProps {
 }
 
 export const StorageIndicator: React.FC<StorageIndicatorProps> = ({ used, total, className }) => {
-  const percentage = Math.min((used / total) * 100, 100);
+  const percentage = total > 0 ? Math.min((used / total) * 100, 100) : 0;
 
   return (
     <div className={cn('w-full', className)}>

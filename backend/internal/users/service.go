@@ -3,6 +3,7 @@ package users
 import (
 	"context"
 	"errors"
+	"regexp"
 	"strings"
 	"time"
 	"unicode"
@@ -16,6 +17,8 @@ import (
 )
 
 const minSearchQueryLength = 2
+
+var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 
 type Service struct {
 	beginTx beginTxFunc
@@ -42,15 +45,15 @@ func NewService(pool *pgxpool.Pool, repo RepositoryInterface) *Service {
 func (s *Service) GetMe(ctx context.Context, userID string) (UserResponse, error) {
 	userID = strings.TrimSpace(userID)
 	if userID == "" {
-		return UserResponse{}, apperror.Unauthorized("invalid access token")
+		return UserResponse{}, apperror.Unauthorized("некорректный access токен")
 	}
 
 	user, err := s.repo.FindUserByID(ctx, s.db, userID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return UserResponse{}, apperror.NotFound("user not found")
+			return UserResponse{}, apperror.NotFound("пользователь не найден")
 		}
-		return UserResponse{}, apperror.WrapInternal("find user", err)
+		return UserResponse{}, apperror.WrapInternal("ошибка поиска пользователя", err)
 	}
 
 	return toUserResponse(user), nil
@@ -59,7 +62,7 @@ func (s *Service) GetMe(ctx context.Context, userID string) (UserResponse, error
 func (s *Service) UpdateMe(ctx context.Context, userID string, req UpdateProfileRequest) (UserResponse, error) {
 	userID = strings.TrimSpace(userID)
 	if userID == "" {
-		return UserResponse{}, apperror.Unauthorized("invalid access token")
+		return UserResponse{}, apperror.Unauthorized("некорректный access токен")
 	}
 
 	input, err := normalizeUpdateProfileRequest(req)
@@ -69,7 +72,7 @@ func (s *Service) UpdateMe(ctx context.Context, userID string, req UpdateProfile
 
 	tx, err := s.beginTx(ctx, pgx.TxOptions{})
 	if err != nil {
-		return UserResponse{}, apperror.WrapInternal("begin transaction", err)
+		return UserResponse{}, apperror.WrapInternal("ошибка начала транзакции", err)
 	}
 	defer tx.Rollback(ctx)
 
@@ -77,9 +80,9 @@ func (s *Service) UpdateMe(ctx context.Context, userID string, req UpdateProfile
 		existing, findErr := s.repo.FindUserByEmail(ctx, tx, *input.Email)
 		switch {
 		case findErr == nil && existing.ID != userID:
-			return UserResponse{}, apperror.Conflict("email is already in use")
+			return UserResponse{}, apperror.Conflict("email уже используется")
 		case findErr != nil && !errors.Is(findErr, pgx.ErrNoRows):
-			return UserResponse{}, apperror.WrapInternal("find user by email", findErr)
+			return UserResponse{}, apperror.WrapInternal("ошибка поиска пользователя по email", findErr)
 		}
 	}
 
@@ -87,25 +90,25 @@ func (s *Service) UpdateMe(ctx context.Context, userID string, req UpdateProfile
 		existing, findErr := s.repo.FindUserByUsername(ctx, tx, *input.Username)
 		switch {
 		case findErr == nil && existing.ID != userID:
-			return UserResponse{}, apperror.Conflict("username is already in use")
+			return UserResponse{}, apperror.Conflict("имя пользователя уже занято")
 		case findErr != nil && !errors.Is(findErr, pgx.ErrNoRows):
-			return UserResponse{}, apperror.WrapInternal("find user by username", findErr)
+			return UserResponse{}, apperror.WrapInternal("ошибка поиска пользователя по имени", findErr)
 		}
 	}
 
 	user, err := s.repo.UpdateUserProfile(ctx, tx, userID, input)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return UserResponse{}, apperror.NotFound("user not found")
+			return UserResponse{}, apperror.NotFound("пользователь не найден")
 		}
 		if isUniqueViolation(err) {
-			return UserResponse{}, apperror.Conflict("user profile already exists")
+			return UserResponse{}, apperror.Conflict("профиль пользователя уже существует")
 		}
-		return UserResponse{}, apperror.WrapInternal("update user profile", err)
+		return UserResponse{}, apperror.WrapInternal("ошибка обновления профиля", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return UserResponse{}, apperror.WrapInternal("commit profile update", err)
+		return UserResponse{}, apperror.WrapInternal("ошибка сохранения профиля", err)
 	}
 
 	return toUserResponse(user), nil
@@ -114,7 +117,7 @@ func (s *Service) UpdateMe(ctx context.Context, userID string, req UpdateProfile
 func (s *Service) ChangePassword(ctx context.Context, userID string, req ChangePasswordRequest) error {
 	userID = strings.TrimSpace(userID)
 	if userID == "" {
-		return apperror.Unauthorized("invalid access token")
+		return apperror.Unauthorized("некорректный access токен")
 	}
 
 	req.OldPassword = strings.TrimSpace(req.OldPassword)
@@ -122,13 +125,13 @@ func (s *Service) ChangePassword(ctx context.Context, userID string, req ChangeP
 	req.CurrentRefreshToken = strings.TrimSpace(req.CurrentRefreshToken)
 
 	if req.OldPassword == "" {
-		return apperror.Validation("old password is required")
+		return apperror.Validation("требуется старый пароль")
 	}
 	if req.NewPassword == "" {
-		return apperror.Validation("new password is required")
+		return apperror.Validation("требуется новый пароль")
 	}
 	if req.CurrentRefreshToken == "" {
-		return apperror.Validation("current refresh token is required")
+		return apperror.Validation("требуется текущий refresh токен")
 	}
 	if err := validatePassword(req.NewPassword); err != nil {
 		return err
@@ -136,48 +139,48 @@ func (s *Service) ChangePassword(ctx context.Context, userID string, req ChangeP
 
 	tx, err := s.beginTx(ctx, pgx.TxOptions{})
 	if err != nil {
-		return apperror.WrapInternal("begin transaction", err)
+		return apperror.WrapInternal("ошибка начала транзакции", err)
 	}
 	defer tx.Rollback(ctx)
 
 	user, err := s.repo.FindUserByID(ctx, tx, userID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return apperror.NotFound("user not found")
+			return apperror.NotFound("пользователь не найден")
 		}
-		return apperror.WrapInternal("find user", err)
+		return apperror.WrapInternal("ошибка поиска пользователя", err)
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.OldPassword)); err != nil {
-		return apperror.Forbidden("old password is invalid")
+		return apperror.Forbidden("неверный старый пароль")
 	}
 
 	record, err := s.repo.LoadRefreshToken(ctx, tx, req.CurrentRefreshToken)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return apperror.Unauthorized("invalid refresh token")
+			return apperror.Unauthorized("некорректный refresh токен")
 		}
-		return apperror.WrapInternal("load refresh token", err)
+		return apperror.WrapInternal("ошибка загрузки refresh токена", err)
 	}
 	if record.UserID != userID || record.RevokedAt != nil || time.Now().UTC().After(record.ExpiresAt) {
-		return apperror.Unauthorized("invalid refresh token")
+		return apperror.Unauthorized("некорректный refresh токен")
 	}
 
 	newHash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
 	if err != nil {
-		return apperror.WrapInternal("hash password", err)
+		return apperror.WrapInternal("ошибка хеширования пароля", err)
 	}
 
 	if err := s.repo.UpdateUserPassword(ctx, tx, userID, string(newHash)); err != nil {
-		return apperror.WrapInternal("update user password", err)
+		return apperror.WrapInternal("ошибка обновления пароля", err)
 	}
 
 	if err := s.repo.RevokeAllRefreshTokensExcept(ctx, tx, userID, req.CurrentRefreshToken); err != nil {
-		return apperror.WrapInternal("revoke refresh tokens", err)
+		return apperror.WrapInternal("ошибка отзыва refresh токенов", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return apperror.WrapInternal("commit password change", err)
+		return apperror.WrapInternal("ошибка сохранения пароля", err)
 	}
 
 	return nil
@@ -186,12 +189,12 @@ func (s *Service) ChangePassword(ctx context.Context, userID string, req ChangeP
 func (s *Service) SearchUsers(ctx context.Context, userID, query string, limit int) (SearchUsersResponse, error) {
 	userID = strings.TrimSpace(userID)
 	if userID == "" {
-		return SearchUsersResponse{}, apperror.Unauthorized("invalid access token")
+		return SearchUsersResponse{}, apperror.Unauthorized("некорректный access токен")
 	}
 
 	query = strings.TrimSpace(query)
 	if len(query) < minSearchQueryLength {
-		return SearchUsersResponse{}, apperror.Validation("query must be at least 2 characters")
+		return SearchUsersResponse{}, apperror.Validation("запрос должен содержать минимум 2 символа")
 	}
 
 	if limit <= 0 {
@@ -203,12 +206,15 @@ func (s *Service) SearchUsers(ctx context.Context, userID, query string, limit i
 
 	users, err := s.repo.SearchUsers(ctx, s.db, userID, query, limit)
 	if err != nil {
-		return SearchUsersResponse{}, apperror.WrapInternal("search users", err)
+		return SearchUsersResponse{}, apperror.WrapInternal("ошибка поиска пользователей", err)
 	}
 
 	result := make([]UserResponse, 0, len(users))
 	for _, u := range users {
-		result = append(result, toUserResponse(u))
+		r := toUserResponse(u)
+		r.StorageQuota = 0
+		r.StorageUsed = 0
+		result = append(result, r)
 	}
 
 	return SearchUsersResponse{Users: result}, nil
@@ -216,12 +222,14 @@ func (s *Service) SearchUsers(ctx context.Context, userID, query string, limit i
 
 func toUserResponse(user record) UserResponse {
 	return UserResponse{
-		ID:         user.ID,
-		Email:      user.Email,
-		Username:   user.Username,
-		FirstName:  user.FirstName,
-		SecondName: user.SecondName,
-		CreatedAt:  user.CreatedAt,
+		ID:           user.ID,
+		Email:        user.Email,
+		Username:     user.Username,
+		FirstName:    user.FirstName,
+		SecondName:   user.SecondName,
+		StorageQuota: user.StorageQuota,
+		StorageUsed:  user.StorageUsed,
+		CreatedAt:    user.CreatedAt,
 	}
 }
 
@@ -234,14 +242,17 @@ func normalizeUpdateProfileRequest(req UpdateProfileRequest) (UpdateProfileInput
 	}
 
 	if input.Email == nil && input.Username == nil && input.FirstName == nil && input.SecondName == nil {
-		return UpdateProfileInput{}, apperror.Validation("at least one profile field is required")
+		return UpdateProfileInput{}, apperror.Validation("требуется хотя бы одно поле профиля")
 	}
 
 	if input.Email != nil && *input.Email == "" {
-		return UpdateProfileInput{}, apperror.Validation("email cannot be empty")
+		return UpdateProfileInput{}, apperror.Validation("email не может быть пустым")
+	}
+	if err := validateOptionalEmail(input.Email); err != nil {
+		return UpdateProfileInput{}, err
 	}
 	if input.Username != nil && *input.Username == "" {
-		return UpdateProfileInput{}, apperror.Validation("username cannot be empty")
+		return UpdateProfileInput{}, apperror.Validation("имя пользователя не может быть пустым")
 	}
 
 	return input, nil
@@ -263,6 +274,16 @@ func normalizeOptionalEmail(v *string) *string {
 	return &normalized
 }
 
+func validateOptionalEmail(v *string) error {
+	if v == nil || *v == "" {
+		return nil
+	}
+	if !emailRegex.MatchString(*v) {
+		return apperror.Validation("некорректный формат email")
+	}
+	return nil
+}
+
 func isUniqueViolation(err error) bool {
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && pgErr.Code == "23505"
@@ -270,10 +291,10 @@ func isUniqueViolation(err error) bool {
 
 func validatePassword(password string) error {
 	if len(password) < 8 {
-		return apperror.Validation("password must be at least 8 characters long")
+		return apperror.Validation("пароль должен быть не короче 8 символов")
 	}
 	if len(password) > 72 {
-		return apperror.Validation("password must be no longer than 72 bytes")
+		return apperror.Validation("пароль должен быть не длиннее 72 байт")
 	}
 
 	var hasUpper, hasLower, hasSpecial bool
@@ -289,7 +310,7 @@ func validatePassword(password string) error {
 	}
 
 	if !hasUpper || !hasLower || !hasSpecial {
-		return apperror.Validation("password must contain uppercase, lowercase and special characters")
+		return apperror.Validation("пароль должен содержать заглавные, строчные буквы и спецсимволы")
 	}
 	return nil
 }

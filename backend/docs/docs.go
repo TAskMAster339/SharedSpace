@@ -764,6 +764,12 @@ const docTemplate = `{
                 "second_name": {
                     "type": "string"
                 },
+                "storage_quota": {
+                    "type": "integer"
+                },
+                "storage_used": {
+                    "type": "integer"
+                },
                 "username": {
                     "type": "string"
                 }
@@ -925,6 +931,12 @@ const docTemplate = `{
                 },
                 "second_name": {
                     "type": "string"
+                },
+                "storage_quota": {
+                    "type": "integer"
+                },
+                "storage_used": {
+                    "type": "integer"
                 },
                 "username": {
                     "type": "string"
