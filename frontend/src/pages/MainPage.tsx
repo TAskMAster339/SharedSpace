@@ -71,14 +71,14 @@ const MainPage: React.FC = () => {
   }, [hash]);
 
   return (
-    <div className="space-y-20 sm:space-y-24 pb-16">
-      {/* Hero — на всю ширину экрана, заподлицо с шапкой */}
-      <section className="relative left-1/2 right-1/2 -mx-[50vw] -mt-4 sm:-mt-6 w-screen overflow-hidden bg-brand-gradient">
+    <div>
+      {/* Hero — на всю ширину экрана, заподлицо с шапкой, на полный экран */}
+      <section className="relative left-1/2 right-1/2 -mx-[50vw] -mt-4 sm:-mt-6 w-screen min-h-[calc(100vh-4rem)] flex items-center overflow-hidden bg-brand-gradient">
         <div className="absolute inset-0 bg-starfield opacity-60" />
         <div className="absolute -top-10 -right-10 w-80 h-80 bg-white/10 rounded-theme-full blur-3xl" />
         <div className="absolute bottom-0 left-10 w-64 h-64 bg-white/10 rounded-theme-full blur-3xl" />
 
-        <div className="relative max-w-6xl mx-auto px-6 sm:px-10 py-16 sm:py-24 grid sm:grid-cols-2 gap-12 items-center">
+        <div className="relative w-full max-w-6xl mx-auto px-6 sm:px-10 py-12 grid sm:grid-cols-2 gap-12 items-center">
           <div className="space-y-6">
             <span className="inline-block text-xs font-semibold uppercase tracking-wide text-white bg-white/15 border border-white/25 px-3 py-1 rounded-theme-full">
               SharedSpace — просторный как космос
@@ -125,7 +125,10 @@ const MainPage: React.FC = () => {
       </section>
 
       {/* Возможности */}
-      <section id="features" className="scroll-mt-20 space-y-8">
+      <section
+        id="features"
+        className="min-h-[calc(100vh-4rem)] flex flex-col justify-center space-y-8 py-12"
+      >
         <div className="text-center space-y-2">
           <h2 className="text-2xl sm:text-3xl font-bold text-theme-primary">Возможности</h2>
           <p className="text-theme-secondary">Всё необходимое для хранения и совместной работы</p>
@@ -147,7 +150,10 @@ const MainPage: React.FC = () => {
       </section>
 
       {/* Как это работает */}
-      <section id="how-it-works" className="scroll-mt-20 space-y-10">
+      <section
+        id="how-it-works"
+        className="min-h-[calc(100vh-4rem)] flex flex-col justify-center space-y-10 py-12"
+      >
         <div className="text-center space-y-2">
           <h2 className="text-2xl sm:text-3xl font-bold text-theme-primary">Как это работает</h2>
           <p className="text-theme-secondary">Три шага, чтобы начать пользоваться SharedSpace</p>

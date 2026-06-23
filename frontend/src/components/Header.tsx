@@ -27,7 +27,6 @@ export const Header: React.FC<HeaderProps> = ({ hasUnreadInvites = unreadCount >
     navigate('/');
   };
 
-  // Плавный скролл к секции на главной; если секции нет на текущей странице — переходим на главную с якорем.
   const scrollToSection = (id: string) => (e: React.MouseEvent) => {
     const el = document.getElementById(id);
     if (el) {
@@ -39,8 +38,11 @@ export const Header: React.FC<HeaderProps> = ({ hasUnreadInvites = unreadCount >
   return (
     <header className="h-16 bg-theme-secondary border-b border-theme flex items-center justify-between px-4 sm:px-6 sticky top-0 z-50 w-full shrink-0">
       <div className="flex items-center gap-8 min-w-0">
-        {/* Логотип + Название */}
-        <Link to="/" className="flex items-center gap-2 cursor-pointer shrink-0">
+        {/* Логотип + Название. Авторизованного ведём в дашборд, а не на лендинг. */}
+        <Link
+          to={isAuthenticated ? '/dashboard' : '/'}
+          className="flex items-center gap-2 cursor-pointer shrink-0"
+        >
           <img
             src={logo}
             alt="SharedSpace"
