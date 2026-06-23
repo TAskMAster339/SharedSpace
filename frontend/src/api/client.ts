@@ -1,3 +1,5 @@
+import { capitalize } from '../utils/text';
+
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api/v1';
 
 export class ApiError extends Error {
@@ -68,7 +70,7 @@ async function rawRequest<T>(path: string, options: RequestOptions): Promise<Raw
 function toApiError(response: Response, data: unknown): ApiError {
   const message =
     (data as { error?: string } | null)?.error || 'Произошла ошибка. Попробуйте ещё раз.';
-  return new ApiError(message, response.status, (data as { code?: string } | null)?.code);
+  return new ApiError(capitalize(message), response.status, (data as { code?: string } | null)?.code);
 }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
