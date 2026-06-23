@@ -38,34 +38,38 @@ func NewService(pool *pgxpool.Pool, repo RepositoryInterface, storage StorageCli
 
 func (s *Service) Upload(ctx context.Context, userID, directoryID string, uploads []FileUpload) (UploadFilesResponse, error) {
 	if len(uploads) == 0 {
-		return UploadFilesResponse{}, apperror.Validation("at least one file is required")
+		return UploadFilesResponse{}, apperror.Validation("требуется хотя бы один файл")
 	}
 
+	// проверка размеров и подсчёт суммарного объёма загрузки
+	var totalSize int64
 	for _, u := range uploads {
 		if u.Size > maxFileSize {
 			return UploadFilesResponse{}, apperror.Validation(
-				fmt.Sprintf("file %q exceeds maximum size of 100MB", u.Filename))
+				fmt.Sprintf("файл %q превышает максимальный размер 100 МБ", u.Filename))
 		}
+		totalSize += u.Size
 	}
 
 	dir, err := s.repo.FindDirectoryByID(ctx, s.db, directoryID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return UploadFilesResponse{}, apperror.NotFound("directory not found")
+			return UploadFilesResponse{}, apperror.NotFound("директория не найдена")
 		}
-		return UploadFilesResponse{}, apperror.WrapInternal("find directory", err)
+		return UploadFilesResponse{}, apperror.WrapInternal("поиск директории", err)
 	}
 	if dir.OwnerID != userID {
-		return UploadFilesResponse{}, apperror.Forbidden("access denied")
+		return UploadFilesResponse{}, apperror.Forbidden("доступ запрещён")
 	}
 
+	// грузим объекты в MinIO; ключи копим для отката
 	uploadedKeys := make([]string, 0, len(uploads))
 	records := make([]fileRecord, 0, len(uploads))
 	for _, u := range uploads {
 		objectKey := uuid.NewString()
 		if err := s.storage.Upload(ctx, objectKey, u.Content, u.Size, u.MimeType); err != nil {
 			s.cleanupObjects(uploadedKeys)
-			return UploadFilesResponse{}, apperror.WrapInternal("upload to storage", err)
+			return UploadFilesResponse{}, apperror.WrapInternal("загрузка в хранилище", err)
 		}
 		uploadedKeys = append(uploadedKeys, objectKey)
 		records = append(records, fileRecord{
@@ -82,23 +86,38 @@ func (s *Service) Upload(ctx context.Context, userID, directoryID string, upload
 	tx, err := s.beginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		s.cleanupObjects(uploadedKeys)
-		return UploadFilesResponse{}, apperror.WrapInternal("begin transaction", err)
+		return UploadFilesResponse{}, apperror.WrapInternal("начало транзакции", err)
 	}
 	defer tx.Rollback(ctx) // после Commit — no-op
+
+	used, quota, err := s.repo.GetUserStorage(ctx, tx, userID)
+	if err != nil {
+		s.cleanupObjects(uploadedKeys)
+		return UploadFilesResponse{}, apperror.WrapInternal("получение данных о хранилище", err)
+	}
+	if used+totalSize > quota {
+		s.cleanupObjects(uploadedKeys)
+		return UploadFilesResponse{}, apperror.Validation("превышен лимит хранилища")
+	}
 
 	results := make([]UploadResponse, 0, len(records))
 	for _, rec := range records {
 		saved, err := s.repo.Save(ctx, tx, rec)
 		if err != nil {
 			s.cleanupObjects(uploadedKeys)
-			return UploadFilesResponse{}, apperror.WrapInternal("save file metadata", err)
+			return UploadFilesResponse{}, apperror.WrapInternal("сохранение метаданных файла", err)
 		}
 		results = append(results, toUploadResponse(saved))
 	}
 
+	if err := s.repo.AddUserStorageUsed(ctx, tx, userID, totalSize); err != nil {
+		s.cleanupObjects(uploadedKeys)
+		return UploadFilesResponse{}, apperror.WrapInternal("обновление использованного объёма", err)
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		s.cleanupObjects(uploadedKeys)
-		return UploadFilesResponse{}, apperror.WrapInternal("commit file upload", err)
+		return UploadFilesResponse{}, apperror.WrapInternal("сохранение загрузки файлов", err)
 	}
 
 	return UploadFilesResponse{Files: results}, nil

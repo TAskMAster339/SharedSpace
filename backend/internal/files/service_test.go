@@ -15,9 +15,14 @@ import (
 )
 
 type mockRepo struct {
-	dir     directoryRecord
-	dirErr  error
-	saveErr error
+	dir           directoryRecord
+	dirErr        error
+	saveErr       error
+	storageUsed   int64
+	storageQuota  int64
+	getStorageErr error
+	addUsedErr    error
+	addedDelta    int64
 }
 
 func (m *mockRepo) FindDirectoryByID(_ context.Context, _ dbTX, _ string) (directoryRecord, error) {
@@ -42,6 +47,19 @@ type mockStorage struct {
 func (m *mockStorage) Upload(_ context.Context, objectKey string, _ io.Reader, _ int64, _ string) error {
 	m.uploadedKey = objectKey
 	return m.err
+}
+
+func (m *mockRepo) GetUserStorage(_ context.Context, _ dbTX, _ string) (int64, int64, error) {
+	quota := m.storageQuota
+	if quota == 0 {
+		quota = 1 << 40 // 1 ТБ
+	}
+	return m.storageUsed, quota, m.getStorageErr
+}
+
+func (m *mockRepo) AddUserStorageUsed(_ context.Context, _ dbTX, _ string, delta int64) error {
+	m.addedDelta = delta
+	return m.addUsedErr
 }
 
 func (m *mockStorage) Delete(_ context.Context, _ string) error {
@@ -166,6 +184,26 @@ func TestServiceUpload_FileTooLarge(t *testing.T) {
 
 	_, err := svc.Upload(context.Background(), "user-1", "dir-1", []FileUpload{
 		{Filename: "big.bin", Extension: "bin", MimeType: "application/octet-stream", Size: maxFileSize + 1, Content: bytes.NewReader([]byte("x"))},
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	appErr, ok := apperror.From(err)
+	if !ok || appErr.Code() != apperror.CodeValidation {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestServiceUpload_QuotaExceeded(t *testing.T) {
+	repo := &mockRepo{
+		dir:          directoryRecord{ID: "dir-1", OwnerID: "user-1"},
+		storageUsed:  90,
+		storageQuota: 100,
+	}
+	svc := newTestService(repo, &mockStorage{})
+
+	_, err := svc.Upload(context.Background(), "user-1", "dir-1", []FileUpload{
+		{Filename: "f.txt", Extension: "txt", MimeType: "text/plain", Size: 50, Content: bytes.NewReader([]byte("x"))},
 	})
 	if err == nil {
 		t.Fatal("expected error")

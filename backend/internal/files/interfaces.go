@@ -20,6 +20,8 @@ type ServiceInterface interface {
 type RepositoryInterface interface {
 	FindDirectoryByID(context.Context, dbTX, string) (directoryRecord, error)
 	Save(context.Context, dbTX, fileRecord) (fileRecord, error)
+	GetUserStorage(ctx context.Context, db dbTX, userID string) (used, quota int64, err error)
+	AddUserStorageUsed(ctx context.Context, db dbTX, userID string, delta int64) error
 }
 
 type FileUpload struct {

@@ -30,3 +30,21 @@ func (r *Repository) Save(ctx context.Context, db dbTX, f fileRecord) (fileRecor
 	)
 	return saved, err
 }
+
+func (r *Repository) GetUserStorage(ctx context.Context, db dbTX, userID string) (int64, int64, error) {
+	var used, quota int64
+	err := db.QueryRow(ctx, `
+		SELECT storage_used, storage_quota FROM users
+		WHERE id = $1
+		FOR UPDATE
+	`, userID).Scan(&used, &quota)
+	return used, quota, err
+}
+
+func (r *Repository) AddUserStorageUsed(ctx context.Context, db dbTX, userID string, delta int64) error {
+	_, err := db.Exec(ctx, `
+		UPDATE users SET storage_used = storage_used + $1, updated_at = now()
+		WHERE id = $2
+	`, delta, userID)
+	return err
+}

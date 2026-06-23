@@ -39,21 +39,21 @@ func NewHandler(service ServiceInterface) *Handler {
 func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) error {
 	claims, ok := auth.ClaimsFromCtx(r.Context())
 	if !ok {
-		return apperror.Unauthorized("unauthorized")
+		return apperror.Unauthorized("не авторизован")
 	}
 
 	if err := r.ParseMultipartForm(maxMemory); err != nil {
-		return apperror.Validation("invalid multipart form")
+		return apperror.Validation("некорректная multipart-форма")
 	}
 
 	directoryID := r.FormValue("directory_id")
 	if directoryID == "" {
-		return apperror.Validation("directory_id is required")
+		return apperror.Validation("directory_id обязателен")
 	}
 
 	formFiles := r.MultipartForm.File["files"]
 	if len(formFiles) == 0 {
-		return apperror.Validation("at least one file is required")
+		return apperror.Validation("требуется хотя бы один файл")
 	}
 
 	var opened []multipart.File
@@ -67,7 +67,7 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) error {
 	for _, fh := range formFiles {
 		f, err := fh.Open()
 		if err != nil {
-			return apperror.WrapInternal("open uploaded file", err)
+			return apperror.WrapInternal("открытие загруженного файла", err)
 		}
 		opened = append(opened, f)
 
