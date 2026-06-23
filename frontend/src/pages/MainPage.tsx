@@ -5,7 +5,7 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { cn } from '../utils/cn';
 
-const logo = '/logo.jpg';
+const logo = '/logo-mark.png';
 
 const FEATURES = [
   {
