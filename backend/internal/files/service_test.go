@@ -29,6 +29,10 @@ func (m *mockRepo) FindDirectoryByID(_ context.Context, _ dbTX, _ string) (direc
 	return m.dir, m.dirErr
 }
 
+func (m *mockRepo) FindByID(_ context.Context, _ dbTX, _ string) (fileRecord, error) {
+	return fileRecord{}, nil
+}
+
 func (m *mockRepo) Save(_ context.Context, _ dbTX, f fileRecord) (fileRecord, error) {
 	if m.saveErr != nil {
 		return fileRecord{}, m.saveErr
@@ -37,6 +41,19 @@ func (m *mockRepo) Save(_ context.Context, _ dbTX, f fileRecord) (fileRecord, er
 	f.CreatedAt = time.Unix(100, 0).UTC()
 	f.UpdatedAt = time.Unix(100, 0).UTC()
 	return f, nil
+}
+
+func (m *mockRepo) GetUserStorage(_ context.Context, _ dbTX, _ string) (int64, int64, error) {
+	quota := m.storageQuota
+	if quota == 0 {
+		quota = 1 << 40
+	}
+	return m.storageUsed, quota, m.getStorageErr
+}
+
+func (m *mockRepo) AddUserStorageUsed(_ context.Context, _ dbTX, _ string, delta int64) error {
+	m.addedDelta = delta
+	return m.addUsedErr
 }
 
 type mockStorage struct {
@@ -49,17 +66,8 @@ func (m *mockStorage) Upload(_ context.Context, objectKey string, _ io.Reader, _
 	return m.err
 }
 
-func (m *mockRepo) GetUserStorage(_ context.Context, _ dbTX, _ string) (int64, int64, error) {
-	quota := m.storageQuota
-	if quota == 0 {
-		quota = 1 << 40 // 1 ТБ
-	}
-	return m.storageUsed, quota, m.getStorageErr
-}
-
-func (m *mockRepo) AddUserStorageUsed(_ context.Context, _ dbTX, _ string, delta int64) error {
-	m.addedDelta = delta
-	return m.addUsedErr
+func (m *mockStorage) PresignedGetURL(_ context.Context, _ string, _ time.Duration) (string, error) {
+	return "http://localhost:9000/test-bucket/key", nil
 }
 
 func (m *mockStorage) Delete(_ context.Context, _ string) error {

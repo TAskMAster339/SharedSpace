@@ -32,6 +32,16 @@ services:
       timeout: 5s
       retries: 5
 
+  nginx-minio:
+    image: nginx:alpine
+    ports:
+      - "9002:9002"
+    volumes:
+      - ./nginx-minio.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      minio:
+        condition: service_healthy
+
   backend:
     build:
       context: ./backend
@@ -41,6 +51,7 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL}
       MINIO_ENDPOINT: ${MINIO_ENDPOINT}
+      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT}
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
       MINIO_BUCKET: ${MINIO_BUCKET}

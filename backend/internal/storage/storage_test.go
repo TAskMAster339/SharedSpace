@@ -26,6 +26,7 @@ func newTestStorage(t *testing.T) *Storage {
 		getEnvOr("MINIO_ACCESS_KEY", "minioadmin"),
 		getEnvOr("MINIO_SECRET_KEY", "minioadmin"),
 		"test-bucket",
+		"localhost:9000",
 		false,
 	)
 	if err != nil {
