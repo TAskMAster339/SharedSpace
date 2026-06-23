@@ -61,12 +61,13 @@ func (s *Service) GetMembers(ctx context.Context, userID, sharedDirID string) ([
 		return nil, apperror.WrapInternal("ошибка поиска общей директории", err)
 	}
 
+	members, err := s.repo.FindMembers(ctx, s.db, sharedDirID)
+	if err != nil {
+		return nil, apperror.WrapInternal("ошибка поиска участников", err)
+	}
+
 	if sd.OwnerID != userID {
-		members, err := s.repo.FindMembers(ctx, s.db, sharedDirID)
-		if err != nil {
-			return nil, apperror.WrapInternal("ошибка поиска участников", err)
-		}
-		var isMember bool
+		isMember := false
 		for _, m := range members {
 			if m.UserID == userID {
 				isMember = true
@@ -76,13 +77,8 @@ func (s *Service) GetMembers(ctx context.Context, userID, sharedDirID string) ([
 		if !isMember {
 			return nil, apperror.Forbidden("доступ запрещён")
 		}
-		return toMemberResponses(members), nil
 	}
 
-	members, err := s.repo.FindMembers(ctx, s.db, sharedDirID)
-	if err != nil {
-		return nil, apperror.WrapInternal("ошибка поиска участников", err)
-	}
 	return toMemberResponses(members), nil
 }
 
