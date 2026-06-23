@@ -9,13 +9,13 @@ import {
   X,
   KeyRound,
   Trash2,
-  AlertTriangle,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { ApiError } from '../api/client';
 import { Button } from '../components/ui/Button';
 import { Card, CardHeader, CardTitle } from '../components/ui/Card';
+import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { cn } from '../utils/cn';
 
 const MIN_PASSWORD_LENGTH = 8;
@@ -442,59 +442,27 @@ const ProfileSettingsPage: React.FC = () => {
       </Card>
 
       {/* Модальное окно подтверждения */}
-      {isDeleteModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-          <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={closeDeleteModal}
-          />
-          <div className="relative bg-theme-secondary rounded-theme-xl max-w-md w-full p-6 shadow-theme-dropdown border border-theme">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-3 rounded-theme-full bg-danger-light/20 text-danger">
-                <AlertTriangle size={24} />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-theme-primary">Удаление аккаунта</h3>
-                <p className="text-sm text-theme-muted">Это действие нельзя будет отменить</p>
-              </div>
-            </div>
-
-            <p className="text-sm text-theme-secondary mb-6">
-              Вы уверены, что хотите полностью удалить свой аккаунт?
-              <br />
-              Все ваши файлы, директории и данные будут безвозвратно удалены.
-            </p>
-
-            {deleteError && <p className="text-danger text-sm mb-4">{deleteError}</p>}
-
-            <div className="flex gap-3">
-              <Button
-                variant="secondary"
-                onClick={closeDeleteModal}
-                disabled={isDeleting}
-                className="flex-1"
-              >
-                Отмена
-              </Button>
-              <Button
-                variant="danger"
-                onClick={handleDeleteAccount}
-                disabled={isDeleting}
-                className="flex-1 flex items-center justify-center gap-2"
-              >
-                {isDeleting ? (
-                  'Удаление...'
-                ) : (
-                  <>
-                    <Trash2 size={16} />
-                    Удалить
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={closeDeleteModal}
+        onConfirm={handleDeleteAccount}
+        variant="danger"
+        confirmLabel="Удалить"
+        cancelLabel="Отмена"
+        showCancel={true}
+        isConfirming={isDeleting}
+        error={deleteError}
+      >
+        <div>
+          <h3 className="text-lg font-semibold text-theme-primary">Удаление аккаунта</h3>
+          <p className="text-sm text-theme-muted">Это действие нельзя будет отменить</p>
         </div>
-      )}
+        <p className="text-sm text-theme-secondary mt-2">
+          Вы уверены, что хотите полностью удалить свой аккаунт?
+          <br />
+          Все ваши файлы, директории и данные будут безвозвратно удалены.
+        </p>
+      </ConfirmModal>
     </div>
   );
 };

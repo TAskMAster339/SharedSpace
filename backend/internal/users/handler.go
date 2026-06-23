@@ -135,7 +135,7 @@ func (h *Handler) SearchUsers(w http.ResponseWriter, r *http.Request) error {
 	return writeJSON(w, http.StatusOK, resp)
 }
 
-// DeleteAccount удаляет аккаунт текущего пользователя
+// DeleteAccount deletes account of the currently authenticated user.
 // @Summary Delete current user account
 // @Tags users
 // @Security BearerAuth
