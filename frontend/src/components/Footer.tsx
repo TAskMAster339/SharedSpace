@@ -1,18 +1,24 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { GitFork } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
 
 const logo = '/logo.jpg';
 
 const GITHUB_URL = 'https://github.com/TAskMAster339/SharedSpace';
 
 export const Footer: React.FC = () => {
+  const { isAuthenticated } = useAuth();
   const year = new Date().getFullYear();
 
   return (
     <footer className="border-t border-theme mt-4">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <Link to="/" className="flex items-center gap-2 cursor-pointer">
+        {/* Авторизованного ведём в дашборд, а не на лендинг — как в Header. */}
+        <Link
+          to={isAuthenticated ? '/dashboard' : '/'}
+          className="flex items-center gap-2 cursor-pointer"
+        >
           <img
             src={logo}
             alt="SharedSpace"
