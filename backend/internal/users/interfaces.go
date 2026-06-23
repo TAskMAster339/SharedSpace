@@ -60,6 +60,8 @@ type record struct {
 	SecondName   string
 	Email        string
 	PasswordHash string
+	StorageQuota int64
+	StorageUsed  int64
 	CreatedAt    time.Time
 }
 

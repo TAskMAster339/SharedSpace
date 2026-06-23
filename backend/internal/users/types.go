@@ -16,12 +16,14 @@ type ChangePasswordRequest struct {
 }
 
 type UserResponse struct {
-	ID         string    `json:"id"`
-	Email      string    `json:"email"`
-	Username   string    `json:"username"`
-	FirstName  string    `json:"first_name,omitempty"`
-	SecondName string    `json:"second_name,omitempty"`
-	CreatedAt  time.Time `json:"created_at"`
+	ID           string    `json:"id"`
+	Email        string    `json:"email"`
+	Username     string    `json:"username"`
+	FirstName    string    `json:"first_name,omitempty"`
+	SecondName   string    `json:"second_name,omitempty"`
+	StorageQuota int64     `json:"storage_quota"`
+	StorageUsed  int64     `json:"storage_used"`
+	CreatedAt    time.Time `json:"created_at"`
 }
 
 type SearchUsersResponse struct {

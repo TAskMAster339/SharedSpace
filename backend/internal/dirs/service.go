@@ -13,12 +13,13 @@ import (
 )
 
 type Service struct {
-	beginTx beginTxFunc
-	db      dbTX
-	repo    RepositoryInterface
+	beginTx     beginTxFunc
+	db          dbTX
+	repo        RepositoryInterface
+	sharingRepo SharingRepository
 }
 
-func NewService(pool *pgxpool.Pool, repo RepositoryInterface) *Service {
+func NewService(pool *pgxpool.Pool, repo RepositoryInterface, sharingRepo SharingRepository) *Service {
 	beginTx := func(ctx context.Context, opts pgx.TxOptions) (transaction, error) {
 		tx, err := pool.BeginTx(ctx, opts)
 		if err != nil {
@@ -27,9 +28,10 @@ func NewService(pool *pgxpool.Pool, repo RepositoryInterface) *Service {
 		return txWrapper{Tx: tx}, nil
 	}
 	return &Service{
-		beginTx: beginTx,
-		db:      pool,
-		repo:    repo,
+		beginTx:     beginTx,
+		db:          pool,
+		repo:        repo,
+		sharingRepo: sharingRepo,
 	}
 }
 
@@ -37,9 +39,9 @@ func (s *Service) GetRootContents(ctx context.Context, userID string) (Directory
 	root, err := s.repo.FindRootByOwner(ctx, s.db, userID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return DirectoryContentsResponse{}, apperror.NotFound("root directory not found")
+			return DirectoryContentsResponse{}, apperror.NotFound("корневая директория не найдена")
 		}
-		return DirectoryContentsResponse{}, apperror.WrapInternal("find root directory", err)
+		return DirectoryContentsResponse{}, apperror.WrapInternal("ошибка поиска корневой директории", err)
 	}
 	return s.loadContents(ctx, root)
 }
@@ -48,12 +50,12 @@ func (s *Service) GetContents(ctx context.Context, userID, dirID string) (Direct
 	dir, err := s.repo.FindByID(ctx, s.db, dirID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return DirectoryContentsResponse{}, apperror.NotFound("directory not found")
+			return DirectoryContentsResponse{}, apperror.NotFound("директория не найдена")
 		}
-		return DirectoryContentsResponse{}, apperror.WrapInternal("find directory", err)
+		return DirectoryContentsResponse{}, apperror.WrapInternal("ошибка поиска директории", err)
 	}
 	if dir.OwnerID != userID {
-		return DirectoryContentsResponse{}, apperror.Forbidden("access denied")
+		return DirectoryContentsResponse{}, apperror.Forbidden("доступ запрещён")
 	}
 	return s.loadContents(ctx, dir)
 }
@@ -62,12 +64,12 @@ func (s *Service) GetByID(ctx context.Context, userID, dirID string) (DirectoryR
 	dir, err := s.repo.FindByID(ctx, s.db, dirID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return DirectoryResponse{}, apperror.NotFound("directory not found")
+			return DirectoryResponse{}, apperror.NotFound("директория не найдена")
 		}
-		return DirectoryResponse{}, apperror.WrapInternal("find directory", err)
+		return DirectoryResponse{}, apperror.WrapInternal("ошибка поиска директории", err)
 	}
 	if dir.OwnerID != userID {
-		return DirectoryResponse{}, apperror.Forbidden("access denied")
+		return DirectoryResponse{}, apperror.Forbidden("доступ запрещён")
 	}
 	return toDirectoryResponse(dir), nil
 }
@@ -77,45 +79,51 @@ func (s *Service) Create(ctx context.Context, userID string, req CreateDirectory
 	req.ParentID = strings.TrimSpace(req.ParentID)
 
 	if req.Name == "" {
-		return DirectoryResponse{}, apperror.Validation("name is required")
+		return DirectoryResponse{}, apperror.Validation("название обязательно")
 	}
 	if req.ParentID == "" {
-		return DirectoryResponse{}, apperror.Validation("parent_id is required")
+		return DirectoryResponse{}, apperror.Validation("parent_id обязателен")
 	}
 
 	parent, err := s.repo.FindByID(ctx, s.db, req.ParentID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return DirectoryResponse{}, apperror.NotFound("parent directory not found")
+			return DirectoryResponse{}, apperror.NotFound("родительская директория не найдена")
 		}
-		return DirectoryResponse{}, apperror.WrapInternal("find parent directory", err)
+		return DirectoryResponse{}, apperror.WrapInternal("ошибка поиска родительской директории", err)
 	}
 	if parent.OwnerID != userID {
-		return DirectoryResponse{}, apperror.Forbidden("access denied")
+		return DirectoryResponse{}, apperror.Forbidden("доступ запрещён")
 	}
 
 	if _, err := s.repo.FindByNameAndParent(ctx, s.db, req.Name, req.ParentID, userID); err == nil {
-		return DirectoryResponse{}, apperror.Conflict("a directory with this name already exists in the parent")
+		return DirectoryResponse{}, apperror.Conflict("директория с таким названием уже существует в родительской")
 	} else if !errors.Is(err, pgx.ErrNoRows) {
-		return DirectoryResponse{}, apperror.WrapInternal("check duplicate name", err)
+		return DirectoryResponse{}, apperror.WrapInternal("ошибка проверки дубликата имени", err)
 	}
 
 	tx, err := s.beginTx(ctx, pgx.TxOptions{})
 	if err != nil {
-		return DirectoryResponse{}, apperror.WrapInternal("begin transaction", err)
+		return DirectoryResponse{}, apperror.WrapInternal("ошибка начала транзакции", err)
 	}
 	defer tx.Rollback(ctx)
 
 	dir, err := s.repo.Create(ctx, tx, req.Name, userID, req.ParentID)
 	if err != nil {
 		if isUniqueViolation(err) {
-			return DirectoryResponse{}, apperror.Conflict("a directory with this name already exists")
+			return DirectoryResponse{}, apperror.Conflict("директория с таким названием уже существует")
 		}
-		return DirectoryResponse{}, apperror.WrapInternal("create directory", err)
+		return DirectoryResponse{}, apperror.WrapInternal("ошибка создания директории", err)
+	}
+
+	if req.Shared {
+		if err := s.sharingRepo.CreateShared(ctx, tx, dir.ID, userID); err != nil {
+			return DirectoryResponse{}, apperror.WrapInternal("ошибка создания общей директории", err)
+		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return DirectoryResponse{}, apperror.WrapInternal("commit create directory", err)
+		return DirectoryResponse{}, apperror.WrapInternal("ошибка сохранения директории", err)
 	}
 
 	return toDirectoryResponse(dir), nil
@@ -126,7 +134,7 @@ func (s *Service) Update(ctx context.Context, userID, dirID string, req UpdateDi
 		trimmed := strings.TrimSpace(*req.Name)
 		req.Name = &trimmed
 		if *req.Name == "" {
-			return DirectoryResponse{}, apperror.Validation("name cannot be empty")
+			return DirectoryResponse{}, apperror.Validation("название не может быть пустым")
 		}
 	}
 	if req.ParentID != nil {
@@ -135,21 +143,21 @@ func (s *Service) Update(ctx context.Context, userID, dirID string, req UpdateDi
 	}
 
 	if req.Name == nil && req.ParentID == nil {
-		return DirectoryResponse{}, apperror.Validation("at least one field (name or parent_id) is required")
+		return DirectoryResponse{}, apperror.Validation("требуется хотя бы одно поле (name или parent_id)")
 	}
 
 	dir, err := s.repo.FindByID(ctx, s.db, dirID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return DirectoryResponse{}, apperror.NotFound("directory not found")
+			return DirectoryResponse{}, apperror.NotFound("директория не найдена")
 		}
-		return DirectoryResponse{}, apperror.WrapInternal("find directory", err)
+		return DirectoryResponse{}, apperror.WrapInternal("ошибка поиска директории", err)
 	}
 	if dir.OwnerID != userID {
-		return DirectoryResponse{}, apperror.Forbidden("access denied")
+		return DirectoryResponse{}, apperror.Forbidden("доступ запрещён")
 	}
 	if dir.Type == "root" {
-		return DirectoryResponse{}, apperror.Forbidden("cannot rename or move the root directory")
+		return DirectoryResponse{}, apperror.Forbidden("нельзя переименовать или переместить корневую директорию")
 	}
 
 	targetParent := dir.ParentID
@@ -165,37 +173,37 @@ func (s *Service) Update(ctx context.Context, userID, dirID string, req UpdateDi
 		parent, err := s.repo.FindByID(ctx, s.db, *targetParent)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				return DirectoryResponse{}, apperror.NotFound("target parent directory not found")
+				return DirectoryResponse{}, apperror.NotFound("целевая родительская директория не найдена")
 			}
-			return DirectoryResponse{}, apperror.WrapInternal("find target parent", err)
+			return DirectoryResponse{}, apperror.WrapInternal("ошибка поиска целевой родительской директории", err)
 		}
 		if parent.OwnerID != userID {
-			return DirectoryResponse{}, apperror.Forbidden("access denied to target parent")
+			return DirectoryResponse{}, apperror.Forbidden("доступ к целевой родительской директории запрещён")
 		}
 	}
 
 	if _, err := s.repo.FindByNameAndParent(ctx, s.db, targetName, *targetParent, userID); err == nil {
-		return DirectoryResponse{}, apperror.Conflict("a directory with this name already exists at the target location")
+		return DirectoryResponse{}, apperror.Conflict("директория с таким названием уже существует в целевом расположении")
 	} else if !errors.Is(err, pgx.ErrNoRows) {
-		return DirectoryResponse{}, apperror.WrapInternal("check duplicate name", err)
+		return DirectoryResponse{}, apperror.WrapInternal("ошибка проверки дубликата имени", err)
 	}
 
 	tx, err := s.beginTx(ctx, pgx.TxOptions{})
 	if err != nil {
-		return DirectoryResponse{}, apperror.WrapInternal("begin transaction", err)
+		return DirectoryResponse{}, apperror.WrapInternal("ошибка начала транзакции", err)
 	}
 	defer tx.Rollback(ctx)
 
 	updated, err := s.repo.UpdateNameAndParent(ctx, tx, dirID, req.Name, req.ParentID)
 	if err != nil {
 		if isUniqueViolation(err) {
-			return DirectoryResponse{}, apperror.Conflict("a directory with this name already exists at the target location")
+			return DirectoryResponse{}, apperror.Conflict("директория с таким названием уже существует в целевом расположении")
 		}
-		return DirectoryResponse{}, apperror.WrapInternal("update directory", err)
+		return DirectoryResponse{}, apperror.WrapInternal("ошибка обновления директории", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return DirectoryResponse{}, apperror.WrapInternal("commit update directory", err)
+		return DirectoryResponse{}, apperror.WrapInternal("ошибка сохранения обновления директории", err)
 	}
 
 	return toDirectoryResponse(updated), nil
@@ -204,12 +212,12 @@ func (s *Service) Update(ctx context.Context, userID, dirID string, req UpdateDi
 func (s *Service) loadContents(ctx context.Context, dir directoryRecord) (DirectoryContentsResponse, error) {
 	subdirs, err := s.repo.FindSubdirectories(ctx, s.db, dir.ID)
 	if err != nil {
-		return DirectoryContentsResponse{}, apperror.WrapInternal("find subdirectories", err)
+		return DirectoryContentsResponse{}, apperror.WrapInternal("ошибка поиска поддиректорий", err)
 	}
 
 	files, err := s.repo.FindFiles(ctx, s.db, dir.ID)
 	if err != nil {
-		return DirectoryContentsResponse{}, apperror.WrapInternal("find files", err)
+		return DirectoryContentsResponse{}, apperror.WrapInternal("ошибка поиска файлов", err)
 	}
 
 	subdirResponses := make([]DirectoryResponse, 0, len(subdirs))

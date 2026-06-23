@@ -32,12 +32,14 @@ type ErrorResponse struct {
 
 // UserResponse contains the public user profile returned by auth endpoints.
 type UserResponse struct {
-	ID         string    `json:"id"`
-	Email      string    `json:"email"`
-	Username   string    `json:"username"`
-	FirstName  string    `json:"first_name,omitempty"`
-	SecondName string    `json:"second_name,omitempty"`
-	CreatedAt  time.Time `json:"created_at"`
+	ID           string    `json:"id"`
+	Email        string    `json:"email"`
+	Username     string    `json:"username"`
+	FirstName    string    `json:"first_name,omitempty"`
+	SecondName   string    `json:"second_name,omitempty"`
+	StorageQuota int64     `json:"storage_quota"`
+	StorageUsed  int64     `json:"storage_used"`
+	CreatedAt    time.Time `json:"created_at"`
 }
 
 // RegisterResponse contains the created user and their root directory ID.
@@ -73,6 +75,8 @@ type authUser struct {
 	SecondName   string
 	Email        string
 	PasswordHash string
+	StorageQuota int64
+	StorageUsed  int64
 	CreatedAt    time.Time
 }
 

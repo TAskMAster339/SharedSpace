@@ -187,12 +187,28 @@ func (m *mockRepo) UpdateNameAndParent(_ context.Context, _ dbTX, id string, nam
 	return m.updateResult, m.updateErr
 }
 
+type mockSharingRepo struct {
+	createSharedErr     error
+	createSharedDirID   string
+	createSharedOwnerID string
+}
+
+func (m *mockSharingRepo) CreateShared(_ context.Context, _ interface {
+	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
+	QueryRow(context.Context, string, ...any) pgx.Row
+}, directoryID, ownerID string) error {
+	m.createSharedDirID = directoryID
+	m.createSharedOwnerID = ownerID
+	return m.createSharedErr
+}
+
 func newTestService(repo RepositoryInterface) (*Service, *mockTx) {
 	tx := &mockTx{}
 	service := &Service{
-		beginTx: func(context.Context, pgx.TxOptions) (transaction, error) { return tx, nil },
-		db:      tx,
-		repo:    repo,
+		beginTx:     func(context.Context, pgx.TxOptions) (transaction, error) { return tx, nil },
+		db:          tx,
+		repo:        repo,
+		sharingRepo: &mockSharingRepo{},
 	}
 	return service, tx
 }

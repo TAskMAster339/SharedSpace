@@ -25,6 +25,13 @@ type RepositoryInterface interface {
 	UpdateNameAndParent(context.Context, dbTX, string, *string, *string) (directoryRecord, error)
 }
 
+type SharingRepository interface {
+	CreateShared(ctx context.Context, tx interface {
+		Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
+		QueryRow(context.Context, string, ...any) pgx.Row
+	}, directoryID, ownerID string) error
+}
+
 type dbTX interface {
 	QueryRow(context.Context, string, ...any) pgx.Row
 	Query(context.Context, string, ...any) (pgx.Rows, error)

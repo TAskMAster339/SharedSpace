@@ -11,6 +11,7 @@ import (
 	"sharedspace/internal/dirs"
 	"sharedspace/internal/files"
 	"sharedspace/internal/server"
+	"sharedspace/internal/sharing"
 	"sharedspace/internal/storage"
 	"sharedspace/internal/users"
 )
@@ -60,14 +61,18 @@ func main() {
 	usersHandler := users.NewHandler(usersService, authService)
 	// dirs
 	dirsRepository := dirs.NewRepository()
-	dirsService := dirs.NewService(pool, dirsRepository)
+	sharingRepository := sharing.NewRepository()
+	dirsService := dirs.NewService(pool, dirsRepository, sharingRepository)
 	dirsHandler := dirs.NewHandler(dirsService)
 	// file
 	filesRepository := files.NewRepository()
 	filesService := files.NewService(pool, filesRepository, store)
 	filesHandler := files.NewHandler(filesService)
+	// sharing
+	sharingService := sharing.NewService(pool, sharingRepository)
+	sharingHandler := sharing.NewHandler(sharingService)
 
-	router := server.NewRouter(authHandler, authService, usersHandler, dirsHandler, filesHandler)
+	router := server.NewRouter(authHandler, authService, usersHandler, dirsHandler, filesHandler, sharingHandler)
 
 	if err := server.New(cfg.Port, router).Run(); err != nil {
 		log.Fatalf("server: %v", err)
