@@ -8,6 +8,7 @@ import (
 
 	"sharedspace/internal/auth"
 	"sharedspace/internal/dirs"
+	"sharedspace/internal/files"
 	"sharedspace/internal/middleware"
 	"sharedspace/internal/sharing"
 	"sharedspace/internal/swagger"
@@ -23,7 +24,7 @@ func healthHandler(w http.ResponseWriter, _ *http.Request) {
 	json.NewEncoder(w).Encode(HealthResponse{Status: "ok"})
 }
 
-func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHandler *users.Handler, dirsHandler *dirs.Handler, sharingHandler *sharing.Handler) http.Handler {
+func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHandler *users.Handler, dirsHandler *dirs.Handler, filesHandler *files.Handler, sharingHandler *sharing.Handler) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Recover)
@@ -54,7 +55,12 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 					r.Get("/search", middleware.AppError(usersHandler.SearchUsers))
 				})
 			}
-			// r.Mount("/files", ...)
+
+			if filesHandler != nil {
+				r.Route("/files", func(r chi.Router) {
+					r.Post("/", middleware.AppError(filesHandler.Upload))
+				})
+			}
 
 			if dirsHandler != nil {
 				r.Route("/directories", func(r chi.Router) {

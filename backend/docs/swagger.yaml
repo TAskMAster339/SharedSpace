@@ -1,13 +1,22 @@
 basePath: /
 definitions:
-  internal_auth.ErrorResponse:
+  apperror.Error:
+    type: object
+  apperror.Response:
     properties:
       code:
         type: string
       error:
         type: string
     type: object
-  internal_auth.LoginRequest:
+  auth.ErrorResponse:
+    properties:
+      code:
+        type: string
+      error:
+        type: string
+    type: object
+  auth.LoginRequest:
     properties:
       email:
         type: string
@@ -18,29 +27,24 @@ definitions:
       username:
         type: string
     type: object
-  internal_auth.LoginResponse:
+  auth.LoginResponse:
     properties:
       tokens:
-        $ref: '#/definitions/internal_auth.TokenPair'
+        $ref: '#/definitions/auth.TokenPair'
       user:
-        $ref: '#/definitions/internal_auth.UserResponse'
+        $ref: '#/definitions/auth.UserResponse'
     type: object
-  internal_auth.MeResponse:
-    properties:
-      user:
-        $ref: '#/definitions/internal_auth.UserResponse'
-    type: object
-  internal_auth.RefreshRequest:
+  auth.RefreshRequest:
     properties:
       refresh_token:
         type: string
     type: object
-  internal_auth.RefreshResponse:
+  auth.RefreshResponse:
     properties:
       tokens:
-        $ref: '#/definitions/internal_auth.TokenPair'
+        $ref: '#/definitions/auth.TokenPair'
     type: object
-  internal_auth.RegisterRequest:
+  auth.RegisterRequest:
     properties:
       email:
         type: string
@@ -53,14 +57,14 @@ definitions:
       username:
         type: string
     type: object
-  internal_auth.RegisterResponse:
+  auth.RegisterResponse:
     properties:
       root_directory_id:
         type: string
       user:
-        $ref: '#/definitions/internal_auth.UserResponse'
+        $ref: '#/definitions/auth.UserResponse'
     type: object
-  internal_auth.TokenPair:
+  auth.TokenPair:
     properties:
       access_expires_in:
         type: integer
@@ -73,7 +77,7 @@ definitions:
       token_type:
         type: string
     type: object
-  internal_auth.UserResponse:
+  auth.UserResponse:
     properties:
       created_at:
         type: string
@@ -88,9 +92,139 @@ definitions:
       username:
         type: string
     type: object
-  internal_server.HealthResponse:
+  dirs.CreateDirectoryRequest:
     properties:
-      status:
+      name:
+        type: string
+      parent_id:
+        type: string
+    type: object
+  dirs.DirectoryContentsResponse:
+    properties:
+      files:
+        items:
+          $ref: '#/definitions/dirs.FileItem'
+        type: array
+      id:
+        type: string
+      name:
+        type: string
+      subdirectories:
+        items:
+          $ref: '#/definitions/dirs.DirectoryResponse'
+        type: array
+    type: object
+  dirs.DirectoryResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      owner_id:
+        type: string
+      parent_id:
+        type: string
+      type:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  dirs.FileItem:
+    properties:
+      created_at:
+        type: string
+      extension:
+        type: string
+      filename:
+        type: string
+      id:
+        type: string
+      mime_type:
+        type: string
+      size:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  dirs.UpdateDirectoryRequest:
+    properties:
+      name:
+        type: string
+      parent_id:
+        type: string
+    type: object
+  files.UploadFilesResponse:
+    properties:
+      files:
+        items:
+          $ref: '#/definitions/files.UploadResponse'
+        type: array
+    type: object
+  files.UploadResponse:
+    properties:
+      created_at:
+        type: string
+      directory_id:
+        type: string
+      extension:
+        type: string
+      filename:
+        type: string
+      id:
+        type: string
+      mime_type:
+        type: string
+      object_key:
+        type: string
+      owner_id:
+        type: string
+      size:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  users.ChangePasswordRequest:
+    properties:
+      current_refresh_token:
+        type: string
+      new_password:
+        type: string
+      old_password:
+        type: string
+    type: object
+  users.SearchUsersResponse:
+    properties:
+      users:
+        items:
+          $ref: '#/definitions/users.UserResponse'
+        type: array
+    type: object
+  users.UpdateProfileRequest:
+    properties:
+      email:
+        type: string
+      first_name:
+        type: string
+      second_name:
+        type: string
+      username:
+        type: string
+    type: object
+  users.UserResponse:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      first_name:
+        type: string
+      id:
+        type: string
+      second_name:
+        type: string
+      username:
         type: string
     type: object
 info:
@@ -109,22 +243,22 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/internal_auth.LoginRequest'
+          $ref: '#/definitions/auth.LoginRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_auth.LoginResponse'
+            $ref: '#/definitions/auth.LoginResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_auth.ErrorResponse'
+            $ref: '#/definitions/auth.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/internal_auth.ErrorResponse'
+            $ref: '#/definitions/auth.ErrorResponse'
       summary: Authenticate a user
       tags:
       - auth
@@ -138,7 +272,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/internal_auth.RefreshRequest'
+          $ref: '#/definitions/auth.RefreshRequest'
       produces:
       - application/json
       responses:
@@ -147,30 +281,12 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_auth.ErrorResponse'
+            $ref: '#/definitions/auth.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/internal_auth.ErrorResponse'
+            $ref: '#/definitions/auth.ErrorResponse'
       summary: Logout a user
-      tags:
-      - auth
-  /api/v1/auth/me:
-    get:
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/internal_auth.MeResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/internal_auth.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Get current user profile
       tags:
       - auth
   /api/v1/auth/refresh:
@@ -183,22 +299,22 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/internal_auth.RefreshRequest'
+          $ref: '#/definitions/auth.RefreshRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_auth.RefreshResponse'
+            $ref: '#/definitions/auth.RefreshResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_auth.ErrorResponse'
+            $ref: '#/definitions/auth.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/internal_auth.ErrorResponse'
+            $ref: '#/definitions/auth.ErrorResponse'
       summary: Refresh access and refresh tokens
       tags:
       - auth
@@ -212,26 +328,180 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/internal_auth.RegisterRequest'
+          $ref: '#/definitions/auth.RegisterRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/internal_auth.RegisterResponse'
+            $ref: '#/definitions/auth.RegisterResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_auth.ErrorResponse'
+            $ref: '#/definitions/auth.ErrorResponse'
         "409":
           description: Conflict
           schema:
-            $ref: '#/definitions/internal_auth.ErrorResponse'
+            $ref: '#/definitions/auth.ErrorResponse'
       summary: Register a new user
       tags:
       - auth
-  /health:
+  /api/v1/directories:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Create directory request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dirs.CreateDirectoryRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dirs.DirectoryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apperror.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apperror.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apperror.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apperror.Response'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/apperror.Response'
+      security:
+      - BearerAuth: []
+      summary: Create a directory
+      tags:
+      - directories
+  /api/v1/directories/{id}:
+    get:
+      parameters:
+      - description: Directory ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dirs.DirectoryResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apperror.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apperror.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apperror.Response'
+      security:
+      - BearerAuth: []
+      summary: Get directory by ID
+      tags:
+      - directories
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Directory ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update directory request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dirs.UpdateDirectoryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dirs.DirectoryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apperror.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apperror.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apperror.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apperror.Response'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/apperror.Response'
+      security:
+      - BearerAuth: []
+      summary: Update (rename/move) a directory
+      tags:
+      - directories
+  /api/v1/directories/{id}/contents:
+    get:
+      parameters:
+      - description: Directory ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dirs.DirectoryContentsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apperror.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apperror.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apperror.Response'
+      security:
+      - BearerAuth: []
+      summary: Get directory contents
+      tags:
+      - directories
+  /api/v1/directories/root/contents:
     get:
       produces:
       - application/json
@@ -239,10 +509,166 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_server.HealthResponse'
-      summary: Check service health
+            $ref: '#/definitions/dirs.DirectoryContentsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apperror.Response'
+      security:
+      - BearerAuth: []
+      summary: Get root directory contents
       tags:
-      - health
+      - directories
+  /api/v1/files:
+    post:
+      consumes:
+      - multipart/form-data
+      parameters:
+      - description: Target directory ID
+        in: formData
+        name: directory_id
+        required: true
+        type: string
+      - description: Files to upload (multiple allowed)
+        in: formData
+        name: files
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/files.UploadFilesResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apperror.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apperror.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apperror.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apperror.Response'
+      security:
+      - BearerAuth: []
+      summary: Upload files to a directory
+      tags:
+      - files
+  /api/v1/users/me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/users.UserResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apperror.Error'
+      security:
+      - BearerAuth: []
+      summary: Get current user profile
+      tags:
+      - users
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Profile fields to update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/users.UpdateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/users.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apperror.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apperror.Error'
+      security:
+      - BearerAuth: []
+      summary: Update current user profile
+      tags:
+      - users
+  /api/v1/users/me/password:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Current and new password
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/users.ChangePasswordRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apperror.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apperror.Error'
+      security:
+      - BearerAuth: []
+      summary: Change current user password
+      tags:
+      - users
+  /api/v1/users/search:
+    get:
+      parameters:
+      - description: Search query
+        in: query
+        name: query
+        type: string
+      - default: 20
+        description: Maximum number of results
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/users.SearchUsersResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apperror.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apperror.Error'
+      security:
+      - BearerAuth: []
+      summary: Search users
+      tags:
+      - users
 schemes:
 - http
 securityDefinitions:
