@@ -6,7 +6,11 @@ import {
   refresh,
   logout as logoutRequest,
 } from '../api/auth';
-import { getMe } from '../api/users';
+import {
+  getMe,
+  updateProfile as updateProfileRequest,
+  changePassword as changePasswordRequest,
+} from '../api/users';
 import { getCookie, setCookie, removeCookie } from '../utils/cookies';
 
 const REFRESH_COOKIE = 'refresh_token';
@@ -26,6 +30,13 @@ interface AuthState {
   }) => Promise<void>;
   logout: () => Promise<void>;
   hydrate: () => Promise<void>;
+  updateProfile: (data: {
+    email?: string;
+    username?: string;
+    firstName?: string;
+    lastName?: string;
+  }) => Promise<void>;
+  changePassword: (oldPassword: string, newPassword: string) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -78,5 +89,32 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } finally {
       set({ isHydrating: false });
     }
+  },
+
+  updateProfile: async (data) => {
+    const { accessToken } = get();
+    if (!accessToken) {
+      throw new Error('Not authenticated');
+    }
+    const user = await updateProfileRequest(accessToken, {
+      email: data.email,
+      username: data.username,
+      first_name: data.firstName,
+      second_name: data.lastName,
+    });
+    set({ user });
+  },
+
+  changePassword: async (oldPassword, newPassword) => {
+    const { accessToken } = get();
+    const refreshToken = getCookie(REFRESH_COOKIE);
+    if (!accessToken || !refreshToken) {
+      throw new Error('Not authenticated');
+    }
+    await changePasswordRequest(accessToken, {
+      old_password: oldPassword,
+      new_password: newPassword,
+      current_refresh_token: refreshToken,
+    });
   },
 }));
