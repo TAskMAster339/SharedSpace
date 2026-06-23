@@ -24,19 +24,53 @@ export const Header: React.FC<HeaderProps> = ({ hasUnreadInvites = unreadCount >
   const handleLogout = () => {
     setDropdownOpen(false);
     logout();
-    navigate('/login');
+    navigate('/');
+  };
+
+  // Плавный скролл к секции на главной; если секции нет на текущей странице — переходим на главную с якорем.
+  const scrollToSection = (id: string) => (e: React.MouseEvent) => {
+    const el = document.getElementById(id);
+    if (el) {
+      e.preventDefault();
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   };
 
   return (
-    <header className="h-16 bg-theme-secondary border-b border-theme flex items-center justify-between px-4 sm:px-6 sticky top-0 z-10 w-full shrink-0">
-      {/* Логотип + Название */}
-      <Link to="/" className="flex items-center gap-2 cursor-pointer">
-        <img src={logo} alt="SharedSpace" className="w-8 h-8 rounded-theme-sm shadow-theme-card" />
-        <span className="text-xl font-semibold tracking-tight">
-          <span className="text-brand-dark dark:text-brand">Shared</span>
-          <span className="text-brand">Space</span>
-        </span>
-      </Link>
+    <header className="h-16 bg-theme-secondary border-b border-theme flex items-center justify-between px-4 sm:px-6 sticky top-0 z-50 w-full shrink-0">
+      <div className="flex items-center gap-8 min-w-0">
+        {/* Логотип + Название */}
+        <Link to="/" className="flex items-center gap-2 cursor-pointer shrink-0">
+          <img
+            src={logo}
+            alt="SharedSpace"
+            className="w-8 h-8 rounded-theme-sm shadow-theme-card"
+          />
+          <span className="text-xl font-semibold tracking-tight hidden sm:inline">
+            <span className="text-brand-dark dark:text-brand">Shared</span>
+            <span className="text-brand">Space</span>
+          </span>
+        </Link>
+
+        {!isAuthenticated && (
+          <nav className="hidden md:flex items-center gap-6">
+            <Link
+              to="/#features"
+              onClick={scrollToSection('features')}
+              className="text-sm font-medium text-theme-secondary hover:text-theme-primary transition-colors"
+            >
+              Возможности
+            </Link>
+            <Link
+              to="/#how-it-works"
+              onClick={scrollToSection('how-it-works')}
+              className="text-sm font-medium text-theme-secondary hover:text-theme-primary transition-colors"
+            >
+              Как это работает
+            </Link>
+          </nav>
+        )}
+      </div>
 
       {isAuthenticated ? (
         <>
@@ -115,10 +149,10 @@ export const Header: React.FC<HeaderProps> = ({ hasUnreadInvites = unreadCount >
         </>
       ) : (
         // Неавторизованный вид
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
           <button
             onClick={toggleTheme}
-            className="p-2 rounded-theme-full hover:bg-theme-hover transition-colors"
+            className="p-2 rounded-theme-full hover:bg-theme-hover transition-colors shrink-0"
             aria-label="Переключить тему"
           >
             <MoonStar
@@ -128,15 +162,15 @@ export const Header: React.FC<HeaderProps> = ({ hasUnreadInvites = unreadCount >
           </button>
           <Link
             to="/login"
-            className="text-sm font-medium text-theme-secondary hover:text-theme-primary px-4 py-2 rounded-theme-md transition-colors"
+            className="text-sm font-medium text-theme-secondary hover:text-theme-primary px-3 sm:px-4 py-2 rounded-theme-md transition-colors whitespace-nowrap"
           >
             Войти
           </Link>
           <Link
             to="/register"
-            className="text-sm font-medium text-theme-on-brand bg-brand hover:bg-brand-hover px-4 py-2 rounded-theme-md transition-colors"
+            className="text-sm font-medium text-theme-on-brand bg-brand hover:bg-brand-hover px-3 sm:px-4 py-2 rounded-theme-md transition-colors whitespace-nowrap"
           >
-            Зарегестрироваться
+            Зарегистрироваться
           </Link>
         </div>
       )}
