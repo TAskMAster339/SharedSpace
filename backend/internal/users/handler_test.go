@@ -12,19 +12,22 @@ import (
 )
 
 type mockService struct {
-	getMeFn      func(string) (UserResponse, error)
-	updateMeFn   func(string, UpdateProfileRequest) (UserResponse, error)
-	changePassFn func(string, ChangePasswordRequest) error
-	searchFn     func(string, string, int) (SearchUsersResponse, error)
+	getMeFn         func(string) (UserResponse, error)
+	updateMeFn      func(string, UpdateProfileRequest) (UserResponse, error)
+	changePassFn    func(string, ChangePasswordRequest) error
+	searchFn        func(string, string, int) (SearchUsersResponse, error)
+	deleteAccountFn func(string, DeleteAccountRequest) error
 
-	getMeUserID  string
-	updateUserID string
-	updateReq    UpdateProfileRequest
-	changeUserID string
-	changeReq    ChangePasswordRequest
-	searchUserID string
-	searchQuery  string
-	searchLimit  int
+	getMeUserID         string
+	updateUserID        string
+	updateReq           UpdateProfileRequest
+	changeUserID        string
+	changeReq           ChangePasswordRequest
+	searchUserID        string
+	searchQuery         string
+	searchLimit         int
+	deleteAccountUserID string
+	deleteAccountReq    DeleteAccountRequest
 }
 
 func (m *mockService) GetMe(_ context.Context, userID string) (UserResponse, error) {
@@ -61,6 +64,15 @@ func (m *mockService) SearchUsers(_ context.Context, userID, query string, limit
 		return m.searchFn(userID, query, limit)
 	}
 	return SearchUsersResponse{}, nil
+}
+
+func (m *mockService) DeleteAccount(_ context.Context, userID string, req DeleteAccountRequest) error {
+	m.deleteAccountUserID = userID
+	m.deleteAccountReq = req
+	if m.deleteAccountFn != nil {
+		return m.deleteAccountFn(userID, req)
+	}
+	return nil
 }
 
 type mockAuthIdentity struct {

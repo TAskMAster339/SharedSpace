@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { User, AtSign, Mail, Lock, Pencil, Check, X, KeyRound } from 'lucide-react';
+import { User, AtSign, Mail, Lock, Pencil, Check, X, KeyRound, Trash2, AlertTriangle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { ApiError } from '../api/client';
 import { Button } from '../components/ui/Button';
@@ -66,7 +67,8 @@ const InfoRow: React.FC<InfoRowProps> = ({ icon, label, value }) => (
 );
 
 const ProfileSettingsPage: React.FC = () => {
-  const { user, avatar, updateProfile, changePassword } = useAuth();
+  const { user, avatar, updateProfile, changePassword, deleteAccount } = useAuth();
+  const navigate = useNavigate();
 
   const [isEditing, setIsEditing] = useState(false);
   const [username, setUsername] = useState(user?.username ?? '');
@@ -86,6 +88,9 @@ const ProfileSettingsPage: React.FC = () => {
   const [passwordFormError, setPasswordFormError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState('');
   const [isSavingPassword, setIsSavingPassword] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   const startEditing = () => {
     setUsername(user?.username ?? '');
@@ -197,6 +202,34 @@ const ProfileSettingsPage: React.FC = () => {
       }
     } finally {
       setIsSavingPassword(false);
+    }
+  };
+
+  const openDeleteModal = () => {
+    setDeleteError('');
+    setIsDeleteModalOpen(true);
+  };
+
+  const closeDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    setDeleteError('');
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleteError('');
+    setIsDeleting(true);
+    try {
+      await deleteAccount();
+      navigate('/login');
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setDeleteError(err.message);
+      } else if (err instanceof Error) {
+        setDeleteError(err.message);
+      } else {
+        setDeleteError('Не удалось удалить аккаунт. Попробуйте позже.');
+      }
+      setIsDeleting(false);
     }
   };
 
@@ -377,6 +410,80 @@ const ProfileSettingsPage: React.FC = () => {
           </form>
         )}
       </Card>
+
+      {/* Удаление аккаунта*/}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-danger">Удаление аккаунта</CardTitle>
+        </CardHeader>
+        <div className="border border-danger/20 rounded-theme-md p-4 bg-danger-light/10">
+          <p className="text-sm text-theme-secondary mb-3">
+            Удаление аккаунта приведёт к безвозвратному удалению всех ваших файлов, директорий и данных.
+            <br />
+            Это действие нельзя отменить.
+          </p>
+          <Button
+            variant="danger"
+            onClick={openDeleteModal}
+            className="flex items-center gap-2"
+          >
+            <Trash2 size={16} />
+            Удалить аккаунт
+          </Button>
+        </div>
+      </Card>
+
+      {/* Модальное окно подтверждения */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={closeDeleteModal} />
+          <div className="relative bg-theme-secondary rounded-theme-xl max-w-md w-full p-6 shadow-theme-dropdown border border-theme">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 rounded-theme-full bg-danger-light/20 text-danger">
+                <AlertTriangle size={24} />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-theme-primary">Удаление аккаунта</h3>
+                <p className="text-sm text-theme-muted">Это действие нельзя будет отменить</p>
+              </div>
+            </div>
+            
+            <p className="text-sm text-theme-secondary mb-6">
+              Вы уверены, что хотите полностью удалить свой аккаунт?
+              <br />
+              Все ваши файлы, директории и данные будут безвозвратно удалены.
+            </p>
+            
+            {deleteError && (
+              <p className="text-danger text-sm mb-4">{deleteError}</p>
+            )}
+            
+            <div className="flex gap-3">
+              <Button
+                variant="secondary"
+                onClick={closeDeleteModal}
+                disabled={isDeleting}
+                className="flex-1"
+              >
+                Отмена
+              </Button>
+              <Button
+                variant="danger"
+                onClick={handleDeleteAccount}
+                disabled={isDeleting}
+                className="flex-1 flex items-center justify-center gap-2"
+              >
+                {isDeleting ? 'Удаление...' : (
+                  <>
+                    <Trash2 size={16} />
+                    Удалить
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

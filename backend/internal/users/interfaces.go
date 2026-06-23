@@ -13,6 +13,7 @@ type ServiceInterface interface {
 	UpdateMe(context.Context, string, UpdateProfileRequest) (UserResponse, error)
 	ChangePassword(context.Context, string, ChangePasswordRequest) error
 	SearchUsers(context.Context, string, string, int) (SearchUsersResponse, error)
+	DeleteAccount(context.Context, string, DeleteAccountRequest) error
 }
 
 type AuthIdentity interface {
@@ -28,6 +29,7 @@ type RepositoryInterface interface {
 	LoadRefreshToken(context.Context, dbTX, string) (refreshTokenRecord, error)
 	RevokeAllRefreshTokensExcept(context.Context, dbTX, string, string) error
 	SearchUsers(context.Context, dbTX, string, string, int) ([]record, error)
+	DeleteUserAndRelatedData(context.Context, dbTX, string) error
 }
 
 type dbTX interface {

@@ -29,3 +29,7 @@ type UserResponse struct {
 type SearchUsersResponse struct {
 	Users []UserResponse `json:"users"`
 }
+
+type DeleteAccountRequest struct {
+	CurrentRefreshToken string `json:"current_refresh_token"`
+}

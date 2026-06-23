@@ -131,6 +131,59 @@ func (r *Repository) SearchUsers(ctx context.Context, db dbTX, requesterID, quer
 	return users, nil
 }
 
+func (r *Repository) DeleteUserAndRelatedData(ctx context.Context, db dbTX, userID string) error {
+	if _, err := db.Exec(ctx, `DELETE FROM refresh_tokens WHERE user_id = $1`, userID); err != nil {
+		return err
+	}
+
+	if _, err := db.Exec(ctx, `DELETE FROM favorite_files WHERE user_id = $1`, userID); err != nil {
+		return err
+	}
+
+	if _, err := db.Exec(ctx, `DELETE FROM shared_directory_members WHERE user_id = $1`, userID); err != nil {
+		return err
+	}
+
+	if _, err := db.Exec(ctx, `DELETE FROM directory_invitations WHERE invited_user_id = $1`, userID); err != nil {
+		return err
+	}
+	if _, err := db.Exec(ctx, `DELETE FROM directory_invitations WHERE invited_by = $1`, userID); err != nil {
+		return err
+	}
+
+	if _, err := db.Exec(ctx, `
+		DELETE FROM share_links 
+		WHERE created_by = $1 OR file_id IN (SELECT id FROM files WHERE owner_id = $1)
+	`, userID); err != nil {
+		return err
+	}
+
+	if _, err := db.Exec(ctx, `
+		DELETE FROM file_conversions 
+		WHERE created_by = $1 OR source_file_id IN (SELECT id FROM files WHERE owner_id = $1)
+	`, userID); err != nil {
+		return err
+	}
+
+	if _, err := db.Exec(ctx, `
+		DELETE FROM shared_directories 
+		WHERE owner_id = $1 OR directory_id IN (SELECT id FROM directories WHERE owner_id = $1)
+	`, userID); err != nil {
+		return err
+	}
+
+	if _, err := db.Exec(ctx, `DELETE FROM files WHERE owner_id = $1`, userID); err != nil {
+		return err
+	}
+
+	if _, err := db.Exec(ctx, `DELETE FROM directories WHERE owner_id = $1`, userID); err != nil {
+		return err
+	}
+
+	_, err := db.Exec(ctx, `DELETE FROM users WHERE id = $1`, userID)
+	return err
+}
+
 func hashToken(raw string) string {
 	sum := sha256.Sum256([]byte(raw))
 	return hex.EncodeToString(sum[:])

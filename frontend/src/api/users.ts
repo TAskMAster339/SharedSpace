@@ -39,3 +39,11 @@ export function changePassword(accessToken: string, payload: ChangePasswordPaylo
     body: JSON.stringify(payload),
   });
 }
+
+export function deleteAccount(accessToken: string, payload: { current_refresh_token: string }): Promise<void> {
+  return apiRequest<void>('/users/me', {
+    method: 'DELETE',
+    token: accessToken,
+    body: JSON.stringify(payload),
+  });
+}
