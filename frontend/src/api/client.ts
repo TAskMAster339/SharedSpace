@@ -70,7 +70,11 @@ async function rawRequest<T>(path: string, options: RequestOptions): Promise<Raw
 function toApiError(response: Response, data: unknown): ApiError {
   const message =
     (data as { error?: string } | null)?.error || 'Произошла ошибка. Попробуйте ещё раз.';
-  return new ApiError(capitalize(message), response.status, (data as { code?: string } | null)?.code);
+  return new ApiError(
+    capitalize(message),
+    response.status,
+    (data as { code?: string } | null)?.code,
+  );
 }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {

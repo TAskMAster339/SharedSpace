@@ -68,7 +68,9 @@ const LoginPage: React.FC = () => {
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-3 py-2 rounded-theme-md border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
             />
-            {fieldErrors.email && <p className="text-danger text-sm mt-1 pl-3">{fieldErrors.email}</p>}
+            {fieldErrors.email && (
+              <p className="text-danger text-sm mt-1 pl-3">{fieldErrors.email}</p>
+            )}
           </div>
 
           <div>
