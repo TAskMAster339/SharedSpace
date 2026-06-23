@@ -13,12 +13,13 @@ import (
 )
 
 type Service struct {
-	beginTx beginTxFunc
-	db      dbTX
-	repo    RepositoryInterface
+	beginTx     beginTxFunc
+	db          dbTX
+	repo        RepositoryInterface
+	sharingRepo SharingRepository
 }
 
-func NewService(pool *pgxpool.Pool, repo RepositoryInterface) *Service {
+func NewService(pool *pgxpool.Pool, repo RepositoryInterface, sharingRepo SharingRepository) *Service {
 	beginTx := func(ctx context.Context, opts pgx.TxOptions) (transaction, error) {
 		tx, err := pool.BeginTx(ctx, opts)
 		if err != nil {
@@ -27,9 +28,10 @@ func NewService(pool *pgxpool.Pool, repo RepositoryInterface) *Service {
 		return txWrapper{Tx: tx}, nil
 	}
 	return &Service{
-		beginTx: beginTx,
-		db:      pool,
-		repo:    repo,
+		beginTx:     beginTx,
+		db:          pool,
+		repo:        repo,
+		sharingRepo: sharingRepo,
 	}
 }
 
@@ -112,6 +114,12 @@ func (s *Service) Create(ctx context.Context, userID string, req CreateDirectory
 			return DirectoryResponse{}, apperror.Conflict("директория с таким названием уже существует")
 		}
 		return DirectoryResponse{}, apperror.WrapInternal("ошибка создания директории", err)
+	}
+
+	if req.Shared {
+		if err := s.sharingRepo.CreateShared(ctx, tx, dir.ID, userID); err != nil {
+			return DirectoryResponse{}, apperror.WrapInternal("ошибка создания общей директории", err)
+		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
