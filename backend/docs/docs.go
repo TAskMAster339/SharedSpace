@@ -34,7 +34,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/auth.LoginRequest"
+                            "$ref": "#/definitions/internal_auth.LoginRequest"
                         }
                     }
                 ],
@@ -42,19 +42,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/auth.LoginResponse"
+                            "$ref": "#/definitions/internal_auth.LoginResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/auth.ErrorResponse"
+                            "$ref": "#/definitions/internal_auth.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/auth.ErrorResponse"
+                            "$ref": "#/definitions/internal_auth.ErrorResponse"
                         }
                     }
                 }
@@ -79,7 +79,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/auth.RefreshRequest"
+                            "$ref": "#/definitions/internal_auth.RefreshRequest"
                         }
                     }
                 ],
@@ -90,13 +90,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/auth.ErrorResponse"
+                            "$ref": "#/definitions/internal_auth.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/auth.ErrorResponse"
+                            "$ref": "#/definitions/internal_auth.ErrorResponse"
                         }
                     }
                 }
@@ -121,7 +121,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/auth.RefreshRequest"
+                            "$ref": "#/definitions/internal_auth.RefreshRequest"
                         }
                     }
                 ],
@@ -129,19 +129,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/auth.RefreshResponse"
+                            "$ref": "#/definitions/internal_auth.RefreshResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/auth.ErrorResponse"
+                            "$ref": "#/definitions/internal_auth.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/auth.ErrorResponse"
+                            "$ref": "#/definitions/internal_auth.ErrorResponse"
                         }
                     }
                 }
@@ -166,7 +166,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/auth.RegisterRequest"
+                            "$ref": "#/definitions/internal_auth.RegisterRequest"
                         }
                     }
                 ],
@@ -174,19 +174,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/auth.RegisterResponse"
+                            "$ref": "#/definitions/internal_auth.RegisterResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/auth.ErrorResponse"
+                            "$ref": "#/definitions/internal_auth.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/auth.ErrorResponse"
+                            "$ref": "#/definitions/internal_auth.ErrorResponse"
                         }
                     }
                 }
@@ -216,7 +216,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dirs.CreateDirectoryRequest"
+                            "$ref": "#/definitions/internal_dirs.CreateDirectoryRequest"
                         }
                     }
                 ],
@@ -224,37 +224,37 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/dirs.DirectoryResponse"
+                            "$ref": "#/definitions/internal_dirs.DirectoryResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/apperror.Response"
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/apperror.Response"
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/apperror.Response"
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/apperror.Response"
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/apperror.Response"
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
                         }
                     }
                 }
@@ -278,13 +278,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dirs.DirectoryContentsResponse"
+                            "$ref": "#/definitions/internal_dirs.DirectoryContentsResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/apperror.Response"
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
                         }
                     }
                 }
@@ -317,25 +317,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dirs.DirectoryResponse"
+                            "$ref": "#/definitions/internal_dirs.DirectoryResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/apperror.Response"
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/apperror.Response"
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/apperror.Response"
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
                         }
                     }
                 }
@@ -370,7 +370,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dirs.UpdateDirectoryRequest"
+                            "$ref": "#/definitions/internal_dirs.UpdateDirectoryRequest"
                         }
                     }
                 ],
@@ -378,37 +378,37 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dirs.DirectoryResponse"
+                            "$ref": "#/definitions/internal_dirs.DirectoryResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/apperror.Response"
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/apperror.Response"
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/apperror.Response"
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/apperror.Response"
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/apperror.Response"
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
                         }
                     }
                 }
@@ -441,25 +441,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dirs.DirectoryContentsResponse"
+                            "$ref": "#/definitions/internal_dirs.DirectoryContentsResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/apperror.Response"
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/apperror.Response"
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/apperror.Response"
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
                         }
                     }
                 }
@@ -494,32 +494,32 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/sharing.MemberResponse"
+                                "$ref": "#/definitions/internal_sharing.MemberResponse"
                             }
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/apperror.Response"
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/apperror.Response"
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/apperror.Response"
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/apperror.Response"
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
                         }
                     }
                 }
@@ -545,14 +545,14 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/sharing.SharedDirectoryResponse"
+                                "$ref": "#/definitions/internal_sharing.SharedDirectoryResponse"
                             }
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/apperror.Response"
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
                         }
                     }
                 }
@@ -576,13 +576,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/users.UserResponse"
+                            "$ref": "#/definitions/internal_users.UserResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/apperror.Error"
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Error"
                         }
                     }
                 }
@@ -607,7 +607,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/users.DeleteAccountRequest"
+                            "$ref": "#/definitions/internal_users.DeleteAccountRequest"
                         }
                     }
                 ],
@@ -618,13 +618,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/apperror.Error"
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Error"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/apperror.Error"
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Error"
                         }
                     }
                 }
@@ -652,7 +652,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/users.UpdateProfileRequest"
+                            "$ref": "#/definitions/internal_users.UpdateProfileRequest"
                         }
                     }
                 ],
@@ -660,19 +660,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/users.UserResponse"
+                            "$ref": "#/definitions/internal_users.UserResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/apperror.Error"
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Error"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/apperror.Error"
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Error"
                         }
                     }
                 }
@@ -699,7 +699,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/users.ChangePasswordRequest"
+                            "$ref": "#/definitions/internal_users.ChangePasswordRequest"
                         }
                     }
                 ],
@@ -710,13 +710,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/apperror.Error"
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Error"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/apperror.Error"
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Error"
                         }
                     }
                 }
@@ -755,19 +755,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/users.SearchUsersResponse"
+                            "$ref": "#/definitions/internal_users.SearchUsersResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/apperror.Error"
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Error"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/apperror.Error"
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Error"
                         }
                     }
                 }
@@ -775,10 +775,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "apperror.Error": {
-            "type": "object"
-        },
-        "apperror.Response": {
+        "internal_auth.ErrorResponse": {
             "type": "object",
             "properties": {
                 "code": {
@@ -789,18 +786,7 @@ const docTemplate = `{
                 }
             }
         },
-        "auth.ErrorResponse": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string"
-                },
-                "error": {
-                    "type": "string"
-                }
-            }
-        },
-        "auth.LoginRequest": {
+        "internal_auth.LoginRequest": {
             "type": "object",
             "properties": {
                 "email": {
@@ -817,18 +803,18 @@ const docTemplate = `{
                 }
             }
         },
-        "auth.LoginResponse": {
+        "internal_auth.LoginResponse": {
             "type": "object",
             "properties": {
                 "tokens": {
-                    "$ref": "#/definitions/auth.TokenPair"
+                    "$ref": "#/definitions/internal_auth.TokenPair"
                 },
                 "user": {
-                    "$ref": "#/definitions/auth.UserResponse"
+                    "$ref": "#/definitions/internal_auth.UserResponse"
                 }
             }
         },
-        "auth.RefreshRequest": {
+        "internal_auth.RefreshRequest": {
             "type": "object",
             "properties": {
                 "refresh_token": {
@@ -836,15 +822,15 @@ const docTemplate = `{
                 }
             }
         },
-        "auth.RefreshResponse": {
+        "internal_auth.RefreshResponse": {
             "type": "object",
             "properties": {
                 "tokens": {
-                    "$ref": "#/definitions/auth.TokenPair"
+                    "$ref": "#/definitions/internal_auth.TokenPair"
                 }
             }
         },
-        "auth.RegisterRequest": {
+        "internal_auth.RegisterRequest": {
             "type": "object",
             "properties": {
                 "email": {
@@ -864,18 +850,18 @@ const docTemplate = `{
                 }
             }
         },
-        "auth.RegisterResponse": {
+        "internal_auth.RegisterResponse": {
             "type": "object",
             "properties": {
                 "root_directory_id": {
                     "type": "string"
                 },
                 "user": {
-                    "$ref": "#/definitions/auth.UserResponse"
+                    "$ref": "#/definitions/internal_auth.UserResponse"
                 }
             }
         },
-        "auth.TokenPair": {
+        "internal_auth.TokenPair": {
             "type": "object",
             "properties": {
                 "access_expires_in": {
@@ -895,7 +881,7 @@ const docTemplate = `{
                 }
             }
         },
-        "auth.UserResponse": {
+        "internal_auth.UserResponse": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -924,7 +910,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dirs.CreateDirectoryRequest": {
+        "internal_dirs.CreateDirectoryRequest": {
             "type": "object",
             "properties": {
                 "name": {
@@ -938,13 +924,13 @@ const docTemplate = `{
                 }
             }
         },
-        "dirs.DirectoryContentsResponse": {
+        "internal_dirs.DirectoryContentsResponse": {
             "type": "object",
             "properties": {
                 "files": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/dirs.FileItem"
+                        "$ref": "#/definitions/internal_dirs.FileItem"
                     }
                 },
                 "id": {
@@ -956,12 +942,12 @@ const docTemplate = `{
                 "subdirectories": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/dirs.DirectoryResponse"
+                        "$ref": "#/definitions/internal_dirs.DirectoryResponse"
                     }
                 }
             }
         },
-        "dirs.DirectoryResponse": {
+        "internal_dirs.DirectoryResponse": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -987,7 +973,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dirs.FileItem": {
+        "internal_dirs.FileItem": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -1013,7 +999,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dirs.UpdateDirectoryRequest": {
+        "internal_dirs.UpdateDirectoryRequest": {
             "type": "object",
             "properties": {
                 "name": {
@@ -1024,7 +1010,7 @@ const docTemplate = `{
                 }
             }
         },
-        "sharing.MemberResponse": {
+        "internal_sharing.MemberResponse": {
             "type": "object",
             "properties": {
                 "id": {
@@ -1034,7 +1020,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "role": {
-                    "$ref": "#/definitions/sharing.Role"
+                    "$ref": "#/definitions/internal_sharing.Role"
                 },
                 "user_id": {
                     "type": "string"
@@ -1044,7 +1030,7 @@ const docTemplate = `{
                 }
             }
         },
-        "sharing.Role": {
+        "internal_sharing.Role": {
             "type": "string",
             "enum": [
                 "viewer",
@@ -1057,7 +1043,7 @@ const docTemplate = `{
                 "RoleAdmin"
             ]
         },
-        "sharing.SharedDirectoryResponse": {
+        "internal_sharing.SharedDirectoryResponse": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -1079,11 +1065,11 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "role": {
-                    "$ref": "#/definitions/sharing.Role"
+                    "$ref": "#/definitions/internal_sharing.Role"
                 }
             }
         },
-        "users.ChangePasswordRequest": {
+        "internal_users.ChangePasswordRequest": {
             "type": "object",
             "properties": {
                 "current_refresh_token": {
@@ -1097,7 +1083,7 @@ const docTemplate = `{
                 }
             }
         },
-        "users.DeleteAccountRequest": {
+        "internal_users.DeleteAccountRequest": {
             "type": "object",
             "properties": {
                 "current_refresh_token": {
@@ -1105,18 +1091,18 @@ const docTemplate = `{
                 }
             }
         },
-        "users.SearchUsersResponse": {
+        "internal_users.SearchUsersResponse": {
             "type": "object",
             "properties": {
                 "users": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/users.UserResponse"
+                        "$ref": "#/definitions/internal_users.UserResponse"
                     }
                 }
             }
         },
-        "users.UpdateProfileRequest": {
+        "internal_users.UpdateProfileRequest": {
             "type": "object",
             "properties": {
                 "email": {
@@ -1133,7 +1119,7 @@ const docTemplate = `{
                 }
             }
         },
-        "users.UserResponse": {
+        "internal_users.UserResponse": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -1158,6 +1144,20 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "sharedspace_internal_apperror.Error": {
+            "type": "object"
+        },
+        "sharedspace_internal_apperror.Response": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "error": {
                     "type": "string"
                 }
             }
