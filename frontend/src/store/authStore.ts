@@ -120,7 +120,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 }));
 
-
 setAuthHandlers({
   refresh: async () => {
     const refreshToken = getCookie(REFRESH_COOKIE);

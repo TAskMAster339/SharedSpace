@@ -66,7 +66,8 @@ async function rawRequest<T>(path: string, options: RequestOptions): Promise<Raw
 }
 
 function toApiError(response: Response, data: unknown): ApiError {
-  const message = (data as { error?: string } | null)?.error || 'Произошла ошибка. Попробуйте ещё раз.';
+  const message =
+    (data as { error?: string } | null)?.error || 'Произошла ошибка. Попробуйте ещё раз.';
   return new ApiError(message, response.status, (data as { code?: string } | null)?.code);
 }
 
