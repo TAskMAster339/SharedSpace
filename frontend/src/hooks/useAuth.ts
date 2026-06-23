@@ -8,6 +8,7 @@ export const useAuth = () => {
   const logout = useAuthStore((state) => state.logout);
   const updateProfile = useAuthStore((state) => state.updateProfile);
   const changePassword = useAuthStore((state) => state.changePassword);
+  const deleteAccount = useAuthStore((state) => state.deleteAccount);
 
   return {
     user,
@@ -20,5 +21,6 @@ export const useAuth = () => {
     logout,
     updateProfile,
     changePassword,
+    deleteAccount,
   };
 };

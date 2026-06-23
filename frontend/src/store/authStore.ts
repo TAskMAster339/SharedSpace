@@ -10,6 +10,7 @@ import {
   getMe,
   updateProfile as updateProfileRequest,
   changePassword as changePasswordRequest,
+  deleteAccount as deleteAccountRequest,
 } from '../api/users';
 import { setAuthHandlers } from '../api/client';
 import { getCookie, setCookie, removeCookie } from '../utils/cookies';
@@ -38,6 +39,7 @@ interface AuthState {
     lastName?: string;
   }) => Promise<void>;
   changePassword: (oldPassword: string, newPassword: string) => Promise<void>;
+  deleteAccount: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -117,6 +119,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       new_password: newPassword,
       current_refresh_token: refreshToken,
     });
+  },
+
+  deleteAccount: async () => {
+    const refreshToken = getCookie(REFRESH_COOKIE);
+    if (!refreshToken) {
+      throw new Error('No refresh token');
+    }
+
+    const { accessToken } = get();
+    if (!accessToken) {
+      throw new Error('Not authenticated');
+    }
+
+    await deleteAccountRequest(accessToken, { current_refresh_token: refreshToken });
+    removeCookie(REFRESH_COOKIE);
+    set({ user: null, accessToken: null, isAuthenticated: false });
   },
 }));
 

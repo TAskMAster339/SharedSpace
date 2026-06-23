@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { User, AtSign, Mail, Lock, Pencil, Check, X, KeyRound } from 'lucide-react';
+import { User, AtSign, Mail, Lock, Pencil, Check, X, KeyRound, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { ApiError } from '../api/client';
 import { Button } from '../components/ui/Button';
 import { Card, CardHeader, CardTitle } from '../components/ui/Card';
+import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { cn } from '../utils/cn';
 
 const MIN_PASSWORD_LENGTH = 8;
@@ -66,7 +68,8 @@ const InfoRow: React.FC<InfoRowProps> = ({ icon, label, value }) => (
 );
 
 const ProfileSettingsPage: React.FC = () => {
-  const { user, avatar, updateProfile, changePassword } = useAuth();
+  const { user, avatar, updateProfile, changePassword, deleteAccount } = useAuth();
+  const navigate = useNavigate();
 
   const [isEditing, setIsEditing] = useState(false);
   const [username, setUsername] = useState(user?.username ?? '');
@@ -86,6 +89,9 @@ const ProfileSettingsPage: React.FC = () => {
   const [passwordFormError, setPasswordFormError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState('');
   const [isSavingPassword, setIsSavingPassword] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   const startEditing = () => {
     setUsername(user?.username ?? '');
@@ -197,6 +203,34 @@ const ProfileSettingsPage: React.FC = () => {
       }
     } finally {
       setIsSavingPassword(false);
+    }
+  };
+
+  const openDeleteModal = () => {
+    setDeleteError('');
+    setIsDeleteModalOpen(true);
+  };
+
+  const closeDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    setDeleteError('');
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleteError('');
+    setIsDeleting(true);
+    try {
+      await deleteAccount();
+      navigate('/login');
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setDeleteError(err.message);
+      } else if (err instanceof Error) {
+        setDeleteError(err.message);
+      } else {
+        setDeleteError('Не удалось удалить аккаунт. Попробуйте позже.');
+      }
+      setIsDeleting(false);
     }
   };
 
@@ -377,6 +411,51 @@ const ProfileSettingsPage: React.FC = () => {
           </form>
         )}
       </Card>
+
+      {/* Удаление аккаунта*/}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-danger">Удаление аккаунта</CardTitle>
+        </CardHeader>
+        <div className="border border-danger/20 rounded-theme-md p-4 bg-danger-light/10">
+          <p className="text-sm text-theme-secondary mb-3">
+            Удаление аккаунта приведёт к безвозвратному удалению всех ваших файлов, директорий и
+            данных.
+            <br />
+            Это действие нельзя отменить.
+          </p>
+          <Button variant="danger" onClick={openDeleteModal} className="flex items-center gap-2">
+            <Trash2 size={16} />
+            Удалить аккаунт
+          </Button>
+        </div>
+      </Card>
+
+      {/* Модальное окно подтверждения */}
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={closeDeleteModal}
+        onConfirm={handleDeleteAccount}
+        variant="danger"
+        confirmLabel="Удалить"
+        cancelLabel="Отмена"
+        showCancel={true}
+        isConfirming={isDeleting}
+        error={deleteError}
+        title={
+          <div>
+            <h3 className="text-lg font-semibold text-theme-primary">Удаление аккаунта</h3>
+            <p className="text-sm text-theme-muted">Это действие нельзя будет отменить</p>
+          </div>
+        }
+        description={
+          <p className="text-sm text-theme-secondary mt-2">
+            Вы уверены, что хотите полностью удалить свой аккаунт?
+            <br />
+            Все ваши файлы, директории и данные будут безвозвратно удалены.
+          </p>
+        }
+      />
     </div>
   );
 };

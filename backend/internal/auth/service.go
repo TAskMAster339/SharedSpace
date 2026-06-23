@@ -257,6 +257,10 @@ func normalizeRegisterRequest(req RegisterRequest) (RegisterRequest, error) {
 	req.SecondName = strings.TrimSpace(req.SecondName)
 	req.Password = strings.TrimSpace(req.Password)
 
+	if req.FirstName == "" {
+		req.FirstName = req.Username
+	}
+
 	if req.Email == "" {
 		return RegisterRequest{}, apperror.Validation("email обязателен")
 	}

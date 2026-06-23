@@ -135,6 +135,35 @@ func (h *Handler) SearchUsers(w http.ResponseWriter, r *http.Request) error {
 	return writeJSON(w, http.StatusOK, resp)
 }
 
+// DeleteAccount deletes account of the currently authenticated user.
+// @Summary Delete current user account
+// @Tags users
+// @Security BearerAuth
+// @Accept json
+// @Param request body DeleteAccountRequest true "Current refresh token"
+// @Success 204 "No Content"
+// @Failure 400 {object} apperror.Error
+// @Failure 401 {object} apperror.Error
+// @Router /api/v1/users/me [delete]
+func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) error {
+	userID, err := h.userIDFromRequest(r)
+	if err != nil {
+		return err
+	}
+
+	var req DeleteAccountRequest
+	if err := decodeJSON(r.Body, &req); err != nil {
+		return err
+	}
+
+	if err := h.service.DeleteAccount(r.Context(), userID, req); err != nil {
+		return err
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
+
 func decodeJSON(body io.ReadCloser, dst any) error {
 	defer body.Close()
 	dec := json.NewDecoder(body)

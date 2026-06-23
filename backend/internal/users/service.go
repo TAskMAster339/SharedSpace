@@ -314,3 +314,50 @@ func validatePassword(password string) error {
 	}
 	return nil
 }
+
+func (s *Service) DeleteAccount(ctx context.Context, userID string, req DeleteAccountRequest) error {
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return apperror.Unauthorized("некорректный access токен")
+	}
+
+	req.CurrentRefreshToken = strings.TrimSpace(req.CurrentRefreshToken)
+	if req.CurrentRefreshToken == "" {
+		return apperror.Validation("требуется текущий refresh токен")
+	}
+
+	tx, err := s.beginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return apperror.WrapInternal("ошибка начала транзакции", err)
+	}
+	defer tx.Rollback(ctx)
+
+	_, err = s.repo.FindUserByID(ctx, tx, userID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperror.NotFound("пользователь не найден")
+		}
+		return apperror.WrapInternal("ошибка поиска пользователя", err)
+	}
+
+	record, err := s.repo.LoadRefreshToken(ctx, tx, req.CurrentRefreshToken)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperror.Unauthorized("некорректный refresh токен")
+		}
+		return apperror.WrapInternal("ошибка загрузки refresh токена", err)
+	}
+	if record.UserID != userID || record.RevokedAt != nil || time.Now().UTC().After(record.ExpiresAt) {
+		return apperror.Unauthorized("некорректный refresh токен")
+	}
+
+	if err := s.repo.DeleteUserAndRelatedData(ctx, tx, userID); err != nil {
+		return apperror.WrapInternal("ошибка удаления аккаунта", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return apperror.WrapInternal("ошибка сохранения удаления аккаунта", err)
+	}
+
+	return nil
+}

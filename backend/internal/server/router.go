@@ -52,6 +52,7 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 					r.Get("/me", middleware.AppError(usersHandler.GetMe))
 					r.Patch("/me", middleware.AppError(usersHandler.UpdateMe))
 					r.Patch("/me/password", middleware.AppError(usersHandler.ChangePassword))
+					r.Delete("/me", middleware.AppError(usersHandler.DeleteAccount))
 					r.Get("/search", middleware.AppError(usersHandler.SearchUsers))
 				})
 			}

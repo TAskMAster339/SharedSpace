@@ -95,6 +95,9 @@ type mockRepo struct {
 	searchLimit              int
 	searchResult             []record
 	searchErr                error
+	deleteUserAndRelatedErr  error
+	deleteUserID             string
+	deleteUserCalled         bool
 }
 
 func (m *mockRepo) FindUserByID(_ context.Context, _ dbTX, userID string) (record, error) {
@@ -138,6 +141,12 @@ func (m *mockRepo) SearchUsers(_ context.Context, _ dbTX, requesterID, query str
 	m.searchQuery = query
 	m.searchLimit = limit
 	return m.searchResult, m.searchErr
+}
+
+func (m *mockRepo) DeleteUserAndRelatedData(_ context.Context, _ dbTX, userID string) error {
+	m.deleteUserID = userID
+	m.deleteUserCalled = true
+	return m.deleteUserAndRelatedErr
 }
 
 func newTestService(repo RepositoryInterface) (*Service, *mockTx) {

@@ -131,6 +131,11 @@ func (r *Repository) SearchUsers(ctx context.Context, db dbTX, requesterID, quer
 	return users, nil
 }
 
+func (r *Repository) DeleteUserAndRelatedData(ctx context.Context, db dbTX, userID string) error {
+	_, err := db.Exec(ctx, `DELETE FROM users WHERE id = $1`, userID)
+	return err
+}
+
 func hashToken(raw string) string {
 	sum := sha256.Sum256([]byte(raw))
 	return hex.EncodeToString(sum[:])
