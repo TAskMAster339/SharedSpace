@@ -16,7 +16,8 @@ interface ConfirmModalProps {
   isConfirming?: boolean;
   error?: string;
   icon?: React.ReactNode;
-  children: React.ReactNode;
+  title: React.ReactNode;
+  description?: React.ReactNode;
 }
 
 const variantStyles: Record<
@@ -55,7 +56,8 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   isConfirming = false,
   error,
   icon,
-  children,
+  title,
+  description,
 }) => {
   if (!isOpen) return null;
 
@@ -68,16 +70,19 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
         onClick={showCancel ? onClose : undefined}
       />
       <div className="relative bg-theme-secondary rounded-theme-xl max-w-md w-full p-6 shadow-theme-dropdown border border-theme">
-        <div className="flex items-center gap-3 mb-4">
-          <div className={cn('p-3 rounded-theme-full', styles.iconBg, styles.iconColor)}>
+        {/* Шапка: иконка и заголовок */}
+        <div className="flex items-start gap-3">
+          <div className={cn('p-3 rounded-theme-full shrink-0', styles.iconBg, styles.iconColor)}>
             {icon || <AlertTriangle size={24} />}
           </div>
-          <div className="flex-1">{children}</div>
+          <div className="flex-1 min-w-0">{title}</div>
         </div>
 
-        {error && <p className="text-danger text-sm mb-4">{error}</p>}
+        {description && <div className="mt-2">{description}</div>}
 
-        <div className={cn('flex gap-3', !showCancel && 'justify-end')}>
+        {error && <p className="text-danger text-sm mt-4">{error}</p>}
+
+        <div className={cn('flex gap-3 mt-6', !showCancel && 'justify-end')}>
           {showCancel && (
             <Button
               variant="secondary"

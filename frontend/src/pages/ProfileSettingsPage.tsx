@@ -442,17 +442,20 @@ const ProfileSettingsPage: React.FC = () => {
         showCancel={true}
         isConfirming={isDeleting}
         error={deleteError}
-      >
-        <div>
-          <h3 className="text-lg font-semibold text-theme-primary">Удаление аккаунта</h3>
-          <p className="text-sm text-theme-muted">Это действие нельзя будет отменить</p>
-        </div>
-        <p className="text-sm text-theme-secondary mt-2">
-          Вы уверены, что хотите полностью удалить свой аккаунт?
-          <br />
-          Все ваши файлы, директории и данные будут безвозвратно удалены.
-        </p>
-      </ConfirmModal>
+        title={
+          <div>
+            <h3 className="text-lg font-semibold text-theme-primary">Удаление аккаунта</h3>
+            <p className="text-sm text-theme-muted">Это действие нельзя будет отменить</p>
+          </div>
+        }
+        description={
+          <p className="text-sm text-theme-secondary mt-2">
+            Вы уверены, что хотите полностью удалить свой аккаунт?
+            <br />
+            Все ваши файлы, директории и данные будут безвозвратно удалены.
+          </p>
+        }
+      />
     </div>
   );
 };
