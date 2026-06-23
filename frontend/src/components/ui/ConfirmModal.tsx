@@ -19,11 +19,14 @@ interface ConfirmModalProps {
   children: React.ReactNode;
 }
 
-const variantStyles: Record<ConfirmModalVariant, {
-  iconBg: string;
-  iconColor: string;
-  buttonVariant: 'danger' | 'primary' | 'secondary';
-}> = {
+const variantStyles: Record<
+  ConfirmModalVariant,
+  {
+    iconBg: string;
+    iconColor: string;
+    buttonVariant: 'danger' | 'primary' | 'secondary';
+  }
+> = {
   danger: {
     iconBg: 'bg-danger-light/20',
     iconColor: 'text-danger',

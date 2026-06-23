@@ -1,15 +1,5 @@
 import React, { useState } from 'react';
-import {
-  User,
-  AtSign,
-  Mail,
-  Lock,
-  Pencil,
-  Check,
-  X,
-  KeyRound,
-  Trash2,
-} from 'lucide-react';
+import { User, AtSign, Mail, Lock, Pencil, Check, X, KeyRound, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { ApiError } from '../api/client';
