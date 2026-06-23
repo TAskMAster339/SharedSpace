@@ -18,7 +18,15 @@ interface FieldProps {
   error?: string;
 }
 
-const Field: React.FC<FieldProps> = ({ label, icon, value, onChange, type = 'text', placeholder, error }) => (
+const Field: React.FC<FieldProps> = ({
+  label,
+  icon,
+  value,
+  onChange,
+  type = 'text',
+  placeholder,
+  error,
+}) => (
   <div>
     <label className="text-xs font-medium text-theme-secondary mb-1.5 block">{label}</label>
     <div className="relative">
@@ -244,8 +252,18 @@ const ProfileSettingsPage: React.FC = () => {
         ) : (
           <form onSubmit={handleProfileSubmit} className="flex flex-col gap-4" noValidate>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="Имя" icon={<User size={16} />} value={firstName} onChange={setFirstName} />
-              <Field label="Фамилия" icon={<User size={16} />} value={lastName} onChange={setLastName} />
+              <Field
+                label="Имя"
+                icon={<User size={16} />}
+                value={firstName}
+                onChange={setFirstName}
+              />
+              <Field
+                label="Фамилия"
+                icon={<User size={16} />}
+                value={lastName}
+                onChange={setLastName}
+              />
             </div>
 
             <Field
@@ -308,11 +326,7 @@ const ProfileSettingsPage: React.FC = () => {
         </CardHeader>
 
         {!isChangingPassword ? (
-          <InfoRow
-            icon={<Lock size={16} />}
-            label="Пароль"
-            value={passwordSuccess || '••••••••'}
-          />
+          <InfoRow icon={<Lock size={16} />} label="Пароль" value={passwordSuccess || '••••••••'} />
         ) : (
           <form onSubmit={handlePasswordSubmit} className="flex flex-col gap-4" noValidate>
             <Field

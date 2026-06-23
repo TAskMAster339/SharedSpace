@@ -32,10 +32,7 @@ export interface ChangePasswordPayload {
   current_refresh_token: string;
 }
 
-export function changePassword(
-  accessToken: string,
-  payload: ChangePasswordPayload,
-): Promise<void> {
+export function changePassword(accessToken: string, payload: ChangePasswordPayload): Promise<void> {
   return apiRequest<void>('/users/me/password', {
     method: 'PATCH',
     token: accessToken,
