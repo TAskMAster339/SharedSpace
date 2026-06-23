@@ -9,6 +9,7 @@ import (
 	"sharedspace/internal/auth"
 	"sharedspace/internal/dirs"
 	"sharedspace/internal/middleware"
+	"sharedspace/internal/sharing"
 	"sharedspace/internal/swagger"
 	"sharedspace/internal/users"
 )
@@ -22,7 +23,7 @@ func healthHandler(w http.ResponseWriter, _ *http.Request) {
 	json.NewEncoder(w).Encode(HealthResponse{Status: "ok"})
 }
 
-func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHandler *users.Handler, dirsHandler *dirs.Handler) http.Handler {
+func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHandler *users.Handler, dirsHandler *dirs.Handler, sharingHandler *sharing.Handler) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Recover)
@@ -63,6 +64,11 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 					r.Post("/", middleware.AppError(dirsHandler.Create))
 					r.Patch("/{id}", middleware.AppError(dirsHandler.Update))
 				})
+			}
+
+			if sharingHandler != nil {
+				r.Get("/shared/with-me", middleware.AppError(sharingHandler.GetSharedWithMe))
+				r.Get("/shared-directories/{id}/members", middleware.AppError(sharingHandler.GetMembers))
 			}
 		})
 	})

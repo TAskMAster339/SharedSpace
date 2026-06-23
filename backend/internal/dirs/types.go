@@ -5,6 +5,7 @@ import "time"
 type CreateDirectoryRequest struct {
 	Name     string `json:"name"`
 	ParentID string `json:"parent_id"`
+	Shared   bool   `json:"shared"`
 }
 
 type UpdateDirectoryRequest struct {
