@@ -11,6 +11,7 @@ import {
   updateProfile as updateProfileRequest,
   changePassword as changePasswordRequest,
 } from '../api/users';
+import { setAuthHandlers } from '../api/client';
 import { getCookie, setCookie, removeCookie } from '../utils/cookies';
 
 const REFRESH_COOKIE = 'refresh_token';
@@ -118,3 +119,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     });
   },
 }));
+
+setAuthHandlers({
+  refresh: async () => {
+    const refreshToken = getCookie(REFRESH_COOKIE);
+    if (!refreshToken) {
+      throw new Error('No refresh token');
+    }
+    const result = await refresh(refreshToken);
+    setCookie(REFRESH_COOKIE, result.tokens.refresh_token, result.tokens.refresh_expires_in);
+    useAuthStore.setState({ accessToken: result.tokens.access_token, isAuthenticated: true });
+    return result.tokens.access_token;
+  },
+  onAuthFailure: () => {
+    removeCookie(REFRESH_COOKIE);
+    useAuthStore.setState({ user: null, accessToken: null, isAuthenticated: false });
+  },
+});

@@ -43,7 +43,7 @@ const Field: React.FC<FieldProps> = ({
         )}
       />
     </div>
-    {error && <p className="text-danger text-xs mt-1.5">{error}</p>}
+    {error && <p className="text-danger text-xs mt-1.5 pl-10">{error}</p>}
   </div>
 );
 
@@ -283,9 +283,7 @@ const ProfileSettingsPage: React.FC = () => {
               error={profileErrors.email}
             />
 
-            {profileFormError && (
-              <p className="text-danger text-sm text-center">{profileFormError}</p>
-            )}
+            {profileFormError && <p className="text-danger text-sm">{profileFormError}</p>}
 
             <div className="flex flex-col sm:flex-row gap-3 mt-1">
               <Button
@@ -356,9 +354,7 @@ const ProfileSettingsPage: React.FC = () => {
               />
             </div>
 
-            {passwordFormError && (
-              <p className="text-danger text-sm text-center">{passwordFormError}</p>
-            )}
+            {passwordFormError && <p className="text-danger text-sm">{passwordFormError}</p>}
 
             <div className="flex flex-col sm:flex-row gap-3 mt-1">
               <Button

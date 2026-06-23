@@ -89,7 +89,7 @@ const RegisterPage: React.FC = () => {
               className="w-full px-3 py-2 rounded-theme-md border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
             />
             {fieldErrors.username && (
-              <p className="text-danger text-sm mt-1">{fieldErrors.username}</p>
+              <p className="text-danger text-sm mt-1 pl-3">{fieldErrors.username}</p>
             )}
           </div>
 
@@ -122,7 +122,9 @@ const RegisterPage: React.FC = () => {
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-3 py-2 rounded-theme-md border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
             />
-            {fieldErrors.email && <p className="text-danger text-sm mt-1">{fieldErrors.email}</p>}
+            {fieldErrors.email && (
+              <p className="text-danger text-sm mt-1 pl-3">{fieldErrors.email}</p>
+            )}
           </div>
 
           <div>
@@ -134,7 +136,7 @@ const RegisterPage: React.FC = () => {
               className="w-full px-3 py-2 rounded-theme-md border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
             />
             {fieldErrors.password && (
-              <p className="text-danger text-sm mt-1">{fieldErrors.password}</p>
+              <p className="text-danger text-sm mt-1 pl-3">{fieldErrors.password}</p>
             )}
           </div>
 
@@ -147,11 +149,11 @@ const RegisterPage: React.FC = () => {
               className="w-full px-3 py-2 rounded-theme-md border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
             />
             {fieldErrors.confirmPassword && (
-              <p className="text-danger text-sm mt-1">{fieldErrors.confirmPassword}</p>
+              <p className="text-danger text-sm mt-1 pl-3">{fieldErrors.confirmPassword}</p>
             )}
           </div>
 
-          {formError && <p className="text-danger text-sm text-center">{formError}</p>}
+          {formError && <p className="text-danger text-sm">{formError}</p>}
 
           <Button type="submit" disabled={isSubmitting} className="mt-1 w-full">
             {isSubmitting ? 'Регистрация...' : 'Зарегистрироваться'}
