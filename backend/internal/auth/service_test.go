@@ -214,6 +214,40 @@ func TestServiceRegister(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
+
+	t.Run("invalid email format", func(t *testing.T) {
+		service, _ := newTestService(&mockRepo{})
+
+		_, err := service.Register(context.Background(), RegisterRequest{
+			Email:    "not-an-email",
+			Username: "ivan",
+			Password: "StrongPass1!",
+		})
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeValidation {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("empty email format", func(t *testing.T) {
+		service, _ := newTestService(&mockRepo{})
+
+		_, err := service.Register(context.Background(), RegisterRequest{
+			Email:    "",
+			Username: "ivan",
+			Password: "StrongPass1!",
+		})
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeValidation {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
 }
 
 func TestServiceLogin(t *testing.T) {

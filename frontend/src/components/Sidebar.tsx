@@ -3,20 +3,24 @@ import { Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Folder, Users, Star, Mail, Trash2 } from 'lucide-react';
 import { StorageIndicator } from './ui/StorageIndicator';
 import { cn } from '../utils/cn';
+import { useAuthStore } from '../store/authStore';
+
+const BYTES_TO_GB = 1024 * 1024 * 1024;
 
 interface SidebarProps {
   hasUnreadInvites?: boolean;
 }
 
-// Пока моки, прописать логику получения кол-ва непрочитанных приглашений и заполненности
 const unreadCount = 0;
-const spaceUsed = 12.5;
-const spaceTotal = 50;
 const personalStorageId = 'personal';
 
 export const Sidebar: React.FC<SidebarProps> = ({ hasUnreadInvites = unreadCount > 0 }) => {
   const location = useLocation();
   const currentPath = location.pathname;
+  const user = useAuthStore((s) => s.user);
+
+  const storageUsed = user ? user.storage_used / BYTES_TO_GB : 0;
+  const storageQuota = user ? user.storage_quota / BYTES_TO_GB : 0;
 
   const menuItems = [
     { label: 'Дашборд', icon: LayoutDashboard, path: '/dashboard' },
@@ -62,7 +66,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ hasUnreadInvites = unreadCount
       {/* Индикатор места внизу */}
       <div className="mt-auto mb-6 pt-6 border-t border-theme">
         <div className="bg-theme-tertiary rounded-theme-xl p-4 shadow-theme-card border border-theme/50">
-          <StorageIndicator used={spaceUsed} total={spaceTotal} />
+          <StorageIndicator used={storageUsed} total={storageQuota} />
         </div>
       </div>
     </div>

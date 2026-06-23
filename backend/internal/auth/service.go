@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"regexp"
 	"strings"
 	"time"
 	"unicode"
@@ -15,6 +16,8 @@ import (
 )
 
 const defaultStorageQuota int64 = 5 * 1024 * 1024 * 1024
+
+var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 
 type Service struct {
 	beginTx      beginTxFunc
@@ -62,54 +65,56 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest) (RegisterRe
 
 	tx, err := s.beginTx(ctx, pgx.TxOptions{})
 	if err != nil {
-		return RegisterResponse{}, apperror.WrapInternal("begin transaction", err)
+		return RegisterResponse{}, apperror.WrapInternal("ошибка начала транзакции", err)
 	}
 	defer tx.Rollback(ctx)
 
 	if exists, err := s.repo.EmailExists(ctx, tx, input.Email); err != nil {
 		return RegisterResponse{}, err
 	} else if exists {
-		return RegisterResponse{}, apperror.Conflict("email is already in use")
+		return RegisterResponse{}, apperror.Conflict("email уже используется")
 	}
 	if exists, err := s.repo.UsernameExists(ctx, tx, input.Username); err != nil {
 		return RegisterResponse{}, err
 	} else if exists {
-		return RegisterResponse{}, apperror.Conflict("username is already in use")
+		return RegisterResponse{}, apperror.Conflict("имя пользователя уже занято")
 	}
 
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return RegisterResponse{}, apperror.WrapInternal("hash password", err)
+		return RegisterResponse{}, apperror.WrapInternal("ошибка хеширования пароля", err)
 	}
 
 	user, err := s.repo.CreateUser(ctx, tx, input, string(passwordHash), s.storageQuota)
 	if err != nil {
 		if isUniqueViolation(err) {
-			return RegisterResponse{}, apperror.Conflict("user already exists")
+			return RegisterResponse{}, apperror.Conflict("пользователь уже существует")
 		}
-		return RegisterResponse{}, apperror.WrapInternal("create user", err)
+		return RegisterResponse{}, apperror.WrapInternal("ошибка создания пользователя", err)
 	}
 
 	rootDirectoryID, err := s.repo.CreateRootDirectory(ctx, tx, user.ID, user.Username)
 	if err != nil {
 		if isUniqueViolation(err) {
-			return RegisterResponse{}, apperror.Conflict("root directory already exists")
+			return RegisterResponse{}, apperror.Conflict("корневая директория уже существует")
 		}
-		return RegisterResponse{}, apperror.WrapInternal("create root directory", err)
+		return RegisterResponse{}, apperror.WrapInternal("ошибка создания корневой директории", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return RegisterResponse{}, apperror.WrapInternal("commit registration", err)
+		return RegisterResponse{}, apperror.WrapInternal("ошибка сохранения регистрации", err)
 	}
 
 	return RegisterResponse{
 		User: UserResponse{
-			ID:         user.ID,
-			Email:      user.Email,
-			Username:   user.Username,
-			FirstName:  user.FirstName,
-			SecondName: user.SecondName,
-			CreatedAt:  user.CreatedAt,
+			ID:           user.ID,
+			Email:        user.Email,
+			Username:     user.Username,
+			FirstName:    user.FirstName,
+			SecondName:   user.SecondName,
+			StorageQuota: user.StorageQuota,
+			StorageUsed:  user.StorageUsed,
+			CreatedAt:    user.CreatedAt,
 		},
 		RootDirectoryID: rootDirectoryID,
 	}, nil
@@ -124,17 +129,17 @@ func (s *Service) Login(ctx context.Context, req LoginRequest, meta loginMeta) (
 	user, err := s.repo.FindUserByIdentifier(ctx, s.db, identifier)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return LoginResponse{}, apperror.Unauthorized("invalid credentials")
+			return LoginResponse{}, apperror.Unauthorized("неверный email или пароль")
 		}
 		return LoginResponse{}, err
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
-		return LoginResponse{}, apperror.Unauthorized("invalid credentials")
+		return LoginResponse{}, apperror.Unauthorized("неверный email или пароль")
 	}
 
 	tokens, err := s.issueTokenPair(user)
 	if err != nil {
-		return LoginResponse{}, apperror.WrapInternal("issue tokens", err)
+		return LoginResponse{}, apperror.WrapInternal("ошибка выпуска токенов", err)
 	}
 	if err := s.repo.StoreRefreshToken(ctx, s.db, user.ID, tokens.RefreshToken, meta.UserAgent, meta.IPAddress, time.Now().UTC().Add(s.refreshTTL)); err != nil {
 		return LoginResponse{}, err
@@ -142,12 +147,14 @@ func (s *Service) Login(ctx context.Context, req LoginRequest, meta loginMeta) (
 
 	return LoginResponse{
 		User: UserResponse{
-			ID:         user.ID,
-			Email:      user.Email,
-			Username:   user.Username,
-			FirstName:  user.FirstName,
-			SecondName: user.SecondName,
-			CreatedAt:  user.CreatedAt,
+			ID:           user.ID,
+			Email:        user.Email,
+			Username:     user.Username,
+			FirstName:    user.FirstName,
+			SecondName:   user.SecondName,
+			StorageQuota: user.StorageQuota,
+			StorageUsed:  user.StorageUsed,
+			CreatedAt:    user.CreatedAt,
 		},
 		Tokens: tokens,
 	}, nil
@@ -155,56 +162,56 @@ func (s *Service) Login(ctx context.Context, req LoginRequest, meta loginMeta) (
 
 func (s *Service) Refresh(ctx context.Context, rawRefreshToken string, meta loginMeta) (RefreshResponse, error) {
 	if strings.TrimSpace(rawRefreshToken) == "" {
-		return RefreshResponse{}, apperror.Validation("refresh token is required")
+		return RefreshResponse{}, apperror.Validation("требуется refresh токен")
 	}
 
 	claims, err := s.parseRefreshToken(rawRefreshToken)
 	if err != nil {
-		return RefreshResponse{}, apperror.Unauthorized("invalid refresh token")
+		return RefreshResponse{}, apperror.Unauthorized("некорректный refresh токен")
 	}
 
 	tx, err := s.beginTx(ctx, pgx.TxOptions{})
 	if err != nil {
-		return RefreshResponse{}, apperror.WrapInternal("begin transaction", err)
+		return RefreshResponse{}, apperror.WrapInternal("ошибка начала транзакции", err)
 	}
 	defer tx.Rollback(ctx)
 
 	record, err := s.repo.LoadRefreshToken(ctx, tx, rawRefreshToken)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return RefreshResponse{}, apperror.Unauthorized("invalid refresh token")
+			return RefreshResponse{}, apperror.Unauthorized("некорректный refresh токен")
 		}
-		return RefreshResponse{}, apperror.WrapInternal("load refresh token", err)
+		return RefreshResponse{}, apperror.WrapInternal("ошибка загрузки refresh токена", err)
 	}
 	if record.RevokedAt != nil || time.Now().UTC().After(record.ExpiresAt) {
-		return RefreshResponse{}, apperror.Unauthorized("refresh token expired")
+		return RefreshResponse{}, apperror.Unauthorized("срок действия refresh токена истёк")
 	}
 	if record.UserID != claims.Subject {
-		return RefreshResponse{}, apperror.Unauthorized("invalid refresh token")
+		return RefreshResponse{}, apperror.Unauthorized("некорректный refresh токен")
 	}
 
 	user, err := s.repo.FindUserByID(ctx, tx, record.UserID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return RefreshResponse{}, apperror.Unauthorized("invalid refresh token")
+			return RefreshResponse{}, apperror.Unauthorized("некорректный refresh токен")
 		}
 		return RefreshResponse{}, err
 	}
 
 	if err := s.repo.RevokeRefreshToken(ctx, tx, rawRefreshToken); err != nil {
-		return RefreshResponse{}, apperror.WrapInternal("revoke refresh token", err)
+		return RefreshResponse{}, apperror.WrapInternal("ошибка отзыва refresh токена", err)
 	}
 
 	tokens, err := s.issueTokenPair(user)
 	if err != nil {
-		return RefreshResponse{}, apperror.WrapInternal("issue tokens", err)
+		return RefreshResponse{}, apperror.WrapInternal("ошибка выпуска токенов", err)
 	}
 	if err := s.repo.StoreRefreshToken(ctx, tx, user.ID, tokens.RefreshToken, meta.UserAgent, meta.IPAddress, time.Now().UTC().Add(s.refreshTTL)); err != nil {
 		return RefreshResponse{}, err
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return RefreshResponse{}, apperror.WrapInternal("commit refresh", err)
+		return RefreshResponse{}, apperror.WrapInternal("ошибка сохранения обновления токена", err)
 	}
 
 	return RefreshResponse{Tokens: tokens}, nil
@@ -213,15 +220,15 @@ func (s *Service) Refresh(ctx context.Context, rawRefreshToken string, meta logi
 func (s *Service) UserIDFromAccessToken(_ context.Context, rawAccessToken string) (string, error) {
 	rawAccessToken = strings.TrimSpace(rawAccessToken)
 	if rawAccessToken == "" {
-		return "", apperror.Unauthorized("access token is required")
+		return "", apperror.Unauthorized("требуется access токен")
 	}
 
 	claims, err := s.parseAccessToken(rawAccessToken)
 	if err != nil {
-		return "", apperror.Unauthorized("invalid access token")
+		return "", apperror.Unauthorized("некорректный access токен")
 	}
 	if strings.TrimSpace(claims.Subject) == "" {
-		return "", apperror.Unauthorized("invalid access token")
+		return "", apperror.Unauthorized("некорректный access токен")
 	}
 
 	return claims.Subject, nil
@@ -229,15 +236,15 @@ func (s *Service) UserIDFromAccessToken(_ context.Context, rawAccessToken string
 
 func (s *Service) Logout(ctx context.Context, rawRefreshToken string) error {
 	if strings.TrimSpace(rawRefreshToken) == "" {
-		return apperror.Validation("refresh token is required")
+		return apperror.Validation("требуется refresh токен")
 	}
 
 	if _, err := s.parseRefreshToken(rawRefreshToken); err != nil {
-		return apperror.Unauthorized("invalid refresh token")
+		return apperror.Unauthorized("некорректный refresh токен")
 	}
 
 	if err := s.repo.RevokeRefreshToken(ctx, s.db, rawRefreshToken); err != nil {
-		return apperror.WrapInternal("revoke refresh token", err)
+		return apperror.WrapInternal("ошибка отзыва refresh токена", err)
 	}
 
 	return nil
@@ -251,13 +258,16 @@ func normalizeRegisterRequest(req RegisterRequest) (RegisterRequest, error) {
 	req.Password = strings.TrimSpace(req.Password)
 
 	if req.Email == "" {
-		return RegisterRequest{}, apperror.Validation("email is required")
+		return RegisterRequest{}, apperror.Validation("email обязателен")
+	}
+	if !emailRegex.MatchString(req.Email) {
+		return RegisterRequest{}, apperror.Validation("некорректный формат email")
 	}
 	if req.Username == "" {
-		return RegisterRequest{}, apperror.Validation("username is required")
+		return RegisterRequest{}, apperror.Validation("имя пользователя обязательно")
 	}
 	if req.Password == "" {
-		return RegisterRequest{}, apperror.Validation("password is required")
+		return RegisterRequest{}, apperror.Validation("пароль обязателен")
 	}
 	return req, nil
 }
@@ -269,7 +279,7 @@ func normalizeLoginIdentifier(req LoginRequest) (string, error) {
 	req.Password = strings.TrimSpace(req.Password)
 
 	if req.Password == "" {
-		return "", apperror.Validation("password is required")
+		return "", apperror.Validation("пароль обязателен")
 	}
 	if req.Email != "" {
 		return req.Email, nil
@@ -280,15 +290,15 @@ func normalizeLoginIdentifier(req LoginRequest) (string, error) {
 	if req.Identifier != "" {
 		return req.Identifier, nil
 	}
-	return "", apperror.Validation("email or username is required")
+	return "", apperror.Validation("email или имя пользователя обязательны")
 }
 
 func validatePassword(password string) error {
 	if len(password) < 8 {
-		return apperror.Validation("password must be at least 8 characters long")
+		return apperror.Validation("пароль должен быть не короче 8 символов")
 	}
 	if len(password) > 72 {
-		return apperror.Validation("password must be no longer than 72 bytes")
+		return apperror.Validation("пароль должен быть не длиннее 72 байт")
 	}
 
 	var hasUpper, hasLower, hasSpecial bool
@@ -304,7 +314,7 @@ func validatePassword(password string) error {
 	}
 
 	if !hasUpper || !hasLower || !hasSpecial {
-		return apperror.Validation("password must contain uppercase, lowercase and special characters")
+		return apperror.Validation("пароль должен содержать заглавные, строчные буквы и спецсимволы")
 	}
 	return nil
 }
