@@ -20,13 +20,17 @@ const (
 )
 
 type SharedDirectoryResponse struct {
-	ID          string    `json:"id"`
-	DirectoryID string    `json:"directory_id"`
-	Name        string    `json:"name"`
-	OwnerID     string    `json:"owner_id"`
-	OwnerName   string    `json:"owner_name"`
-	Role        Role      `json:"role"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID                string    `json:"id"`
+	SharedDirectoryID string    `json:"shared_directory_id"`
+	DirectoryID       string    `json:"directory_id"`
+	Name              string    `json:"name"`
+	OwnerID           string    `json:"owner_id"`
+	OwnerName         string    `json:"owner_name"`
+	ParentID          *string   `json:"parent_id,omitempty"`
+	Type              string    `json:"type"`
+	Role              Role      `json:"role"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
 }
 
 type SharedDirectoryWithStatsResponse struct {

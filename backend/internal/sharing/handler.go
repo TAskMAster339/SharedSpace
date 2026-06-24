@@ -31,7 +31,7 @@ func NewHandler(service ServiceInterface) *Handler {
 func (h *Handler) GetSharedWithMe(w http.ResponseWriter, r *http.Request) error {
 	claims, ok := auth.ClaimsFromCtx(r.Context())
 	if !ok {
-		return apperror.Unauthorized("неавторизован")
+		return apperror.Unauthorized("unauthorized")
 	}
 
 	limit := 0
@@ -97,12 +97,12 @@ func (h *Handler) GetSharedWithMeStats(w http.ResponseWriter, r *http.Request) e
 func (h *Handler) GetMembers(w http.ResponseWriter, r *http.Request) error {
 	claims, ok := auth.ClaimsFromCtx(r.Context())
 	if !ok {
-		return apperror.Unauthorized("неавторизован")
+		return apperror.Unauthorized("unauthorized")
 	}
 
 	sharedDirID := chi.URLParam(r, "id")
 	if sharedDirID == "" {
-		return apperror.Validation("требуется идентификатор общей директории")
+		return apperror.Validation("shared directory id is required")
 	}
 
 	limit := 0
@@ -144,12 +144,12 @@ func (h *Handler) GetMembers(w http.ResponseWriter, r *http.Request) error {
 func (h *Handler) Invite(w http.ResponseWriter, r *http.Request) error {
 	claims, ok := auth.ClaimsFromCtx(r.Context())
 	if !ok {
-		return apperror.Unauthorized("неавторизован")
+		return apperror.Unauthorized("unauthorized")
 	}
 
 	sharedDirID := chi.URLParam(r, "id")
 	if sharedDirID == "" {
-		return apperror.Validation("требуется идентификатор общей директории")
+		return apperror.Validation("shared directory id is required")
 	}
 
 	var req InviteRequest
@@ -157,7 +157,7 @@ func (h *Handler) Invite(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if req.Username == "" {
-		return apperror.Validation("требуется имя пользователя")
+		return apperror.Validation("username is required")
 	}
 
 	resp, err := h.service.Invite(r.Context(), claims.UserID, sharedDirID, req.Username)
@@ -179,7 +179,7 @@ func (h *Handler) Invite(w http.ResponseWriter, r *http.Request) error {
 func (h *Handler) GetMyInvitations(w http.ResponseWriter, r *http.Request) error {
 	claims, ok := auth.ClaimsFromCtx(r.Context())
 	if !ok {
-		return apperror.Unauthorized("неавторизован")
+		return apperror.Unauthorized("unauthorized")
 	}
 
 	resp, err := h.service.GetMyInvitations(r.Context(), claims.UserID)
@@ -210,12 +210,12 @@ func (h *Handler) GetMyInvitations(w http.ResponseWriter, r *http.Request) error
 func (h *Handler) AcceptInvitation(w http.ResponseWriter, r *http.Request) error {
 	claims, ok := auth.ClaimsFromCtx(r.Context())
 	if !ok {
-		return apperror.Unauthorized("неавторизован")
+		return apperror.Unauthorized("unauthorized")
 	}
 
 	invitationID := chi.URLParam(r, "id")
 	if invitationID == "" {
-		return apperror.Validation("требуется идентификатор приглашения")
+		return apperror.Validation("invitation id is required")
 	}
 
 	if err := h.service.AcceptInvitation(r.Context(), claims.UserID, invitationID); err != nil {
@@ -241,12 +241,12 @@ func (h *Handler) AcceptInvitation(w http.ResponseWriter, r *http.Request) error
 func (h *Handler) DeclineInvitation(w http.ResponseWriter, r *http.Request) error {
 	claims, ok := auth.ClaimsFromCtx(r.Context())
 	if !ok {
-		return apperror.Unauthorized("неавторизован")
+		return apperror.Unauthorized("unauthorized")
 	}
 
 	invitationID := chi.URLParam(r, "id")
 	if invitationID == "" {
-		return apperror.Validation("требуется идентификатор приглашения")
+		return apperror.Validation("invitation id is required")
 	}
 
 	if err := h.service.DeclineInvitation(r.Context(), claims.UserID, invitationID); err != nil {
@@ -271,12 +271,12 @@ func (h *Handler) DeclineInvitation(w http.ResponseWriter, r *http.Request) erro
 func (h *Handler) RemoveInvitation(w http.ResponseWriter, r *http.Request) error {
 	claims, ok := auth.ClaimsFromCtx(r.Context())
 	if !ok {
-		return apperror.Unauthorized("неавторизован")
+		return apperror.Unauthorized("unauthorized")
 	}
 
 	invitationID := chi.URLParam(r, "id")
 	if invitationID == "" {
-		return apperror.Validation("требуется идентификатор приглашения")
+		return apperror.Validation("invitation id is required")
 	}
 
 	if err := h.service.RemoveInvitation(r.Context(), claims.UserID, invitationID); err != nil {
@@ -372,6 +372,42 @@ func (h *Handler) RemoveMember(w http.ResponseWriter, r *http.Request) error {
 	return writeJSON(w, http.StatusOK, map[string]string{"status": "removed"})
 }
 
+// GetUserSharedDirectories returns shared directories where user can invite others
+// @Summary Get user's shared directories for invitations
+// @Tags sharing
+// @Security BearerAuth
+// @Produce json
+// @Param limit query int false "Maximum number of directories to return"
+// @Success 200 {array} SharedDirectoryResponse
+// @Failure 401 {object} apperror.Response
+// @Router /api/v1/shared/directories [get]
+func (h *Handler) GetUserSharedDirectories(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := auth.ClaimsFromCtx(r.Context())
+	if !ok {
+		return apperror.Unauthorized("неавторизован")
+	}
+
+	limit := 0
+	if l := r.URL.Query().Get("limit"); l != "" {
+		parsed, err := strconv.Atoi(l)
+		if err != nil || parsed < 0 {
+			return apperror.Validation("некорректный лимит")
+		}
+		limit = parsed
+	}
+
+	resp, err := h.service.GetUserSharedDirectories(r.Context(), claims.UserID, limit)
+	if err != nil {
+		return err
+	}
+
+	if resp == nil {
+		resp = []SharedDirectoryResponse{}
+	}
+
+	return writeJSON(w, http.StatusOK, resp)
+}
+
 func writeJSON(w http.ResponseWriter, status int, payload any) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
@@ -383,7 +419,7 @@ func decodeJSON(r *http.Request, v any) error {
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(v); err != nil {
-		return apperror.Validation("неверный формат запроса")
+		return apperror.Validation("invalid request format")
 	}
 	return nil
 }

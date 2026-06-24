@@ -38,6 +38,8 @@ type mockRepo struct {
 	findMemberErr               error
 	updateMemberRoleErr         error
 	removeMemberErr             error
+	getUserSharedDirsResult     []SharedDirectoryResponse
+	getUserSharedDirsErr        error
 }
 
 func (m *mockRepo) FindByMember(_ context.Context, _ dbTX, _ string, _ int) ([]sharedDirectoryRecord, error) {
@@ -101,6 +103,10 @@ func (m *mockRepo) UpdateMemberRole(_ context.Context, _ dbTX, _, _, _ string) e
 
 func (m *mockRepo) RemoveMember(_ context.Context, _ dbTX, _, _ string) error {
 	return m.removeMemberErr
+}
+
+func (m *mockRepo) GetUserSharedDirectories(_ context.Context, _ dbTX, _ string, _ int) ([]SharedDirectoryResponse, error) {
+	return m.getUserSharedDirsResult, m.getUserSharedDirsErr
 }
 
 type mockTX struct{}

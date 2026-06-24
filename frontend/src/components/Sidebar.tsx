@@ -8,16 +8,7 @@ import { useDirectoryStore } from '../store/directoryStore';
 
 const BYTES_TO_GB = 1024 * 1024 * 1024;
 
-interface SidebarProps {
-  hasUnreadInvites?: boolean;
-}
-
-/*===
-  Это мок
-  === */
-const unreadCount = 0;
-
-export const Sidebar: React.FC<SidebarProps> = ({ hasUnreadInvites = unreadCount > 0 }) => {
+export const Sidebar: React.FC = () => {
   const location = useLocation();
   const currentPath = location.pathname;
   const user = useAuthStore((s) => s.user);
@@ -42,10 +33,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ hasUnreadInvites = unreadCount
       { label: 'Личное хранилище', icon: Folder, path: `/directories/${personalStorageId}` },
       { label: 'Общие директории', icon: Users, path: '/directories' },
       { label: 'Избранное', icon: Star, path: '/favorites' },
-      { label: 'Приглашения', icon: Mail, path: '/invitations', badge: hasUnreadInvites }, // Синяя точка
+      { label: 'Приглашения', icon: Mail, path: '/invitations' },
       { label: 'Корзина', icon: Trash2, path: '/trash' },
     ],
-    [personalStorageId, hasUnreadInvites],
+    [personalStorageId],
   );
 
   if (isLoading) {
@@ -82,9 +73,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ hasUnreadInvites = unreadCount
                 className={cn('size-[18px]', isActive ? 'text-brand' : 'text-theme-muted')}
               />
               {item.label}
-              {item.badge && (
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-brand rounded-theme-full" />
-              )}
             </Link>
           );
         })}

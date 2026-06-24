@@ -30,7 +30,7 @@ func NewHandler(service ServiceInterface) *Handler {
 func (h *Handler) GetRootContents(w http.ResponseWriter, r *http.Request) error {
 	claims, ok := auth.ClaimsFromCtx(r.Context())
 	if !ok {
-		return apperror.Unauthorized("unauthorized")
+		return apperror.Unauthorized("не авторизован")
 	}
 
 	resp, err := h.service.GetRootContents(r.Context(), claims.UserID)
@@ -55,12 +55,12 @@ func (h *Handler) GetRootContents(w http.ResponseWriter, r *http.Request) error 
 func (h *Handler) GetContents(w http.ResponseWriter, r *http.Request) error {
 	claims, ok := auth.ClaimsFromCtx(r.Context())
 	if !ok {
-		return apperror.Unauthorized("unauthorized")
+		return apperror.Unauthorized("не авторизован")
 	}
 
 	dirID := chi.URLParam(r, "id")
 	if dirID == "" {
-		return apperror.Validation("directory id is required")
+		return apperror.Validation("id директории обязателен")
 	}
 
 	resp, err := h.service.GetContents(r.Context(), claims.UserID, dirID)
@@ -85,12 +85,12 @@ func (h *Handler) GetContents(w http.ResponseWriter, r *http.Request) error {
 func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) error {
 	claims, ok := auth.ClaimsFromCtx(r.Context())
 	if !ok {
-		return apperror.Unauthorized("unauthorized")
+		return apperror.Unauthorized("не авторизован")
 	}
 
 	dirID := chi.URLParam(r, "id")
 	if dirID == "" {
-		return apperror.Validation("directory id is required")
+		return apperror.Validation("id директории обязателен")
 	}
 
 	resp, err := h.service.GetByID(r.Context(), claims.UserID, dirID)
@@ -118,7 +118,7 @@ func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) error {
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) error {
 	claims, ok := auth.ClaimsFromCtx(r.Context())
 	if !ok {
-		return apperror.Unauthorized("unauthorized")
+		return apperror.Unauthorized("не авторизован")
 	}
 
 	var req CreateDirectoryRequest
@@ -152,12 +152,12 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) error {
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) error {
 	claims, ok := auth.ClaimsFromCtx(r.Context())
 	if !ok {
-		return apperror.Unauthorized("unauthorized")
+		return apperror.Unauthorized("не авторизован")
 	}
 
 	dirID := chi.URLParam(r, "id")
 	if dirID == "" {
-		return apperror.Validation("directory id is required")
+		return apperror.Validation("id директории обязателен")
 	}
 
 	var req UpdateDirectoryRequest
@@ -178,7 +178,7 @@ func decodeJSON(body io.ReadCloser, dst any) error {
 	dec := json.NewDecoder(body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(dst); err != nil {
-		return apperror.Validation("invalid JSON body")
+		return apperror.Validation("некорректный JSON")
 	}
 	return nil
 }
@@ -187,7 +187,86 @@ func writeJSON(w http.ResponseWriter, status int, payload any) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(payload); err != nil {
-		return apperror.WrapInternal("encode response", err)
+		return apperror.WrapInternal("ошибка кодирования ответа", err)
 	}
 	return nil
+}
+
+// SoftDelete moves a directory to trash (cascade).
+// @Summary Delete directory to trash
+// @Tags directories
+// @Security BearerAuth
+// @Param id path string true "Directory ID"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} apperror.Response
+// @Failure 401 {object} apperror.Response
+// @Failure 403 {object} apperror.Response
+// @Failure 404 {object} apperror.Response
+// @Router /api/v1/directories/{id} [delete]
+func (h *Handler) SoftDelete(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := auth.ClaimsFromCtx(r.Context())
+	if !ok {
+		return apperror.Unauthorized("не авторизован")
+	}
+	dirID := chi.URLParam(r, "id")
+	if dirID == "" {
+		return apperror.Validation("id директории обязателен")
+	}
+	if err := h.service.SoftDelete(r.Context(), claims.UserID, dirID); err != nil {
+		return err
+	}
+	return writeJSON(w, http.StatusOK, map[string]string{"message": "директория перемещена в корзину"})
+}
+
+// Restore restores a directory from trash.
+// @Summary Restore directory from trash
+// @Tags directories
+// @Security BearerAuth
+// @Param id path string true "Directory ID"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} apperror.Response
+// @Failure 401 {object} apperror.Response
+// @Failure 403 {object} apperror.Response
+// @Failure 404 {object} apperror.Response
+// @Failure 409 {object} apperror.Response
+// @Router /api/v1/directories/{id}/restore [post]
+func (h *Handler) Restore(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := auth.ClaimsFromCtx(r.Context())
+	if !ok {
+		return apperror.Unauthorized("не авторизован")
+	}
+	dirID := chi.URLParam(r, "id")
+	if dirID == "" {
+		return apperror.Validation("id директории обязателен")
+	}
+	if err := h.service.Restore(r.Context(), claims.UserID, dirID); err != nil {
+		return err
+	}
+	return writeJSON(w, http.StatusOK, map[string]string{"message": "директория восстановлена"})
+}
+
+// PermanentDelete deletes a directory permanently.
+// @Summary Permanently delete directory
+// @Tags directories
+// @Security BearerAuth
+// @Param id path string true "Directory ID"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} apperror.Response
+// @Failure 401 {object} apperror.Response
+// @Failure 403 {object} apperror.Response
+// @Failure 404 {object} apperror.Response
+// @Router /api/v1/directories/{id}/permanent [delete]
+func (h *Handler) PermanentDelete(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := auth.ClaimsFromCtx(r.Context())
+	if !ok {
+		return apperror.Unauthorized("не авторизован")
+	}
+	dirID := chi.URLParam(r, "id")
+	if dirID == "" {
+		return apperror.Validation("id директории обязателен")
+	}
+	if err := h.service.PermanentDelete(r.Context(), claims.UserID, dirID); err != nil {
+		return err
+	}
+	return writeJSON(w, http.StatusOK, map[string]string{"message": "директория удалена навсегда"})
 }
