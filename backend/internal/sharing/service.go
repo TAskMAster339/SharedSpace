@@ -368,3 +368,7 @@ func (s *Service) RemoveMember(ctx context.Context, userID, sharedDirID, targetU
 func isNotFound(err error) bool {
 	return errors.Is(err, pgx.ErrNoRows)
 }
+
+func (s *Service) GetUserSharedDirectories(ctx context.Context, userID string) ([]SharedDirectoryResponse, error) {
+	return s.repo.GetUserSharedDirectories(ctx, s.db, userID)
+}

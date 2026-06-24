@@ -1323,6 +1323,39 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/shared/directories": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sharing"
+                ],
+                "summary": "Get user's shared directories for invitations",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/internal_sharing.SharedDirectoryResponse"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/shared/with-me": {
             "get": {
                 "security": [
@@ -2106,8 +2139,20 @@ const docTemplate = `{
                 "owner_name": {
                     "type": "string"
                 },
+                "parent_id": {
+                    "type": "string"
+                },
                 "role": {
                     "$ref": "#/definitions/internal_sharing.Role"
+                },
+                "shared_directory_id": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
                 }
             }
         },

@@ -264,3 +264,54 @@ func (r *Repository) RemoveMember(ctx context.Context, db dbTX, sharedDirID, use
 	`, sharedDirID, userID)
 	return err
 }
+
+func (r *Repository) GetUserSharedDirectories(ctx context.Context, db dbTX, userID string) ([]SharedDirectoryResponse, error) {
+	rows, err := db.Query(ctx, `
+		SELECT 
+			sd.id AS shared_directory_id,
+			d.id AS directory_id,
+			d.name,
+			d.owner_id,
+			d.parent_id,
+			d.type,
+			d.created_at,
+			d.updated_at
+		FROM shared_directories sd
+		JOIN directories d ON sd.directory_id = d.id
+		LEFT JOIN shared_directory_members sdm ON sdm.shared_directory_id = sd.id
+		WHERE sd.owner_id = $1 OR (sdm.user_id = $1 AND sdm.role = 'admin')
+		ORDER BY d.created_at DESC
+	`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []SharedDirectoryResponse
+	for rows.Next() {
+		var resp SharedDirectoryResponse
+		var parentID *string
+
+		err := rows.Scan(
+			&resp.SharedDirectoryID,
+			&resp.DirectoryID,
+			&resp.Name,
+			&resp.OwnerID,
+			&parentID,
+			&resp.Type,
+			&resp.CreatedAt,
+			&resp.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if parentID != nil {
+			resp.ParentID = parentID
+		}
+
+		result = append(result, resp)
+	}
+
+	return result, nil
+}
