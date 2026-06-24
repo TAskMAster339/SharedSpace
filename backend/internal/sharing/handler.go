@@ -44,6 +44,32 @@ func (h *Handler) GetSharedWithMe(w http.ResponseWriter, r *http.Request) error 
 	return writeJSON(w, http.StatusOK, resp)
 }
 
+// GetSharedWithMeStats returns shared directories with member and file counts.
+// @Summary List shared directories with stats for current user
+// @Tags sharing
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {array} SharedDirectoryWithStatsResponse
+// @Failure 401 {object} apperror.Response
+// @Router /api/v1/shared/with-me/stats [get]
+func (h *Handler) GetSharedWithMeStats(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := auth.ClaimsFromCtx(r.Context())
+	if !ok {
+		return apperror.Unauthorized("неавторизован")
+	}
+
+	resp, err := h.service.GetSharedWithMeStats(r.Context(), claims.UserID)
+	if err != nil {
+		return err
+	}
+
+	if resp == nil {
+		resp = []SharedDirectoryWithStatsResponse{}
+	}
+
+	return writeJSON(w, http.StatusOK, resp)
+}
+
 // GetMembers returns all members of a shared directory.
 // @Summary Get shared directory members
 // @Tags sharing

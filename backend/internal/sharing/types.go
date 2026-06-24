@@ -29,6 +29,18 @@ type SharedDirectoryResponse struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+type SharedDirectoryWithStatsResponse struct {
+	ID          string    `json:"id"`
+	DirectoryID string    `json:"directory_id"`
+	Name        string    `json:"name"`
+	OwnerID     string    `json:"owner_id"`
+	OwnerName   string    `json:"owner_name"`
+	Role        Role      `json:"role"`
+	MemberCount int       `json:"member_count"`
+	FileCount   int       `json:"file_count"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
 type MemberResponse struct {
 	ID       string    `json:"id"`
 	UserID   string    `json:"user_id"`
@@ -59,6 +71,18 @@ type sharedDirectoryRecord struct {
 	Name        string
 	OwnerName   string
 	Role        string
+	CreatedAt   time.Time
+}
+
+type sharedDirectoryWithStatsRecord struct {
+	ID          string
+	DirectoryID string
+	OwnerID     string
+	Name        string
+	OwnerName   string
+	Role        string
+	MemberCount int
+	FileCount   int
 	CreatedAt   time.Time
 }
 
