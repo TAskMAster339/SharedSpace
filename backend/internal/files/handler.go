@@ -194,6 +194,13 @@ func (h *Handler) GetRecent(w http.ResponseWriter, r *http.Request) error {
 	return writeJSON(w, http.StatusOK, resp)
 }
 
+func (h *Handler) decodeJSON(r *http.Request, v any) error {
+	if err := json.NewDecoder(r.Body).Decode(v); err != nil {
+		return apperror.Validation("некорректный JSON")
+	}
+	return nil
+}
+
 func writeJSON(w http.ResponseWriter, status int, payload any) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
@@ -201,6 +208,44 @@ func writeJSON(w http.ResponseWriter, status int, payload any) error {
 		return apperror.WrapInternal("ошибка кодирования ответа", err)
 	}
 	return nil
+}
+
+// Update moves or renames a file.
+// @Summary Move or rename a file
+// @Tags files
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "File ID"
+// @Param body body UpdateFileRequest true "Fields to update"
+// @Success 200 {object} FileMetadataResponse
+// @Failure 400 {object} apperror.Response
+// @Failure 401 {object} apperror.Response
+// @Failure 403 {object} apperror.Response
+// @Failure 404 {object} apperror.Response
+// @Router /api/v1/files/{id} [patch]
+func (h *Handler) Update(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := auth.ClaimsFromCtx(r.Context())
+	if !ok {
+		return apperror.Unauthorized("не авторизован")
+	}
+
+	fileID := chi.URLParam(r, "id")
+	if fileID == "" {
+		return apperror.Validation("id файла обязателен")
+	}
+
+	var req UpdateFileRequest
+	if err := h.decodeJSON(r, &req); err != nil {
+		return err
+	}
+
+	resp, err := h.service.Update(r.Context(), claims.UserID, fileID, req)
+	if err != nil {
+		return err
+	}
+
+	return writeJSON(w, http.StatusOK, resp)
 }
 
 // SoftDelete moves a file to trash.

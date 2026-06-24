@@ -126,6 +126,12 @@ func (m *mockRepo) SoftDeleteFile(_ context.Context, _ dbTX, _ string, _ time.Ti
 }
 func (m *mockRepo) RestoreFile(_ context.Context, _ dbTX, _ string) error    { return m.restoreErr }
 func (m *mockRepo) HardDeleteFile(_ context.Context, _ dbTX, _ string) error { return m.hardErr }
+func (m *mockRepo) MoveFile(_ context.Context, _ dbTX, _, _ string, _ *string) (fileRecord, error) {
+	return fileRecord{}, nil
+}
+func (m *mockRepo) FindByFilenameAndDirectory(_ context.Context, _ dbTX, _, _ string) (fileRecord, error) {
+	return fileRecord{}, pgx.ErrNoRows
+}
 
 func newTestService(repo RepositoryInterface, storage StorageClient) *Service {
 	tx := &mockTx{}

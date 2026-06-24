@@ -23,6 +23,7 @@ type ServiceInterface interface {
 	Restore(ctx context.Context, userID, fileID string) error
 	PermanentDelete(ctx context.Context, userID, fileID string) error
 	GetRecent(ctx context.Context, userID string, limit int) (RecentFilesResponse, error)
+	Update(ctx context.Context, userID, fileID string, req UpdateFileRequest) (FileMetadataResponse, error)
 }
 
 type RepositoryInterface interface {
@@ -37,6 +38,8 @@ type RepositoryInterface interface {
 	RestoreFile(ctx context.Context, db dbTX, fileID string) error
 	HardDeleteFile(ctx context.Context, db dbTX, fileID string) error
 	FindRecentByUserID(ctx context.Context, db dbTX, userID string, limit int) ([]fileRecord, error)
+	MoveFile(ctx context.Context, db dbTX, fileID, newParentID string, newFilename *string) (fileRecord, error)
+	FindByFilenameAndDirectory(ctx context.Context, db dbTX, filename, directoryID string) (fileRecord, error)
 }
 
 type FileUpload struct {

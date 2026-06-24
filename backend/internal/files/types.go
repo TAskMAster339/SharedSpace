@@ -35,6 +35,11 @@ type FileContentResponse struct {
 	URL string `json:"url"`
 }
 
+type UpdateFileRequest struct {
+	Filename *string `json:"filename"`
+	ParentID *string `json:"parent_id"`
+}
+
 type RecentFilesResponse struct {
 	Files []FileMetadataResponse `json:"files"`
 }
