@@ -64,6 +64,10 @@ type InviteRequest struct {
 	Username string `json:"username"`
 }
 
+type ChangeRoleRequest struct {
+	Role Role `json:"role"`
+}
+
 type sharedDirectoryRecord struct {
 	ID          string
 	DirectoryID string

@@ -276,6 +276,92 @@ func (h *Handler) RemoveInvitation(w http.ResponseWriter, r *http.Request) error
 	return writeJSON(w, http.StatusOK, map[string]string{"status": "revoked"})
 }
 
+// ChangeMemberRole changes the role of a member in a shared directory.
+// @Summary Change member role
+// @Tags sharing
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "Shared Directory ID"
+// @Param userId path string true "User ID"
+// @Param body body ChangeRoleRequest true "New role"
+// @Success 200 {object} MemberResponse
+// @Failure 400 {object} apperror.Response
+// @Failure 401 {object} apperror.Response
+// @Failure 403 {object} apperror.Response
+// @Failure 404 {object} apperror.Response
+// @Router /api/v1/shared-directories/{id}/members/{userId} [patch]
+func (h *Handler) ChangeMemberRole(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := auth.ClaimsFromCtx(r.Context())
+	if !ok {
+		return apperror.Unauthorized("неавторизован")
+	}
+
+	sharedDirID := chi.URLParam(r, "id")
+	if sharedDirID == "" {
+		return apperror.Validation("требуется идентификатор общей директории")
+	}
+
+	targetUserID := chi.URLParam(r, "userId")
+	if targetUserID == "" {
+		return apperror.Validation("требуется идентификатор пользователя")
+	}
+
+	var req ChangeRoleRequest
+	if err := decodeJSON(r, &req); err != nil {
+		return err
+	}
+	if req.Role == "" {
+		return apperror.Validation("требуется роль")
+	}
+	if req.Role != RoleViewer && req.Role != RoleEditor && req.Role != RoleAdmin {
+		return apperror.Validation("недопустимая роль")
+	}
+
+	resp, err := h.service.ChangeRole(r.Context(), claims.UserID, sharedDirID, targetUserID, string(req.Role))
+	if err != nil {
+		return err
+	}
+
+	return writeJSON(w, http.StatusOK, resp)
+}
+
+// RemoveMember removes a member from a shared directory.
+// @Summary Remove member
+// @Tags sharing
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Shared Directory ID"
+// @Param userId path string true "User ID"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} apperror.Response
+// @Failure 401 {object} apperror.Response
+// @Failure 403 {object} apperror.Response
+// @Failure 404 {object} apperror.Response
+// @Router /api/v1/shared-directories/{id}/members/{userId} [delete]
+func (h *Handler) RemoveMember(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := auth.ClaimsFromCtx(r.Context())
+	if !ok {
+		return apperror.Unauthorized("неавторизован")
+	}
+
+	sharedDirID := chi.URLParam(r, "id")
+	if sharedDirID == "" {
+		return apperror.Validation("требуется идентификатор общей директории")
+	}
+
+	targetUserID := chi.URLParam(r, "userId")
+	if targetUserID == "" {
+		return apperror.Validation("требуется идентификатор пользователя")
+	}
+
+	if err := h.service.RemoveMember(r.Context(), claims.UserID, sharedDirID, targetUserID); err != nil {
+		return err
+	}
+
+	return writeJSON(w, http.StatusOK, map[string]string{"status": "removed"})
+}
+
 func writeJSON(w http.ResponseWriter, status int, payload any) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
