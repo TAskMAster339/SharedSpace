@@ -18,7 +18,6 @@ type RepositoryInterface interface {
 	Delete(ctx context.Context, db dbTX, userID, fileID string) error
 	FindAllByUserID(ctx context.Context, db dbTX, userID string) ([]favoriteFileRecord, error)
 	FindFileByID(ctx context.Context, db dbTX, fileID string) error
-	FindByUserAndFile(ctx context.Context, db dbTX, userID, fileID string) (bool, error)
 }
 
 type dbTX interface {

@@ -36,10 +36,6 @@ func (m *mockRepo) FindFileByID(_ context.Context, _ dbTX, _ string) error {
 	return m.findFileErr
 }
 
-func (m *mockRepo) FindByUserAndFile(_ context.Context, _ dbTX, _, _ string) (bool, error) {
-	return false, nil
-}
-
 type mockTx struct {
 	commitCount   int
 	rollbackCount int

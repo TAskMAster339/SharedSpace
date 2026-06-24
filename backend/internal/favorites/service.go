@@ -2,6 +2,7 @@ package favorites
 
 import (
 	"context"
+	"errors"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -28,7 +29,7 @@ func NewService(pool *pgxpool.Pool, repo RepositoryInterface) *Service {
 
 func (s *Service) Add(ctx context.Context, userID, fileID string) error {
 	if err := s.repo.FindFileByID(ctx, s.db, fileID); err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return apperror.NotFound("файл не найден")
 		}
 		return apperror.WrapInternal("проверка существования файла", err)
@@ -43,7 +44,7 @@ func (s *Service) Add(ctx context.Context, userID, fileID string) error {
 
 func (s *Service) Remove(ctx context.Context, userID, fileID string) error {
 	if err := s.repo.FindFileByID(ctx, s.db, fileID); err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return apperror.NotFound("файл не найден")
 		}
 		return apperror.WrapInternal("проверка существования файла", err)

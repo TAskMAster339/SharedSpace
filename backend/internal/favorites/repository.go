@@ -77,14 +77,3 @@ func (r *Repository) FindFileByID(ctx context.Context, db dbTX, fileID string) e
 		WHERE id = $1 AND deleted_at IS NULL
 	`, fileID).Scan(new(string))
 }
-
-func (r *Repository) FindByUserAndFile(ctx context.Context, db dbTX, userID, fileID string) (bool, error) {
-	var exists bool
-	err := db.QueryRow(ctx, `
-		SELECT EXISTS(
-			SELECT 1 FROM favorite_files
-			WHERE user_id = $1 AND file_id = $2
-		)
-	`, userID, fileID).Scan(&exists)
-	return exists, err
-}
