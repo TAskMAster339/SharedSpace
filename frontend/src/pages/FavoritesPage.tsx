@@ -44,8 +44,8 @@ const FavoritesPage: React.FC = () => {
   const handleToggleFavorite = async (fileId: string) => {
     if (!accessToken) return;
     // Оптимистично удаляем файл из списка
-    setFiles(prev => prev.filter(file => file.id !== fileId));
-    
+    setFiles((prev) => prev.filter((file) => file.id !== fileId));
+
     try {
       // Вызываем toggleFavorite из хука
       await toggleFavorite(fileId);

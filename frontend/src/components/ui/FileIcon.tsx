@@ -1,9 +1,16 @@
 // src/components/ui/FileIcon.tsx
 import React from 'react';
-import { 
-  Image, Video, Music, Table, 
-  Archive, Code, Type, 
-  FileText, File, Presentation,
+import {
+  Image,
+  Video,
+  Music,
+  Table,
+  Archive,
+  Code,
+  Type,
+  FileText,
+  File,
+  Presentation,
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { FileIconType } from '../../utils/fileType';

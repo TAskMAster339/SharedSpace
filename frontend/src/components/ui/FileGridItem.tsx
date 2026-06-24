@@ -39,7 +39,7 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
       <p className="text-sm text-theme-primary font-medium text-center mt-2 truncate w-full max-w-[120px]">
         {name}
       </p>
-      
+
       {onToggleFavorite && (
         <button
           type="button"
@@ -51,15 +51,12 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
           }}
           className={cn(
             'absolute top-2 right-2 transition-colors',
-            isFavorite 
+            isFavorite
               ? 'text-yellow-400 opacity-100'
-              : 'text-theme-muted opacity-60 hover:text-yellow-400'
+              : 'text-theme-muted opacity-60 hover:text-yellow-400',
           )}
         >
-          <Star
-            size={16}
-            fill={isFavorite ? 'currentColor' : 'none'}
-          />
+          <Star size={16} fill={isFavorite ? 'currentColor' : 'none'} />
         </button>
       )}
     </Link>

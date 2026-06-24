@@ -62,7 +62,7 @@ export const FileItem: React.FC<FileItemProps> = ({
           <Star
             size={18}
             className={cn(
-              isFavorite ? 'text-yellow-400' : 'text-theme-muted opacity-60 hover:text-yellow-400'
+              isFavorite ? 'text-yellow-400' : 'text-theme-muted opacity-60 hover:text-yellow-400',
             )}
             fill={isFavorite ? 'currentColor' : 'none'}
           />
