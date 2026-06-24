@@ -157,6 +157,19 @@ func (s *Service) GetContentURL(ctx context.Context, userID, fileID string) (Fil
 	return FileContentResponse{URL: url}, nil
 }
 
+func (s *Service) GetRecent(ctx context.Context, userID string, limit int) (RecentFilesResponse, error) {
+	records, err := s.repo.FindRecentByUserID(ctx, s.db, userID, limit)
+	if err != nil {
+		return RecentFilesResponse{}, apperror.WrapInternal("получение списка недавних файлов", err)
+	}
+
+	files := make([]FileMetadataResponse, 0, len(records))
+	for _, rec := range records {
+		files = append(files, toMetadataResponse(rec))
+	}
+	return RecentFilesResponse{Files: files}, nil
+}
+
 func (s *Service) cleanupObjects(keys []string) {
 	if len(keys) == 0 {
 		return

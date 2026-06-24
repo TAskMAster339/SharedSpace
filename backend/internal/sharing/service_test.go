@@ -40,7 +40,7 @@ type mockRepo struct {
 	removeMemberErr             error
 }
 
-func (m *mockRepo) FindByMember(_ context.Context, _ dbTX, _ string) ([]sharedDirectoryRecord, error) {
+func (m *mockRepo) FindByMember(_ context.Context, _ dbTX, _ string, _ int) ([]sharedDirectoryRecord, error) {
 	return m.findByMemberResult, m.findByMemberErr
 }
 
@@ -142,7 +142,7 @@ func TestServiceGetSharedWithMe(t *testing.T) {
 		}
 		svc := newTestService(repo)
 
-		resp, err := svc.GetSharedWithMe(context.Background(), "user-1")
+		resp, err := svc.GetSharedWithMe(context.Background(), "user-1", 0)
 		if err != nil {
 			t.Fatalf("GetSharedWithMe returned error: %v", err)
 		}
@@ -161,7 +161,7 @@ func TestServiceGetSharedWithMe(t *testing.T) {
 		repo := &mockRepo{findByMemberResult: []sharedDirectoryRecord{}}
 		svc := newTestService(repo)
 
-		resp, err := svc.GetSharedWithMe(context.Background(), "user-1")
+		resp, err := svc.GetSharedWithMe(context.Background(), "user-1", 0)
 		if err != nil {
 			t.Fatalf("GetSharedWithMe returned error: %v", err)
 		}
@@ -174,7 +174,7 @@ func TestServiceGetSharedWithMe(t *testing.T) {
 		repo := &mockRepo{findByMemberErr: errors.New("db error")}
 		svc := newTestService(repo)
 
-		_, err := svc.GetSharedWithMe(context.Background(), "user-1")
+		_, err := svc.GetSharedWithMe(context.Background(), "user-1", 0)
 		if err == nil {
 			t.Fatal("expected error")
 		}

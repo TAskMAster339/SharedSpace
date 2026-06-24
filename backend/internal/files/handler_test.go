@@ -39,6 +39,10 @@ func (m *mockService) GetContentURL(_ context.Context, userID, fileID string) (F
 	return FileContentResponse{}, nil
 }
 
+func (m *mockService) GetRecent(_ context.Context, userID string, limit int) (RecentFilesResponse, error) {
+	return RecentFilesResponse{}, nil
+}
+
 func withClaims(ctx context.Context, userID string) context.Context {
 	return auth.SetClaims(ctx, &auth.Claims{UserID: userID})
 }

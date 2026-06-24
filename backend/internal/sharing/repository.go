@@ -34,16 +34,23 @@ func (r *Repository) CreateShared(ctx context.Context, tx interface {
 	return err
 }
 
-func (r *Repository) FindByMember(ctx context.Context, db dbTX, userID string) ([]sharedDirectoryRecord, error) {
-	rows, err := db.Query(ctx, `
+func (r *Repository) FindByMember(ctx context.Context, db dbTX, userID string, limit int) ([]sharedDirectoryRecord, error) {
+	query := `
 		SELECT sd.id, sd.directory_id, sd.owner_id, d.name, u.username, sdm.role, sd.created_at
 		FROM shared_directories sd
 		JOIN shared_directory_members sdm ON sdm.shared_directory_id = sd.id
 		JOIN directories d ON d.id = sd.directory_id
 		JOIN users u ON u.id = sd.owner_id
 		WHERE sdm.user_id = $1
-		ORDER BY sd.created_at DESC
-	`, userID)
+		ORDER BY sd.created_at DESC`
+	args := []any{userID}
+
+	if limit > 0 {
+		query += ` LIMIT $2`
+		args = append(args, limit)
+	}
+
+	rows, err := db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}

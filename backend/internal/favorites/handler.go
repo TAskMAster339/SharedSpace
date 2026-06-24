@@ -3,6 +3,7 @@ package favorites
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 
@@ -85,6 +86,7 @@ func (h *Handler) Remove(w http.ResponseWriter, r *http.Request) error {
 // @Tags files
 // @Security BearerAuth
 // @Produce json
+// @Param limit query int false "Maximum number of favorites to return"
 // @Success 200 {object} FavoritesListResponse
 // @Failure 401 {object} apperror.Response
 // @Router /api/v1/files/favorites [get]
@@ -94,7 +96,16 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) error {
 		return apperror.Unauthorized("не авторизован")
 	}
 
-	resp, err := h.service.List(r.Context(), claims.UserID)
+	limit := 0
+	if l := r.URL.Query().Get("limit"); l != "" {
+		parsed, err := strconv.Atoi(l)
+		if err != nil || parsed < 0 {
+			return apperror.Validation("некорректный лимит")
+		}
+		limit = parsed
+	}
+
+	resp, err := h.service.List(r.Context(), claims.UserID, limit)
 	if err != nil {
 		return err
 	}

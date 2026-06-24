@@ -546,11 +546,57 @@ const docTemplate = `{
                     "files"
                 ],
                 "summary": "List favorited files",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Maximum number of favorites to return",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/internal_favorites.FavoritesListResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/files/recent": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Get recent files",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Maximum number of files to return",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_files.RecentFilesResponse"
                         }
                     },
                     "401": {
@@ -1291,6 +1337,14 @@ const docTemplate = `{
                     "sharing"
                 ],
                 "summary": "List shared directories for current user",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Maximum number of shared directories to return",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1878,6 +1932,17 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                }
+            }
+        },
+        "internal_files.RecentFilesResponse": {
+            "type": "object",
+            "properties": {
+                "files": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_files.FileMetadataResponse"
+                    }
                 }
             }
         },

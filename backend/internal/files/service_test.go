@@ -57,6 +57,10 @@ func (m *mockRepo) AddUserStorageUsed(_ context.Context, _ dbTX, _ string, delta
 	return m.addUsedErr
 }
 
+func (m *mockRepo) FindRecentByUserID(_ context.Context, _ dbTX, _ string, _ int) ([]fileRecord, error) {
+	return nil, nil
+}
+
 type mockStorage struct {
 	uploadedKey string
 	err         error
