@@ -290,3 +290,81 @@ func toMemberResponses(records []memberRecord) []MemberResponse {
 	}
 	return resp
 }
+
+func (s *Service) ChangeRole(ctx context.Context, userID, sharedDirID, targetUserID, newRole string) (*MemberResponse, error) {
+	sd, err := s.repo.FindByID(ctx, s.db, sharedDirID)
+	if err != nil {
+		if isNotFound(err) {
+			return nil, apperror.NotFound("общая директория не найдена")
+		}
+		return nil, apperror.WrapInternal("ошибка поиска общей директории", err)
+	}
+
+	ok, err := s.accessChecker.Can(ctx, userID, sd.DirectoryID, access.ActionChangeRole)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, apperror.Forbidden("доступ запрещён")
+	}
+
+	member, err := s.repo.FindMember(ctx, s.db, sharedDirID, targetUserID)
+	if err != nil {
+		if isNotFound(err) {
+			return nil, apperror.NotFound("участник не найден")
+		}
+		return nil, apperror.WrapInternal("ошибка поиска участника", err)
+	}
+
+	if err := s.repo.UpdateMemberRole(ctx, s.db, sharedDirID, targetUserID, newRole); err != nil {
+		return nil, apperror.WrapInternal("ошибка обновления роли", err)
+	}
+
+	return &MemberResponse{
+		ID:       member.ID,
+		UserID:   member.UserID,
+		Username: member.Username,
+		Role:     Role(newRole),
+		JoinedAt: member.JoinedAt,
+	}, nil
+}
+
+func (s *Service) RemoveMember(ctx context.Context, userID, sharedDirID, targetUserID string) error {
+	sd, err := s.repo.FindByID(ctx, s.db, sharedDirID)
+	if err != nil {
+		if isNotFound(err) {
+			return apperror.NotFound("общая директория не найдена")
+		}
+		return apperror.WrapInternal("ошибка поиска общей директории", err)
+	}
+
+	ok, err := s.accessChecker.Can(ctx, userID, sd.DirectoryID, access.ActionRemoveMember)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return apperror.Forbidden("доступ запрещён")
+	}
+
+	if targetUserID == sd.OwnerID {
+		return apperror.Forbidden("нельзя удалить владельца общей директории")
+	}
+
+	_, err = s.repo.FindMember(ctx, s.db, sharedDirID, targetUserID)
+	if err != nil {
+		if isNotFound(err) {
+			return apperror.NotFound("участник не найден")
+		}
+		return apperror.WrapInternal("ошибка поиска участника", err)
+	}
+
+	if err := s.repo.RemoveMember(ctx, s.db, sharedDirID, targetUserID); err != nil {
+		return apperror.WrapInternal("ошибка удаления участника", err)
+	}
+
+	return nil
+}
+
+func isNotFound(err error) bool {
+	return errors.Is(err, pgx.ErrNoRows)
+}

@@ -25,6 +25,8 @@ type mockService struct {
 	acceptInvitationFn     func(string, string) error
 	declineInvitationFn    func(string, string) error
 	removeInvitationFn     func(string, string) error
+	changeRoleFn           func(string, string, string, string) (*MemberResponse, error)
+	removeMemberFn         func(string, string, string) error
 }
 
 func (m *mockService) GetSharedWithMe(_ context.Context, userID string) ([]SharedDirectoryResponse, error) {
@@ -79,6 +81,20 @@ func (m *mockService) DeclineInvitation(_ context.Context, userID, invitationID 
 func (m *mockService) RemoveInvitation(_ context.Context, userID, invitationID string) error {
 	if m.removeInvitationFn != nil {
 		return m.removeInvitationFn(userID, invitationID)
+	}
+	return nil
+}
+
+func (m *mockService) ChangeRole(_ context.Context, userID, sharedDirID, targetUserID, newRole string) (*MemberResponse, error) {
+	if m.changeRoleFn != nil {
+		return m.changeRoleFn(userID, sharedDirID, targetUserID, newRole)
+	}
+	return nil, nil
+}
+
+func (m *mockService) RemoveMember(_ context.Context, userID, sharedDirID, targetUserID string) error {
+	if m.removeMemberFn != nil {
+		return m.removeMemberFn(userID, sharedDirID, targetUserID)
 	}
 	return nil
 }
@@ -436,6 +452,194 @@ func TestHandlerGetMembers(t *testing.T) {
 		rec := httptest.NewRecorder()
 
 		err := handler.GetMembers(rec, req)
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeUnauthorized {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+}
+
+func TestHandlerChangeMemberRole(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		svc := &mockService{
+			changeRoleFn: func(userID, sharedDirID, targetUserID, newRole string) (*MemberResponse, error) {
+				return &MemberResponse{
+					ID: "mem-1", UserID: targetUserID, Username: "bob",
+					Role: RoleEditor, JoinedAt: time.Now(),
+				}, nil
+			},
+		}
+		handler := NewHandler(svc)
+
+		body := bytes.NewReader([]byte(`{"role":"editor"}`))
+		req := httptest.NewRequest(http.MethodPatch, "/api/v1/shared-directories/shared-1/members/user-2", body)
+		req = req.WithContext(withChiParams(withClaims(req.Context(), "user-1"), map[string]string{"id": "shared-1", "userId": "user-2"}))
+		rec := httptest.NewRecorder()
+
+		if err := handler.ChangeMemberRole(rec, req); err != nil {
+			t.Fatalf("handler returned error: %v", err)
+		}
+		if rec.Code != http.StatusOK {
+			t.Fatalf("unexpected status: %d", rec.Code)
+		}
+		var resp MemberResponse
+		if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+			t.Fatalf("decode response: %v", err)
+		}
+		if resp.Role != RoleEditor || resp.UserID != "user-2" {
+			t.Fatalf("unexpected response: %+v", resp)
+		}
+	})
+
+	t.Run("missing shared dir id", func(t *testing.T) {
+		handler := NewHandler(&mockService{})
+		body := bytes.NewReader([]byte(`{"role":"editor"}`))
+		req := httptest.NewRequest(http.MethodPatch, "/api/v1/shared-directories//members/user-2", body)
+		req = req.WithContext(withClaims(req.Context(), "user-1"))
+		rec := httptest.NewRecorder()
+
+		err := handler.ChangeMemberRole(rec, req)
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeValidation {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("missing user id", func(t *testing.T) {
+		handler := NewHandler(&mockService{})
+		body := bytes.NewReader([]byte(`{"role":"editor"}`))
+		req := httptest.NewRequest(http.MethodPatch, "/api/v1/shared-directories/shared-1/members/", body)
+		req = req.WithContext(withChiParams(withClaims(req.Context(), "user-1"), map[string]string{"id": "shared-1"}))
+		rec := httptest.NewRecorder()
+
+		err := handler.ChangeMemberRole(rec, req)
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeValidation {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("missing role in body", func(t *testing.T) {
+		handler := NewHandler(&mockService{})
+		body := bytes.NewReader([]byte(`{}`))
+		req := httptest.NewRequest(http.MethodPatch, "/api/v1/shared-directories/shared-1/members/user-2", body)
+		req = req.WithContext(withChiParams(withClaims(req.Context(), "user-1"), map[string]string{"id": "shared-1", "userId": "user-2"}))
+		rec := httptest.NewRecorder()
+
+		err := handler.ChangeMemberRole(rec, req)
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeValidation {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("invalid role", func(t *testing.T) {
+		handler := NewHandler(&mockService{})
+		body := bytes.NewReader([]byte(`{"role":"superadmin"}`))
+		req := httptest.NewRequest(http.MethodPatch, "/api/v1/shared-directories/shared-1/members/user-2", body)
+		req = req.WithContext(withChiParams(withClaims(req.Context(), "user-1"), map[string]string{"id": "shared-1", "userId": "user-2"}))
+		rec := httptest.NewRecorder()
+
+		err := handler.ChangeMemberRole(rec, req)
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeValidation {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("unauthorized", func(t *testing.T) {
+		handler := NewHandler(&mockService{})
+		body := bytes.NewReader([]byte(`{"role":"editor"}`))
+		req := httptest.NewRequest(http.MethodPatch, "/api/v1/shared-directories/shared-1/members/user-2", body)
+		req = req.WithContext(withChiParams(withClaims(req.Context(), ""), map[string]string{"id": "shared-1", "userId": "user-2"}))
+		rec := httptest.NewRecorder()
+
+		err := handler.ChangeMemberRole(rec, req)
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeUnauthorized {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+}
+
+func TestHandlerRemoveMember(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		svc := &mockService{
+			removeMemberFn: func(userID, sharedDirID, targetUserID string) error {
+				return nil
+			},
+		}
+		handler := NewHandler(svc)
+
+		req := httptest.NewRequest(http.MethodDelete, "/api/v1/shared-directories/shared-1/members/user-2", nil)
+		req = req.WithContext(withChiParams(withClaims(req.Context(), "user-1"), map[string]string{"id": "shared-1", "userId": "user-2"}))
+		rec := httptest.NewRecorder()
+
+		if err := handler.RemoveMember(rec, req); err != nil {
+			t.Fatalf("handler returned error: %v", err)
+		}
+		if rec.Code != http.StatusOK {
+			t.Fatalf("unexpected status: %d", rec.Code)
+		}
+	})
+
+	t.Run("missing shared dir id", func(t *testing.T) {
+		handler := NewHandler(&mockService{})
+		req := httptest.NewRequest(http.MethodDelete, "/api/v1/shared-directories//members/user-2", nil)
+		req = req.WithContext(withClaims(req.Context(), "user-1"))
+		rec := httptest.NewRecorder()
+
+		err := handler.RemoveMember(rec, req)
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeValidation {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("missing user id", func(t *testing.T) {
+		handler := NewHandler(&mockService{})
+		req := httptest.NewRequest(http.MethodDelete, "/api/v1/shared-directories/shared-1/members/", nil)
+		req = req.WithContext(withChiParams(withClaims(req.Context(), "user-1"), map[string]string{"id": "shared-1"}))
+		rec := httptest.NewRecorder()
+
+		err := handler.RemoveMember(rec, req)
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeValidation {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("unauthorized", func(t *testing.T) {
+		handler := NewHandler(&mockService{})
+		req := httptest.NewRequest(http.MethodDelete, "/api/v1/shared-directories/shared-1/members/user-2", nil)
+		req = req.WithContext(withChiParams(withClaims(req.Context(), ""), map[string]string{"id": "shared-1", "userId": "user-2"}))
+		rec := httptest.NewRecorder()
+
+		err := handler.RemoveMember(rec, req)
 		if err == nil {
 			t.Fatal("expected error")
 		}

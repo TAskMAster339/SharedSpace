@@ -223,3 +223,30 @@ func (r *Repository) AddMember(ctx context.Context, db dbTX, sharedDirID, userID
 	`, sharedDirID, userID, role)
 	return err
 }
+
+func (r *Repository) FindMember(ctx context.Context, db dbTX, sharedDirID, userID string) (memberRecord, error) {
+	var rec memberRecord
+	err := db.QueryRow(ctx, `
+		SELECT sdm.id, u.id, u.username, sdm.role, sdm.joined_at
+		FROM shared_directory_members sdm
+		JOIN users u ON u.id = sdm.user_id
+		WHERE sdm.shared_directory_id = $1 AND sdm.user_id = $2
+	`, sharedDirID, userID).Scan(&rec.ID, &rec.UserID, &rec.Username, &rec.Role, &rec.JoinedAt)
+	return rec, err
+}
+
+func (r *Repository) UpdateMemberRole(ctx context.Context, db dbTX, sharedDirID, userID, role string) error {
+	_, err := db.Exec(ctx, `
+		UPDATE shared_directory_members SET role = $3
+		WHERE shared_directory_id = $1 AND user_id = $2
+	`, sharedDirID, userID, role)
+	return err
+}
+
+func (r *Repository) RemoveMember(ctx context.Context, db dbTX, sharedDirID, userID string) error {
+	_, err := db.Exec(ctx, `
+		DELETE FROM shared_directory_members
+		WHERE shared_directory_id = $1 AND user_id = $2
+	`, sharedDirID, userID)
+	return err
+}

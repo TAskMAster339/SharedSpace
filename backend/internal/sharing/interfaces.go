@@ -16,6 +16,8 @@ type ServiceInterface interface {
 	AcceptInvitation(context.Context, string, string) error
 	DeclineInvitation(context.Context, string, string) error
 	RemoveInvitation(context.Context, string, string) error
+	ChangeRole(context.Context, string, string, string, string) (*MemberResponse, error)
+	RemoveMember(context.Context, string, string, string) error
 }
 
 type RepositoryInterface interface {
@@ -34,6 +36,9 @@ type RepositoryInterface interface {
 	FindInvitationByID(ctx context.Context, db dbTX, id string) (invitationRecord, error)
 	UpdateInvitationStatus(ctx context.Context, db dbTX, id, status string) error
 	AddMember(ctx context.Context, db dbTX, sharedDirID, userID, role string) error
+	FindMember(ctx context.Context, db dbTX, sharedDirID, userID string) (memberRecord, error)
+	UpdateMemberRole(ctx context.Context, db dbTX, sharedDirID, userID, role string) error
+	RemoveMember(ctx context.Context, db dbTX, sharedDirID, userID string) error
 }
 
 type dbTX interface {
