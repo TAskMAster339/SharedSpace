@@ -3,13 +3,14 @@ import { Link } from 'react-router-dom';
 import { Star } from 'lucide-react';
 import { FileIcon } from './FileIcon';
 import { cn } from '../../utils/cn';
+import { FileIconType } from '../../utils/fileType';
 
 interface FileItemProps {
   id: string;
   name: string;
   date: string;
   size: string;
-  type: 'img' | 'pdf' | 'video' | 'text' | 'audio' | 'xlsx' | string;
+  type: FileIconType | string;
   to: string;
   className?: string;
   isFavorite?: boolean;
@@ -24,14 +25,14 @@ export const FileItem: React.FC<FileItemProps> = ({
   type,
   to,
   className,
-  isFavorite,
+  isFavorite = false,
   onToggleFavorite,
 }) => (
   <Link
     key={id}
     to={to}
     className={cn(
-      'flex items-center justify-between p-3 rounded-theme-md transition-colors cursor-pointer',
+      'group flex items-center justify-between p-3 rounded-theme-md transition-colors cursor-pointer',
       'bg-theme-tertiary hover:bg-theme-hover border border-theme',
       className,
     )}
@@ -56,11 +57,13 @@ export const FileItem: React.FC<FileItemProps> = ({
             e.stopPropagation();
             onToggleFavorite(id);
           }}
-          className="text-theme-muted hover:text-yellow-400 transition-colors"
+          className="transition-colors"
         >
           <Star
             size={18}
-            className={cn(isFavorite && 'text-yellow-400')}
+            className={cn(
+              isFavorite ? 'text-yellow-400' : 'text-theme-muted opacity-60 hover:text-yellow-400'
+            )}
             fill={isFavorite ? 'currentColor' : 'none'}
           />
         </button>

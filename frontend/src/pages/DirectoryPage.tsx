@@ -21,6 +21,8 @@ import {
 } from '../api/directories';
 import { uploadFilesWithProgress } from '../api/files';
 import { formatFileSize, formatDate } from '../utils/format';
+import { useFavorites } from '../hooks/useFavorites';
+import { resolveFileIconType } from '../utils/fileType';
 
 interface BreadcrumbItem {
   id: string;
@@ -51,6 +53,7 @@ const DirectoryPage: React.FC = () => {
   const [isCreateFolderModalOpen, setIsCreateFolderModalOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
+  const { isFavorite, toggleFavorite } = useFavorites();
 
   // Breadcrumbs
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([]);
@@ -222,6 +225,18 @@ const DirectoryPage: React.FC = () => {
     [directoryInfo, user],
   );
   const isOwner = useMemo(() => directoryInfo?.owner_id === user?.id, [directoryInfo, user]);
+  const displayFiles = useMemo(() => {
+    if (!directoryContents) return [];
+    
+    return directoryContents.files.map((f) => ({
+      id: f.id,
+      name: f.filename,
+      date: formatDate(f.created_at),
+      size: formatFileSize(f.size),
+      type: resolveFileIconType(f.mime_type, f.extension),
+      isFavorite: isFavorite(f.id),
+    }));
+  }, [directoryContents, isFavorite]);
 
   // --- Обработчики ---
   const handleViewModeChange = useCallback((mode: ViewMode) => {
@@ -360,14 +375,6 @@ const DirectoryPage: React.FC = () => {
   const { subdirectories, files } = directoryContents;
   const isEmpty = subdirectories.length === 0 && files.length === 0;
 
-  const displayFiles = files.map((f) => ({
-    id: f.id,
-    name: f.filename,
-    date: formatDate(f.created_at),
-    size: formatFileSize(f.size),
-    type: f.extension || 'file',
-  }));
-
   return (
     <div className="space-y-6 pb-10">
       {/* Заголовок */}
@@ -495,6 +502,8 @@ const DirectoryPage: React.FC = () => {
                         name={file.name}
                         type={file.type}
                         to={`/files/${file.id}`}
+                        isFavorite={file.isFavorite}
+                        onToggleFavorite={toggleFavorite}
                       />
                     ))}
                   </div>
@@ -509,6 +518,8 @@ const DirectoryPage: React.FC = () => {
                         size={file.size}
                         type={file.type}
                         to={`/files/${file.id}`}
+                        isFavorite={file.isFavorite}
+                        onToggleFavorite={toggleFavorite}
                       />
                     ))}
                   </div>

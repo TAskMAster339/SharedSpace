@@ -1,24 +1,34 @@
+// src/components/ui/FileIcon.tsx
 import React from 'react';
-import { Image, FileText, Video, File, Music, Table } from 'lucide-react';
+import { 
+  Image, Video, Music, Table, 
+  Archive, Code, Type, 
+  FileText, File, Presentation,
+} from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { FileIconType } from '../../utils/fileType';
 
 interface FileIconProps {
-  type: 'img' | 'pdf' | 'video' | 'text' | 'audio' | 'xlsx' | string;
+  type: FileIconType | string;
   className?: string;
   size?: number;
 }
 
+const iconMap: Record<FileIconType, React.ElementType> = {
+  img: Image,
+  pdf: FileText,
+  video: Video,
+  text: FileText,
+  audio: Music,
+  xlsx: Table,
+  presentation: Presentation,
+  archive: Archive,
+  code: Code,
+  font: Type,
+  file: File,
+};
+
 export const FileIcon: React.FC<FileIconProps> = ({ type, className, size = 20 }) => {
-  const icons = {
-    img: Image,
-    pdf: FileText,
-    video: Video,
-    text: File,
-    audio: Music,
-    xlsx: Table,
-  };
-
-  const Icon = icons[type as keyof typeof icons] || File;
-
+  const Icon = iconMap[type as FileIconType] || File;
   return <Icon size={size} className={cn('text-theme-muted', className)} />;
 };
