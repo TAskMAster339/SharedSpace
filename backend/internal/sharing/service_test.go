@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"sharedspace/internal/access"
 	"sharedspace/internal/apperror"
 )
 
@@ -90,11 +91,20 @@ func (mockTX) Exec(_ context.Context, _ string, _ ...any) (pgconn.CommandTag, er
 func (mockTX) Commit(_ context.Context) error   { return nil }
 func (mockTX) Rollback(_ context.Context) error { return nil }
 
+type mockAccessChecker struct {
+	canFn func(ctx context.Context, userID, directoryID string, action access.Action) (bool, error)
+}
+
+func (m *mockAccessChecker) Can(ctx context.Context, userID, directoryID string, action access.Action) (bool, error) {
+	return m.canFn(ctx, userID, directoryID, action)
+}
+
 func newTestService(repo RepositoryInterface) *Service {
 	return &Service{
-		beginTx: func(_ context.Context, _ pgx.TxOptions) (transaction, error) { return mockTX{}, nil },
-		db:      mockTX{},
-		repo:    repo,
+		beginTx:       func(_ context.Context, _ pgx.TxOptions) (transaction, error) { return mockTX{}, nil },
+		db:            mockTX{},
+		repo:          repo,
+		accessChecker: &mockAccessChecker{canFn: func(_ context.Context, _, _ string, _ access.Action) (bool, error) { return true, nil }},
 	}
 }
 
@@ -211,6 +221,7 @@ func TestServiceGetMembers(t *testing.T) {
 			},
 		}
 		svc := newTestService(repo)
+		svc.accessChecker = &mockAccessChecker{canFn: func(_ context.Context, _, _ string, _ access.Action) (bool, error) { return false, nil }}
 
 		_, err := svc.GetMembers(context.Background(), "user-1", "s-1")
 		if err == nil {

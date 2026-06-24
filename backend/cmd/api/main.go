@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"sharedspace/internal/access"
 	"sharedspace/internal/auth"
 	"sharedspace/internal/config"
 	"sharedspace/internal/database"
@@ -60,17 +61,21 @@ func main() {
 	usersRepository := users.NewRepository()
 	usersService := users.NewService(pool, usersRepository)
 	usersHandler := users.NewHandler(usersService, authService)
+	// access checker
+	accessRepository := access.NewRepository()
+	accessChecker := access.NewChecker(pool, accessRepository)
+
 	// dirs
 	dirsRepository := dirs.NewRepository()
 	sharingRepository := sharing.NewRepository()
-	dirsService := dirs.NewService(pool, dirsRepository, sharingRepository)
+	dirsService := dirs.NewService(pool, dirsRepository, sharingRepository, accessChecker)
 	dirsHandler := dirs.NewHandler(dirsService)
 	// file
 	filesRepository := files.NewRepository()
-	filesService := files.NewService(pool, filesRepository, store)
+	filesService := files.NewService(pool, filesRepository, store, accessChecker)
 	filesHandler := files.NewHandler(filesService)
 	// sharing
-	sharingService := sharing.NewService(pool, sharingRepository)
+	sharingService := sharing.NewService(pool, sharingRepository, accessChecker)
 	sharingHandler := sharing.NewHandler(sharingService)
 	// favorites
 	favoritesRepository := favorites.NewRepository()

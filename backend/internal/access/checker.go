@@ -1,0 +1,38 @@
+package access
+
+import (
+	"context"
+
+	"sharedspace/internal/apperror"
+)
+
+type Checker struct {
+	repo RepositoryInterface
+	db   dbExecutor
+}
+
+func NewChecker(db dbExecutor, repo RepositoryInterface) *Checker {
+	return &Checker{db: db, repo: repo}
+}
+
+func (c *Checker) Can(ctx context.Context, userID, directoryID string, action Action) (bool, error) {
+	ownerID, sharedDirID, err := c.repo.GetDirectoryInfo(ctx, c.db, directoryID)
+	if err != nil {
+		return false, err
+	}
+
+	if userID == ownerID {
+		return true, nil
+	}
+
+	if sharedDirID == nil {
+		return false, apperror.Forbidden("доступ запрещён")
+	}
+
+	role, err := c.repo.GetUserRole(ctx, c.db, userID, *sharedDirID)
+	if err != nil {
+		return false, err
+	}
+
+	return Can(role, action), nil
+}

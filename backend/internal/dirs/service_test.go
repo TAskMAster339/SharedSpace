@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"sharedspace/internal/access"
 	"sharedspace/internal/apperror"
 )
 
@@ -202,13 +203,22 @@ func (m *mockSharingRepo) CreateShared(_ context.Context, _ interface {
 	return m.createSharedErr
 }
 
+type mockAccessChecker struct {
+	canFn func(ctx context.Context, userID, directoryID string, action access.Action) (bool, error)
+}
+
+func (m *mockAccessChecker) Can(ctx context.Context, userID, directoryID string, action access.Action) (bool, error) {
+	return m.canFn(ctx, userID, directoryID, action)
+}
+
 func newTestService(repo RepositoryInterface) (*Service, *mockTx) {
 	tx := &mockTx{}
 	service := &Service{
-		beginTx:     func(context.Context, pgx.TxOptions) (transaction, error) { return tx, nil },
-		db:          tx,
-		repo:        repo,
-		sharingRepo: &mockSharingRepo{},
+		beginTx:       func(context.Context, pgx.TxOptions) (transaction, error) { return tx, nil },
+		db:            tx,
+		repo:          repo,
+		sharingRepo:   &mockSharingRepo{},
+		accessChecker: &mockAccessChecker{canFn: func(_ context.Context, _, _ string, _ access.Action) (bool, error) { return true, nil }},
 	}
 	return service, tx
 }
@@ -300,6 +310,7 @@ func TestServiceGetContents(t *testing.T) {
 			findByIDResult: directoryRecord{ID: "dir-1", Name: "photos", OwnerID: "other-user", Type: "regular", CreatedAt: now, UpdatedAt: now},
 		}
 		service, _ := newTestService(repo)
+		service.accessChecker = &mockAccessChecker{canFn: func(_ context.Context, _, _ string, _ access.Action) (bool, error) { return false, nil }}
 
 		_, err := service.GetContents(context.Background(), "user-1", "dir-1")
 		if err == nil {
@@ -349,6 +360,7 @@ func TestServiceGetByID(t *testing.T) {
 			findByIDResult: directoryRecord{ID: "dir-1", Name: "photos", OwnerID: "other-user", Type: "regular", CreatedAt: now, UpdatedAt: now},
 		}
 		service, _ := newTestService(repo)
+		service.accessChecker = &mockAccessChecker{canFn: func(_ context.Context, _, _ string, _ access.Action) (bool, error) { return false, nil }}
 
 		_, err := service.GetByID(context.Background(), "user-1", "dir-1")
 		if err == nil {
@@ -427,8 +439,10 @@ func TestServiceCreate(t *testing.T) {
 		now := time.Now()
 		repo := &mockRepo{
 			findByIDResult: directoryRecord{ID: "parent-1", Name: "parent", OwnerID: "other-user", Type: "regular", CreatedAt: now, UpdatedAt: now},
+			findByNameErr:  pgx.ErrNoRows,
 		}
 		service, _ := newTestService(repo)
+		service.accessChecker = &mockAccessChecker{canFn: func(_ context.Context, _, _ string, _ access.Action) (bool, error) { return false, nil }}
 		_, err := service.Create(context.Background(), "user-1", CreateDirectoryRequest{Name: "newdir", ParentID: "parent-1"})
 		if err == nil {
 			t.Fatal("expected error")
@@ -573,6 +587,7 @@ func TestServiceUpdate(t *testing.T) {
 			findByIDResult: directoryRecord{ID: "dir-1", Name: "mydir", OwnerID: "other-user", Type: "regular", CreatedAt: now, UpdatedAt: now},
 		}
 		service, _ := newTestService(repo)
+		service.accessChecker = &mockAccessChecker{canFn: func(_ context.Context, _, _ string, _ access.Action) (bool, error) { return false, nil }}
 		name := "newname"
 		_, err := service.Update(context.Background(), "user-1", "dir-1", UpdateDirectoryRequest{Name: &name})
 		if err == nil {
@@ -608,6 +623,9 @@ func TestServiceUpdate(t *testing.T) {
 			findByNameErr:  pgx.ErrNoRows,
 		}
 		service, _ := newTestService(repo)
+		service.accessChecker = &mockAccessChecker{canFn: func(_ context.Context, _, dirID string, _ access.Action) (bool, error) {
+			return dirID == "dir-1", nil
+		}}
 
 		newParent := "other-parent"
 		_, err := service.Update(context.Background(), "user-1", "dir-1", UpdateDirectoryRequest{ParentID: &newParent})
