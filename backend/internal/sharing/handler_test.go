@@ -27,7 +27,7 @@ type mockService struct {
 	removeInvitationFn     func(string, string) error
 	changeRoleFn           func(string, string, string, string) (*MemberResponse, error)
 	removeMemberFn         func(string, string, string) error
-	getUserSharedDirsFn    func(string) ([]SharedDirectoryResponse, error)
+	getUserSharedDirsFn    func(string, int) ([]SharedDirectoryResponse, error)
 }
 
 func (m *mockService) GetSharedWithMe(_ context.Context, userID string, limit int) ([]SharedDirectoryResponse, error) {
@@ -100,9 +100,9 @@ func (m *mockService) RemoveMember(_ context.Context, userID, sharedDirID, targe
 	return nil
 }
 
-func (m *mockService) GetUserSharedDirectories(_ context.Context, userID string) ([]SharedDirectoryResponse, error) {
+func (m *mockService) GetUserSharedDirectories(_ context.Context, userID string, limit int) ([]SharedDirectoryResponse, error) {
 	if m.getUserSharedDirsFn != nil {
-		return m.getUserSharedDirsFn(userID)
+		return m.getUserSharedDirsFn(userID, limit)
 	}
 	return nil, nil
 }

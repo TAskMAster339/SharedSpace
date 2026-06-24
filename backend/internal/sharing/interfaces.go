@@ -18,7 +18,7 @@ type ServiceInterface interface {
 	RemoveInvitation(context.Context, string, string) error
 	ChangeRole(context.Context, string, string, string, string) (*MemberResponse, error)
 	RemoveMember(context.Context, string, string, string) error
-	GetUserSharedDirectories(context.Context, string) ([]SharedDirectoryResponse, error)
+	GetUserSharedDirectories(context.Context, string, int) ([]SharedDirectoryResponse, error)
 }
 
 type RepositoryInterface interface {
@@ -40,7 +40,7 @@ type RepositoryInterface interface {
 	FindMember(ctx context.Context, db dbTX, sharedDirID, userID string) (memberRecord, error)
 	UpdateMemberRole(ctx context.Context, db dbTX, sharedDirID, userID, role string) error
 	RemoveMember(ctx context.Context, db dbTX, sharedDirID, userID string) error
-	GetUserSharedDirectories(ctx context.Context, db dbTX, userID string) ([]SharedDirectoryResponse, error)
+	GetUserSharedDirectories(ctx context.Context, db dbTX, userID string, limit int) ([]SharedDirectoryResponse, error)
 }
 
 type dbTX interface {

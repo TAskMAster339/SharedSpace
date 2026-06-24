@@ -377,6 +377,7 @@ func (h *Handler) RemoveMember(w http.ResponseWriter, r *http.Request) error {
 // @Tags sharing
 // @Security BearerAuth
 // @Produce json
+// @Param limit query int false "Maximum number of directories to return"
 // @Success 200 {array} SharedDirectoryResponse
 // @Failure 401 {object} apperror.Response
 // @Router /api/v1/shared/directories [get]
@@ -386,7 +387,16 @@ func (h *Handler) GetUserSharedDirectories(w http.ResponseWriter, r *http.Reques
 		return apperror.Unauthorized("неавторизован")
 	}
 
-	resp, err := h.service.GetUserSharedDirectories(r.Context(), claims.UserID)
+	limit := 0
+	if l := r.URL.Query().Get("limit"); l != "" {
+		parsed, err := strconv.Atoi(l)
+		if err != nil || parsed < 0 {
+			return apperror.Validation("некорректный лимит")
+		}
+		limit = parsed
+	}
+
+	resp, err := h.service.GetUserSharedDirectories(r.Context(), claims.UserID, limit)
 	if err != nil {
 		return err
 	}

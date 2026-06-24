@@ -105,7 +105,7 @@ func (m *mockRepo) RemoveMember(_ context.Context, _ dbTX, _, _ string) error {
 	return m.removeMemberErr
 }
 
-func (m *mockRepo) GetUserSharedDirectories(_ context.Context, _ dbTX, _ string) ([]SharedDirectoryResponse, error) {
+func (m *mockRepo) GetUserSharedDirectories(_ context.Context, _ dbTX, _ string, _ int) ([]SharedDirectoryResponse, error) {
 	return m.getUserSharedDirsResult, m.getUserSharedDirsErr
 }
 
