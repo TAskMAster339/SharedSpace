@@ -19,6 +19,9 @@ type ServiceInterface interface {
 	Upload(ctx context.Context, userID, directoryID string, uploads []FileUpload) (UploadFilesResponse, error)
 	GetMetadata(ctx context.Context, userID, fileID string) (FileMetadataResponse, error)
 	GetContentURL(ctx context.Context, userID, fileID string) (FileContentResponse, error)
+	SoftDelete(ctx context.Context, userID, fileID string) error
+	Restore(ctx context.Context, userID, fileID string) error
+	PermanentDelete(ctx context.Context, userID, fileID string) error
 }
 
 type RepositoryInterface interface {
@@ -27,6 +30,10 @@ type RepositoryInterface interface {
 	Save(context.Context, dbTX, fileRecord) (fileRecord, error)
 	GetUserStorage(ctx context.Context, db dbTX, userID string) (used, quota int64, err error)
 	AddUserStorageUsed(ctx context.Context, db dbTX, userID string, delta int64) error
+	FindByIDAnyState(ctx context.Context, db dbTX, fileID string) (fileRecord, error)
+	SoftDeleteFile(ctx context.Context, db dbTX, fileID string, deletedAt time.Time) error
+	RestoreFile(ctx context.Context, db dbTX, fileID string) error
+	HardDeleteFile(ctx context.Context, db dbTX, fileID string) error
 }
 
 type FileUpload struct {

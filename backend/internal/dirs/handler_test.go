@@ -20,15 +20,21 @@ type mockService struct {
 	getByIDFn         func(string, string) (DirectoryResponse, error)
 	createFn          func(string, CreateDirectoryRequest) (DirectoryResponse, error)
 	updateFn          func(string, string, UpdateDirectoryRequest) (DirectoryResponse, error)
+	softDeleteFn      func(string, string) error
+	restoreFn         func(string, string) error
+	permanentDeleteFn func(string, string) error
 
-	getRootUserID string
-	getContentsID string
-	getByIDArg    string
-	createUserID  string
-	createReq     CreateDirectoryRequest
-	updateUserID  string
-	updateDirID   string
-	updateReq     UpdateDirectoryRequest
+	getRootUserID        string
+	getContentsID        string
+	getByIDArg           string
+	createUserID         string
+	createReq            CreateDirectoryRequest
+	updateUserID         string
+	updateDirID          string
+	updateReq            UpdateDirectoryRequest
+	softDeleteDirID      string
+	restoreDirID         string
+	permanentDeleteDirID string
 }
 
 func (m *mockService) GetRootContents(_ context.Context, userID string) (DirectoryContentsResponse, error) {
@@ -72,6 +78,30 @@ func (m *mockService) Update(_ context.Context, userID, dirID string, req Update
 		return m.updateFn(userID, dirID, req)
 	}
 	return DirectoryResponse{}, nil
+}
+
+func (m *mockService) SoftDelete(_ context.Context, userID, dirID string) error {
+	m.softDeleteDirID = dirID
+	if m.softDeleteFn != nil {
+		return m.softDeleteFn(userID, dirID)
+	}
+	return nil
+}
+
+func (m *mockService) Restore(_ context.Context, userID, dirID string) error {
+	m.restoreDirID = dirID
+	if m.restoreFn != nil {
+		return m.restoreFn(userID, dirID)
+	}
+	return nil
+}
+
+func (m *mockService) PermanentDelete(_ context.Context, userID, dirID string) error {
+	m.permanentDeleteDirID = dirID
+	if m.permanentDeleteFn != nil {
+		return m.permanentDeleteFn(userID, dirID)
+	}
+	return nil
 }
 
 func withClaims(ctx context.Context, userID string) context.Context {

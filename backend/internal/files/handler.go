@@ -165,3 +165,72 @@ func writeJSON(w http.ResponseWriter, status int, payload any) error {
 	}
 	return nil
 }
+
+// SoftDelete moves a file to trash.
+// @Summary Move file to trash
+// @Tags files
+// @Security BearerAuth
+// @Param id path string true "File ID"
+// @Success 204
+// @Router /api/v1/files/{id} [delete]
+func (h *Handler) SoftDelete(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := auth.ClaimsFromCtx(r.Context())
+	if !ok {
+		return apperror.Unauthorized("не авторизован")
+	}
+	fileID := chi.URLParam(r, "id")
+	if fileID == "" {
+		return apperror.Validation("id файла обязателен")
+	}
+	if err := h.service.SoftDelete(r.Context(), claims.UserID, fileID); err != nil {
+		return err
+	}
+	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
+
+// Restore restores a file from trash.
+// @Summary Restore file from trash
+// @Tags files
+// @Security BearerAuth
+// @Param id path string true "File ID"
+// @Success 204
+// @Router /api/v1/files/{id}/restore [post]
+func (h *Handler) Restore(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := auth.ClaimsFromCtx(r.Context())
+	if !ok {
+		return apperror.Unauthorized("не авторизован")
+	}
+	fileID := chi.URLParam(r, "id")
+	if fileID == "" {
+		return apperror.Validation("id файла обязателен")
+	}
+	if err := h.service.Restore(r.Context(), claims.UserID, fileID); err != nil {
+		return err
+	}
+	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
+
+// PermanentDelete deletes a file permanently.
+// @Summary Permanently delete file
+// @Tags files
+// @Security BearerAuth
+// @Param id path string true "File ID"
+// @Success 204
+// @Router /api/v1/files/{id}/permanent [delete]
+func (h *Handler) PermanentDelete(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := auth.ClaimsFromCtx(r.Context())
+	if !ok {
+		return apperror.Unauthorized("не авторизован")
+	}
+	fileID := chi.URLParam(r, "id")
+	if fileID == "" {
+		return apperror.Validation("id файла обязателен")
+	}
+	if err := h.service.PermanentDelete(r.Context(), claims.UserID, fileID); err != nil {
+		return err
+	}
+	w.WriteHeader(http.StatusNoContent)
+	return nil
+}

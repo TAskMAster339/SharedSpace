@@ -148,6 +148,21 @@ type mockRepo struct {
 	updateParentID *string
 
 	findByIDCallCount int
+
+	findByIDAnyStateResult directoryRecord
+	findByIDAnyStateErr    error
+	findSubtreeIDsResult   []string
+	findSubtreeIDsErr      error
+	findFilesInDirsResult  []fileRecord
+	findFilesInDirsErr     error
+	findDeletedFilesResult []fileRecord
+	findDeletedFilesErr    error
+	softDeleteSubtreeErr   error
+	softDeleteFilesErr     error
+	restoreSubtreeErr      error
+	restoreFilesErr        error
+	hardDeleteSubtreeErr   error
+	addUserStorageUsedErr  error
 }
 
 func (m *mockRepo) FindByID(_ context.Context, _ dbTX, _ string) (directoryRecord, error) {
@@ -188,6 +203,56 @@ func (m *mockRepo) UpdateNameAndParent(_ context.Context, _ dbTX, id string, nam
 	return m.updateResult, m.updateErr
 }
 
+func (m *mockRepo) FindByIDAnyState(_ context.Context, _ dbTX, _ string) (directoryRecord, error) {
+	return m.findByIDAnyStateResult, m.findByIDAnyStateErr
+}
+
+func (m *mockRepo) FindSubtreeIDs(_ context.Context, _ dbTX, _ string) ([]string, error) {
+	return m.findSubtreeIDsResult, m.findSubtreeIDsErr
+}
+
+func (m *mockRepo) FindFilesInDirs(_ context.Context, _ dbTX, _ []string) ([]fileRecord, error) {
+	return m.findFilesInDirsResult, m.findFilesInDirsErr
+}
+
+func (m *mockRepo) FindDeletedFilesInDirs(_ context.Context, _ dbTX, _ []string) ([]fileRecord, error) {
+	return m.findDeletedFilesResult, m.findDeletedFilesErr
+}
+
+func (m *mockRepo) SoftDeleteSubtree(_ context.Context, _ dbTX, _ []string, _ time.Time) error {
+	return m.softDeleteSubtreeErr
+}
+
+func (m *mockRepo) SoftDeleteFilesInDirs(_ context.Context, _ dbTX, _ []string, _ time.Time) error {
+	return m.softDeleteFilesErr
+}
+
+func (m *mockRepo) RestoreSubtree(_ context.Context, _ dbTX, _ []string) error {
+	return m.restoreSubtreeErr
+}
+
+func (m *mockRepo) RestoreFilesInDirs(_ context.Context, _ dbTX, _ []string, _ time.Time) error {
+	return m.restoreFilesErr
+}
+
+func (m *mockRepo) HardDeleteSubtree(_ context.Context, _ dbTX, _ []string) error {
+	return m.hardDeleteSubtreeErr
+}
+
+func (m *mockRepo) AddUserStorageUsed(_ context.Context, _ dbTX, _ string, _ int64) error {
+	return m.addUserStorageUsedErr
+}
+
+type mockStorage struct {
+	deleteErr error
+	deleteKey string
+}
+
+func (m *mockStorage) Delete(_ context.Context, objectKey string) error {
+	m.deleteKey = objectKey
+	return m.deleteErr
+}
+
 type mockSharingRepo struct {
 	createSharedErr     error
 	createSharedDirID   string
@@ -219,6 +284,7 @@ func newTestService(repo RepositoryInterface) (*Service, *mockTx) {
 		repo:          repo,
 		sharingRepo:   &mockSharingRepo{},
 		accessChecker: &mockAccessChecker{canFn: func(_ context.Context, _, _ string, _ access.Action) (bool, error) { return true, nil }},
+		storage:       &mockStorage{},
 	}
 	return service, tx
 }
@@ -661,4 +727,106 @@ func TestServiceUpdate(t *testing.T) {
 
 func strPtr(s string) *string {
 	return &s
+}
+
+func TestServiceSoftDelete(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		now := time.Now()
+		repo := &mockRepo{
+			findByIDAnyStateResult: directoryRecord{ID: "dir-1", Name: "mydir", OwnerID: "user-1", Type: "regular", DeletedAt: nil, CreatedAt: now, UpdatedAt: now},
+			findSubtreeIDsResult:   []string{"dir-1", "sub-1"},
+		}
+		service, tx := newTestService(repo)
+
+		err := service.SoftDelete(context.Background(), "user-1", "dir-1")
+		if err != nil {
+			t.Fatalf("SoftDelete returned error: %v", err)
+		}
+		if tx.commitCount != 1 {
+			t.Fatalf("commit count = %d, want 1", tx.commitCount)
+		}
+	})
+
+	t.Run("root cannot be deleted", func(t *testing.T) {
+		now := time.Now()
+		repo := &mockRepo{
+			findByIDAnyStateResult: directoryRecord{ID: "root-1", Name: "ivan", OwnerID: "user-1", Type: "root", DeletedAt: nil, CreatedAt: now, UpdatedAt: now},
+		}
+		service, _ := newTestService(repo)
+
+		err := service.SoftDelete(context.Background(), "user-1", "root-1")
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeForbidden {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("already deleted", func(t *testing.T) {
+		now := time.Now()
+		deletedAt := now
+		repo := &mockRepo{
+			findByIDAnyStateResult: directoryRecord{ID: "dir-1", Name: "mydir", OwnerID: "user-1", Type: "regular", DeletedAt: &deletedAt, CreatedAt: now, UpdatedAt: now},
+		}
+		service, _ := newTestService(repo)
+
+		err := service.SoftDelete(context.Background(), "user-1", "dir-1")
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeValidation {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+}
+
+func TestServicePermanentDelete(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		now := time.Now()
+		deletedAt := now.Add(-time.Hour)
+		repo := &mockRepo{
+			findByIDAnyStateResult: directoryRecord{ID: "dir-1", Name: "mydir", OwnerID: "user-1", Type: "regular", DeletedAt: &deletedAt, CreatedAt: now, UpdatedAt: now},
+			findSubtreeIDsResult:   []string{"dir-1", "sub-1"},
+			findFilesInDirsResult:  []fileRecord{{ID: "file-1", ObjectKey: "key1", Size: 1024, OwnerID: "user-1"}},
+			findDeletedFilesResult: []fileRecord{{ID: "file-2", ObjectKey: "key2", Size: 2048, OwnerID: "user-1"}},
+		}
+		storage := &mockStorage{}
+		tx := &mockTx{}
+		service := &Service{
+			beginTx:       func(context.Context, pgx.TxOptions) (transaction, error) { return tx, nil },
+			db:            tx,
+			repo:          repo,
+			sharingRepo:   &mockSharingRepo{},
+			accessChecker: &mockAccessChecker{canFn: func(_ context.Context, _, _ string, _ access.Action) (bool, error) { return true, nil }},
+			storage:       storage,
+		}
+
+		err := service.PermanentDelete(context.Background(), "user-1", "dir-1")
+		if err != nil {
+			t.Fatalf("PermanentDelete returned error: %v", err)
+		}
+		if tx.commitCount != 1 {
+			t.Fatalf("commit count = %d, want 1", tx.commitCount)
+		}
+	})
+
+	t.Run("root cannot be deleted", func(t *testing.T) {
+		now := time.Now()
+		repo := &mockRepo{
+			findByIDAnyStateResult: directoryRecord{ID: "root-1", Name: "ivan", OwnerID: "user-1", Type: "root", CreatedAt: now, UpdatedAt: now},
+		}
+		service, _ := newTestService(repo)
+
+		err := service.PermanentDelete(context.Background(), "user-1", "root-1")
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeForbidden {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
 }

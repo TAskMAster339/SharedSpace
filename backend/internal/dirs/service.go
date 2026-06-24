@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -19,9 +20,10 @@ type Service struct {
 	repo          RepositoryInterface
 	sharingRepo   SharingRepository
 	accessChecker access.AccessChecker
+	storage       StorageClient
 }
 
-func NewService(pool *pgxpool.Pool, repo RepositoryInterface, sharingRepo SharingRepository, accessChecker access.AccessChecker) *Service {
+func NewService(pool *pgxpool.Pool, repo RepositoryInterface, sharingRepo SharingRepository, accessChecker access.AccessChecker, storage StorageClient) *Service {
 	beginTx := func(ctx context.Context, opts pgx.TxOptions) (transaction, error) {
 		tx, err := pool.BeginTx(ctx, opts)
 		if err != nil {
@@ -35,6 +37,7 @@ func NewService(pool *pgxpool.Pool, repo RepositoryInterface, sharingRepo Sharin
 		repo:          repo,
 		sharingRepo:   sharingRepo,
 		accessChecker: accessChecker,
+		storage:       storage,
 	}
 }
 
@@ -284,4 +287,171 @@ func toDirectoryResponse(d directoryRecord) DirectoryResponse {
 func isUniqueViolation(err error) bool {
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && pgErr.Code == "23505"
+}
+
+func (s *Service) SoftDelete(ctx context.Context, userID, dirID string) error {
+	dir, err := s.repo.FindByIDAnyState(ctx, s.db, dirID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperror.NotFound("директория не найдена")
+		}
+		return apperror.WrapInternal("поиск директории", err)
+	}
+	ok, err := s.accessChecker.Can(ctx, userID, dirID, access.ActionDelete)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return apperror.Forbidden("доступ запрещён")
+	}
+	if dir.Type == "root" {
+		return apperror.Forbidden("нельзя удалить корневую директорию")
+	}
+	if dir.DeletedAt != nil {
+		return apperror.Validation("директория уже в корзине")
+	}
+
+	ids, err := s.repo.FindSubtreeIDs(ctx, s.db, dirID)
+	if err != nil {
+		return apperror.WrapInternal("обход поддерева", err)
+	}
+
+	tx, err := s.beginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return apperror.WrapInternal("начало транзакции", err)
+	}
+	defer tx.Rollback(ctx)
+
+	at := time.Now().UTC()
+	if err := s.repo.SoftDeleteFilesInDirs(ctx, tx, ids, at); err != nil {
+		return apperror.WrapInternal("удаление файлов", err)
+	}
+	if err := s.repo.SoftDeleteSubtree(ctx, tx, ids, at); err != nil {
+		return apperror.WrapInternal("удаление директорий", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return apperror.WrapInternal("сохранение", err)
+	}
+	return nil
+}
+
+func (s *Service) Restore(ctx context.Context, userID, dirID string) error {
+	dir, err := s.repo.FindByIDAnyState(ctx, s.db, dirID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperror.NotFound("директория не найдена")
+		}
+		return apperror.WrapInternal("поиск директории", err)
+	}
+	ok, err := s.accessChecker.Can(ctx, userID, dirID, access.ActionDelete)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return apperror.Forbidden("доступ запрещён")
+	}
+	if dir.DeletedAt == nil {
+		return apperror.Validation("директория не в корзине")
+	}
+
+	if dir.ParentID != nil {
+		parent, err := s.repo.FindByIDAnyState(ctx, s.db, *dir.ParentID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return apperror.Conflict("родитель не существует")
+			}
+			return apperror.WrapInternal("поиск родителя", err)
+		}
+		if parent.DeletedAt != nil {
+			return apperror.Conflict("сначала восстановите родительскую директорию")
+		}
+	}
+
+	ids, err := s.repo.FindSubtreeIDs(ctx, s.db, dirID)
+	if err != nil {
+		return apperror.WrapInternal("обход поддерева", err)
+	}
+
+	tx, err := s.beginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return apperror.WrapInternal("начало транзакции", err)
+	}
+	defer tx.Rollback(ctx)
+
+	if err := s.repo.RestoreFilesInDirs(ctx, tx, ids, *dir.DeletedAt); err != nil {
+		return apperror.WrapInternal("восстановление файлов", err)
+	}
+	if err := s.repo.RestoreSubtree(ctx, tx, ids); err != nil {
+		return apperror.WrapInternal("восстановление директорий", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return apperror.WrapInternal("сохранение", err)
+	}
+	return nil
+}
+
+func (s *Service) PermanentDelete(ctx context.Context, userID, dirID string) error {
+	dir, err := s.repo.FindByIDAnyState(ctx, s.db, dirID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperror.NotFound("директория не найдена")
+		}
+		return apperror.WrapInternal("поиск директории", err)
+	}
+	ok, err := s.accessChecker.Can(ctx, userID, dirID, access.ActionDelete)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return apperror.Forbidden("доступ запрещён")
+	}
+	if dir.Type == "root" {
+		return apperror.Forbidden("нельзя удалить корневую директорию")
+	}
+
+	ids, err := s.repo.FindSubtreeIDs(ctx, s.db, dirID)
+	if err != nil {
+		return apperror.WrapInternal("обход поддерева", err)
+	}
+
+	alive, err := s.repo.FindFilesInDirs(ctx, s.db, ids)
+	if err != nil {
+		return apperror.WrapInternal("поиск файлов", err)
+	}
+	deleted, err := s.repo.FindDeletedFilesInDirs(ctx, s.db, ids)
+	if err != nil {
+		return apperror.WrapInternal("поиск удалённых файлов", err)
+	}
+	allFiles := append(alive, deleted...)
+
+	freedByOwner := map[string]int64{}
+	for _, f := range allFiles {
+		freedByOwner[f.OwnerID] += f.Size
+	}
+
+	tx, err := s.beginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return apperror.WrapInternal("начало транзакции", err)
+	}
+	defer tx.Rollback(ctx)
+
+	if err := s.repo.HardDeleteSubtree(ctx, tx, ids); err != nil {
+		return apperror.WrapInternal("удаление директорий", err)
+	}
+	for owner, freed := range freedByOwner {
+		if freed > 0 {
+			if err := s.repo.AddUserStorageUsed(ctx, tx, owner, -freed); err != nil {
+				return apperror.WrapInternal("обновление объёма", err)
+			}
+		}
+	}
+	for _, f := range allFiles {
+		if err := s.storage.Delete(ctx, f.ObjectKey); err != nil {
+			return apperror.WrapInternal("удаление объекта из хранилища", err)
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return apperror.WrapInternal("сохранение", err)
+	}
+	return nil
 }

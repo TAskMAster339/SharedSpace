@@ -1,6 +1,9 @@
 package files
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 type Repository struct{}
 
@@ -60,5 +63,30 @@ func (r *Repository) AddUserStorageUsed(ctx context.Context, db dbTX, userID str
 		UPDATE users SET storage_used = storage_used + $1, updated_at = now()
 		WHERE id = $2
 	`, delta, userID)
+	return err
+}
+
+func (r *Repository) FindByIDAnyState(ctx context.Context, db dbTX, id string) (fileRecord, error) {
+	var f fileRecord
+	err := db.QueryRow(ctx, `
+		SELECT id, directory_id, owner_id, filename, extension, mime_type, size, object_key, deleted_at, created_at, updated_at
+		FROM files WHERE id = $1
+	`, id).Scan(&f.ID, &f.DirectoryID, &f.OwnerID, &f.Filename, &f.Extension,
+		&f.MimeType, &f.Size, &f.ObjectKey, &f.DeletedAt, &f.CreatedAt, &f.UpdatedAt)
+	return f, err
+}
+
+func (r *Repository) SoftDeleteFile(ctx context.Context, db dbTX, id string, deletedAt time.Time) error {
+	_, err := db.Exec(ctx, `UPDATE files SET deleted_at=$2, updated_at=now() WHERE id=$1 AND deleted_at IS NULL`, id, deletedAt)
+	return err
+}
+
+func (r *Repository) RestoreFile(ctx context.Context, db dbTX, id string) error {
+	_, err := db.Exec(ctx, `UPDATE files SET deleted_at=NULL, updated_at=now() WHERE id=$1`, id)
+	return err
+}
+
+func (r *Repository) HardDeleteFile(ctx context.Context, db dbTX, id string) error {
+	_, err := db.Exec(ctx, `DELETE FROM files WHERE id=$1`, id)
 	return err
 }

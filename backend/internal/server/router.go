@@ -13,6 +13,7 @@ import (
 	"sharedspace/internal/middleware"
 	"sharedspace/internal/sharing"
 	"sharedspace/internal/swagger"
+	"sharedspace/internal/trash"
 	"sharedspace/internal/users"
 )
 
@@ -25,7 +26,7 @@ func healthHandler(w http.ResponseWriter, _ *http.Request) {
 	json.NewEncoder(w).Encode(HealthResponse{Status: "ok"})
 }
 
-func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHandler *users.Handler, dirsHandler *dirs.Handler, filesHandler *files.Handler, sharingHandler *sharing.Handler, favoritesHandler *favorites.Handler) http.Handler {
+func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHandler *users.Handler, dirsHandler *dirs.Handler, filesHandler *files.Handler, sharingHandler *sharing.Handler, favoritesHandler *favorites.Handler, trashHandler *trash.Handler) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Recover)
@@ -66,6 +67,9 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 					r.Delete("/{id}/favorite", middleware.AppError(favoritesHandler.Remove))
 					r.Get("/{id}", middleware.AppError(filesHandler.GetMetadata))
 					r.Get("/{id}/content", middleware.AppError(filesHandler.GetContent))
+					r.Delete("/{id}", middleware.AppError(filesHandler.SoftDelete))
+					r.Post("/{id}/restore", middleware.AppError(filesHandler.Restore))
+					r.Delete("/{id}/permanent", middleware.AppError(filesHandler.PermanentDelete))
 				})
 			}
 
@@ -76,6 +80,9 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 					r.Get("/{id}", middleware.AppError(dirsHandler.GetByID))
 					r.Post("/", middleware.AppError(dirsHandler.Create))
 					r.Patch("/{id}", middleware.AppError(dirsHandler.Update))
+					r.Delete("/{id}", middleware.AppError(dirsHandler.SoftDelete))
+					r.Post("/{id}/restore", middleware.AppError(dirsHandler.Restore))
+					r.Delete("/{id}/permanent", middleware.AppError(dirsHandler.PermanentDelete))
 				})
 			}
 
@@ -87,6 +94,13 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 				r.Post("/invitations/{id}/accept", middleware.AppError(sharingHandler.AcceptInvitation))
 				r.Post("/invitations/{id}/decline", middleware.AppError(sharingHandler.DeclineInvitation))
 				r.Delete("/invitations/{id}", middleware.AppError(sharingHandler.RemoveInvitation))
+			}
+
+			if trashHandler != nil {
+				r.Route("/trash", func(r chi.Router) {
+					r.Get("/", middleware.AppError(trashHandler.GetTrashList))
+					r.Delete("/", middleware.AppError(trashHandler.ClearTrash))
+				})
 			}
 		})
 	})

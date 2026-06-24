@@ -39,6 +39,18 @@ func (m *mockService) GetContentURL(_ context.Context, userID, fileID string) (F
 	return FileContentResponse{}, nil
 }
 
+func (m *mockService) SoftDelete(_ context.Context, userID, fileID string) error {
+	return nil
+}
+
+func (m *mockService) Restore(_ context.Context, userID, fileID string) error {
+	return nil
+}
+
+func (m *mockService) PermanentDelete(_ context.Context, userID, fileID string) error {
+	return nil
+}
+
 func withClaims(ctx context.Context, userID string) context.Context {
 	return auth.SetClaims(ctx, &auth.Claims{UserID: userID})
 }

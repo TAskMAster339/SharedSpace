@@ -44,6 +44,7 @@ type fileRecord struct {
 	DirectoryID string
 	OwnerID     string
 	ObjectKey   string
+	DeletedAt   *time.Time
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }

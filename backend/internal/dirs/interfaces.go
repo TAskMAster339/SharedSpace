@@ -2,6 +2,7 @@ package dirs
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -13,6 +14,9 @@ type ServiceInterface interface {
 	GetByID(context.Context, string, string) (DirectoryResponse, error)
 	Create(context.Context, string, CreateDirectoryRequest) (DirectoryResponse, error)
 	Update(context.Context, string, string, UpdateDirectoryRequest) (DirectoryResponse, error)
+	SoftDelete(context.Context, string, string) error
+	Restore(context.Context, string, string) error
+	PermanentDelete(context.Context, string, string) error
 }
 
 type RepositoryInterface interface {
@@ -23,6 +27,17 @@ type RepositoryInterface interface {
 	FindByNameAndParent(context.Context, dbTX, string, string, string) (directoryRecord, error)
 	Create(context.Context, dbTX, string, string, string) (directoryRecord, error)
 	UpdateNameAndParent(context.Context, dbTX, string, *string, *string) (directoryRecord, error)
+
+	FindByIDAnyState(context.Context, dbTX, string) (directoryRecord, error)
+	FindSubtreeIDs(context.Context, dbTX, string) ([]string, error)
+	FindFilesInDirs(context.Context, dbTX, []string) ([]fileRecord, error)
+	FindDeletedFilesInDirs(context.Context, dbTX, []string) ([]fileRecord, error)
+	SoftDeleteSubtree(context.Context, dbTX, []string, time.Time) error
+	SoftDeleteFilesInDirs(context.Context, dbTX, []string, time.Time) error
+	RestoreSubtree(context.Context, dbTX, []string) error
+	RestoreFilesInDirs(context.Context, dbTX, []string, time.Time) error
+	HardDeleteSubtree(context.Context, dbTX, []string) error
+	AddUserStorageUsed(context.Context, dbTX, string, int64) error
 }
 
 type SharingRepository interface {
@@ -47,3 +62,7 @@ type transaction interface {
 }
 
 type txWrapper struct{ pgx.Tx }
+
+type StorageClient interface {
+	Delete(ctx context.Context, objectKey string) error
+}

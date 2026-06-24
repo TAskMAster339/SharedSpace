@@ -203,3 +203,88 @@ func toMetadataResponse(f fileRecord) FileMetadataResponse {
 		UpdatedAt:   f.UpdatedAt,
 	}
 }
+
+func (s *Service) SoftDelete(ctx context.Context, userID, fileID string) error {
+	file, err := s.repo.FindByIDAnyState(ctx, s.db, fileID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperror.NotFound("файл не найден")
+		}
+		return apperror.WrapInternal("поиск файла", err)
+	}
+	ok, err := s.accessChecker.Can(ctx, userID, file.DirectoryID, access.ActionDelete)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return apperror.Forbidden("доступ запрещён")
+	}
+	if file.DeletedAt != nil {
+		return apperror.Validation("файл уже в корзине")
+	}
+	if err := s.repo.SoftDeleteFile(ctx, s.db, fileID, time.Now().UTC()); err != nil {
+		return apperror.WrapInternal("удаление файла в корзину", err)
+	}
+	return nil
+}
+
+func (s *Service) Restore(ctx context.Context, userID, fileID string) error {
+	file, err := s.repo.FindByIDAnyState(ctx, s.db, fileID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperror.NotFound("файл не найден")
+		}
+		return apperror.WrapInternal("поиск файла", err)
+	}
+	ok, err := s.accessChecker.Can(ctx, userID, file.DirectoryID, access.ActionDelete)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return apperror.Forbidden("доступ запрещён")
+	}
+	if file.DeletedAt == nil {
+		return apperror.Validation("файл не находится в корзине")
+	}
+	if err := s.repo.RestoreFile(ctx, s.db, fileID); err != nil {
+		return apperror.WrapInternal("восстановление файла", err)
+	}
+	return nil
+}
+
+func (s *Service) PermanentDelete(ctx context.Context, userID, fileID string) error {
+	file, err := s.repo.FindByIDAnyState(ctx, s.db, fileID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperror.NotFound("файл не найден")
+		}
+		return apperror.WrapInternal("поиск файла", err)
+	}
+	ok, err := s.accessChecker.Can(ctx, userID, file.DirectoryID, access.ActionDelete)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return apperror.Forbidden("доступ запрещён")
+	}
+
+	tx, err := s.beginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return apperror.WrapInternal("начало транзакции", err)
+	}
+	defer tx.Rollback(ctx)
+
+	if err := s.repo.HardDeleteFile(ctx, tx, fileID); err != nil {
+		return apperror.WrapInternal("удаление метаданных файла", err)
+	}
+	if err := s.repo.AddUserStorageUsed(ctx, tx, file.OwnerID, -file.Size); err != nil {
+		return apperror.WrapInternal("обновление объёма", err)
+	}
+	if err := s.storage.Delete(ctx, file.ObjectKey); err != nil {
+		return apperror.WrapInternal("удаление объекта из хранилища", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return apperror.WrapInternal("сохранение удаления", err)
+	}
+	return nil
+}

@@ -1,6 +1,9 @@
 package dirs
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 type Repository struct{}
 
@@ -108,4 +111,100 @@ func (r *Repository) UpdateNameAndParent(ctx context.Context, db dbTX, id string
 		RETURNING id, name, owner_id, parent_id, type, created_at, updated_at
 	`, id, name, parentID).Scan(&d.ID, &d.Name, &d.OwnerID, &d.ParentID, &d.Type, &d.CreatedAt, &d.UpdatedAt)
 	return d, err
+}
+
+func (r *Repository) FindByIDAnyState(ctx context.Context, db dbTX, id string) (directoryRecord, error) {
+	var d directoryRecord
+	err := db.QueryRow(ctx, `
+		SELECT id, name, owner_id, parent_id, type, deleted_at, created_at, updated_at
+		FROM directories WHERE id = $1
+	`, id).Scan(&d.ID, &d.Name, &d.OwnerID, &d.ParentID, &d.Type, &d.DeletedAt, &d.CreatedAt, &d.UpdatedAt)
+	return d, err
+}
+
+func (r *Repository) FindSubtreeIDs(ctx context.Context, db dbTX, rootID string) ([]string, error) {
+	rows, err := db.Query(ctx, `
+		WITH RECURSIVE subtree AS (
+			SELECT id FROM directories WHERE id = $1
+			UNION ALL
+			SELECT d.id FROM directories d JOIN subtree s ON d.parent_id = s.id
+		)
+		SELECT id FROM subtree
+	`, rootID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
+func (r *Repository) FindFilesInDirs(ctx context.Context, db dbTX, dirIDs []string) ([]fileRecord, error) {
+	return r.findFilesInDirs(ctx, db, dirIDs, true)
+}
+func (r *Repository) FindDeletedFilesInDirs(ctx context.Context, db dbTX, dirIDs []string) ([]fileRecord, error) {
+	return r.findFilesInDirs(ctx, db, dirIDs, false)
+}
+func (r *Repository) findFilesInDirs(ctx context.Context, db dbTX, dirIDs []string, alive bool) ([]fileRecord, error) {
+	if len(dirIDs) == 0 {
+		return nil, nil
+	}
+	cond := "deleted_at IS NULL"
+	if !alive {
+		cond = "deleted_at IS NOT NULL"
+	}
+	rows, err := db.Query(ctx, `
+		SELECT id, filename, extension, mime_type, size, object_key, owner_id
+		FROM files WHERE directory_id = ANY($1) AND `+cond, dirIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var files []fileRecord
+	for rows.Next() {
+		var f fileRecord
+		if err := rows.Scan(&f.ID, &f.Filename, &f.Extension, &f.MimeType, &f.Size, &f.ObjectKey, &f.OwnerID); err != nil {
+			return nil, err
+		}
+		files = append(files, f)
+	}
+	return files, rows.Err()
+}
+
+func (r *Repository) SoftDeleteSubtree(ctx context.Context, db dbTX, dirIDs []string, deletedAt time.Time) error {
+	_, err := db.Exec(ctx, `UPDATE directories SET deleted_at=$2, updated_at=now() WHERE id = ANY($1) AND deleted_at IS NULL`, dirIDs, deletedAt)
+	return err
+}
+func (r *Repository) SoftDeleteFilesInDirs(ctx context.Context, db dbTX, dirIDs []string, deletedAt time.Time) error {
+	if len(dirIDs) == 0 {
+		return nil
+	}
+	_, err := db.Exec(ctx, `UPDATE files SET deleted_at=$2, updated_at=now() WHERE directory_id = ANY($1) AND deleted_at IS NULL`, dirIDs, deletedAt)
+	return err
+}
+func (r *Repository) RestoreSubtree(ctx context.Context, db dbTX, dirIDs []string) error {
+	_, err := db.Exec(ctx, `UPDATE directories SET deleted_at=NULL, updated_at=now() WHERE id = ANY($1)`, dirIDs)
+	return err
+}
+func (r *Repository) RestoreFilesInDirs(ctx context.Context, db dbTX, dirIDs []string, deletedAt time.Time) error {
+	if len(dirIDs) == 0 {
+		return nil
+	}
+	_, err := db.Exec(ctx, `UPDATE files SET deleted_at=NULL, updated_at=now() WHERE directory_id = ANY($1) AND deleted_at = $2`, dirIDs, deletedAt)
+	return err
+}
+func (r *Repository) HardDeleteSubtree(ctx context.Context, db dbTX, dirIDs []string) error {
+	_, err := db.Exec(ctx, `DELETE FROM directories WHERE id = ANY($1)`, dirIDs)
+	return err
+}
+func (r *Repository) AddUserStorageUsed(ctx context.Context, db dbTX, userID string, delta int64) error {
+	_, err := db.Exec(ctx, `UPDATE users SET storage_used = storage_used + $1, updated_at = now() WHERE id = $2`, delta, userID)
+	return err
 }

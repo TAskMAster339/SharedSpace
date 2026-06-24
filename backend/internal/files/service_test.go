@@ -24,6 +24,12 @@ type mockRepo struct {
 	getStorageErr error
 	addUsedErr    error
 	addedDelta    int64
+
+	file       fileRecord
+	fileErr    error
+	softErr    error
+	restoreErr error
+	hardErr    error
 }
 
 func (m *mockRepo) FindDirectoryByID(_ context.Context, _ dbTX, _ string) (directoryRecord, error) {
@@ -103,6 +109,15 @@ type mockAccessChecker struct {
 func (m *mockAccessChecker) Can(ctx context.Context, userID, directoryID string, action access.Action) (bool, error) {
 	return m.canFn(ctx, userID, directoryID, action)
 }
+
+func (m *mockRepo) FindByIDAnyState(_ context.Context, _ dbTX, _ string) (fileRecord, error) {
+	return m.file, m.fileErr
+}
+func (m *mockRepo) SoftDeleteFile(_ context.Context, _ dbTX, _ string, _ time.Time) error {
+	return m.softErr
+}
+func (m *mockRepo) RestoreFile(_ context.Context, _ dbTX, _ string) error    { return m.restoreErr }
+func (m *mockRepo) HardDeleteFile(_ context.Context, _ dbTX, _ string) error { return m.hardErr }
 
 func newTestService(repo RepositoryInterface, storage StorageClient) *Service {
 	tx := &mockTx{}
@@ -251,5 +266,51 @@ func TestExtractExtension(t *testing.T) {
 		if got != c.want {
 			t.Fatalf("ExtractExtension(%q) = %q, want %q", c.filename, got, c.want)
 		}
+	}
+}
+
+func TestServiceSoftDelete_Success(t *testing.T) {
+	repo := &mockRepo{file: fileRecord{ID: "f-1", DirectoryID: "d-1", OwnerID: "user-1"}}
+	svc := newTestService(repo, &mockStorage{})
+
+	if err := svc.SoftDelete(context.Background(), "user-1", "f-1"); err != nil {
+		t.Fatalf("SoftDelete: %v", err)
+	}
+}
+
+func TestServiceSoftDelete_AlreadyTrashed(t *testing.T) {
+	now := time.Now()
+	repo := &mockRepo{file: fileRecord{ID: "f-1", DirectoryID: "d-1", DeletedAt: &now}}
+	svc := newTestService(repo, &mockStorage{})
+
+	err := svc.SoftDelete(context.Background(), "user-1", "f-1")
+	appErr, ok := apperror.From(err)
+	if !ok || appErr.Code() != apperror.CodeValidation {
+		t.Fatalf("expected validation, got %v", err)
+	}
+}
+
+func TestServiceSoftDelete_Forbidden(t *testing.T) {
+	repo := &mockRepo{file: fileRecord{ID: "f-1", DirectoryID: "d-1"}}
+	svc := newTestService(repo, &mockStorage{})
+	svc.accessChecker = &mockAccessChecker{canFn: func(_ context.Context, _, _ string, _ access.Action) (bool, error) { return false, nil }}
+
+	err := svc.SoftDelete(context.Background(), "user-1", "f-1")
+	appErr, ok := apperror.From(err)
+	if !ok || appErr.Code() != apperror.CodeForbidden {
+		t.Fatalf("expected forbidden, got %v", err)
+	}
+}
+
+func TestServicePermanentDelete_Success(t *testing.T) {
+	repo := &mockRepo{file: fileRecord{ID: "f-1", DirectoryID: "d-1", OwnerID: "user-1", Size: 100, ObjectKey: "key-1"}}
+	storage := &mockStorage{}
+	svc := newTestService(repo, storage)
+
+	if err := svc.PermanentDelete(context.Background(), "user-1", "f-1"); err != nil {
+		t.Fatalf("PermanentDelete: %v", err)
+	}
+	if repo.addedDelta != -100 {
+		t.Fatalf("expected storage_used -100, got %d", repo.addedDelta)
 	}
 }

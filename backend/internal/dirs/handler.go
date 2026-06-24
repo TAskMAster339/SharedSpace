@@ -191,3 +191,85 @@ func writeJSON(w http.ResponseWriter, status int, payload any) error {
 	}
 	return nil
 }
+
+// SoftDelete moves a directory to trash (cascade).
+// @Summary Delete directory to trash
+// @Tags directories
+// @Security BearerAuth
+// @Param id path string true "Directory ID"
+// @Success 204
+// @Failure 400 {object} apperror.Response
+// @Failure 401 {object} apperror.Response
+// @Failure 403 {object} apperror.Response
+// @Failure 404 {object} apperror.Response
+// @Router /api/v1/directories/{id} [delete]
+func (h *Handler) SoftDelete(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := auth.ClaimsFromCtx(r.Context())
+	if !ok {
+		return apperror.Unauthorized("не авторизован")
+	}
+	dirID := chi.URLParam(r, "id")
+	if dirID == "" {
+		return apperror.Validation("id директории обязателен")
+	}
+	if err := h.service.SoftDelete(r.Context(), claims.UserID, dirID); err != nil {
+		return err
+	}
+	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
+
+// Restore restores a directory from trash.
+// @Summary Restore directory from trash
+// @Tags directories
+// @Security BearerAuth
+// @Param id path string true "Directory ID"
+// @Success 204
+// @Failure 400 {object} apperror.Response
+// @Failure 401 {object} apperror.Response
+// @Failure 403 {object} apperror.Response
+// @Failure 404 {object} apperror.Response
+// @Failure 409 {object} apperror.Response
+// @Router /api/v1/directories/{id}/restore [post]
+func (h *Handler) Restore(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := auth.ClaimsFromCtx(r.Context())
+	if !ok {
+		return apperror.Unauthorized("не авторизован")
+	}
+	dirID := chi.URLParam(r, "id")
+	if dirID == "" {
+		return apperror.Validation("id директории обязателен")
+	}
+	if err := h.service.Restore(r.Context(), claims.UserID, dirID); err != nil {
+		return err
+	}
+	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
+
+// PermanentDelete deletes a directory permanently.
+// @Summary Permanently delete directory
+// @Tags directories
+// @Security BearerAuth
+// @Param id path string true "Directory ID"
+// @Success 204
+// @Failure 400 {object} apperror.Response
+// @Failure 401 {object} apperror.Response
+// @Failure 403 {object} apperror.Response
+// @Failure 404 {object} apperror.Response
+// @Router /api/v1/directories/{id}/permanent [delete]
+func (h *Handler) PermanentDelete(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := auth.ClaimsFromCtx(r.Context())
+	if !ok {
+		return apperror.Unauthorized("не авторизован")
+	}
+	dirID := chi.URLParam(r, "id")
+	if dirID == "" {
+		return apperror.Validation("id директории обязателен")
+	}
+	if err := h.service.PermanentDelete(r.Context(), claims.UserID, dirID); err != nil {
+		return err
+	}
+	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
