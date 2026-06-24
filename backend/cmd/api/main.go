@@ -10,6 +10,7 @@ import (
 	"sharedspace/internal/config"
 	"sharedspace/internal/database"
 	"sharedspace/internal/dirs"
+	"sharedspace/internal/favorites"
 	"sharedspace/internal/files"
 	"sharedspace/internal/server"
 	"sharedspace/internal/sharing"
@@ -47,7 +48,7 @@ func main() {
 	}
 
 	store, err := storage.New(ctx, cfg.MinIOEndpoint, cfg.MinIOAccessKey,
-		cfg.MinIOSecretKey, cfg.MinIOBucket, false)
+		cfg.MinIOSecretKey, cfg.MinIOBucket, cfg.MinIOPublicEndpoint, false)
 	if err != nil {
 		log.Fatalf("storage: %v", err)
 	}
@@ -76,8 +77,12 @@ func main() {
 	// sharing
 	sharingService := sharing.NewService(pool, sharingRepository, accessChecker)
 	sharingHandler := sharing.NewHandler(sharingService)
+	// favorites
+	favoritesRepository := favorites.NewRepository()
+	favoritesService := favorites.NewService(pool, favoritesRepository)
+	favoritesHandler := favorites.NewHandler(favoritesService)
 
-	router := server.NewRouter(authHandler, authService, usersHandler, dirsHandler, filesHandler, sharingHandler)
+	router := server.NewRouter(authHandler, authService, usersHandler, dirsHandler, filesHandler, sharingHandler, favoritesHandler)
 
 	if err := server.New(cfg.Port, router).Run(); err != nil {
 		log.Fatalf("server: %v", err)

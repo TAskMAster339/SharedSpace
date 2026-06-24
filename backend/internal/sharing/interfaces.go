@@ -10,6 +10,11 @@ import (
 type ServiceInterface interface {
 	GetSharedWithMe(context.Context, string) ([]SharedDirectoryResponse, error)
 	GetMembers(context.Context, string, string) ([]MemberResponse, error)
+	Invite(context.Context, string, string, string) (*InvitationResponse, error)
+	GetMyInvitations(context.Context, string) ([]InvitationResponse, error)
+	AcceptInvitation(context.Context, string, string) error
+	DeclineInvitation(context.Context, string, string) error
+	RemoveInvitation(context.Context, string, string) error
 }
 
 type RepositoryInterface interface {
@@ -20,6 +25,13 @@ type RepositoryInterface interface {
 	FindByMember(ctx context.Context, db dbTX, userID string) ([]sharedDirectoryRecord, error)
 	FindMembers(ctx context.Context, db dbTX, sharedDirID string) ([]memberRecord, error)
 	FindByID(ctx context.Context, db dbTX, id string) (sharedDirectoryRecord, error)
+	FindUserByUsername(ctx context.Context, db dbTX, username string) (string, error)
+	IsMember(ctx context.Context, db dbTX, sharedDirID, userID string) (bool, error)
+	CreateInvitation(ctx context.Context, db dbTX, sharedDirID, invitedUserID, invitedByUserID, role string) (invitationRecord, error)
+	FindInvitationsByUser(ctx context.Context, db dbTX, userID string, statuses ...string) ([]invitationRecord, error)
+	FindInvitationByID(ctx context.Context, db dbTX, id string) (invitationRecord, error)
+	UpdateInvitationStatus(ctx context.Context, db dbTX, id, status string) error
+	AddMember(ctx context.Context, db dbTX, sharedDirID, userID, role string) error
 }
 
 type dbTX interface {

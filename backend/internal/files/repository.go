@@ -17,6 +17,20 @@ func (r *Repository) FindDirectoryByID(ctx context.Context, db dbTX, id string) 
 	return d, err
 }
 
+func (r *Repository) FindByID(ctx context.Context, db dbTX, id string) (fileRecord, error) {
+	var f fileRecord
+	err := db.QueryRow(ctx, `
+		SELECT id, directory_id, owner_id, filename, extension, mime_type, size, object_key, created_at, updated_at
+		FROM files
+		WHERE id = $1 AND deleted_at IS NULL
+	`, id).Scan(
+		&f.ID, &f.DirectoryID, &f.OwnerID,
+		&f.Filename, &f.Extension, &f.MimeType,
+		&f.Size, &f.ObjectKey, &f.CreatedAt, &f.UpdatedAt,
+	)
+	return f, err
+}
+
 func (r *Repository) Save(ctx context.Context, db dbTX, f fileRecord) (fileRecord, error) {
 	var saved fileRecord
 	err := db.QueryRow(ctx, `

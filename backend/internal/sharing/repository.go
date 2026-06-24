@@ -95,3 +95,96 @@ func (r *Repository) FindByID(ctx context.Context, db dbTX, id string) (sharedDi
 	`, id).Scan(&rec.ID, &rec.DirectoryID, &rec.OwnerID, &rec.Name, &rec.OwnerName, &rec.Role, &rec.CreatedAt)
 	return rec, err
 }
+
+func (r *Repository) FindUserByUsername(ctx context.Context, db dbTX, username string) (string, error) {
+	var userID string
+	err := db.QueryRow(ctx, `
+		SELECT id FROM users WHERE username = $1
+	`, username).Scan(&userID)
+	return userID, err
+}
+
+func (r *Repository) IsMember(ctx context.Context, db dbTX, sharedDirID, userID string) (bool, error) {
+	var exists bool
+	err := db.QueryRow(ctx, `
+		SELECT EXISTS(
+			SELECT 1 FROM shared_directory_members
+			WHERE shared_directory_id = $1 AND user_id = $2
+		)
+	`, sharedDirID, userID).Scan(&exists)
+	return exists, err
+}
+
+func (r *Repository) CreateInvitation(ctx context.Context, db dbTX, sharedDirID, invitedUserID, invitedByUserID, role string) (invitationRecord, error) {
+	var rec invitationRecord
+	err := db.QueryRow(ctx, `
+		INSERT INTO directory_invitations (shared_directory_id, invited_user_id, invited_by, role)
+		VALUES ($1, $2, $3, $4)
+		RETURNING id, shared_directory_id, invited_user_id, invited_by, role, status, created_at
+	`, sharedDirID, invitedUserID, invitedByUserID, role).Scan(
+		&rec.ID, &rec.SharedDirectoryID, &rec.InvitedUserID,
+		&rec.InvitedByUserID, &rec.Role, &rec.Status, &rec.CreatedAt,
+	)
+	if err != nil {
+		return invitationRecord{}, err
+	}
+	return rec, nil
+}
+
+func (r *Repository) FindInvitationsByUser(ctx context.Context, db dbTX, userID string, statuses ...string) ([]invitationRecord, error) {
+	rows, err := db.Query(ctx, `
+		SELECT di.id, di.shared_directory_id, d.name, di.invited_user_id, di.invited_by, u.username, di.role, di.status, di.created_at
+		FROM directory_invitations di
+		JOIN shared_directories sd ON sd.id = di.shared_directory_id
+		JOIN directories d ON d.id = sd.directory_id
+		JOIN users u ON u.id = di.invited_by
+		WHERE di.invited_user_id = $1
+		ORDER BY di.created_at DESC
+	`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var records []invitationRecord
+	for rows.Next() {
+		var rec invitationRecord
+		if err := rows.Scan(&rec.ID, &rec.SharedDirectoryID, &rec.DirectoryName,
+			&rec.InvitedUserID, &rec.InvitedByUserID, &rec.InvitedByUsername,
+			&rec.Role, &rec.Status, &rec.CreatedAt); err != nil {
+			return nil, err
+		}
+		records = append(records, rec)
+	}
+	return records, rows.Err()
+}
+
+func (r *Repository) FindInvitationByID(ctx context.Context, db dbTX, id string) (invitationRecord, error) {
+	var rec invitationRecord
+	err := db.QueryRow(ctx, `
+		SELECT di.id, di.shared_directory_id, d.name, di.invited_user_id, di.invited_by, u.username, di.role, di.status, di.created_at
+		FROM directory_invitations di
+		JOIN shared_directories sd ON sd.id = di.shared_directory_id
+		JOIN directories d ON d.id = sd.directory_id
+		JOIN users u ON u.id = di.invited_by
+		WHERE di.id = $1
+	`, id).Scan(&rec.ID, &rec.SharedDirectoryID, &rec.DirectoryName,
+		&rec.InvitedUserID, &rec.InvitedByUserID, &rec.InvitedByUsername,
+		&rec.Role, &rec.Status, &rec.CreatedAt)
+	return rec, err
+}
+
+func (r *Repository) UpdateInvitationStatus(ctx context.Context, db dbTX, id, status string) error {
+	_, err := db.Exec(ctx, `
+		UPDATE directory_invitations SET status = $2 WHERE id = $1
+	`, id, status)
+	return err
+}
+
+func (r *Repository) AddMember(ctx context.Context, db dbTX, sharedDirID, userID, role string) error {
+	_, err := db.Exec(ctx, `
+		INSERT INTO shared_directory_members (shared_directory_id, user_id, role)
+		VALUES ($1, $2, $3)
+	`, sharedDirID, userID, role)
+	return err
+}

@@ -5,6 +5,8 @@ import (
 	"mime/multipart"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
+
 	"sharedspace/internal/apperror"
 	"sharedspace/internal/auth"
 )
@@ -93,4 +95,73 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	return json.NewEncoder(w).Encode(resp)
+}
+
+// GetMetadata returns file metadata by ID.
+// @Summary Get file metadata
+// @Tags files
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "File ID"
+// @Success 200 {object} FileMetadataResponse
+// @Failure 401 {object} apperror.Response
+// @Failure 403 {object} apperror.Response
+// @Failure 404 {object} apperror.Response
+// @Router /api/v1/files/{id} [get]
+func (h *Handler) GetMetadata(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := auth.ClaimsFromCtx(r.Context())
+	if !ok {
+		return apperror.Unauthorized("не авторизован")
+	}
+
+	fileID := chi.URLParam(r, "id")
+	if fileID == "" {
+		return apperror.Validation("id файла обязателен")
+	}
+
+	resp, err := h.service.GetMetadata(r.Context(), claims.UserID, fileID)
+	if err != nil {
+		return err
+	}
+
+	return writeJSON(w, http.StatusOK, resp)
+}
+
+// GetContent returns a presigned URL to view/download the file.
+// @Summary Get file content URL
+// @Tags files
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "File ID"
+// @Success 200 {object} FileContentResponse
+// @Failure 401 {object} apperror.Response
+// @Failure 403 {object} apperror.Response
+// @Failure 404 {object} apperror.Response
+// @Router /api/v1/files/{id}/content [get]
+func (h *Handler) GetContent(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := auth.ClaimsFromCtx(r.Context())
+	if !ok {
+		return apperror.Unauthorized("не авторизован")
+	}
+
+	fileID := chi.URLParam(r, "id")
+	if fileID == "" {
+		return apperror.Validation("id файла обязателен")
+	}
+
+	resp, err := h.service.GetContentURL(r.Context(), claims.UserID, fileID)
+	if err != nil {
+		return err
+	}
+
+	return writeJSON(w, http.StatusOK, resp)
+}
+
+func writeJSON(w http.ResponseWriter, status int, payload any) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	if err := json.NewEncoder(w).Encode(payload); err != nil {
+		return apperror.WrapInternal("encode response", err)
+	}
+	return nil
 }
