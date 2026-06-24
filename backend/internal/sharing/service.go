@@ -64,17 +64,17 @@ func (s *Service) GetMembers(ctx context.Context, userID, sharedDirID string) ([
 		return nil, apperror.WrapInternal("ошибка поиска общей директории", err)
 	}
 
-	members, err := s.repo.FindMembers(ctx, s.db, sharedDirID)
-	if err != nil {
-		return nil, apperror.WrapInternal("ошибка поиска участников", err)
-	}
-
 	ok, err := s.accessChecker.Can(ctx, userID, sd.DirectoryID, access.ActionView)
 	if err != nil {
 		return nil, err
 	}
 	if !ok {
 		return nil, apperror.Forbidden("доступ запрещён")
+	}
+
+	members, err := s.repo.FindMembers(ctx, s.db, sharedDirID)
+	if err != nil {
+		return nil, apperror.WrapInternal("ошибка поиска участников", err)
 	}
 
 	return toMemberResponses(members), nil
