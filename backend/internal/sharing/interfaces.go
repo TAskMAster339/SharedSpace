@@ -9,6 +9,7 @@ import (
 
 type ServiceInterface interface {
 	GetSharedWithMe(context.Context, string) ([]SharedDirectoryResponse, error)
+	GetSharedWithMeStats(context.Context, string) ([]SharedDirectoryWithStatsResponse, error)
 	GetMembers(context.Context, string, string) ([]MemberResponse, error)
 	Invite(context.Context, string, string, string) (*InvitationResponse, error)
 	GetMyInvitations(context.Context, string) ([]InvitationResponse, error)
@@ -23,6 +24,7 @@ type RepositoryInterface interface {
 		QueryRow(context.Context, string, ...any) pgx.Row
 	}, directoryID, ownerID string) error
 	FindByMember(ctx context.Context, db dbTX, userID string) ([]sharedDirectoryRecord, error)
+	FindByMemberWithStats(ctx context.Context, db dbTX, userID string) ([]sharedDirectoryWithStatsRecord, error)
 	FindMembers(ctx context.Context, db dbTX, sharedDirID string) ([]memberRecord, error)
 	FindByID(ctx context.Context, db dbTX, id string) (sharedDirectoryRecord, error)
 	FindUserByUsername(ctx context.Context, db dbTX, username string) (string, error)

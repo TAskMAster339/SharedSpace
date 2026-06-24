@@ -60,6 +60,41 @@ func (r *Repository) FindByMember(ctx context.Context, db dbTX, userID string) (
 	return records, rows.Err()
 }
 
+func (r *Repository) FindByMemberWithStats(ctx context.Context, db dbTX, userID string) ([]sharedDirectoryWithStatsRecord, error) {
+	rows, err := db.Query(ctx, `
+		SELECT
+			sd.id,
+			sd.directory_id,
+			sd.owner_id,
+			d.name,
+			u.username,
+			sdm.role,
+			(SELECT COUNT(*) FROM shared_directory_members sdm2 WHERE sdm2.shared_directory_id = sd.id),
+			(SELECT COUNT(*) FROM files f WHERE f.directory_id = sd.directory_id AND f.deleted_at IS NULL),
+			sd.created_at
+		FROM shared_directories sd
+		JOIN shared_directory_members sdm ON sdm.shared_directory_id = sd.id
+		JOIN directories d ON d.id = sd.directory_id
+		JOIN users u ON u.id = sd.owner_id
+		WHERE sdm.user_id = $1
+		ORDER BY sd.created_at DESC
+	`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var records []sharedDirectoryWithStatsRecord
+	for rows.Next() {
+		var r sharedDirectoryWithStatsRecord
+		if err := rows.Scan(&r.ID, &r.DirectoryID, &r.OwnerID, &r.Name, &r.OwnerName, &r.Role, &r.MemberCount, &r.FileCount, &r.CreatedAt); err != nil {
+			return nil, err
+		}
+		records = append(records, r)
+	}
+	return records, rows.Err()
+}
+
 func (r *Repository) FindMembers(ctx context.Context, db dbTX, sharedDirID string) ([]memberRecord, error) {
 	rows, err := db.Query(ctx, `
 		SELECT sdm.id, u.id, u.username, sdm.role, sdm.joined_at

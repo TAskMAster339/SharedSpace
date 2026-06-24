@@ -14,28 +14,34 @@ import (
 )
 
 type mockRepo struct {
-	findByMemberResult     []sharedDirectoryRecord
-	findByMemberErr        error
-	findMembersResult      []memberRecord
-	findMembersErr         error
-	findByIDResult         sharedDirectoryRecord
-	findByIDErr            error
-	findUserByUsernameID   string
-	findUserByUsernameErr  error
-	isMemberResult         bool
-	isMemberErr            error
-	createInvitationResult invitationRecord
-	createInvitationErr    error
-	findInvitationsResult  []invitationRecord
-	findInvitationsErr     error
-	findInvitationResult   invitationRecord
-	findInvitationErr      error
-	updateInvitationErr    error
-	addMemberErr           error
+	findByMemberResult          []sharedDirectoryRecord
+	findByMemberErr             error
+	findByMemberWithStatsResult []sharedDirectoryWithStatsRecord
+	findByMemberWithStatsErr    error
+	findMembersResult           []memberRecord
+	findMembersErr              error
+	findByIDResult              sharedDirectoryRecord
+	findByIDErr                 error
+	findUserByUsernameID        string
+	findUserByUsernameErr       error
+	isMemberResult              bool
+	isMemberErr                 error
+	createInvitationResult      invitationRecord
+	createInvitationErr         error
+	findInvitationsResult       []invitationRecord
+	findInvitationsErr          error
+	findInvitationResult        invitationRecord
+	findInvitationErr           error
+	updateInvitationErr         error
+	addMemberErr                error
 }
 
 func (m *mockRepo) FindByMember(_ context.Context, _ dbTX, _ string) ([]sharedDirectoryRecord, error) {
 	return m.findByMemberResult, m.findByMemberErr
+}
+
+func (m *mockRepo) FindByMemberWithStats(_ context.Context, _ dbTX, _ string) ([]sharedDirectoryWithStatsRecord, error) {
+	return m.findByMemberWithStatsResult, m.findByMemberWithStatsErr
 }
 
 func (m *mockRepo) FindMembers(_ context.Context, _ dbTX, _ string) ([]memberRecord, error) {

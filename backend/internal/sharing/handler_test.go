@@ -17,18 +17,26 @@ import (
 )
 
 type mockService struct {
-	getSharedWithMeFn   func(string) ([]SharedDirectoryResponse, error)
-	getMembersFn        func(string, string) ([]MemberResponse, error)
-	inviteFn            func(string, string, string) (*InvitationResponse, error)
-	getMyInvitationsFn  func(string) ([]InvitationResponse, error)
-	acceptInvitationFn  func(string, string) error
-	declineInvitationFn func(string, string) error
-	removeInvitationFn  func(string, string) error
+	getSharedWithMeFn      func(string) ([]SharedDirectoryResponse, error)
+	getSharedWithMeStatsFn func(string) ([]SharedDirectoryWithStatsResponse, error)
+	getMembersFn           func(string, string) ([]MemberResponse, error)
+	inviteFn               func(string, string, string) (*InvitationResponse, error)
+	getMyInvitationsFn     func(string) ([]InvitationResponse, error)
+	acceptInvitationFn     func(string, string) error
+	declineInvitationFn    func(string, string) error
+	removeInvitationFn     func(string, string) error
 }
 
 func (m *mockService) GetSharedWithMe(_ context.Context, userID string) ([]SharedDirectoryResponse, error) {
 	if m.getSharedWithMeFn != nil {
 		return m.getSharedWithMeFn(userID)
+	}
+	return nil, nil
+}
+
+func (m *mockService) GetSharedWithMeStats(_ context.Context, userID string) ([]SharedDirectoryWithStatsResponse, error) {
+	if m.getSharedWithMeStatsFn != nil {
+		return m.getSharedWithMeStatsFn(userID)
 	}
 	return nil, nil
 }

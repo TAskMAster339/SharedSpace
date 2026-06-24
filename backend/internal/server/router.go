@@ -81,6 +81,7 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 
 			if sharingHandler != nil {
 				r.Get("/shared/with-me", middleware.AppError(sharingHandler.GetSharedWithMe))
+				r.Get("/shared/with-me/stats", middleware.AppError(sharingHandler.GetSharedWithMeStats))
 				r.Get("/shared-directories/{id}/members", middleware.AppError(sharingHandler.GetMembers))
 				r.Post("/shared-directories/{id}/invitations", middleware.AppError(sharingHandler.Invite))
 				r.Get("/invitations", middleware.AppError(sharingHandler.GetMyInvitations))
