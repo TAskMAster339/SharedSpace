@@ -22,6 +22,7 @@ type ServiceInterface interface {
 	SoftDelete(ctx context.Context, userID, fileID string) error
 	Restore(ctx context.Context, userID, fileID string) error
 	PermanentDelete(ctx context.Context, userID, fileID string) error
+	GetRecent(ctx context.Context, userID string, limit int) (RecentFilesResponse, error)
 }
 
 type RepositoryInterface interface {
@@ -35,6 +36,7 @@ type RepositoryInterface interface {
 	SoftDeleteFile(ctx context.Context, db dbTX, fileID string, deletedAt time.Time) error
 	RestoreFile(ctx context.Context, db dbTX, fileID string) error
 	HardDeleteFile(ctx context.Context, db dbTX, fileID string) error
+	FindRecentByUserID(ctx context.Context, db dbTX, userID string, limit int) ([]fileRecord, error)
 }
 
 type FileUpload struct {
@@ -47,6 +49,7 @@ type FileUpload struct {
 
 type dbTX interface {
 	QueryRow(context.Context, string, ...any) pgx.Row
+	Query(context.Context, string, ...any) (pgx.Rows, error)
 	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
 }
 

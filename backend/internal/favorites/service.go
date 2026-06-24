@@ -57,8 +57,8 @@ func (s *Service) Remove(ctx context.Context, userID, fileID string) error {
 	return nil
 }
 
-func (s *Service) List(ctx context.Context, userID string) (FavoritesListResponse, error) {
-	records, err := s.repo.FindAllByUserID(ctx, s.db, userID)
+func (s *Service) List(ctx context.Context, userID string, limit int) (FavoritesListResponse, error) {
+	records, err := s.repo.FindAllByUserID(ctx, s.db, userID, limit)
 	if err != nil {
 		return FavoritesListResponse{}, apperror.WrapInternal("получение списка избранного", err)
 	}

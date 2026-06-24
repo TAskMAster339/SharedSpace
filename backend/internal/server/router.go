@@ -62,6 +62,7 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 			if filesHandler != nil {
 				r.Route("/files", func(r chi.Router) {
 					r.Post("/", middleware.AppError(filesHandler.Upload))
+					r.Get("/recent", middleware.AppError(filesHandler.GetRecent))
 					r.Get("/favorites", middleware.AppError(favoritesHandler.List))
 					r.Post("/{id}/favorite", middleware.AppError(favoritesHandler.Add))
 					r.Delete("/{id}/favorite", middleware.AppError(favoritesHandler.Remove))
@@ -88,7 +89,10 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 
 			if sharingHandler != nil {
 				r.Get("/shared/with-me", middleware.AppError(sharingHandler.GetSharedWithMe))
+				r.Get("/shared/with-me/stats", middleware.AppError(sharingHandler.GetSharedWithMeStats))
 				r.Get("/shared-directories/{id}/members", middleware.AppError(sharingHandler.GetMembers))
+				r.Patch("/shared-directories/{id}/members/{userId}", middleware.AppError(sharingHandler.ChangeMemberRole))
+				r.Delete("/shared-directories/{id}/members/{userId}", middleware.AppError(sharingHandler.RemoveMember))
 				r.Post("/shared-directories/{id}/invitations", middleware.AppError(sharingHandler.Invite))
 				r.Get("/invitations", middleware.AppError(sharingHandler.GetMyInvitations))
 				r.Post("/invitations/{id}/accept", middleware.AppError(sharingHandler.AcceptInvitation))

@@ -8,13 +8,16 @@ import (
 )
 
 type ServiceInterface interface {
-	GetSharedWithMe(context.Context, string) ([]SharedDirectoryResponse, error)
-	GetMembers(context.Context, string, string) ([]MemberResponse, error)
+	GetSharedWithMe(context.Context, string, int) ([]SharedDirectoryResponse, error)
+	GetSharedWithMeStats(context.Context, string) ([]SharedDirectoryWithStatsResponse, error)
+	GetMembers(context.Context, string, string, int) ([]MemberResponse, error)
 	Invite(context.Context, string, string, string) (*InvitationResponse, error)
 	GetMyInvitations(context.Context, string) ([]InvitationResponse, error)
 	AcceptInvitation(context.Context, string, string) error
 	DeclineInvitation(context.Context, string, string) error
 	RemoveInvitation(context.Context, string, string) error
+	ChangeRole(context.Context, string, string, string, string) (*MemberResponse, error)
+	RemoveMember(context.Context, string, string, string) error
 }
 
 type RepositoryInterface interface {
@@ -22,8 +25,9 @@ type RepositoryInterface interface {
 		Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
 		QueryRow(context.Context, string, ...any) pgx.Row
 	}, directoryID, ownerID string) error
-	FindByMember(ctx context.Context, db dbTX, userID string) ([]sharedDirectoryRecord, error)
-	FindMembers(ctx context.Context, db dbTX, sharedDirID string) ([]memberRecord, error)
+	FindByMember(ctx context.Context, db dbTX, userID string, limit int) ([]sharedDirectoryRecord, error)
+	FindByMemberWithStats(ctx context.Context, db dbTX, userID string) ([]sharedDirectoryWithStatsRecord, error)
+	FindMembers(ctx context.Context, db dbTX, sharedDirID string, limit int) ([]memberRecord, error)
 	FindByID(ctx context.Context, db dbTX, id string) (sharedDirectoryRecord, error)
 	FindUserByUsername(ctx context.Context, db dbTX, username string) (string, error)
 	IsMember(ctx context.Context, db dbTX, sharedDirID, userID string) (bool, error)
@@ -32,6 +36,9 @@ type RepositoryInterface interface {
 	FindInvitationByID(ctx context.Context, db dbTX, id string) (invitationRecord, error)
 	UpdateInvitationStatus(ctx context.Context, db dbTX, id, status string) error
 	AddMember(ctx context.Context, db dbTX, sharedDirID, userID, role string) error
+	FindMember(ctx context.Context, db dbTX, sharedDirID, userID string) (memberRecord, error)
+	UpdateMemberRole(ctx context.Context, db dbTX, sharedDirID, userID, role string) error
+	RemoveMember(ctx context.Context, db dbTX, sharedDirID, userID string) error
 }
 
 type dbTX interface {

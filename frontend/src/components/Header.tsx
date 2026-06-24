@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Bell, Settings, LogOut, ChevronDown, MoonStar } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
@@ -18,6 +18,8 @@ export const Header: React.FC<HeaderProps> = ({ hasUnreadInvites = unreadCount >
   const { isAuthenticated, firstName, lastName, avatar, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isOnLandingPage = location.pathname === '/';
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const lastNameInitial = lastName ? lastName.charAt(0).toUpperCase() + '.' : '';
 
@@ -38,21 +40,34 @@ export const Header: React.FC<HeaderProps> = ({ hasUnreadInvites = unreadCount >
   return (
     <header className="h-16 bg-theme-secondary border-b border-theme flex items-center justify-between px-4 sm:px-6 sticky top-0 z-50 w-full shrink-0">
       <div className="flex items-center gap-8 min-w-0">
-        {/* Логотип + Название. Авторизованного ведём в дашборд, а не на лендинг. */}
-        <Link
-          to={isAuthenticated ? '/dashboard' : '/'}
-          className="flex items-center gap-2 cursor-pointer shrink-0"
-        >
-          <img
-            src={logo}
-            alt="SharedSpace"
-            className="w-8 h-8 rounded-theme-sm shadow-theme-card"
-          />
-          <span className="text-xl font-semibold tracking-tight hidden sm:inline">
-            <span className="text-brand-dark dark:text-brand">Shared</span>
-            <span className="text-brand">Space</span>
-          </span>
-        </Link>
+        {isOnLandingPage ? (
+          <div className="flex items-center gap-2 shrink-0">
+            <img
+              src={logo}
+              alt="SharedSpace"
+              className="w-8 h-8 rounded-theme-sm shadow-theme-card"
+            />
+            <span className="text-xl font-semibold tracking-tight hidden sm:inline">
+              <span className="text-brand-dark dark:text-brand">Shared</span>
+              <span className="text-brand">Space</span>
+            </span>
+          </div>
+        ) : (
+          <Link
+            to={isAuthenticated ? '/dashboard' : '/'}
+            className="flex items-center gap-2 cursor-pointer shrink-0"
+          >
+            <img
+              src={logo}
+              alt="SharedSpace"
+              className="w-8 h-8 rounded-theme-sm shadow-theme-card"
+            />
+            <span className="text-xl font-semibold tracking-tight hidden sm:inline">
+              <span className="text-brand-dark dark:text-brand">Shared</span>
+              <span className="text-brand">Space</span>
+            </span>
+          </Link>
+        )}
 
         {!isAuthenticated && (
           <nav className="hidden md:flex items-center gap-6">

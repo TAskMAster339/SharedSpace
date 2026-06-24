@@ -14,31 +14,41 @@ import (
 )
 
 type mockRepo struct {
-	findByMemberResult     []sharedDirectoryRecord
-	findByMemberErr        error
-	findMembersResult      []memberRecord
-	findMembersErr         error
-	findByIDResult         sharedDirectoryRecord
-	findByIDErr            error
-	findUserByUsernameID   string
-	findUserByUsernameErr  error
-	isMemberResult         bool
-	isMemberErr            error
-	createInvitationResult invitationRecord
-	createInvitationErr    error
-	findInvitationsResult  []invitationRecord
-	findInvitationsErr     error
-	findInvitationResult   invitationRecord
-	findInvitationErr      error
-	updateInvitationErr    error
-	addMemberErr           error
+	findByMemberResult          []sharedDirectoryRecord
+	findByMemberErr             error
+	findByMemberWithStatsResult []sharedDirectoryWithStatsRecord
+	findByMemberWithStatsErr    error
+	findMembersResult           []memberRecord
+	findMembersErr              error
+	findByIDResult              sharedDirectoryRecord
+	findByIDErr                 error
+	findUserByUsernameID        string
+	findUserByUsernameErr       error
+	isMemberResult              bool
+	isMemberErr                 error
+	createInvitationResult      invitationRecord
+	createInvitationErr         error
+	findInvitationsResult       []invitationRecord
+	findInvitationsErr          error
+	findInvitationResult        invitationRecord
+	findInvitationErr           error
+	updateInvitationErr         error
+	addMemberErr                error
+	findMemberResult            memberRecord
+	findMemberErr               error
+	updateMemberRoleErr         error
+	removeMemberErr             error
 }
 
-func (m *mockRepo) FindByMember(_ context.Context, _ dbTX, _ string) ([]sharedDirectoryRecord, error) {
+func (m *mockRepo) FindByMember(_ context.Context, _ dbTX, _ string, _ int) ([]sharedDirectoryRecord, error) {
 	return m.findByMemberResult, m.findByMemberErr
 }
 
-func (m *mockRepo) FindMembers(_ context.Context, _ dbTX, _ string) ([]memberRecord, error) {
+func (m *mockRepo) FindByMemberWithStats(_ context.Context, _ dbTX, _ string) ([]sharedDirectoryWithStatsRecord, error) {
+	return m.findByMemberWithStatsResult, m.findByMemberWithStatsErr
+}
+
+func (m *mockRepo) FindMembers(_ context.Context, _ dbTX, _ string, _ int) ([]memberRecord, error) {
 	return m.findMembersResult, m.findMembersErr
 }
 
@@ -81,6 +91,18 @@ func (m *mockRepo) AddMember(_ context.Context, _ dbTX, _, _, _ string) error {
 	return m.addMemberErr
 }
 
+func (m *mockRepo) FindMember(_ context.Context, _ dbTX, _, _ string) (memberRecord, error) {
+	return m.findMemberResult, m.findMemberErr
+}
+
+func (m *mockRepo) UpdateMemberRole(_ context.Context, _ dbTX, _, _, _ string) error {
+	return m.updateMemberRoleErr
+}
+
+func (m *mockRepo) RemoveMember(_ context.Context, _ dbTX, _, _ string) error {
+	return m.removeMemberErr
+}
+
 type mockTX struct{}
 
 func (mockTX) QueryRow(_ context.Context, _ string, _ ...any) pgx.Row        { return nil }
@@ -120,7 +142,7 @@ func TestServiceGetSharedWithMe(t *testing.T) {
 		}
 		svc := newTestService(repo)
 
-		resp, err := svc.GetSharedWithMe(context.Background(), "user-1")
+		resp, err := svc.GetSharedWithMe(context.Background(), "user-1", 0)
 		if err != nil {
 			t.Fatalf("GetSharedWithMe returned error: %v", err)
 		}
@@ -139,7 +161,7 @@ func TestServiceGetSharedWithMe(t *testing.T) {
 		repo := &mockRepo{findByMemberResult: []sharedDirectoryRecord{}}
 		svc := newTestService(repo)
 
-		resp, err := svc.GetSharedWithMe(context.Background(), "user-1")
+		resp, err := svc.GetSharedWithMe(context.Background(), "user-1", 0)
 		if err != nil {
 			t.Fatalf("GetSharedWithMe returned error: %v", err)
 		}
@@ -152,7 +174,7 @@ func TestServiceGetSharedWithMe(t *testing.T) {
 		repo := &mockRepo{findByMemberErr: errors.New("db error")}
 		svc := newTestService(repo)
 
-		_, err := svc.GetSharedWithMe(context.Background(), "user-1")
+		_, err := svc.GetSharedWithMe(context.Background(), "user-1", 0)
 		if err == nil {
 			t.Fatal("expected error")
 		}
@@ -176,7 +198,7 @@ func TestServiceGetMembers(t *testing.T) {
 		}
 		svc := newTestService(repo)
 
-		resp, err := svc.GetMembers(context.Background(), "user-1", "s-1")
+		resp, err := svc.GetMembers(context.Background(), "user-1", "s-1", 0)
 		if err != nil {
 			t.Fatalf("GetMembers returned error: %v", err)
 		}
@@ -201,7 +223,7 @@ func TestServiceGetMembers(t *testing.T) {
 		}
 		svc := newTestService(repo)
 
-		resp, err := svc.GetMembers(context.Background(), "user-1", "s-1")
+		resp, err := svc.GetMembers(context.Background(), "user-1", "s-1", 0)
 		if err != nil {
 			t.Fatalf("GetMembers returned error: %v", err)
 		}
@@ -223,7 +245,7 @@ func TestServiceGetMembers(t *testing.T) {
 		svc := newTestService(repo)
 		svc.accessChecker = &mockAccessChecker{canFn: func(_ context.Context, _, _ string, _ access.Action) (bool, error) { return false, nil }}
 
-		_, err := svc.GetMembers(context.Background(), "user-1", "s-1")
+		_, err := svc.GetMembers(context.Background(), "user-1", "s-1", 0)
 		if err == nil {
 			t.Fatal("expected error")
 		}
@@ -237,7 +259,7 @@ func TestServiceGetMembers(t *testing.T) {
 		repo := &mockRepo{findByIDErr: pgx.ErrNoRows}
 		svc := newTestService(repo)
 
-		_, err := svc.GetMembers(context.Background(), "user-1", "missing")
+		_, err := svc.GetMembers(context.Background(), "user-1", "missing", 0)
 		if err == nil {
 			t.Fatal("expected error")
 		}
@@ -568,6 +590,163 @@ func TestServiceRemoveInvitation(t *testing.T) {
 		svc := newTestService(repo)
 
 		err := svc.RemoveInvitation(context.Background(), "user-1", "missing")
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeNotFound {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+}
+
+func TestServiceChangeRole(t *testing.T) {
+	now := time.Now()
+
+	t.Run("success", func(t *testing.T) {
+		repo := &mockRepo{
+			findByIDResult: sharedDirectoryRecord{ID: "s-1", DirectoryID: "d-1", OwnerID: "user-1"},
+			findMemberResult: memberRecord{
+				ID: "m-2", UserID: "user-2", Username: "bob", Role: "viewer", JoinedAt: now,
+			},
+		}
+		svc := newTestService(repo)
+
+		resp, err := svc.ChangeRole(context.Background(), "user-1", "s-1", "user-2", "editor")
+		if err != nil {
+			t.Fatalf("ChangeRole returned error: %v", err)
+		}
+		if resp.Role != RoleEditor || resp.UserID != "user-2" || resp.Username != "bob" {
+			t.Fatalf("unexpected response: %+v", resp)
+		}
+	})
+
+	t.Run("shared directory not found", func(t *testing.T) {
+		repo := &mockRepo{findByIDErr: pgx.ErrNoRows}
+		svc := newTestService(repo)
+
+		_, err := svc.ChangeRole(context.Background(), "user-1", "missing", "user-2", "editor")
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeNotFound {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("forbidden for contributor", func(t *testing.T) {
+		repo := &mockRepo{
+			findByIDResult: sharedDirectoryRecord{ID: "s-1", DirectoryID: "d-1", OwnerID: "user-2"},
+		}
+		svc := newTestService(repo)
+		svc.accessChecker = &mockAccessChecker{canFn: func(_ context.Context, _, _ string, _ access.Action) (bool, error) {
+			return false, nil
+		}}
+
+		_, err := svc.ChangeRole(context.Background(), "user-1", "s-1", "user-2", "editor")
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeForbidden {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("member not found", func(t *testing.T) {
+		repo := &mockRepo{
+			findByIDResult: sharedDirectoryRecord{ID: "s-1", DirectoryID: "d-1", OwnerID: "user-1"},
+			findMemberErr:  pgx.ErrNoRows,
+		}
+		svc := newTestService(repo)
+
+		_, err := svc.ChangeRole(context.Background(), "user-1", "s-1", "user-3", "editor")
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeNotFound {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+}
+
+func TestServiceRemoveMember(t *testing.T) {
+	now := time.Now()
+
+	t.Run("success", func(t *testing.T) {
+		repo := &mockRepo{
+			findByIDResult: sharedDirectoryRecord{ID: "s-1", DirectoryID: "d-1", OwnerID: "user-1"},
+			findMemberResult: memberRecord{
+				ID: "m-2", UserID: "user-2", Username: "bob", Role: "viewer", JoinedAt: now,
+			},
+		}
+		svc := newTestService(repo)
+
+		err := svc.RemoveMember(context.Background(), "user-1", "s-1", "user-2")
+		if err != nil {
+			t.Fatalf("RemoveMember returned error: %v", err)
+		}
+	})
+
+	t.Run("shared directory not found", func(t *testing.T) {
+		repo := &mockRepo{findByIDErr: pgx.ErrNoRows}
+		svc := newTestService(repo)
+
+		err := svc.RemoveMember(context.Background(), "user-1", "missing", "user-2")
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeNotFound {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("forbidden for contributor", func(t *testing.T) {
+		repo := &mockRepo{
+			findByIDResult: sharedDirectoryRecord{ID: "s-1", DirectoryID: "d-1", OwnerID: "user-2"},
+		}
+		svc := newTestService(repo)
+		svc.accessChecker = &mockAccessChecker{canFn: func(_ context.Context, _, _ string, _ access.Action) (bool, error) {
+			return false, nil
+		}}
+
+		err := svc.RemoveMember(context.Background(), "user-1", "s-1", "user-2")
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeForbidden {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("forbidden to remove owner", func(t *testing.T) {
+		repo := &mockRepo{
+			findByIDResult: sharedDirectoryRecord{ID: "s-1", DirectoryID: "d-1", OwnerID: "user-1"},
+		}
+		svc := newTestService(repo)
+
+		err := svc.RemoveMember(context.Background(), "user-1", "s-1", "user-1")
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeForbidden {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("member not found", func(t *testing.T) {
+		repo := &mockRepo{
+			findByIDResult: sharedDirectoryRecord{ID: "s-1", DirectoryID: "d-1", OwnerID: "user-1"},
+			findMemberErr:  pgx.ErrNoRows,
+		}
+		svc := newTestService(repo)
+
+		err := svc.RemoveMember(context.Background(), "user-1", "s-1", "user-3")
 		if err == nil {
 			t.Fatal("expected error")
 		}

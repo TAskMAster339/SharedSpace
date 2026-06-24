@@ -32,13 +32,13 @@ export const FileItem: React.FC<FileItemProps> = ({
     to={to}
     className={cn(
       'flex items-center justify-between p-3 rounded-theme-md transition-colors cursor-pointer',
-      'bg-theme-tertiary hover:bg-theme-hover',
+      'bg-theme-tertiary hover:bg-theme-hover border border-theme',
       className,
     )}
   >
     <div className="flex items-center gap-3 min-w-0">
       <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card shrink-0">
-        <FileIcon type={type} />
+        <FileIcon type={type} size={20} />
       </div>
       <div className="min-w-0">
         <p className="text-sm text-theme-primary font-medium truncate">{name}</p>

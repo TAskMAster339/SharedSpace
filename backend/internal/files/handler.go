@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"mime/multipart"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 
@@ -152,6 +153,42 @@ func (h *Handler) GetContent(w http.ResponseWriter, r *http.Request) error {
 	resp, err := h.service.GetContentURL(r.Context(), claims.UserID, fileID)
 	if err != nil {
 		return err
+	}
+
+	return writeJSON(w, http.StatusOK, resp)
+}
+
+// GetRecent returns the most recent files for the authenticated user.
+// @Summary Get recent files
+// @Tags files
+// @Security BearerAuth
+// @Produce json
+// @Param limit query int false "Maximum number of files to return"
+// @Success 200 {object} RecentFilesResponse
+// @Failure 401 {object} apperror.Response
+// @Router /api/v1/files/recent [get]
+func (h *Handler) GetRecent(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := auth.ClaimsFromCtx(r.Context())
+	if !ok {
+		return apperror.Unauthorized("не авторизован")
+	}
+
+	limit := 0
+	if l := r.URL.Query().Get("limit"); l != "" {
+		parsed, err := strconv.Atoi(l)
+		if err != nil || parsed < 0 {
+			return apperror.Validation("некорректный лимит")
+		}
+		limit = parsed
+	}
+
+	resp, err := h.service.GetRecent(r.Context(), claims.UserID, limit)
+	if err != nil {
+		return err
+	}
+
+	if resp.Files == nil {
+		resp.Files = []FileMetadataResponse{}
 	}
 
 	return writeJSON(w, http.StatusOK, resp)

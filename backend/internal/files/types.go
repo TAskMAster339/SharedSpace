@@ -35,6 +35,10 @@ type FileContentResponse struct {
 	URL string `json:"url"`
 }
 
+type RecentFilesResponse struct {
+	Files []FileMetadataResponse `json:"files"`
+}
+
 type fileRecord struct {
 	ID          string
 	Filename    string

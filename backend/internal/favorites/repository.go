@@ -36,16 +36,23 @@ func (r *Repository) Delete(ctx context.Context, db dbTX, userID, fileID string)
 	return err
 }
 
-func (r *Repository) FindAllByUserID(ctx context.Context, db dbTX, userID string) ([]favoriteFileRecord, error) {
-	rows, err := db.Query(ctx, `
+func (r *Repository) FindAllByUserID(ctx context.Context, db dbTX, userID string, limit int) ([]favoriteFileRecord, error) {
+	query := `
 		SELECT f.id, f.filename, f.extension, f.mime_type, f.size,
 		       f.directory_id, f.owner_id, f.created_at, f.updated_at,
 		       fav.created_at AS favorited_at
 		FROM favorite_files fav
 		JOIN files f ON f.id = fav.file_id
 		WHERE fav.user_id = $1 AND f.deleted_at IS NULL
-		ORDER BY fav.created_at DESC
-	`, userID)
+		ORDER BY fav.created_at DESC`
+	args := []any{userID}
+
+	if limit > 0 {
+		query += ` LIMIT $2`
+		args = append(args, limit)
+	}
+
+	rows, err := db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}

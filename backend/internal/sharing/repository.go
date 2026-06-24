@@ -34,16 +34,23 @@ func (r *Repository) CreateShared(ctx context.Context, tx interface {
 	return err
 }
 
-func (r *Repository) FindByMember(ctx context.Context, db dbTX, userID string) ([]sharedDirectoryRecord, error) {
-	rows, err := db.Query(ctx, `
+func (r *Repository) FindByMember(ctx context.Context, db dbTX, userID string, limit int) ([]sharedDirectoryRecord, error) {
+	query := `
 		SELECT sd.id, sd.directory_id, sd.owner_id, d.name, u.username, sdm.role, sd.created_at
 		FROM shared_directories sd
 		JOIN shared_directory_members sdm ON sdm.shared_directory_id = sd.id
 		JOIN directories d ON d.id = sd.directory_id
 		JOIN users u ON u.id = sd.owner_id
 		WHERE sdm.user_id = $1
-		ORDER BY sd.created_at DESC
-	`, userID)
+		ORDER BY sd.created_at DESC`
+	args := []any{userID}
+
+	if limit > 0 {
+		query += ` LIMIT $2`
+		args = append(args, limit)
+	}
+
+	rows, err := db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -60,14 +67,56 @@ func (r *Repository) FindByMember(ctx context.Context, db dbTX, userID string) (
 	return records, rows.Err()
 }
 
-func (r *Repository) FindMembers(ctx context.Context, db dbTX, sharedDirID string) ([]memberRecord, error) {
+func (r *Repository) FindByMemberWithStats(ctx context.Context, db dbTX, userID string) ([]sharedDirectoryWithStatsRecord, error) {
 	rows, err := db.Query(ctx, `
+		SELECT
+			sd.id,
+			sd.directory_id,
+			sd.owner_id,
+			d.name,
+			u.username,
+			sdm.role,
+			(SELECT COUNT(*) FROM shared_directory_members sdm2 WHERE sdm2.shared_directory_id = sd.id),
+			(SELECT COUNT(*) FROM files f WHERE f.directory_id = sd.directory_id AND f.deleted_at IS NULL),
+			sd.created_at
+		FROM shared_directories sd
+		JOIN shared_directory_members sdm ON sdm.shared_directory_id = sd.id
+		JOIN directories d ON d.id = sd.directory_id
+		JOIN users u ON u.id = sd.owner_id
+		WHERE sdm.user_id = $1
+		ORDER BY sd.created_at DESC
+	`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var records []sharedDirectoryWithStatsRecord
+	for rows.Next() {
+		var r sharedDirectoryWithStatsRecord
+		if err := rows.Scan(&r.ID, &r.DirectoryID, &r.OwnerID, &r.Name, &r.OwnerName, &r.Role, &r.MemberCount, &r.FileCount, &r.CreatedAt); err != nil {
+			return nil, err
+		}
+		records = append(records, r)
+	}
+	return records, rows.Err()
+}
+
+func (r *Repository) FindMembers(ctx context.Context, db dbTX, sharedDirID string, limit int) ([]memberRecord, error) {
+	query := `
 		SELECT sdm.id, u.id, u.username, sdm.role, sdm.joined_at
 		FROM shared_directory_members sdm
 		JOIN users u ON u.id = sdm.user_id
 		WHERE sdm.shared_directory_id = $1
-		ORDER BY sdm.joined_at ASC
-	`, sharedDirID)
+		ORDER BY sdm.joined_at ASC`
+	args := []any{sharedDirID}
+
+	if limit > 0 {
+		query += ` LIMIT $2`
+		args = append(args, limit)
+	}
+
+	rows, err := db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -186,5 +235,32 @@ func (r *Repository) AddMember(ctx context.Context, db dbTX, sharedDirID, userID
 		INSERT INTO shared_directory_members (shared_directory_id, user_id, role)
 		VALUES ($1, $2, $3)
 	`, sharedDirID, userID, role)
+	return err
+}
+
+func (r *Repository) FindMember(ctx context.Context, db dbTX, sharedDirID, userID string) (memberRecord, error) {
+	var rec memberRecord
+	err := db.QueryRow(ctx, `
+		SELECT sdm.id, u.id, u.username, sdm.role, sdm.joined_at
+		FROM shared_directory_members sdm
+		JOIN users u ON u.id = sdm.user_id
+		WHERE sdm.shared_directory_id = $1 AND sdm.user_id = $2
+	`, sharedDirID, userID).Scan(&rec.ID, &rec.UserID, &rec.Username, &rec.Role, &rec.JoinedAt)
+	return rec, err
+}
+
+func (r *Repository) UpdateMemberRole(ctx context.Context, db dbTX, sharedDirID, userID, role string) error {
+	_, err := db.Exec(ctx, `
+		UPDATE shared_directory_members SET role = $3
+		WHERE shared_directory_id = $1 AND user_id = $2
+	`, sharedDirID, userID, role)
+	return err
+}
+
+func (r *Repository) RemoveMember(ctx context.Context, db dbTX, sharedDirID, userID string) error {
+	_, err := db.Exec(ctx, `
+		DELETE FROM shared_directory_members
+		WHERE shared_directory_id = $1 AND user_id = $2
+	`, sharedDirID, userID)
 	return err
 }

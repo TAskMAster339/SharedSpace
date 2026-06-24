@@ -10,13 +10,13 @@ import (
 type ServiceInterface interface {
 	Add(ctx context.Context, userID, fileID string) error
 	Remove(ctx context.Context, userID, fileID string) error
-	List(ctx context.Context, userID string) (FavoritesListResponse, error)
+	List(ctx context.Context, userID string, limit int) (FavoritesListResponse, error)
 }
 
 type RepositoryInterface interface {
 	Insert(ctx context.Context, db dbTX, userID, fileID string) error
 	Delete(ctx context.Context, db dbTX, userID, fileID string) error
-	FindAllByUserID(ctx context.Context, db dbTX, userID string) ([]favoriteFileRecord, error)
+	FindAllByUserID(ctx context.Context, db dbTX, userID string, limit int) ([]favoriteFileRecord, error)
 	FindFileByID(ctx context.Context, db dbTX, fileID string) error
 }
 

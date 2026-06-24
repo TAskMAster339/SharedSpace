@@ -63,7 +63,7 @@ const LoginPage: React.FC = () => {
           <div>
             <input
               type="email"
-              placeholder="Email"
+              placeholder="Email или username"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-3 py-2 rounded-theme-md border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
