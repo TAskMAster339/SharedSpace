@@ -12,6 +12,8 @@ interface DirectoryCardData extends SharedDirectoryWithStats {
   memberUsernames: string[];
 }
 
+const AVATAR_LIMIT = 4;
+
 function roleLabel(dir: SharedDirectoryWithStats, currentUserId: string | undefined): string {
   if (dir.owner_id === currentUserId) return 'Owner';
   if (dir.role === 'admin') return 'Admin';
@@ -39,7 +41,7 @@ const SharedDirListPage: React.FC = () => {
       const shared = await getSharedWithMeStats(token);
       const withDetails = await Promise.all(
         shared.map(async (dir) => {
-          const members = await getMembers(token, dir.id).catch(() => []);
+          const members = await getMembers(token, dir.id, AVATAR_LIMIT).catch(() => []);
           return {
             ...dir,
             memberUsernames: members.map((m) => m.username),

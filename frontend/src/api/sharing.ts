@@ -29,8 +29,13 @@ export function getSharedWithMeStats(accessToken: string): Promise<SharedDirecto
   });
 }
 
-export function getMembers(accessToken: string, sharedDirectoryId: string): Promise<Member[]> {
-  return apiRequest<Member[]>(`/shared-directories/${sharedDirectoryId}/members`, {
+export function getMembers(
+  accessToken: string,
+  sharedDirectoryId: string,
+  limit?: number,
+): Promise<Member[]> {
+  const query = limit ? `?limit=${limit}` : '';
+  return apiRequest<Member[]>(`/shared-directories/${sharedDirectoryId}/members${query}`, {
     method: 'GET',
     token: accessToken,
   });
