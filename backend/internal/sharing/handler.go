@@ -372,6 +372,42 @@ func (h *Handler) RemoveMember(w http.ResponseWriter, r *http.Request) error {
 	return writeJSON(w, http.StatusOK, map[string]string{"status": "removed"})
 }
 
+// GetUserSharedDirectories returns shared directories where user can invite others
+// @Summary Get user's shared directories for invitations
+// @Tags sharing
+// @Security BearerAuth
+// @Produce json
+// @Param limit query int false "Maximum number of directories to return"
+// @Success 200 {array} SharedDirectoryResponse
+// @Failure 401 {object} apperror.Response
+// @Router /api/v1/shared/directories [get]
+func (h *Handler) GetUserSharedDirectories(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := auth.ClaimsFromCtx(r.Context())
+	if !ok {
+		return apperror.Unauthorized("неавторизован")
+	}
+
+	limit := 0
+	if l := r.URL.Query().Get("limit"); l != "" {
+		parsed, err := strconv.Atoi(l)
+		if err != nil || parsed < 0 {
+			return apperror.Validation("некорректный лимит")
+		}
+		limit = parsed
+	}
+
+	resp, err := h.service.GetUserSharedDirectories(r.Context(), claims.UserID, limit)
+	if err != nil {
+		return err
+	}
+
+	if resp == nil {
+		resp = []SharedDirectoryResponse{}
+	}
+
+	return writeJSON(w, http.StatusOK, resp)
+}
+
 func writeJSON(w http.ResponseWriter, status int, payload any) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)

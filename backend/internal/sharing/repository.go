@@ -264,3 +264,64 @@ func (r *Repository) RemoveMember(ctx context.Context, db dbTX, sharedDirID, use
 	`, sharedDirID, userID)
 	return err
 }
+
+func (r *Repository) GetUserSharedDirectories(ctx context.Context, db dbTX, userID string, limit int) ([]SharedDirectoryResponse, error) {
+	query := `
+		SELECT
+			sd.id AS shared_directory_id,
+			d.id AS directory_id,
+			d.name,
+			d.owner_id,
+			d.parent_id,
+			d.type,
+			d.created_at,
+			d.updated_at
+		FROM shared_directories sd
+		JOIN directories d ON sd.directory_id = d.id
+		WHERE sd.owner_id = $1
+		   OR EXISTS (
+		     SELECT 1 FROM shared_directory_members sdm
+		     WHERE sdm.shared_directory_id = sd.id AND sdm.user_id = $1 AND sdm.role = 'admin'
+		   )
+		ORDER BY d.created_at DESC`
+	args := []any{userID}
+
+	if limit > 0 {
+		query += ` LIMIT $2`
+		args = append(args, limit)
+	}
+
+	rows, err := db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []SharedDirectoryResponse
+	for rows.Next() {
+		var resp SharedDirectoryResponse
+		var parentID *string
+
+		err := rows.Scan(
+			&resp.SharedDirectoryID,
+			&resp.DirectoryID,
+			&resp.Name,
+			&resp.OwnerID,
+			&parentID,
+			&resp.Type,
+			&resp.CreatedAt,
+			&resp.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if parentID != nil {
+			resp.ParentID = parentID
+		}
+
+		result = append(result, resp)
+	}
+
+	return result, nil
+}
