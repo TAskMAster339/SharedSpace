@@ -129,6 +129,37 @@ func (r *Repository) RestoreFile(ctx context.Context, db dbTX, id string) error 
 	return err
 }
 
+func (r *Repository) FindByFilenameAndDirectory(ctx context.Context, db dbTX, filename, directoryID string) (fileRecord, error) {
+	var f fileRecord
+	err := db.QueryRow(ctx, `
+		SELECT id, directory_id, owner_id, filename, extension, mime_type, size, object_key, created_at, updated_at
+		FROM files
+		WHERE filename = $1 AND directory_id = $2 AND deleted_at IS NULL
+	`, filename, directoryID).Scan(
+		&f.ID, &f.DirectoryID, &f.OwnerID,
+		&f.Filename, &f.Extension, &f.MimeType,
+		&f.Size, &f.ObjectKey, &f.CreatedAt, &f.UpdatedAt,
+	)
+	return f, err
+}
+
+func (r *Repository) MoveFile(ctx context.Context, db dbTX, fileID, newParentID string, newFilename *string) (fileRecord, error) {
+	var f fileRecord
+	err := db.QueryRow(ctx, `
+		UPDATE files SET
+			filename = COALESCE($2, filename),
+			directory_id = $3,
+			updated_at = now()
+		WHERE id = $1 AND deleted_at IS NULL
+		RETURNING id, directory_id, owner_id, filename, extension, mime_type, size, object_key, created_at, updated_at
+	`, fileID, newFilename, newParentID).Scan(
+		&f.ID, &f.DirectoryID, &f.OwnerID,
+		&f.Filename, &f.Extension, &f.MimeType,
+		&f.Size, &f.ObjectKey, &f.CreatedAt, &f.UpdatedAt,
+	)
+	return f, err
+}
+
 func (r *Repository) HardDeleteFile(ctx context.Context, db dbTX, id string) error {
 	_, err := db.Exec(ctx, `DELETE FROM files WHERE id=$1`, id)
 	return err

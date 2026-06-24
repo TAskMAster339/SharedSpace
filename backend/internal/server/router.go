@@ -68,6 +68,7 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 					r.Delete("/{id}/favorite", middleware.AppError(favoritesHandler.Remove))
 					r.Get("/{id}", middleware.AppError(filesHandler.GetMetadata))
 					r.Get("/{id}/content", middleware.AppError(filesHandler.GetContent))
+					r.Patch("/{id}", middleware.AppError(filesHandler.Update))
 					r.Delete("/{id}", middleware.AppError(filesHandler.SoftDelete))
 					r.Post("/{id}/restore", middleware.AppError(filesHandler.Restore))
 					r.Delete("/{id}/permanent", middleware.AppError(filesHandler.PermanentDelete))

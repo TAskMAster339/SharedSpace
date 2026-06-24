@@ -170,6 +170,85 @@ func (s *Service) GetRecent(ctx context.Context, userID string, limit int) (Rece
 	return RecentFilesResponse{Files: files}, nil
 }
 
+func (s *Service) Update(ctx context.Context, userID, fileID string, req UpdateFileRequest) (FileMetadataResponse, error) {
+	if req.Filename != nil {
+		trimmed := strings.TrimSpace(*req.Filename)
+		req.Filename = &trimmed
+		if *req.Filename == "" {
+			return FileMetadataResponse{}, apperror.Validation("имя файла не может быть пустым")
+		}
+	}
+
+	if req.Filename == nil && req.ParentID == nil {
+		return FileMetadataResponse{}, apperror.Validation("требуется хотя бы одно поле (filename или parent_id)")
+	}
+
+	file, err := s.repo.FindByID(ctx, s.db, fileID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return FileMetadataResponse{}, apperror.NotFound("файл не найден")
+		}
+		return FileMetadataResponse{}, apperror.WrapInternal("поиск файла", err)
+	}
+
+	ok, err := s.accessChecker.Can(ctx, userID, file.DirectoryID, access.ActionDelete)
+	if err != nil {
+		return FileMetadataResponse{}, err
+	}
+	if !ok {
+		return FileMetadataResponse{}, apperror.Forbidden("доступ запрещён")
+	}
+
+	targetParent := file.DirectoryID
+	if req.ParentID != nil {
+		targetParent = *req.ParentID
+	}
+	targetFilename := file.Filename
+	if req.Filename != nil {
+		targetFilename = *req.Filename
+	}
+
+	if req.ParentID != nil {
+		_, err := s.repo.FindDirectoryByID(ctx, s.db, *req.ParentID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return FileMetadataResponse{}, apperror.NotFound("целевая директория не найдена")
+			}
+			return FileMetadataResponse{}, apperror.WrapInternal("поиск целевой директории", err)
+		}
+		ok, err = s.accessChecker.Can(ctx, userID, *req.ParentID, access.ActionUpload)
+		if err != nil {
+			return FileMetadataResponse{}, err
+		}
+		if !ok {
+			return FileMetadataResponse{}, apperror.Forbidden("доступ к целевой директории запрещён")
+		}
+	}
+
+	if _, err := s.repo.FindByFilenameAndDirectory(ctx, s.db, targetFilename, targetParent); err == nil {
+		return FileMetadataResponse{}, apperror.Conflict("файл с таким именем уже существует в целевой директории")
+	} else if !errors.Is(err, pgx.ErrNoRows) {
+		return FileMetadataResponse{}, apperror.WrapInternal("проверка дубликата имени", err)
+	}
+
+	tx, err := s.beginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return FileMetadataResponse{}, apperror.WrapInternal("начало транзакции", err)
+	}
+	defer tx.Rollback(ctx)
+
+	updated, err := s.repo.MoveFile(ctx, tx, fileID, targetParent, req.Filename)
+	if err != nil {
+		return FileMetadataResponse{}, apperror.WrapInternal("перемещение файла", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return FileMetadataResponse{}, apperror.WrapInternal("сохранение перемещения файла", err)
+	}
+
+	return toMetadataResponse(updated), nil
+}
+
 func (s *Service) cleanupObjects(keys []string) {
 	if len(keys) == 0 {
 		return
