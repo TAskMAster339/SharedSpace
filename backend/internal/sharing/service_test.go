@@ -9,16 +9,29 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"sharedspace/internal/access"
 	"sharedspace/internal/apperror"
 )
 
 type mockRepo struct {
-	findByMemberResult []sharedDirectoryRecord
-	findByMemberErr    error
-	findMembersResult  []memberRecord
-	findMembersErr     error
-	findByIDResult     sharedDirectoryRecord
-	findByIDErr        error
+	findByMemberResult     []sharedDirectoryRecord
+	findByMemberErr        error
+	findMembersResult      []memberRecord
+	findMembersErr         error
+	findByIDResult         sharedDirectoryRecord
+	findByIDErr            error
+	findUserByUsernameID   string
+	findUserByUsernameErr  error
+	isMemberResult         bool
+	isMemberErr            error
+	createInvitationResult invitationRecord
+	createInvitationErr    error
+	findInvitationsResult  []invitationRecord
+	findInvitationsErr     error
+	findInvitationResult   invitationRecord
+	findInvitationErr      error
+	updateInvitationErr    error
+	addMemberErr           error
 }
 
 func (m *mockRepo) FindByMember(_ context.Context, _ dbTX, _ string) ([]sharedDirectoryRecord, error) {
@@ -40,6 +53,34 @@ func (m *mockRepo) CreateShared(_ context.Context, _ interface {
 	return nil
 }
 
+func (m *mockRepo) FindUserByUsername(_ context.Context, _ dbTX, _ string) (string, error) {
+	return m.findUserByUsernameID, m.findUserByUsernameErr
+}
+
+func (m *mockRepo) IsMember(_ context.Context, _ dbTX, _, _ string) (bool, error) {
+	return m.isMemberResult, m.isMemberErr
+}
+
+func (m *mockRepo) CreateInvitation(_ context.Context, _ dbTX, _, _, _, _ string) (invitationRecord, error) {
+	return m.createInvitationResult, m.createInvitationErr
+}
+
+func (m *mockRepo) FindInvitationsByUser(_ context.Context, _ dbTX, _ string, _ ...string) ([]invitationRecord, error) {
+	return m.findInvitationsResult, m.findInvitationsErr
+}
+
+func (m *mockRepo) FindInvitationByID(_ context.Context, _ dbTX, _ string) (invitationRecord, error) {
+	return m.findInvitationResult, m.findInvitationErr
+}
+
+func (m *mockRepo) UpdateInvitationStatus(_ context.Context, _ dbTX, _, _ string) error {
+	return m.updateInvitationErr
+}
+
+func (m *mockRepo) AddMember(_ context.Context, _ dbTX, _, _, _ string) error {
+	return m.addMemberErr
+}
+
 type mockTX struct{}
 
 func (mockTX) QueryRow(_ context.Context, _ string, _ ...any) pgx.Row        { return nil }
@@ -47,12 +88,23 @@ func (mockTX) Query(_ context.Context, _ string, _ ...any) (pgx.Rows, error) { r
 func (mockTX) Exec(_ context.Context, _ string, _ ...any) (pgconn.CommandTag, error) {
 	return pgconn.CommandTag{}, nil
 }
+func (mockTX) Commit(_ context.Context) error   { return nil }
+func (mockTX) Rollback(_ context.Context) error { return nil }
+
+type mockAccessChecker struct {
+	canFn func(ctx context.Context, userID, directoryID string, action access.Action) (bool, error)
+}
+
+func (m *mockAccessChecker) Can(ctx context.Context, userID, directoryID string, action access.Action) (bool, error) {
+	return m.canFn(ctx, userID, directoryID, action)
+}
 
 func newTestService(repo RepositoryInterface) *Service {
 	return &Service{
-		beginTx: func(_ context.Context, _ pgx.TxOptions) (transaction, error) { return nil, nil },
-		db:      mockTX{},
-		repo:    repo,
+		beginTx:       func(_ context.Context, _ pgx.TxOptions) (transaction, error) { return mockTX{}, nil },
+		db:            mockTX{},
+		repo:          repo,
+		accessChecker: &mockAccessChecker{canFn: func(_ context.Context, _, _ string, _ access.Action) (bool, error) { return true, nil }},
 	}
 }
 
@@ -169,6 +221,7 @@ func TestServiceGetMembers(t *testing.T) {
 			},
 		}
 		svc := newTestService(repo)
+		svc.accessChecker = &mockAccessChecker{canFn: func(_ context.Context, _, _ string, _ access.Action) (bool, error) { return false, nil }}
 
 		_, err := svc.GetMembers(context.Background(), "user-1", "s-1")
 		if err == nil {
@@ -185,6 +238,336 @@ func TestServiceGetMembers(t *testing.T) {
 		svc := newTestService(repo)
 
 		_, err := svc.GetMembers(context.Background(), "user-1", "missing")
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeNotFound {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+}
+
+func TestServiceInvite(t *testing.T) {
+	t.Run("success as owner", func(t *testing.T) {
+		repo := &mockRepo{
+			findByIDResult:       sharedDirectoryRecord{ID: "s-1", DirectoryID: "d-1", OwnerID: "user-1", Name: "photos", OwnerName: "alice"},
+			findUserByUsernameID: "user-2",
+			isMemberResult:       false,
+			createInvitationResult: invitationRecord{
+				ID: "inv-1", SharedDirectoryID: "s-1", InvitedUserID: "user-2",
+				InvitedByUserID: "user-1", Role: "viewer", Status: "pending",
+			},
+		}
+		svc := newTestService(repo)
+
+		resp, err := svc.Invite(context.Background(), "user-1", "s-1", "bob")
+		if err != nil {
+			t.Fatalf("Invite returned error: %v", err)
+		}
+		if resp.Role != RoleViewer || resp.Status != InvitationPending {
+			t.Fatalf("unexpected response: %+v", resp)
+		}
+	})
+
+	t.Run("not found shared directory", func(t *testing.T) {
+		repo := &mockRepo{findByIDErr: pgx.ErrNoRows}
+		svc := newTestService(repo)
+
+		_, err := svc.Invite(context.Background(), "user-1", "missing", "bob")
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeNotFound {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("forbidden for non-admin member", func(t *testing.T) {
+		repo := &mockRepo{
+			findByIDResult: sharedDirectoryRecord{ID: "s-1", DirectoryID: "d-1", OwnerID: "user-2"},
+			findMembersResult: []memberRecord{
+				{UserID: "user-1", Role: "viewer"},
+			},
+		}
+		svc := newTestService(repo)
+
+		_, err := svc.Invite(context.Background(), "user-1", "s-1", "bob")
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeForbidden {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("user not found", func(t *testing.T) {
+		repo := &mockRepo{
+			findByIDResult:        sharedDirectoryRecord{ID: "s-1", DirectoryID: "d-1", OwnerID: "user-1"},
+			findUserByUsernameID:  "",
+			findUserByUsernameErr: pgx.ErrNoRows,
+		}
+		svc := newTestService(repo)
+
+		_, err := svc.Invite(context.Background(), "user-1", "s-1", "unknown")
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeNotFound {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("already a member", func(t *testing.T) {
+		repo := &mockRepo{
+			findByIDResult:       sharedDirectoryRecord{ID: "s-1", DirectoryID: "d-1", OwnerID: "user-1"},
+			findUserByUsernameID: "user-2",
+			isMemberResult:       true,
+		}
+		svc := newTestService(repo)
+
+		_, err := svc.Invite(context.Background(), "user-1", "s-1", "bob")
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeConflict {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+}
+
+func TestServiceGetMyInvitations(t *testing.T) {
+	now := time.Now()
+
+	t.Run("success", func(t *testing.T) {
+		repo := &mockRepo{
+			findInvitationsResult: []invitationRecord{
+				{ID: "inv-1", SharedDirectoryID: "s-1", DirectoryName: "photos",
+					InvitedUserID: "user-1", InvitedByUserID: "user-2",
+					InvitedByUsername: "ivan", Role: "viewer", Status: "pending", CreatedAt: now},
+			},
+		}
+		svc := newTestService(repo)
+
+		resp, err := svc.GetMyInvitations(context.Background(), "user-1")
+		if err != nil {
+			t.Fatalf("GetMyInvitations returned error: %v", err)
+		}
+		if len(resp) != 1 || resp[0].ID != "inv-1" || resp[0].Role != RoleViewer {
+			t.Fatalf("unexpected response: %+v", resp)
+		}
+	})
+
+	t.Run("empty result", func(t *testing.T) {
+		repo := &mockRepo{findInvitationsResult: []invitationRecord{}}
+		svc := newTestService(repo)
+
+		resp, err := svc.GetMyInvitations(context.Background(), "user-1")
+		if err != nil {
+			t.Fatalf("GetMyInvitations returned error: %v", err)
+		}
+		if len(resp) != 0 {
+			t.Fatalf("expected empty, got %d", len(resp))
+		}
+	})
+
+	t.Run("repository error", func(t *testing.T) {
+		repo := &mockRepo{findInvitationsErr: errors.New("db error")}
+		svc := newTestService(repo)
+
+		_, err := svc.GetMyInvitations(context.Background(), "user-1")
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeInternal {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+}
+
+func TestServiceAcceptInvitation(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		repo := &mockRepo{
+			findInvitationResult: invitationRecord{
+				ID: "inv-1", SharedDirectoryID: "s-1", InvitedUserID: "user-1",
+				Role: "viewer", Status: "pending",
+			},
+		}
+		svc := newTestService(repo)
+
+		err := svc.AcceptInvitation(context.Background(), "user-1", "inv-1")
+		if err != nil {
+			t.Fatalf("AcceptInvitation returned error: %v", err)
+		}
+	})
+
+	t.Run("not found", func(t *testing.T) {
+		repo := &mockRepo{findInvitationErr: pgx.ErrNoRows}
+		svc := newTestService(repo)
+
+		err := svc.AcceptInvitation(context.Background(), "user-1", "missing")
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeNotFound {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("not the invited user", func(t *testing.T) {
+		repo := &mockRepo{
+			findInvitationResult: invitationRecord{
+				ID: "inv-1", InvitedUserID: "user-2", Status: "pending",
+			},
+		}
+		svc := newTestService(repo)
+
+		err := svc.AcceptInvitation(context.Background(), "user-1", "inv-1")
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeForbidden {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("already processed", func(t *testing.T) {
+		repo := &mockRepo{
+			findInvitationResult: invitationRecord{
+				ID: "inv-1", InvitedUserID: "user-1", Status: "accepted",
+			},
+		}
+		svc := newTestService(repo)
+
+		err := svc.AcceptInvitation(context.Background(), "user-1", "inv-1")
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeConflict {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+}
+
+func TestServiceDeclineInvitation(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		repo := &mockRepo{
+			findInvitationResult: invitationRecord{
+				ID: "inv-1", InvitedUserID: "user-1", Status: "pending",
+			},
+		}
+		svc := newTestService(repo)
+
+		err := svc.DeclineInvitation(context.Background(), "user-1", "inv-1")
+		if err != nil {
+			t.Fatalf("DeclineInvitation returned error: %v", err)
+		}
+	})
+
+	t.Run("not the invited user", func(t *testing.T) {
+		repo := &mockRepo{
+			findInvitationResult: invitationRecord{
+				ID: "inv-1", InvitedUserID: "user-2", Status: "pending",
+			},
+		}
+		svc := newTestService(repo)
+
+		err := svc.DeclineInvitation(context.Background(), "user-1", "inv-1")
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeForbidden {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("already processed", func(t *testing.T) {
+		repo := &mockRepo{
+			findInvitationResult: invitationRecord{
+				ID: "inv-1", InvitedUserID: "user-1", Status: "declined",
+			},
+		}
+		svc := newTestService(repo)
+
+		err := svc.DeclineInvitation(context.Background(), "user-1", "inv-1")
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeConflict {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+}
+
+func TestServiceRemoveInvitation(t *testing.T) {
+	t.Run("success as inviter", func(t *testing.T) {
+		now := time.Now()
+		repo := &mockRepo{
+			findInvitationResult: invitationRecord{
+				ID: "inv-1", SharedDirectoryID: "s-1", InvitedUserID: "user-2",
+				InvitedByUserID: "user-1", Status: "pending", CreatedAt: now,
+			},
+			findByIDResult: sharedDirectoryRecord{ID: "s-1", OwnerID: "user-3"},
+		}
+		svc := newTestService(repo)
+
+		err := svc.RemoveInvitation(context.Background(), "user-1", "inv-1")
+		if err != nil {
+			t.Fatalf("RemoveInvitation returned error: %v", err)
+		}
+	})
+
+	t.Run("success as owner", func(t *testing.T) {
+		now := time.Now()
+		repo := &mockRepo{
+			findInvitationResult: invitationRecord{
+				ID: "inv-1", SharedDirectoryID: "s-1", InvitedUserID: "user-2",
+				InvitedByUserID: "user-3", Status: "pending", CreatedAt: now,
+			},
+			findByIDResult: sharedDirectoryRecord{ID: "s-1", OwnerID: "user-1"},
+		}
+		svc := newTestService(repo)
+
+		err := svc.RemoveInvitation(context.Background(), "user-1", "inv-1")
+		if err != nil {
+			t.Fatalf("RemoveInvitation returned error: %v", err)
+		}
+	})
+
+	t.Run("forbidden for unrelated user", func(t *testing.T) {
+		repo := &mockRepo{
+			findInvitationResult: invitationRecord{
+				ID: "inv-1", SharedDirectoryID: "s-1", InvitedByUserID: "user-2",
+			},
+			findByIDResult: sharedDirectoryRecord{ID: "s-1", OwnerID: "user-3"},
+		}
+		svc := newTestService(repo)
+
+		err := svc.RemoveInvitation(context.Background(), "user-1", "inv-1")
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeForbidden {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("not found", func(t *testing.T) {
+		repo := &mockRepo{findInvitationErr: pgx.ErrNoRows}
+		svc := newTestService(repo)
+
+		err := svc.RemoveInvitation(context.Background(), "user-1", "missing")
 		if err == nil {
 			t.Fatal("expected error")
 		}

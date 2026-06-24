@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"sharedspace/internal/access"
 	"sharedspace/internal/apperror"
 )
 
@@ -29,6 +30,10 @@ func (m *mockRepo) FindDirectoryByID(_ context.Context, _ dbTX, _ string) (direc
 	return m.dir, m.dirErr
 }
 
+func (m *mockRepo) FindByID(_ context.Context, _ dbTX, _ string) (fileRecord, error) {
+	return fileRecord{}, nil
+}
+
 func (m *mockRepo) Save(_ context.Context, _ dbTX, f fileRecord) (fileRecord, error) {
 	if m.saveErr != nil {
 		return fileRecord{}, m.saveErr
@@ -37,6 +42,19 @@ func (m *mockRepo) Save(_ context.Context, _ dbTX, f fileRecord) (fileRecord, er
 	f.CreatedAt = time.Unix(100, 0).UTC()
 	f.UpdatedAt = time.Unix(100, 0).UTC()
 	return f, nil
+}
+
+func (m *mockRepo) GetUserStorage(_ context.Context, _ dbTX, _ string) (int64, int64, error) {
+	quota := m.storageQuota
+	if quota == 0 {
+		quota = 1 << 40
+	}
+	return m.storageUsed, quota, m.getStorageErr
+}
+
+func (m *mockRepo) AddUserStorageUsed(_ context.Context, _ dbTX, _ string, delta int64) error {
+	m.addedDelta = delta
+	return m.addUsedErr
 }
 
 type mockStorage struct {
@@ -49,17 +67,8 @@ func (m *mockStorage) Upload(_ context.Context, objectKey string, _ io.Reader, _
 	return m.err
 }
 
-func (m *mockRepo) GetUserStorage(_ context.Context, _ dbTX, _ string) (int64, int64, error) {
-	quota := m.storageQuota
-	if quota == 0 {
-		quota = 1 << 40 // 1 ТБ
-	}
-	return m.storageUsed, quota, m.getStorageErr
-}
-
-func (m *mockRepo) AddUserStorageUsed(_ context.Context, _ dbTX, _ string, delta int64) error {
-	m.addedDelta = delta
-	return m.addUsedErr
+func (m *mockStorage) PresignedGetURL(_ context.Context, _ string, _ time.Duration) (string, error) {
+	return "http://localhost:9000/test-bucket/key", nil
 }
 
 func (m *mockStorage) Delete(_ context.Context, _ string) error {
@@ -87,15 +96,24 @@ type mockRow struct{}
 
 func (r mockRow) Scan(_ ...any) error { return nil }
 
+type mockAccessChecker struct {
+	canFn func(ctx context.Context, userID, directoryID string, action access.Action) (bool, error)
+}
+
+func (m *mockAccessChecker) Can(ctx context.Context, userID, directoryID string, action access.Action) (bool, error) {
+	return m.canFn(ctx, userID, directoryID, action)
+}
+
 func newTestService(repo RepositoryInterface, storage StorageClient) *Service {
 	tx := &mockTx{}
 	return &Service{
 		beginTx: func(_ context.Context, _ pgx.TxOptions) (transaction, error) {
 			return tx, nil
 		},
-		db:      tx,
-		repo:    repo,
-		storage: storage,
+		db:            tx,
+		repo:          repo,
+		storage:       storage,
+		accessChecker: &mockAccessChecker{canFn: func(_ context.Context, _, _ string, _ access.Action) (bool, error) { return true, nil }},
 	}
 }
 
@@ -143,8 +161,11 @@ func TestServiceUpload_NoFiles(t *testing.T) {
 }
 
 func TestServiceUpload_DirectoryNotFound(t *testing.T) {
-	repo := &mockRepo{dirErr: pgx.ErrNoRows}
+	repo := &mockRepo{}
 	svc := newTestService(repo, &mockStorage{})
+	svc.accessChecker = &mockAccessChecker{canFn: func(_ context.Context, _, _ string, _ access.Action) (bool, error) {
+		return false, apperror.NotFound("директория не найдена")
+	}}
 
 	_, err := svc.Upload(context.Background(), "user-1", "dir-1", []FileUpload{
 		{Filename: "f.txt", Extension: "txt", MimeType: "text/plain", Size: 1, Content: bytes.NewReader([]byte("x"))},
@@ -163,6 +184,7 @@ func TestServiceUpload_AccessDenied(t *testing.T) {
 		dir: directoryRecord{ID: "dir-1", OwnerID: "other-user"},
 	}
 	svc := newTestService(repo, &mockStorage{})
+	svc.accessChecker = &mockAccessChecker{canFn: func(_ context.Context, _, _ string, _ access.Action) (bool, error) { return false, nil }}
 
 	_, err := svc.Upload(context.Background(), "user-1", "dir-1", []FileUpload{
 		{Filename: "f.txt", Extension: "txt", MimeType: "text/plain", Size: 1, Content: bytes.NewReader([]byte("x"))},
