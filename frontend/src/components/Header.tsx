@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Bell, Settings, LogOut, ChevronDown, MoonStar } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
-import { SearchBar } from './ui/SearchBar';
+import { UserSearch } from './UserSearch';
 
 const logo = '/logo-mark.png';
 
@@ -92,10 +92,7 @@ export const Header: React.FC<HeaderProps> = ({ hasUnreadInvites = unreadCount >
       {isAuthenticated ? (
         <>
           {/* Строка поиска (по центру) */}
-          <SearchBar
-            placeholder="Поиск файлов, папок, людей..."
-            className="flex-1 max-w-2xl mx-4 sm:mx-8 hidden md:block"
-          />
+          <UserSearch className="flex-1 max-w-2xl mx-4 sm:mx-8 hidden md:block" />
 
           {/* Правая часть: Уведомления и Профиль */}
           <div className="flex items-center gap-2 sm:gap-4">

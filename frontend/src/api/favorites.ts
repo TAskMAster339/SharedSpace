@@ -17,8 +17,9 @@ interface FavoritesListResponse {
   favorites: FavoriteFile[];
 }
 
-export function getFavorites(accessToken: string): Promise<FavoritesListResponse> {
-  return apiRequest<FavoritesListResponse>('/files/favorites', {
+export function getFavorites(accessToken: string, limit?: number): Promise<FavoritesListResponse> {
+  const query = limit ? `?limit=${limit}` : '';
+  return apiRequest<FavoritesListResponse>(`/files/favorites${query}`, {
     method: 'GET',
     token: accessToken,
   });

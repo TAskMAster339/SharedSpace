@@ -50,3 +50,28 @@ export function deleteAccount(
     body: JSON.stringify(payload),
   });
 }
+
+export interface SearchedUser {
+  id: string;
+  username: string;
+  email: string;
+  first_name?: string;
+  second_name?: string;
+  created_at: string;
+}
+
+interface SearchUsersResponse {
+  users: SearchedUser[];
+}
+
+export function searchUsers(
+  accessToken: string,
+  query: string,
+  limit = 5,
+): Promise<SearchUsersResponse> {
+  const params = new URLSearchParams({ query, limit: String(limit) });
+  return apiRequest<SearchUsersResponse>(`/users/search?${params.toString()}`, {
+    method: 'GET',
+    token: accessToken,
+  });
+}
