@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Folder, Users, Star, Mail, Trash2 } from 'lucide-react';
 import { StorageIndicator } from './ui/StorageIndicator';
 import { cn } from '../utils/cn';
 import { useAuthStore } from '../store/authStore';
+import { useDirectoryStore } from '../store/directoryStore';
 
 const BYTES_TO_GB = 1024 * 1024 * 1024;
 
@@ -11,25 +12,49 @@ interface SidebarProps {
   hasUnreadInvites?: boolean;
 }
 
+/*===
+  Это мок
+  === */
 const unreadCount = 0;
-const personalStorageId = 'personal';
 
 export const Sidebar: React.FC<SidebarProps> = ({ hasUnreadInvites = unreadCount > 0 }) => {
   const location = useLocation();
   const currentPath = location.pathname;
   const user = useAuthStore((s) => s.user);
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
-  const storageUsed = user ? user.storage_used / BYTES_TO_GB : 0;
-  const storageQuota = user ? user.storage_quota / BYTES_TO_GB : 0;
+  const { personalStorageId, isLoading, fetchPersonalStorageId } = useDirectoryStore();
 
-  const menuItems = [
-    { label: 'Дашборд', icon: LayoutDashboard, path: '/dashboard' },
-    { label: 'Личное хранилище', icon: Folder, path: `/directories/${personalStorageId}` },
-    { label: 'Общие директории', icon: Users, path: '/directories' },
-    { label: 'Избранное', icon: Star, path: '/favorites' },
-    { label: 'Приглашения', icon: Mail, path: '/invitations', badge: hasUnreadInvites }, // Синяя точка
-    { label: 'Корзина', icon: Trash2, path: '/trash' },
-  ];
+  // Загружаем ID только если ещё не загружено и есть токен
+  useEffect(() => {
+    if (isAuthenticated && accessToken && isLoading) {
+      fetchPersonalStorageId(accessToken);
+    }
+  }, [isAuthenticated, accessToken, isLoading, fetchPersonalStorageId]);
+
+  const storageUsed = useMemo(() => (user ? user.storage_used / BYTES_TO_GB : 0), [user]);
+  const storageQuota = useMemo(() => (user ? user.storage_quota / BYTES_TO_GB : 0), [user]);
+
+  const menuItems = useMemo(
+    () => [
+      { label: 'Дашборд', icon: LayoutDashboard, path: '/dashboard' },
+      { label: 'Личное хранилище', icon: Folder, path: `/directories/${personalStorageId}` },
+      { label: 'Общие директории', icon: Users, path: '/directories' },
+      { label: 'Избранное', icon: Star, path: '/favorites' },
+      { label: 'Приглашения', icon: Mail, path: '/invitations', badge: hasUnreadInvites }, // Синяя точка
+      { label: 'Корзина', icon: Trash2, path: '/trash' },
+    ],
+    [personalStorageId, hasUnreadInvites],
+  );
+
+  if (isLoading) {
+    return (
+      <div className="w-64 h-[calc(100vh-4rem)] flex flex-col bg-theme-secondary border-r border-theme sticky top-0 shrink-0 px-4 py-2 hidden md:flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="w-64 h-[calc(100vh-4rem)] flex flex-col bg-theme-secondary border-r border-theme sticky top-0 shrink-0 px-4 py-2 hidden md:flex">
@@ -38,7 +63,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ hasUnreadInvites = unreadCount
           Меню
         </div>
         {menuItems.map((item) => {
-          const isActive = currentPath === item.path;
+          const isActive =
+            currentPath === item.path ||
+            (item.path.startsWith('/directories/') && currentPath.startsWith('/directories/'));
           return (
             <Link
               key={item.path}

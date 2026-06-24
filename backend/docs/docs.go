@@ -1091,6 +1091,12 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Maximum number of members to return",
+                        "name": "limit",
+                        "in": "query"
                     }
                 ],
                 "responses": {

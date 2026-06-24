@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { useDirectoryStore } from './directoryStore';
 import {
   AuthUser,
   login as loginRequest,
@@ -52,6 +53,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const result = await loginRequest({ email, password });
     setCookie(REFRESH_COOKIE, result.tokens.refresh_token, result.tokens.refresh_expires_in);
     set({ user: result.user, accessToken: result.tokens.access_token, isAuthenticated: true });
+    useDirectoryStore.getState().reset();
+    await useDirectoryStore.getState().fetchPersonalStorageId(result.tokens.access_token);
   },
 
   register: async (data) => {
@@ -73,6 +76,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
     removeCookie(REFRESH_COOKIE);
     set({ user: null, accessToken: null, isAuthenticated: false });
+    useDirectoryStore.getState().reset();
   },
 
   hydrate: async () => {
@@ -86,9 +90,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       setCookie(REFRESH_COOKIE, result.tokens.refresh_token, result.tokens.refresh_expires_in);
       const user = await getMe(result.tokens.access_token);
       set({ user, accessToken: result.tokens.access_token, isAuthenticated: true });
+      await useDirectoryStore.getState().fetchPersonalStorageId(result.tokens.access_token);
     } catch {
       removeCookie(REFRESH_COOKIE);
       set({ user: null, accessToken: null, isAuthenticated: false });
+      useDirectoryStore.getState().reset();
     } finally {
       set({ isHydrating: false });
     }

@@ -7,7 +7,7 @@ import PublicRoute from './components/PublicRoute';
 import MainPage from './pages/MainPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
-import { DashboardPage } from './pages/DashboardPage';
+import DashboardPage from './pages/DashboardPage';
 import ProfileSettingsPage from './pages/ProfileSettingsPage';
 import SharedDirListPage from './pages/SharedDirListPage';
 import DirectoryPage from './pages/DirectoryPage';
@@ -86,7 +86,7 @@ const App: React.FC = () => {
           <Route path="/files/:id/convert" element={<ConvertPage />} />
         </Route>
 
-        {/* Редирект по умолчанию */}
+        {/* 404 */}
         <Route
           path="*"
           element={

@@ -3,23 +3,15 @@ import { Link } from 'react-router-dom';
 import { Folder } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
-interface DirectoryItemProps {
+interface FolderItemProps {
   id: string;
   name: string;
-  members: number;
   to: string;
   className?: string;
 }
 
-export const DirectoryItem: React.FC<DirectoryItemProps> = ({
-  id,
-  name,
-  members,
-  to,
-  className,
-}) => (
+export const FolderItem: React.FC<FolderItemProps> = ({ id, name, to, className }) => (
   <Link
-    key={id}
     to={to}
     className={cn(
       'flex items-center gap-3 p-3 rounded-theme-md transition-colors cursor-pointer',
@@ -32,7 +24,7 @@ export const DirectoryItem: React.FC<DirectoryItemProps> = ({
     </div>
     <div>
       <p className="text-sm text-theme-primary font-medium">{name}</p>
-      <p className="text-xs text-theme-muted">{members} участников</p>
+      <p className="text-xs text-theme-muted">Папка</p>
     </div>
   </Link>
 );
