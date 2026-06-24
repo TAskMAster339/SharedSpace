@@ -532,6 +532,36 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/files/favorites": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "List favorited files",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_favorites.FavoritesListResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/files/{id}": {
             "get": {
                 "security": [
@@ -621,6 +651,112 @@ const docTemplate = `{
                     },
                     "403": {
                         "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/files/{id}/favorite": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Add file to favorites",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "File ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Remove file from favorites",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "File ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/sharedspace_internal_apperror.Response"
                         }
@@ -1176,6 +1312,52 @@ const docTemplate = `{
                 },
                 "parent_id": {
                     "type": "string"
+                }
+            }
+        },
+        "internal_favorites.FavoriteFileResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "directory_id": {
+                    "type": "string"
+                },
+                "extension": {
+                    "type": "string"
+                },
+                "favorited_at": {
+                    "type": "string"
+                },
+                "filename": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "mime_type": {
+                    "type": "string"
+                },
+                "owner_id": {
+                    "type": "string"
+                },
+                "size": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_favorites.FavoritesListResponse": {
+            "type": "object",
+            "properties": {
+                "favorites": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_favorites.FavoriteFileResponse"
+                    }
                 }
             }
         },

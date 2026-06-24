@@ -9,6 +9,7 @@ import (
 	"sharedspace/internal/config"
 	"sharedspace/internal/database"
 	"sharedspace/internal/dirs"
+	"sharedspace/internal/favorites"
 	"sharedspace/internal/files"
 	"sharedspace/internal/server"
 	"sharedspace/internal/sharing"
@@ -71,8 +72,12 @@ func main() {
 	// sharing
 	sharingService := sharing.NewService(pool, sharingRepository)
 	sharingHandler := sharing.NewHandler(sharingService)
+	// favorites
+	favoritesRepository := favorites.NewRepository()
+	favoritesService := favorites.NewService(pool, favoritesRepository)
+	favoritesHandler := favorites.NewHandler(favoritesService)
 
-	router := server.NewRouter(authHandler, authService, usersHandler, dirsHandler, filesHandler, sharingHandler)
+	router := server.NewRouter(authHandler, authService, usersHandler, dirsHandler, filesHandler, sharingHandler, favoritesHandler)
 
 	if err := server.New(cfg.Port, router).Run(); err != nil {
 		log.Fatalf("server: %v", err)

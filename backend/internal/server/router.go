@@ -8,6 +8,7 @@ import (
 
 	"sharedspace/internal/auth"
 	"sharedspace/internal/dirs"
+	"sharedspace/internal/favorites"
 	"sharedspace/internal/files"
 	"sharedspace/internal/middleware"
 	"sharedspace/internal/sharing"
@@ -24,7 +25,7 @@ func healthHandler(w http.ResponseWriter, _ *http.Request) {
 	json.NewEncoder(w).Encode(HealthResponse{Status: "ok"})
 }
 
-func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHandler *users.Handler, dirsHandler *dirs.Handler, filesHandler *files.Handler, sharingHandler *sharing.Handler) http.Handler {
+func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHandler *users.Handler, dirsHandler *dirs.Handler, filesHandler *files.Handler, sharingHandler *sharing.Handler, favoritesHandler *favorites.Handler) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Recover)
@@ -60,6 +61,9 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 			if filesHandler != nil {
 				r.Route("/files", func(r chi.Router) {
 					r.Post("/", middleware.AppError(filesHandler.Upload))
+					r.Get("/favorites", middleware.AppError(favoritesHandler.List))
+					r.Post("/{id}/favorite", middleware.AppError(favoritesHandler.Add))
+					r.Delete("/{id}/favorite", middleware.AppError(favoritesHandler.Remove))
 					r.Get("/{id}", middleware.AppError(filesHandler.GetMetadata))
 					r.Get("/{id}/content", middleware.AppError(filesHandler.GetContent))
 				})
