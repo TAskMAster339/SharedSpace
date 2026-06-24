@@ -31,6 +31,14 @@ func (m *mockService) Upload(_ context.Context, userID, directoryID string, uplo
 	return UploadFilesResponse{}, nil
 }
 
+func (m *mockService) GetMetadata(_ context.Context, userID, fileID string) (FileMetadataResponse, error) {
+	return FileMetadataResponse{}, nil
+}
+
+func (m *mockService) GetContentURL(_ context.Context, userID, fileID string) (FileContentResponse, error) {
+	return FileContentResponse{}, nil
+}
+
 func withClaims(ctx context.Context, userID string) context.Context {
 	return auth.SetClaims(ctx, &auth.Claims{UserID: userID})
 }

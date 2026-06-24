@@ -60,6 +60,8 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 			if filesHandler != nil {
 				r.Route("/files", func(r chi.Router) {
 					r.Post("/", middleware.AppError(filesHandler.Upload))
+					r.Get("/{id}", middleware.AppError(filesHandler.GetMetadata))
+					r.Get("/{id}/content", middleware.AppError(filesHandler.GetContent))
 				})
 			}
 
