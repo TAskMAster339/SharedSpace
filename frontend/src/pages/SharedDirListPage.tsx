@@ -1,20 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { Users, Plus, X, Check } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
-import { getSharedWithMe, getMembers, SharedDirectory } from '../api/sharing';
-import { createDirectory, getDirectoryContents, getRootContents } from '../api/dirs';
+import { getSharedWithMeStats, getMembers, SharedDirectoryWithStats } from '../api/sharing';
+import { createDirectory, getRootContents } from '../api/dirs';
 import { ApiError } from '../api/client';
 import { DirectoryCard } from '../components/ui/DirectoryCard';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Button } from '../components/ui/Button';
 
-interface DirectoryCardData extends SharedDirectory {
-  memberCount: number;
-  fileCount: number;
+interface DirectoryCardData extends SharedDirectoryWithStats {
   memberUsernames: string[];
 }
 
-function roleLabel(dir: SharedDirectory, currentUserId: string | undefined): string {
+function roleLabel(dir: SharedDirectoryWithStats, currentUserId: string | undefined): string {
   if (dir.owner_id === currentUserId) return 'Owner';
   if (dir.role === 'admin') return 'Admin';
   if (dir.role === 'editor') return 'Contributor';
@@ -38,18 +36,13 @@ const SharedDirListPage: React.FC = () => {
     setIsLoading(true);
     setError('');
     try {
-      const shared = await getSharedWithMe(token);
+      const shared = await getSharedWithMeStats(token);
       const withDetails = await Promise.all(
         shared.map(async (dir) => {
-          const [members, contents] = await Promise.all([
-            getMembers(token, dir.id).catch(() => []),
-            getDirectoryContents(token, dir.directory_id).catch(() => null),
-          ]);
+          const members = await getMembers(token, dir.id).catch(() => []);
           return {
             ...dir,
-            memberCount: members.length,
             memberUsernames: members.map((m) => m.username),
-            fileCount: contents?.files.length ?? 0,
           };
         }),
       );
@@ -134,8 +127,8 @@ const SharedDirListPage: React.FC = () => {
               id={dir.id}
               name={dir.name}
               role={roleLabel(dir, userId)}
-              memberCount={dir.memberCount}
-              fileCount={dir.fileCount}
+              memberCount={dir.member_count}
+              fileCount={dir.file_count}
               memberUsernames={dir.memberUsernames}
               to={`/directories/${dir.directory_id}`}
             />

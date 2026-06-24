@@ -2,13 +2,15 @@ import { apiRequest } from './client';
 
 export type SharingRole = 'viewer' | 'editor' | 'admin';
 
-export interface SharedDirectory {
+export interface SharedDirectoryWithStats {
   id: string;
   directory_id: string;
   name: string;
   owner_id: string;
   owner_name: string;
   role: SharingRole;
+  member_count: number;
+  file_count: number;
   created_at: string;
 }
 
@@ -20,8 +22,8 @@ export interface Member {
   joined_at: string;
 }
 
-export function getSharedWithMe(accessToken: string): Promise<SharedDirectory[]> {
-  return apiRequest<SharedDirectory[]>('/shared/with-me', {
+export function getSharedWithMeStats(accessToken: string): Promise<SharedDirectoryWithStats[]> {
+  return apiRequest<SharedDirectoryWithStats[]>('/shared/with-me/stats', {
     method: 'GET',
     token: accessToken,
   });

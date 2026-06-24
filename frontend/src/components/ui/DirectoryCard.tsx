@@ -4,6 +4,7 @@ import { Folder } from 'lucide-react';
 import { Badge } from './Badge';
 import { AvatarStack } from './AvatarStack';
 import { cn } from '../../utils/cn';
+import { formatCount, formatCountWord } from '../../utils/format';
 
 interface DirectoryCardProps {
   id: string;
@@ -44,7 +45,11 @@ export const DirectoryCard: React.FC<DirectoryCardProps> = ({
 
     <h3 className="font-semibold text-theme-primary mb-1 truncate">{name}</h3>
     <p className="text-sm text-theme-muted mb-4">
-      {memberCount} участников &bull; {fileCount} файлов
+      {formatCount(memberCount)}{' '}
+      {formatCountWord(memberCount, 'участник', 'участника', 'участников')} &bull;{' '}
+      <span title="Учтены файлы только в этой папке, без вложенных">
+        {formatCount(fileCount)}+ {formatCountWord(fileCount, 'файл', 'файла', 'файлов')}
+      </span>
     </p>
 
     <AvatarStack usernames={memberUsernames} />
