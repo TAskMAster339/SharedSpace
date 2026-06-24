@@ -349,11 +349,11 @@ const docTemplate = `{
                 "tags": [
                     "directories"
                 ],
-                "summary": "Удалить директорию в корзину",
+                "summary": "Delete directory to trash",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "ID директории",
+                        "description": "Directory ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -524,11 +524,11 @@ const docTemplate = `{
                 "tags": [
                     "directories"
                 ],
-                "summary": "Удалить директорию навсегда",
+                "summary": "Permanently delete directory",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "ID директории",
+                        "description": "Directory ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -575,11 +575,11 @@ const docTemplate = `{
                 "tags": [
                     "directories"
                 ],
-                "summary": "Восстановить директорию из корзины",
+                "summary": "Restore directory from trash",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "ID директории",
+                        "description": "Directory ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -1412,7 +1412,7 @@ const docTemplate = `{
                 "tags": [
                     "trash"
                 ],
-                "summary": "Получить список корзины",
+                "summary": "Get trash list",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1443,10 +1443,10 @@ const docTemplate = `{
                 "tags": [
                     "trash"
                 ],
-                "summary": "Очистить корзину",
+                "summary": "Clear trash",
                 "parameters": [
                     {
-                        "description": "Запрос на очистку корзины",
+                        "description": "Clear trash request",
                         "name": "request",
                         "in": "body",
                         "required": true,
