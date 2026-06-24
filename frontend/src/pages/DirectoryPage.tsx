@@ -9,6 +9,7 @@ import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
 import { Button } from '../components/ui/Button';
 import { FolderGridItem } from '../components/ui/FolderGridItem';
 import { FileGridItem } from '../components/ui/FileGridItem';
+import { FolderItem } from '../components/ui/FolderItem';
 import { FileItem } from '../components/ui/FileItem';
 import {
   getDirectoryContents,
@@ -46,7 +47,7 @@ const DirectoryPage: React.FC = () => {
   
   // Используем refs для предотвращения повторных вызовов
   const redirectDone = useRef(false);
-  const initialLoadDone = useRef(false); // <-- Добавляем этот ref
+  const initialLoadDone = useRef(false);
   const [actualId, setActualId] = useState<string | null>(null);
 
   // --- Эффект 1: Обработка 'personal' ID ---
@@ -107,7 +108,7 @@ const DirectoryPage: React.FC = () => {
     localStorage.setItem('directoryViewMode', viewMode);
   }, [viewMode]);
 
-  // --- Вычисляемые значения (мемоизированные) ---
+  // --- Вычисляемые значения ---
   const isPersonal = useMemo(() => directoryInfo?.type === 'root', [directoryInfo]);
   const isShared = useMemo(() => 
     directoryInfo?.type === 'regular' && directoryInfo?.owner_id !== user?.id,
@@ -118,7 +119,7 @@ const DirectoryPage: React.FC = () => {
     [directoryInfo, user]
   );
 
-  // --- Обработчики (мемоизированные) ---
+  // --- Обработчики ---
   const handleViewModeChange = useCallback((mode: ViewMode) => {
     setViewMode(mode);
   }, []);
@@ -256,28 +257,24 @@ const DirectoryPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <Button
-            variant="primary"
-            size="sm"
+          <button
             onClick={() => {
               setUploadError(null);
               setIsUploadModalOpen(true);
             }}
-            className="flex items-center gap-1.5"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-brand text-theme-on-brand rounded-theme-md hover:bg-brand-hover transition-colors text-sm font-medium"
           >
             <Upload size={16} />
             Загрузить
-          </Button>
+          </button>
 
-          <Button
-            variant="secondary"
-            size="sm"
+          <button
             onClick={() => setIsCreateFolderModalOpen(true)}
-            className="flex items-center gap-1.5"
+            className="inline-flex items-center gap-2 px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium"
           >
             <FolderPlus size={16} />
             Новая папка
-          </Button>
+          </button>
 
           <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} />
         </div>
@@ -286,15 +283,13 @@ const DirectoryPage: React.FC = () => {
       {/* Настройки директории */}
       {isShared && isOwner && (
         <div className="flex justify-end">
-          <Button
-            variant="secondary"
-            size="sm"
+          <button
             onClick={() => navigate(`/shared/${actualId}/settings`)}
-            className="flex items-center gap-1.5"
+            className="inline-flex items-center gap-2 px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium"
           >
             <Settings size={16} />
             Настройки директории
-          </Button>
+          </button>
         </div>
       )}
 
@@ -322,73 +317,78 @@ const DirectoryPage: React.FC = () => {
           </div>
         </div>
       ) : (
-        <>
+        <div className="space-y-6">
+          {/* Папки */}
           {subdirectories.length > 0 && (
             <div>
               <h2 className="text-sm font-medium text-theme-secondary mb-3">Папки</h2>
-              {viewMode === 'grid' ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                  {subdirectories.map((folder) => (
-                    <FolderGridItem
-                      key={folder.id}
-                      id={folder.id}
-                      name={folder.name}
-                      to={`/directories/${folder.id}`}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {subdirectories.map((folder) => (
-                    <FolderGridItem
-                      key={folder.id}
-                      id={folder.id}
-                      name={folder.name}
-                      to={`/directories/${folder.id}`}
-                      className="flex-row p-3"
-                    />
-                  ))}
-                </div>
-              )}
+              <div className="bg-theme-secondary border border-theme rounded-theme-lg p-4 shadow-theme-card">
+                {viewMode === 'grid' ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                    {subdirectories.map((folder) => (
+                      <FolderGridItem
+                        key={folder.id}
+                        id={folder.id}
+                        name={folder.name}
+                        to={`/directories/${folder.id}`}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {subdirectories.map((folder) => (
+                      <FolderItem
+                        key={folder.id}
+                        id={folder.id}
+                        name={folder.name}
+                        to={`/directories/${folder.id}`}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
+          {/* Файлы */}
           {files.length > 0 && (
             <div>
               <h2 className="text-sm font-medium text-theme-secondary mb-3">Файлы</h2>
-              {viewMode === 'grid' ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                  {displayFiles.map((file) => (
-                    <FileGridItem
-                      key={file.id}
-                      id={file.id}
-                      name={file.name}
-                      type={file.type}
-                      to={`/files/${file.id}`}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {displayFiles.map((file) => (
-                    <FileItem
-                      key={file.id}
-                      id={file.id}
-                      name={file.name}
-                      date={file.date}
-                      size={file.size}
-                      type={file.type}
-                      to={`/files/${file.id}`}
-                    />
-                  ))}
-                </div>
-              )}
+              <div className="bg-theme-secondary border border-theme rounded-theme-lg p-4 shadow-theme-card">
+                {viewMode === 'grid' ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                    {displayFiles.map((file) => (
+                      <FileGridItem
+                        key={file.id}
+                        id={file.id}
+                        name={file.name}
+                        type={file.type}
+                        to={`/files/${file.id}`}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {displayFiles.map((file) => (
+                      <FileItem
+                        key={file.id}
+                        id={file.id}
+                        name={file.name}
+                        date={file.date}
+                        size={file.size}
+                        type={file.type}
+                        to={`/files/${file.id}`}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
-        </>
+        </div>
       )}
 
-      {/* Модальные окна */}
+      {/* Модальное окно загрузки */}
       <Modal
         isOpen={isUploadModalOpen}
         onClose={() => !isUploading && setIsUploadModalOpen(false)}
@@ -403,6 +403,7 @@ const DirectoryPage: React.FC = () => {
         />
       </Modal>
 
+      {/* Модальное окно создания папки */}
       <Modal
         isOpen={isCreateFolderModalOpen}
         onClose={() => !isCreatingFolder && setIsCreateFolderModalOpen(false)}
@@ -427,22 +428,20 @@ const DirectoryPage: React.FC = () => {
             />
           </div>
           <div className="flex gap-3 pt-2">
-            <Button
-              variant="secondary"
+            <button
               onClick={() => setIsCreateFolderModalOpen(false)}
               disabled={isCreatingFolder}
-              className="flex-1"
+              className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Отмена
-            </Button>
-            <Button
-              variant="primary"
+            </button>
+            <button
               onClick={handleCreateFolder}
               disabled={!newFolderName.trim() || isCreatingFolder}
-              className="flex-1"
+              className="flex-1 inline-flex items-center justify-center px-4 py-2 bg-brand text-theme-on-brand hover:bg-brand-hover rounded-theme-md transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isCreatingFolder ? 'Создание...' : 'Создать'}
-            </Button>
+            </button>
           </div>
         </div>
       </Modal>
