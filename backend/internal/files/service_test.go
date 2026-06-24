@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"sharedspace/internal/access"
 	"sharedspace/internal/apperror"
 )
 
@@ -87,15 +88,24 @@ type mockRow struct{}
 
 func (r mockRow) Scan(_ ...any) error { return nil }
 
+type mockAccessChecker struct {
+	canFn func(ctx context.Context, userID, directoryID string, action access.Action) (bool, error)
+}
+
+func (m *mockAccessChecker) Can(ctx context.Context, userID, directoryID string, action access.Action) (bool, error) {
+	return m.canFn(ctx, userID, directoryID, action)
+}
+
 func newTestService(repo RepositoryInterface, storage StorageClient) *Service {
 	tx := &mockTx{}
 	return &Service{
 		beginTx: func(_ context.Context, _ pgx.TxOptions) (transaction, error) {
 			return tx, nil
 		},
-		db:      tx,
-		repo:    repo,
-		storage: storage,
+		db:            tx,
+		repo:          repo,
+		storage:       storage,
+		accessChecker: &mockAccessChecker{canFn: func(_ context.Context, _, _ string, _ access.Action) (bool, error) { return true, nil }},
 	}
 }
 
@@ -143,8 +153,11 @@ func TestServiceUpload_NoFiles(t *testing.T) {
 }
 
 func TestServiceUpload_DirectoryNotFound(t *testing.T) {
-	repo := &mockRepo{dirErr: pgx.ErrNoRows}
+	repo := &mockRepo{}
 	svc := newTestService(repo, &mockStorage{})
+	svc.accessChecker = &mockAccessChecker{canFn: func(_ context.Context, _, _ string, _ access.Action) (bool, error) {
+		return false, apperror.NotFound("директория не найдена")
+	}}
 
 	_, err := svc.Upload(context.Background(), "user-1", "dir-1", []FileUpload{
 		{Filename: "f.txt", Extension: "txt", MimeType: "text/plain", Size: 1, Content: bytes.NewReader([]byte("x"))},
@@ -163,6 +176,7 @@ func TestServiceUpload_AccessDenied(t *testing.T) {
 		dir: directoryRecord{ID: "dir-1", OwnerID: "other-user"},
 	}
 	svc := newTestService(repo, &mockStorage{})
+	svc.accessChecker = &mockAccessChecker{canFn: func(_ context.Context, _, _ string, _ access.Action) (bool, error) { return false, nil }}
 
 	_, err := svc.Upload(context.Background(), "user-1", "dir-1", []FileUpload{
 		{Filename: "f.txt", Extension: "txt", MimeType: "text/plain", Size: 1, Content: bytes.NewReader([]byte("x"))},

@@ -9,17 +9,19 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"sharedspace/internal/access"
 	"sharedspace/internal/apperror"
 )
 
 type Service struct {
-	beginTx     beginTxFunc
-	db          dbTX
-	repo        RepositoryInterface
-	sharingRepo SharingRepository
+	beginTx       beginTxFunc
+	db            dbTX
+	repo          RepositoryInterface
+	sharingRepo   SharingRepository
+	accessChecker access.AccessChecker
 }
 
-func NewService(pool *pgxpool.Pool, repo RepositoryInterface, sharingRepo SharingRepository) *Service {
+func NewService(pool *pgxpool.Pool, repo RepositoryInterface, sharingRepo SharingRepository, accessChecker access.AccessChecker) *Service {
 	beginTx := func(ctx context.Context, opts pgx.TxOptions) (transaction, error) {
 		tx, err := pool.BeginTx(ctx, opts)
 		if err != nil {
@@ -28,10 +30,11 @@ func NewService(pool *pgxpool.Pool, repo RepositoryInterface, sharingRepo Sharin
 		return txWrapper{Tx: tx}, nil
 	}
 	return &Service{
-		beginTx:     beginTx,
-		db:          pool,
-		repo:        repo,
-		sharingRepo: sharingRepo,
+		beginTx:       beginTx,
+		db:            pool,
+		repo:          repo,
+		sharingRepo:   sharingRepo,
+		accessChecker: accessChecker,
 	}
 }
 
@@ -54,7 +57,11 @@ func (s *Service) GetContents(ctx context.Context, userID, dirID string) (Direct
 		}
 		return DirectoryContentsResponse{}, apperror.WrapInternal("ошибка поиска директории", err)
 	}
-	if dir.OwnerID != userID {
+	ok, err := s.accessChecker.Can(ctx, userID, dirID, access.ActionView)
+	if err != nil {
+		return DirectoryContentsResponse{}, err
+	}
+	if !ok {
 		return DirectoryContentsResponse{}, apperror.Forbidden("доступ запрещён")
 	}
 	return s.loadContents(ctx, dir)
@@ -68,7 +75,11 @@ func (s *Service) GetByID(ctx context.Context, userID, dirID string) (DirectoryR
 		}
 		return DirectoryResponse{}, apperror.WrapInternal("ошибка поиска директории", err)
 	}
-	if dir.OwnerID != userID {
+	ok, err := s.accessChecker.Can(ctx, userID, dirID, access.ActionView)
+	if err != nil {
+		return DirectoryResponse{}, err
+	}
+	if !ok {
 		return DirectoryResponse{}, apperror.Forbidden("доступ запрещён")
 	}
 	return toDirectoryResponse(dir), nil
@@ -85,14 +96,18 @@ func (s *Service) Create(ctx context.Context, userID string, req CreateDirectory
 		return DirectoryResponse{}, apperror.Validation("parent_id обязателен")
 	}
 
-	parent, err := s.repo.FindByID(ctx, s.db, req.ParentID)
+	_, err := s.repo.FindByID(ctx, s.db, req.ParentID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return DirectoryResponse{}, apperror.NotFound("родительская директория не найдена")
 		}
 		return DirectoryResponse{}, apperror.WrapInternal("ошибка поиска родительской директории", err)
 	}
-	if parent.OwnerID != userID {
+	ok, err := s.accessChecker.Can(ctx, userID, req.ParentID, access.ActionCreateFolder)
+	if err != nil {
+		return DirectoryResponse{}, err
+	}
+	if !ok {
 		return DirectoryResponse{}, apperror.Forbidden("доступ запрещён")
 	}
 
@@ -153,7 +168,11 @@ func (s *Service) Update(ctx context.Context, userID, dirID string, req UpdateDi
 		}
 		return DirectoryResponse{}, apperror.WrapInternal("ошибка поиска директории", err)
 	}
-	if dir.OwnerID != userID {
+	ok, err := s.accessChecker.Can(ctx, userID, dirID, access.ActionDelete)
+	if err != nil {
+		return DirectoryResponse{}, err
+	}
+	if !ok {
 		return DirectoryResponse{}, apperror.Forbidden("доступ запрещён")
 	}
 	if dir.Type == "root" {
@@ -170,14 +189,18 @@ func (s *Service) Update(ctx context.Context, userID, dirID string, req UpdateDi
 	}
 
 	if targetParent != nil {
-		parent, err := s.repo.FindByID(ctx, s.db, *targetParent)
+		_, err := s.repo.FindByID(ctx, s.db, *targetParent)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return DirectoryResponse{}, apperror.NotFound("целевая родительская директория не найдена")
 			}
 			return DirectoryResponse{}, apperror.WrapInternal("ошибка поиска целевой родительской директории", err)
 		}
-		if parent.OwnerID != userID {
+		ok, err = s.accessChecker.Can(ctx, userID, *targetParent, access.ActionCreateFolder)
+		if err != nil {
+			return DirectoryResponse{}, err
+		}
+		if !ok {
 			return DirectoryResponse{}, apperror.Forbidden("доступ к целевой родительской директории запрещён")
 		}
 	}

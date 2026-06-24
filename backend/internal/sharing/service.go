@@ -7,16 +7,18 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"sharedspace/internal/access"
 	"sharedspace/internal/apperror"
 )
 
 type Service struct {
-	beginTx beginTxFunc
-	db      dbTX
-	repo    RepositoryInterface
+	beginTx       beginTxFunc
+	db            dbTX
+	repo          RepositoryInterface
+	accessChecker access.AccessChecker
 }
 
-func NewService(pool *pgxpool.Pool, repo RepositoryInterface) *Service {
+func NewService(pool *pgxpool.Pool, repo RepositoryInterface, accessChecker access.AccessChecker) *Service {
 	beginTx := func(ctx context.Context, opts pgx.TxOptions) (transaction, error) {
 		tx, err := pool.BeginTx(ctx, opts)
 		if err != nil {
@@ -25,9 +27,10 @@ func NewService(pool *pgxpool.Pool, repo RepositoryInterface) *Service {
 		return txWrapper{Tx: tx}, nil
 	}
 	return &Service{
-		beginTx: beginTx,
-		db:      pool,
-		repo:    repo,
+		beginTx:       beginTx,
+		db:            pool,
+		repo:          repo,
+		accessChecker: accessChecker,
 	}
 }
 
@@ -66,17 +69,12 @@ func (s *Service) GetMembers(ctx context.Context, userID, sharedDirID string) ([
 		return nil, apperror.WrapInternal("ошибка поиска участников", err)
 	}
 
-	if sd.OwnerID != userID {
-		isMember := false
-		for _, m := range members {
-			if m.UserID == userID {
-				isMember = true
-				break
-			}
-		}
-		if !isMember {
-			return nil, apperror.Forbidden("доступ запрещён")
-		}
+	ok, err := s.accessChecker.Can(ctx, userID, sd.DirectoryID, access.ActionView)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, apperror.Forbidden("доступ запрещён")
 	}
 
 	return toMemberResponses(members), nil

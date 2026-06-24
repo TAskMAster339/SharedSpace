@@ -2,7 +2,6 @@ package files
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"path/filepath"
@@ -13,19 +12,21 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"sharedspace/internal/access"
 	"sharedspace/internal/apperror"
 )
 
 const maxFileSize = 100 * 1024 * 1024 // 100 MB
 
 type Service struct {
-	beginTx beginTxFunc
-	db      dbTX
-	repo    RepositoryInterface
-	storage StorageClient
+	beginTx       beginTxFunc
+	db            dbTX
+	repo          RepositoryInterface
+	storage       StorageClient
+	accessChecker access.AccessChecker
 }
 
-func NewService(pool *pgxpool.Pool, repo RepositoryInterface, storage StorageClient) *Service {
+func NewService(pool *pgxpool.Pool, repo RepositoryInterface, storage StorageClient, accessChecker access.AccessChecker) *Service {
 	beginTx := func(ctx context.Context, opts pgx.TxOptions) (transaction, error) {
 		tx, err := pool.BeginTx(ctx, opts)
 		if err != nil {
@@ -33,7 +34,7 @@ func NewService(pool *pgxpool.Pool, repo RepositoryInterface, storage StorageCli
 		}
 		return txWrapper{Tx: tx}, nil
 	}
-	return &Service{beginTx: beginTx, db: pool, repo: repo, storage: storage}
+	return &Service{beginTx: beginTx, db: pool, repo: repo, storage: storage, accessChecker: accessChecker}
 }
 
 func (s *Service) Upload(ctx context.Context, userID, directoryID string, uploads []FileUpload) (UploadFilesResponse, error) {
@@ -51,14 +52,12 @@ func (s *Service) Upload(ctx context.Context, userID, directoryID string, upload
 		totalSize += u.Size
 	}
 
-	dir, err := s.repo.FindDirectoryByID(ctx, s.db, directoryID)
+	// проверяем доступ к директории
+	ok, err := s.accessChecker.Can(ctx, userID, directoryID, access.ActionUpload)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return UploadFilesResponse{}, apperror.NotFound("директория не найдена")
-		}
-		return UploadFilesResponse{}, apperror.WrapInternal("поиск директории", err)
+		return UploadFilesResponse{}, err
 	}
-	if dir.OwnerID != userID {
+	if !ok {
 		return UploadFilesResponse{}, apperror.Forbidden("доступ запрещён")
 	}
 
