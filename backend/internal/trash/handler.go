@@ -28,7 +28,7 @@ func NewHandler(service ServiceInterface) *Handler {
 func (h *Handler) GetTrashList(w http.ResponseWriter, r *http.Request) error {
 	claims, ok := auth.ClaimsFromCtx(r.Context())
 	if !ok {
-		return apperror.Unauthorized("unauthorized")
+		return apperror.Unauthorized("не авторизован")
 	}
 
 	resp, err := h.service.GetTrashList(r.Context(), claims.UserID)
@@ -46,14 +46,14 @@ func (h *Handler) GetTrashList(w http.ResponseWriter, r *http.Request) error {
 // @Accept json
 // @Produce json
 // @Param request body ClearTrashRequest true "Clear trash request"
-// @Success 204
+// @Success 200 {object} map[string]string
 // @Failure 400 {object} apperror.Response
 // @Failure 401 {object} apperror.Response
 // @Router /api/v1/trash [delete]
 func (h *Handler) ClearTrash(w http.ResponseWriter, r *http.Request) error {
 	claims, ok := auth.ClaimsFromCtx(r.Context())
 	if !ok {
-		return apperror.Unauthorized("unauthorized")
+		return apperror.Unauthorized("не авторизован")
 	}
 
 	var req ClearTrashRequest
@@ -65,8 +65,7 @@ func (h *Handler) ClearTrash(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+	return writeJSON(w, http.StatusOK, map[string]string{"message": "корзина очищена"})
 }
 
 func decodeJSON(body io.ReadCloser, dst any) error {
@@ -74,7 +73,7 @@ func decodeJSON(body io.ReadCloser, dst any) error {
 	dec := json.NewDecoder(body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(dst); err != nil {
-		return apperror.Validation("invalid JSON format")
+		return apperror.Validation("некорректный JSON")
 	}
 	return nil
 }
@@ -83,7 +82,7 @@ func writeJSON(w http.ResponseWriter, status int, payload any) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(payload); err != nil {
-		return apperror.WrapInternal("encode response", err)
+		return apperror.WrapInternal("ошибка кодирования ответа", err)
 	}
 	return nil
 }

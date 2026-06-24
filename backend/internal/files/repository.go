@@ -14,9 +14,18 @@ func NewRepository() *Repository {
 func (r *Repository) FindDirectoryByID(ctx context.Context, db dbTX, id string) (directoryRecord, error) {
 	var d directoryRecord
 	err := db.QueryRow(ctx, `
-		SELECT id, owner_id FROM directories
+		SELECT id, owner_id, deleted_at FROM directories
 		WHERE id = $1 AND deleted_at IS NULL
-	`, id).Scan(&d.ID, &d.OwnerID)
+	`, id).Scan(&d.ID, &d.OwnerID, &d.DeletedAt)
+	return d, err
+}
+
+func (r *Repository) FindDirectoryByIDAnyState(ctx context.Context, db dbTX, id string) (directoryRecord, error) {
+	var d directoryRecord
+	err := db.QueryRow(ctx, `
+		SELECT id, owner_id, deleted_at FROM directories
+		WHERE id = $1
+	`, id).Scan(&d.ID, &d.OwnerID, &d.DeletedAt)
 	return d, err
 }
 

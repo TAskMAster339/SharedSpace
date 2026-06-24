@@ -44,9 +44,9 @@ func (s *Service) GetTrashList(ctx context.Context, userID string) (TrashListRes
 		return TrashListResponse{}, apperror.WrapInternal("ошибка получения удалённых файлов", err)
 	}
 
-	deletedDirMap := make(map[string]bool)
+	allDeletedDirIDs := make(map[string]bool)
 	for _, d := range dirs {
-		deletedDirMap[d.ID] = true
+		allDeletedDirIDs[d.ID] = true
 	}
 
 	items := make([]TrashItem, 0, len(dirs)+len(files))
@@ -56,6 +56,10 @@ func (s *Service) GetTrashList(ctx context.Context, userID string) (TrashListRes
 		subtreeIDs, err := s.repo.FindDeletedSubtreeIDs(ctx, s.db, []string{d.ID})
 		if err != nil {
 			return TrashListResponse{}, apperror.WrapInternal("ошибка получения поддерева", err)
+		}
+
+		for _, id := range subtreeIDs {
+			allDeletedDirIDs[id] = true
 		}
 
 		subtreeFiles, err := s.repo.FindFilesInDeletedDirs(ctx, s.db, subtreeIDs)
@@ -81,7 +85,7 @@ func (s *Service) GetTrashList(ctx context.Context, userID string) (TrashListRes
 	}
 
 	for _, f := range files {
-		if !deletedDirMap[f.DirectoryID] {
+		if !allDeletedDirIDs[f.DirectoryID] {
 			items = append(items, TrashItem{
 				ID:        f.ID,
 				Name:      f.Filename,
@@ -141,16 +145,23 @@ func (s *Service) clearAllTrash(ctx context.Context, userID string) error {
 	}
 
 	allFiles := make([]fileForDeleteRecord, 0, len(files)+len(filesInDirs))
+	seen := make(map[string]bool, len(files)+len(filesInDirs))
 	for _, f := range files {
-		allFiles = append(allFiles, fileForDeleteRecord{
-			ID:        f.ID,
-			ObjectKey: f.ObjectKey,
-			Size:      f.Size,
-			OwnerID:   f.OwnerID,
-		})
+		if !seen[f.ID] {
+			seen[f.ID] = true
+			allFiles = append(allFiles, fileForDeleteRecord{
+				ID:        f.ID,
+				ObjectKey: f.ObjectKey,
+				Size:      f.Size,
+				OwnerID:   f.OwnerID,
+			})
+		}
 	}
 	for _, f := range filesInDirs {
-		allFiles = append(allFiles, f)
+		if !seen[f.ID] {
+			seen[f.ID] = true
+			allFiles = append(allFiles, f)
+		}
 	}
 
 	fileIDs := make([]string, 0, len(allFiles))
@@ -211,14 +222,23 @@ func (s *Service) clearSelectedItems(ctx context.Context, userID string, itemIDs
 	}
 
 	allFiles := make([]fileForDeleteRecord, 0, len(filesInDirs)+len(selectedFiles))
-	allFiles = append(allFiles, filesInDirs...)
+	seen := make(map[string]bool, len(filesInDirs)+len(selectedFiles))
+	for _, f := range filesInDirs {
+		if !seen[f.ID] {
+			seen[f.ID] = true
+			allFiles = append(allFiles, f)
+		}
+	}
 	for _, f := range selectedFiles {
-		allFiles = append(allFiles, fileForDeleteRecord{
-			ID:        f.ID,
-			ObjectKey: f.ObjectKey,
-			Size:      f.Size,
-			OwnerID:   f.OwnerID,
-		})
+		if !seen[f.ID] {
+			seen[f.ID] = true
+			allFiles = append(allFiles, fileForDeleteRecord{
+				ID:        f.ID,
+				ObjectKey: f.ObjectKey,
+				Size:      f.Size,
+				OwnerID:   f.OwnerID,
+			})
+		}
 	}
 
 	allFileIDs := make([]string, 0, len(allFiles))

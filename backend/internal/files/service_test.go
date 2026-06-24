@@ -36,6 +36,10 @@ func (m *mockRepo) FindDirectoryByID(_ context.Context, _ dbTX, _ string) (direc
 	return m.dir, m.dirErr
 }
 
+func (m *mockRepo) FindDirectoryByIDAnyState(_ context.Context, _ dbTX, _ string) (directoryRecord, error) {
+	return m.dir, m.dirErr
+}
+
 func (m *mockRepo) FindByID(_ context.Context, _ dbTX, _ string) (fileRecord, error) {
 	return fileRecord{}, nil
 }

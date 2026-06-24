@@ -161,7 +161,7 @@ func writeJSON(w http.ResponseWriter, status int, payload any) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(payload); err != nil {
-		return apperror.WrapInternal("encode response", err)
+		return apperror.WrapInternal("ошибка кодирования ответа", err)
 	}
 	return nil
 }
@@ -171,7 +171,7 @@ func writeJSON(w http.ResponseWriter, status int, payload any) error {
 // @Tags files
 // @Security BearerAuth
 // @Param id path string true "File ID"
-// @Success 204
+// @Success 200 {object} map[string]string
 // @Router /api/v1/files/{id} [delete]
 func (h *Handler) SoftDelete(w http.ResponseWriter, r *http.Request) error {
 	claims, ok := auth.ClaimsFromCtx(r.Context())
@@ -185,8 +185,7 @@ func (h *Handler) SoftDelete(w http.ResponseWriter, r *http.Request) error {
 	if err := h.service.SoftDelete(r.Context(), claims.UserID, fileID); err != nil {
 		return err
 	}
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+	return writeJSON(w, http.StatusOK, map[string]string{"message": "файл перемещён в корзину"})
 }
 
 // Restore restores a file from trash.
@@ -194,7 +193,7 @@ func (h *Handler) SoftDelete(w http.ResponseWriter, r *http.Request) error {
 // @Tags files
 // @Security BearerAuth
 // @Param id path string true "File ID"
-// @Success 204
+// @Success 200 {object} map[string]string
 // @Router /api/v1/files/{id}/restore [post]
 func (h *Handler) Restore(w http.ResponseWriter, r *http.Request) error {
 	claims, ok := auth.ClaimsFromCtx(r.Context())
@@ -208,8 +207,7 @@ func (h *Handler) Restore(w http.ResponseWriter, r *http.Request) error {
 	if err := h.service.Restore(r.Context(), claims.UserID, fileID); err != nil {
 		return err
 	}
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+	return writeJSON(w, http.StatusOK, map[string]string{"message": "файл восстановлен"})
 }
 
 // PermanentDelete deletes a file permanently.
@@ -217,7 +215,7 @@ func (h *Handler) Restore(w http.ResponseWriter, r *http.Request) error {
 // @Tags files
 // @Security BearerAuth
 // @Param id path string true "File ID"
-// @Success 204
+// @Success 200 {object} map[string]string
 // @Router /api/v1/files/{id}/permanent [delete]
 func (h *Handler) PermanentDelete(w http.ResponseWriter, r *http.Request) error {
 	claims, ok := auth.ClaimsFromCtx(r.Context())
@@ -231,6 +229,5 @@ func (h *Handler) PermanentDelete(w http.ResponseWriter, r *http.Request) error 
 	if err := h.service.PermanentDelete(r.Context(), claims.UserID, fileID); err != nil {
 		return err
 	}
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+	return writeJSON(w, http.StatusOK, map[string]string{"message": "файл удалён навсегда"})
 }

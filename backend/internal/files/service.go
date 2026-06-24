@@ -246,6 +246,18 @@ func (s *Service) Restore(ctx context.Context, userID, fileID string) error {
 	if file.DeletedAt == nil {
 		return apperror.Validation("файл не находится в корзине")
 	}
+
+	dir, err := s.repo.FindDirectoryByIDAnyState(ctx, s.db, file.DirectoryID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperror.Conflict("родительская директория не найдена")
+		}
+		return apperror.WrapInternal("поиск родительской директории", err)
+	}
+	if dir.DeletedAt != nil {
+		return apperror.Conflict("сначала восстановите родительскую директорию")
+	}
+
 	if err := s.repo.RestoreFile(ctx, s.db, fileID); err != nil {
 		return apperror.WrapInternal("восстановление файла", err)
 	}

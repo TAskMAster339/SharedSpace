@@ -26,6 +26,7 @@ type ServiceInterface interface {
 
 type RepositoryInterface interface {
 	FindDirectoryByID(context.Context, dbTX, string) (directoryRecord, error)
+	FindDirectoryByIDAnyState(context.Context, dbTX, string) (directoryRecord, error)
 	FindByID(context.Context, dbTX, string) (fileRecord, error)
 	Save(context.Context, dbTX, fileRecord) (fileRecord, error)
 	GetUserStorage(ctx context.Context, db dbTX, userID string) (used, quota int64, err error)
@@ -60,6 +61,7 @@ type transaction interface {
 type txWrapper struct{ pgx.Tx }
 
 type directoryRecord struct {
-	ID      string
-	OwnerID string
+	ID        string
+	OwnerID   string
+	DeletedAt *time.Time
 }

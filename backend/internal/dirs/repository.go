@@ -186,7 +186,7 @@ func (r *Repository) SoftDeleteFilesInDirs(ctx context.Context, db dbTX, dirIDs 
 	if len(dirIDs) == 0 {
 		return nil
 	}
-	_, err := db.Exec(ctx, `UPDATE files SET deleted_at=$2, updated_at=now() WHERE directory_id = ANY($1) AND deleted_at IS NULL`, dirIDs, deletedAt)
+	_, err := db.Exec(ctx, `UPDATE files SET deleted_at=$2, updated_at=now() WHERE directory_id = ANY($1)`, dirIDs, deletedAt)
 	return err
 }
 func (r *Repository) RestoreSubtree(ctx context.Context, db dbTX, dirIDs []string) error {
