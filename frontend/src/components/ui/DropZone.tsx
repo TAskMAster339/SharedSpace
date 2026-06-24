@@ -79,8 +79,8 @@ export const DropZone: React.FC<DropZoneProps> = ({
         isDragging
           ? 'border-brand bg-brand-light/20'
           : uploadError
-          ? 'border-danger bg-danger-light/10'
-          : 'border-theme-dashed bg-theme-tertiary hover:border-brand/50',
+            ? 'border-danger bg-danger-light/10'
+            : 'border-theme-dashed bg-theme-tertiary hover:border-brand/50',
         isUploading && 'pointer-events-none opacity-70',
         className,
       )}

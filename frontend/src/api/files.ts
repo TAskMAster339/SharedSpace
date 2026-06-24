@@ -25,13 +25,13 @@ export function uploadFilesWithProgress(
   return new Promise((resolve, reject) => {
     const formData = new FormData();
     formData.append('directory_id', directoryId);
-    
+
     for (let i = 0; i < files.length; i++) {
       formData.append('files', files[i]);
     }
 
     const xhr = new XMLHttpRequest();
-    
+
     xhr.upload.addEventListener('progress', (event) => {
       if (event.lengthComputable) {
         const progress = Math.round((event.loaded / event.total) * 100);

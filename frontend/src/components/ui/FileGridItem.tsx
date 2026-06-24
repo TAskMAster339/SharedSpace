@@ -11,13 +11,7 @@ interface FileGridItemProps {
   className?: string;
 }
 
-export const FileGridItem: React.FC<FileGridItemProps> = ({
-  id,
-  name,
-  type,
-  to,
-  className,
-}) => {
+export const FileGridItem: React.FC<FileGridItemProps> = ({ id, name, type, to, className }) => {
   return (
     <Link
       to={to}

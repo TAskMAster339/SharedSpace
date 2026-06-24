@@ -11,7 +11,7 @@ interface DirectoryState {
 export const useDirectoryStore = create<DirectoryState>((set) => ({
   personalStorageId: 'personal',
   isLoading: true,
-  
+
   fetchPersonalStorageId: async (accessToken: string) => {
     try {
       // Проверяем localStorage

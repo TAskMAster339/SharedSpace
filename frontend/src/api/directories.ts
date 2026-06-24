@@ -40,7 +40,10 @@ export function getRootDirectoryContents(token: string): Promise<DirectoryConten
   });
 }
 
-export function getDirectoryContents(token: string, directoryId: string): Promise<DirectoryContents> {
+export function getDirectoryContents(
+  token: string,
+  directoryId: string,
+): Promise<DirectoryContents> {
   return apiRequest<DirectoryContents>(`/directories/${directoryId}/contents`, {
     method: 'GET',
     token,
@@ -54,10 +57,7 @@ export function getDirectoryById(token: string, directoryId: string): Promise<Di
   });
 }
 
-export function createDirectory(
-  token: string,
-  data: CreateDirectoryRequest,
-): Promise<Directory> {
+export function createDirectory(token: string, data: CreateDirectoryRequest): Promise<Directory> {
   return apiRequest<Directory>('/directories', {
     method: 'POST',
     token,

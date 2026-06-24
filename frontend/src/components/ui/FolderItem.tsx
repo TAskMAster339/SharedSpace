@@ -10,12 +10,7 @@ interface FolderItemProps {
   className?: string;
 }
 
-export const FolderItem: React.FC<FolderItemProps> = ({
-  id,
-  name,
-  to,
-  className,
-}) => (
+export const FolderItem: React.FC<FolderItemProps> = ({ id, name, to, className }) => (
   <Link
     to={to}
     className={cn(

@@ -42,7 +42,9 @@ export const FileItem: React.FC<FileItemProps> = ({
       </div>
       <div className="min-w-0">
         <p className="text-sm text-theme-primary font-medium truncate">{name}</p>
-        <p className="text-xs text-theme-muted">{date} • {size}</p>
+        <p className="text-xs text-theme-muted">
+          {date} • {size}
+        </p>
       </div>
     </div>
     <div className="flex items-center gap-3 shrink-0 ml-3">

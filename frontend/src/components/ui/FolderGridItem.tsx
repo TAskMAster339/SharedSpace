@@ -10,12 +10,7 @@ interface FolderGridItemProps {
   className?: string;
 }
 
-export const FolderGridItem: React.FC<FolderGridItemProps> = ({
-  id,
-  name,
-  to,
-  className,
-}) => {
+export const FolderGridItem: React.FC<FolderGridItemProps> = ({ id, name, to, className }) => {
   return (
     <Link
       to={to}

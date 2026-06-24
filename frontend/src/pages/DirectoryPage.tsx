@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Upload, FolderPlus, Settings } from 'lucide-react';
+import { Upload, FolderPlus, Settings, ChevronRight, Home } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useDirectoryStore } from '../store/directoryStore';
 import { Modal } from '../components/ui/Modal';
@@ -15,16 +15,23 @@ import {
   getDirectoryContents,
   getDirectoryById,
   createDirectory,
+  getDirectoryById as getDirectory,
   DirectoryContents,
   Directory,
 } from '../api/directories';
 import { uploadFilesWithProgress } from '../api/files';
 import { formatFileSize, formatDate } from '../utils/format';
 
+interface BreadcrumbItem {
+  id: string;
+  name: string;
+  isRoot?: boolean;
+}
+
 const DirectoryPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  
+
   const accessToken = useAuthStore((s) => s.accessToken);
   const user = useAuthStore((s) => s.user);
   const { personalStorageId } = useDirectoryStore();
@@ -44,52 +51,105 @@ const DirectoryPage: React.FC = () => {
   const [isCreateFolderModalOpen, setIsCreateFolderModalOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
-  
+
+  // Breadcrumbs
+  const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([]);
+  const [isLoadingBreadcrumbs, setIsLoadingBreadcrumbs] = useState(false);
+
   // Используем refs для предотвращения повторных вызовов
   const redirectDone = useRef(false);
-  const initialLoadDone = useRef(false);
   const [actualId, setActualId] = useState<string | null>(null);
 
-  // --- Эффект 1: Обработка 'personal' ID ---
-  useEffect(() => {
-    if (redirectDone.current || !accessToken) return;
+  // --- Функция загрузки breadcrumbs ---
+  const loadBreadcrumbs = useCallback(
+    async (directoryId: string) => {
+      if (!accessToken) return;
 
-    if (id === 'personal') {
-      const rootId = personalStorageId || localStorage.getItem('rootDirectoryId');
-      if (rootId && rootId !== 'personal') {
-        setActualId(rootId);
-        redirectDone.current = true;
-        navigate(`/directories/${rootId}`, { replace: true });
+      setIsLoadingBreadcrumbs(true);
+      const crumbs: BreadcrumbItem[] = [];
+      let currentId = directoryId;
+
+      try {
+        // Сначала получаем текущую директорию
+        const currentDir = await getDirectory(accessToken, currentId);
+
+        // Если это root директория, добавляем её и выходим
+        if (currentDir.type === 'root') {
+          crumbs.push({
+            id: currentDir.id,
+            name: 'Личное хранилище',
+            isRoot: true,
+          });
+          setBreadcrumbs(crumbs);
+          setIsLoadingBreadcrumbs(false);
+          return;
+        }
+
+        // Собираем путь от текущей до корня
+        let parentId = currentDir.parent_id;
+        // Добавляем текущую директорию
+        crumbs.push({
+          id: currentDir.id,
+          name: currentDir.name,
+        });
+
+        // Поднимаемся вверх по дереву
+        while (parentId) {
+          const parentDir = await getDirectory(accessToken, parentId);
+          if (parentDir.type === 'root') {
+            crumbs.unshift({
+              id: parentDir.id,
+              name: 'Личное хранилище',
+              isRoot: true,
+            });
+            break;
+          } else {
+            crumbs.unshift({
+              id: parentDir.id,
+              name: parentDir.name,
+            });
+            parentId = parentDir.parent_id;
+          }
+        }
+
+        setBreadcrumbs(crumbs);
+      } catch (err) {
+        console.error('Failed to load breadcrumbs:', err);
+        // Если не удалось загрузить полный путь, показываем хотя бы текущую
+        setBreadcrumbs([
+          {
+            id: directoryId,
+            name: directoryInfo?.name || 'Текущая папка',
+          },
+        ]);
+      } finally {
+        setIsLoadingBreadcrumbs(false);
       }
-    } else if (id) {
-      setActualId(id);
-      redirectDone.current = true;
-    }
-  }, [id, personalStorageId, accessToken, navigate]);
+    },
+    [accessToken, directoryInfo],
+  );
 
-  // --- Эффект 2: Загрузка данных ---
-  useEffect(() => {
-    // Проверяем все условия для загрузки
-    if (!actualId || !accessToken || !redirectDone.current || initialLoadDone.current) {
-      return;
-    }
+  // --- Функция загрузки содержимого ---
+  const loadDirectory = useCallback(
+    async (dirId: string) => {
+      if (!accessToken || !dirId) return;
 
-    const loadData = async () => {
       setIsLoading(true);
       setError(null);
 
       try {
         const [info, contents] = await Promise.all([
-          getDirectoryById(accessToken, actualId),
-          getDirectoryContents(accessToken, actualId),
+          getDirectoryById(accessToken, dirId),
+          getDirectoryContents(accessToken, dirId),
         ]);
-        
+
         setDirectoryInfo(info);
         setDirectoryContents(contents);
-        initialLoadDone.current = true;
+
+        // Загружаем breadcrumbs после получения информации о директории
+        await loadBreadcrumbs(dirId);
       } catch (err) {
         console.error('Failed to load directory:', err);
-        // Проверяем, является ли ошибка 404
         if (err instanceof Error && err.message?.includes('404')) {
           navigate('/dashboard', { replace: true });
         } else {
@@ -98,10 +158,57 @@ const DirectoryPage: React.FC = () => {
       } finally {
         setIsLoading(false);
       }
+    },
+    [accessToken, navigate, loadBreadcrumbs],
+  );
+
+  // --- Обработчик навигации по breadcrumbs ---
+  const handleBreadcrumbClick = useCallback(
+    async (crumbId: string) => {
+      // Обновляем URL
+      navigate(`/directories/${crumbId}`);
+      // Загружаем содержимое
+      await loadDirectory(crumbId);
+      setActualId(crumbId);
+    },
+    [navigate, loadDirectory],
+  );
+
+  // --- Эффект 1: Обработка 'personal' ID ---
+  useEffect(() => {
+    if (redirectDone.current || !accessToken) return;
+
+    const resolveAndLoad = async () => {
+      let targetId = id;
+
+      if (id === 'personal') {
+        const rootId = personalStorageId || localStorage.getItem('rootDirectoryId');
+        if (rootId && rootId !== 'personal') {
+          targetId = rootId;
+          redirectDone.current = true;
+          navigate(`/directories/${rootId}`, { replace: true });
+        }
+      } else if (id) {
+        redirectDone.current = true;
+      }
+
+      if (targetId && targetId !== 'personal') {
+        await loadDirectory(targetId);
+        setActualId(targetId);
+      }
     };
 
-    loadData();
-  }, [actualId, accessToken, navigate]);
+    resolveAndLoad();
+  }, [id, personalStorageId, accessToken, navigate, loadDirectory]);
+
+  // --- Эффект 2: Обновление при изменении ID в URL ---
+  useEffect(() => {
+    // Если ID изменился и это не 'personal', загружаем новую директорию
+    if (id && id !== 'personal' && id !== actualId && accessToken) {
+      setActualId(id);
+      loadDirectory(id);
+    }
+  }, [id, actualId, accessToken, loadDirectory]);
 
   // --- Сохраняем режим просмотра ---
   useEffect(() => {
@@ -110,41 +217,16 @@ const DirectoryPage: React.FC = () => {
 
   // --- Вычисляемые значения ---
   const isPersonal = useMemo(() => directoryInfo?.type === 'root', [directoryInfo]);
-  const isShared = useMemo(() => 
-    directoryInfo?.type === 'regular' && directoryInfo?.owner_id !== user?.id,
-    [directoryInfo, user]
+  const isShared = useMemo(
+    () => directoryInfo?.type === 'regular' && directoryInfo?.owner_id !== user?.id,
+    [directoryInfo, user],
   );
-  const isOwner = useMemo(() => 
-    directoryInfo?.owner_id === user?.id,
-    [directoryInfo, user]
-  );
+  const isOwner = useMemo(() => directoryInfo?.owner_id === user?.id, [directoryInfo, user]);
 
   // --- Обработчики ---
   const handleViewModeChange = useCallback((mode: ViewMode) => {
     setViewMode(mode);
   }, []);
-
-  const loadDirectory = useCallback(async () => {
-    if (!actualId || !accessToken) return;
-
-    try {
-      const [info, contents] = await Promise.all([
-        getDirectoryById(accessToken, actualId),
-        getDirectoryContents(accessToken, actualId),
-      ]);
-      
-      setDirectoryInfo(info);
-      setDirectoryContents(contents);
-      setError(null);
-    } catch (err) {
-      console.error('Failed to reload directory:', err);
-      if (err instanceof Error && err.message?.includes('404')) {
-        navigate('/dashboard', { replace: true });
-      } else {
-        setError('Не удалось обновить содержимое');
-      }
-    }
-  }, [actualId, accessToken, navigate]);
 
   const handleFilesDrop = useCallback(
     async (files: FileList) => {
@@ -155,16 +237,11 @@ const DirectoryPage: React.FC = () => {
       setUploadError(null);
 
       try {
-        await uploadFilesWithProgress(
-          accessToken,
-          actualId,
-          files,
-          (progress: number) => {
-            setUploadProgress(progress);
-          }
-        );
+        await uploadFilesWithProgress(accessToken, actualId, files, (progress: number) => {
+          setUploadProgress(progress);
+        });
 
-        await loadDirectory();
+        await loadDirectory(actualId);
 
         // Закрываем модалку после успешной загрузки
         setTimeout(() => {
@@ -179,7 +256,7 @@ const DirectoryPage: React.FC = () => {
         setUploadProgress(0);
       }
     },
-    [accessToken, actualId, loadDirectory]
+    [accessToken, actualId, loadDirectory],
   );
 
   const handleCreateFolder = useCallback(async () => {
@@ -193,7 +270,7 @@ const DirectoryPage: React.FC = () => {
         shared: isShared,
       });
 
-      await loadDirectory();
+      await loadDirectory(actualId);
       setIsCreateFolderModalOpen(false);
       setNewFolderName('');
     } catch (err) {
@@ -203,6 +280,62 @@ const DirectoryPage: React.FC = () => {
       setIsCreatingFolder(false);
     }
   }, [newFolderName, accessToken, actualId, isShared, loadDirectory]);
+
+  // --- Рендер breadcrumbs ---
+  const renderBreadcrumbs = () => {
+    if (isLoadingBreadcrumbs) {
+      return (
+        <div className="flex items-center gap-2 text-sm text-theme-muted">
+          <span>Загрузка...</span>
+        </div>
+      );
+    }
+
+    if (breadcrumbs.length === 0) {
+      return null;
+    }
+
+    return (
+      <nav className="flex items-center gap-1 text-sm flex-wrap" aria-label="Breadcrumb">
+        {breadcrumbs.map((crumb, index) => {
+          const isLast = index === breadcrumbs.length - 1;
+          const isFirst = index === 0;
+
+          return (
+            <React.Fragment key={crumb.id}>
+              {!isFirst && <ChevronRight size={14} className="text-theme-muted shrink-0" />}
+              {isLast ? (
+                <span className="text-theme-primary font-medium">
+                  {crumb.isRoot ? (
+                    <span className="flex items-center gap-1">
+                      <Home size={14} />
+                      {crumb.name}
+                    </span>
+                  ) : (
+                    crumb.name
+                  )}
+                </span>
+              ) : (
+                <button
+                  onClick={() => handleBreadcrumbClick(crumb.id)}
+                  className="text-theme-secondary hover:text-brand transition-colors hover:underline cursor-pointer"
+                >
+                  {crumb.isRoot ? (
+                    <span className="flex items-center gap-1">
+                      <Home size={14} />
+                      {crumb.name}
+                    </span>
+                  ) : (
+                    crumb.name
+                  )}
+                </button>
+              )}
+            </React.Fragment>
+          );
+        })}
+      </nav>
+    );
+  };
 
   // --- Рендер ---
   if (isLoading) {
@@ -217,11 +350,7 @@ const DirectoryPage: React.FC = () => {
     return (
       <div className="py-12 text-center">
         <p className="text-theme-secondary">{error || 'Директория не найдена'}</p>
-        <Button
-          variant="secondary"
-          onClick={() => navigate('/dashboard')}
-          className="mt-4"
-        >
+        <Button variant="secondary" onClick={() => navigate('/dashboard')} className="mt-4">
           Вернуться на дашборд
         </Button>
       </div>
@@ -242,42 +371,44 @@ const DirectoryPage: React.FC = () => {
   return (
     <div className="space-y-6 pb-10">
       {/* Заголовок */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-theme-primary">
-            {isPersonal ? 'Личное хранилище' : `"${directoryContents.name}"`}
-          </h1>
-          <p className="text-sm text-theme-muted mt-0.5">
-            {isPersonal 
-              ? 'Ваши личные файлы и папки' 
-              : isShared 
-                ? 'Общая директория' 
-                : 'Ваша директория'}
-          </p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-semibold text-theme-primary">
+          {isPersonal ? 'Личное хранилище' : directoryContents.name}
+        </h1>
+        <p className="text-sm text-theme-muted mt-0.5">
+          {isPersonal
+            ? 'Ваши личные файлы и папки'
+            : isShared
+              ? 'Общая директория'
+              : 'Ваша директория'}
+        </p>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={() => {
-              setUploadError(null);
-              setIsUploadModalOpen(true);
-            }}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-brand text-theme-on-brand rounded-theme-md hover:bg-brand-hover transition-colors text-sm font-medium"
-          >
-            <Upload size={16} />
-            Загрузить
-          </button>
+        {/* Breadcrumbs под описанием */}
+        <div className="mt-2">{renderBreadcrumbs()}</div>
+      </div>
 
-          <button
-            onClick={() => setIsCreateFolderModalOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium"
-          >
-            <FolderPlus size={16} />
-            Новая папка
-          </button>
+      {/* Кнопки действий справа от заголовка */}
+      <div className="flex items-center justify-end gap-2 flex-wrap -mt-2">
+        <button
+          onClick={() => {
+            setUploadError(null);
+            setIsUploadModalOpen(true);
+          }}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-brand text-theme-on-brand rounded-theme-md hover:bg-brand-hover transition-colors text-sm font-medium"
+        >
+          <Upload size={16} />
+          Загрузить
+        </button>
 
-          <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} />
-        </div>
+        <button
+          onClick={() => setIsCreateFolderModalOpen(true)}
+          className="inline-flex items-center gap-2 px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium"
+        >
+          <FolderPlus size={16} />
+          Новая папка
+        </button>
+
+        <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} />
       </div>
 
       {/* Настройки директории */}
@@ -321,8 +452,8 @@ const DirectoryPage: React.FC = () => {
           {/* Папки */}
           {subdirectories.length > 0 && (
             <div>
-              <h2 className="text-sm font-medium text-theme-secondary mb-3">Папки</h2>
               <div className="bg-theme-secondary border border-theme rounded-theme-lg p-4 shadow-theme-card">
+                <h2 className="text-sm font-medium text-theme-secondary mb-3">Папки</h2>
                 {viewMode === 'grid' ? (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
                     {subdirectories.map((folder) => (
@@ -353,8 +484,8 @@ const DirectoryPage: React.FC = () => {
           {/* Файлы */}
           {files.length > 0 && (
             <div>
-              <h2 className="text-sm font-medium text-theme-secondary mb-3">Файлы</h2>
               <div className="bg-theme-secondary border border-theme rounded-theme-lg p-4 shadow-theme-card">
+                <h2 className="text-sm font-medium text-theme-secondary mb-3">Файлы</h2>
                 {viewMode === 'grid' ? (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
                     {displayFiles.map((file) => (
