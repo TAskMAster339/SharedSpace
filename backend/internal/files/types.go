@@ -19,6 +19,22 @@ type UploadFilesResponse struct {
 	Files []UploadResponse `json:"files"`
 }
 
+type FileMetadataResponse struct {
+	ID          string    `json:"id"`
+	Filename    string    `json:"filename"`
+	Extension   string    `json:"extension"`
+	MimeType    string    `json:"mime_type"`
+	Size        int64     `json:"size"`
+	DirectoryID string    `json:"directory_id"`
+	OwnerID     string    `json:"owner_id"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+type FileContentResponse struct {
+	URL string `json:"url"`
+}
+
 type fileRecord struct {
 	ID          string
 	Filename    string

@@ -123,6 +123,40 @@ func (s *Service) Upload(ctx context.Context, userID, directoryID string, upload
 	return UploadFilesResponse{Files: results}, nil
 }
 
+func (s *Service) GetMetadata(ctx context.Context, userID, fileID string) (FileMetadataResponse, error) {
+	file, err := s.repo.FindByID(ctx, s.db, fileID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return FileMetadataResponse{}, apperror.NotFound("файл не найден")
+		}
+		return FileMetadataResponse{}, apperror.WrapInternal("поиск файла", err)
+	}
+	if file.OwnerID != userID {
+		return FileMetadataResponse{}, apperror.Forbidden("доступ запрещён")
+	}
+	return toMetadataResponse(file), nil
+}
+
+func (s *Service) GetContentURL(ctx context.Context, userID, fileID string) (FileContentResponse, error) {
+	file, err := s.repo.FindByID(ctx, s.db, fileID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return FileContentResponse{}, apperror.NotFound("файл не найден")
+		}
+		return FileContentResponse{}, apperror.WrapInternal("поиск файла", err)
+	}
+	if file.OwnerID != userID {
+		return FileContentResponse{}, apperror.Forbidden("доступ запрещён")
+	}
+
+	url, err := s.storage.PresignedGetURL(ctx, file.ObjectKey, 24*time.Hour)
+	if err != nil {
+		return FileContentResponse{}, apperror.WrapInternal("генерация ссылки", err)
+	}
+
+	return FileContentResponse{URL: url}, nil
+}
+
 func (s *Service) cleanupObjects(keys []string) {
 	if len(keys) == 0 {
 		return
@@ -154,4 +188,18 @@ func toUploadResponse(f fileRecord) UploadResponse {
 func ExtractExtension(filename string) string {
 	ext := filepath.Ext(filename)
 	return strings.ToLower(strings.TrimPrefix(ext, "."))
+}
+
+func toMetadataResponse(f fileRecord) FileMetadataResponse {
+	return FileMetadataResponse{
+		ID:          f.ID,
+		Filename:    f.Filename,
+		Extension:   f.Extension,
+		MimeType:    f.MimeType,
+		Size:        f.Size,
+		DirectoryID: f.DirectoryID,
+		OwnerID:     f.OwnerID,
+		CreatedAt:   f.CreatedAt,
+		UpdatedAt:   f.UpdatedAt,
+	}
 }

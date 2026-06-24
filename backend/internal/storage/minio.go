@@ -12,11 +12,12 @@ import (
 )
 
 type Storage struct {
-	client *minio.Client
-	bucket string
+	client         *minio.Client
+	bucket         string
+	publicEndpoint string
 }
 
-func New(ctx context.Context, endpoint, accessKey, secretKey, bucket string, useSSL bool) (*Storage, error) {
+func New(ctx context.Context, endpoint, accessKey, secretKey, bucket, publicEndpoint string, useSSL bool) (*Storage, error) {
 	client, err := minio.New(endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
 		Secure: useSSL,
@@ -35,7 +36,7 @@ func New(ctx context.Context, endpoint, accessKey, secretKey, bucket string, use
 		}
 	}
 
-	return &Storage{client: client, bucket: bucket}, nil
+	return &Storage{client: client, bucket: bucket, publicEndpoint: publicEndpoint}, nil
 }
 
 func (s *Storage) Upload(ctx context.Context, objectKey string, r io.Reader, size int64, contentType string) error {
@@ -64,6 +65,9 @@ func (s *Storage) PresignedGetURL(ctx context.Context, objectKey string, expiry 
 	if err != nil {
 		return "", fmt.Errorf("presign %s: %w", objectKey, err)
 	}
+
+	u.Host = s.publicEndpoint
+
 	return u.String(), nil
 }
 
