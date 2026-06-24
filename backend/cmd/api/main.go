@@ -47,7 +47,7 @@ func main() {
 	}
 
 	store, err := storage.New(ctx, cfg.MinIOEndpoint, cfg.MinIOAccessKey,
-		cfg.MinIOSecretKey, cfg.MinIOBucket, false)
+		cfg.MinIOSecretKey, cfg.MinIOBucket, cfg.MinIOPublicEndpoint, false)
 	if err != nil {
 		log.Fatalf("storage: %v", err)
 	}

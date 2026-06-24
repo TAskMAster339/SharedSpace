@@ -64,6 +64,8 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 					r.Get("/favorites", middleware.AppError(favoritesHandler.List))
 					r.Post("/{id}/favorite", middleware.AppError(favoritesHandler.Add))
 					r.Delete("/{id}/favorite", middleware.AppError(favoritesHandler.Remove))
+					r.Get("/{id}", middleware.AppError(filesHandler.GetMetadata))
+					r.Get("/{id}/content", middleware.AppError(filesHandler.GetContent))
 				})
 			}
 

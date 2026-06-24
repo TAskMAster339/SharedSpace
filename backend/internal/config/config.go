@@ -28,10 +28,11 @@ func findEnvFile() string {
 type Config struct {
 	DBDSN string
 
-	MinIOEndpoint  string
-	MinIOAccessKey string
-	MinIOSecretKey string
-	MinIOBucket    string
+	MinIOEndpoint       string
+	MinIOAccessKey      string
+	MinIOSecretKey      string
+	MinIOBucket         string
+	MinIOPublicEndpoint string
 
 	JWTSecret     string
 	JWTTTL        time.Duration
@@ -67,10 +68,11 @@ func Load() (*Config, error) {
 	return &Config{
 		DBDSN: dsn,
 
-		MinIOEndpoint:  getEnv("MINIO_ENDPOINT", "localhost:9000"),
-		MinIOAccessKey: getEnv("MINIO_ROOT_USER", "minioadmin"),
-		MinIOSecretKey: getEnv("MINIO_ROOT_PASSWORD", "minioadmin"),
-		MinIOBucket:    getEnv("MINIO_BUCKET", "sharedspace"),
+		MinIOEndpoint:       getEnv("MINIO_ENDPOINT", "minio:9000"),
+		MinIOAccessKey:      getEnv("MINIO_ROOT_USER", "minioadmin"),
+		MinIOSecretKey:      getEnv("MINIO_ROOT_PASSWORD", "minioadmin"),
+		MinIOBucket:         getEnv("MINIO_BUCKET", "sharedspace"),
+		MinIOPublicEndpoint: getEnv("MINIO_PUBLIC_ENDPOINT", "localhost:9002"),
 
 		JWTSecret:     secret,
 		JWTTTL:        time.Duration(ttl) * time.Second,
