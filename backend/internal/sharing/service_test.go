@@ -44,7 +44,7 @@ func (m *mockRepo) FindByMemberWithStats(_ context.Context, _ dbTX, _ string) ([
 	return m.findByMemberWithStatsResult, m.findByMemberWithStatsErr
 }
 
-func (m *mockRepo) FindMembers(_ context.Context, _ dbTX, _ string) ([]memberRecord, error) {
+func (m *mockRepo) FindMembers(_ context.Context, _ dbTX, _ string, _ int) ([]memberRecord, error) {
 	return m.findMembersResult, m.findMembersErr
 }
 
@@ -182,7 +182,7 @@ func TestServiceGetMembers(t *testing.T) {
 		}
 		svc := newTestService(repo)
 
-		resp, err := svc.GetMembers(context.Background(), "user-1", "s-1")
+		resp, err := svc.GetMembers(context.Background(), "user-1", "s-1", 0)
 		if err != nil {
 			t.Fatalf("GetMembers returned error: %v", err)
 		}
@@ -207,7 +207,7 @@ func TestServiceGetMembers(t *testing.T) {
 		}
 		svc := newTestService(repo)
 
-		resp, err := svc.GetMembers(context.Background(), "user-1", "s-1")
+		resp, err := svc.GetMembers(context.Background(), "user-1", "s-1", 0)
 		if err != nil {
 			t.Fatalf("GetMembers returned error: %v", err)
 		}
@@ -229,7 +229,7 @@ func TestServiceGetMembers(t *testing.T) {
 		svc := newTestService(repo)
 		svc.accessChecker = &mockAccessChecker{canFn: func(_ context.Context, _, _ string, _ access.Action) (bool, error) { return false, nil }}
 
-		_, err := svc.GetMembers(context.Background(), "user-1", "s-1")
+		_, err := svc.GetMembers(context.Background(), "user-1", "s-1", 0)
 		if err == nil {
 			t.Fatal("expected error")
 		}
@@ -243,7 +243,7 @@ func TestServiceGetMembers(t *testing.T) {
 		repo := &mockRepo{findByIDErr: pgx.ErrNoRows}
 		svc := newTestService(repo)
 
-		_, err := svc.GetMembers(context.Background(), "user-1", "missing")
+		_, err := svc.GetMembers(context.Background(), "user-1", "missing", 0)
 		if err == nil {
 			t.Fatal("expected error")
 		}

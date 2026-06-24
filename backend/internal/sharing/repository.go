@@ -95,14 +95,21 @@ func (r *Repository) FindByMemberWithStats(ctx context.Context, db dbTX, userID 
 	return records, rows.Err()
 }
 
-func (r *Repository) FindMembers(ctx context.Context, db dbTX, sharedDirID string) ([]memberRecord, error) {
-	rows, err := db.Query(ctx, `
+func (r *Repository) FindMembers(ctx context.Context, db dbTX, sharedDirID string, limit int) ([]memberRecord, error) {
+	query := `
 		SELECT sdm.id, u.id, u.username, sdm.role, sdm.joined_at
 		FROM shared_directory_members sdm
 		JOIN users u ON u.id = sdm.user_id
 		WHERE sdm.shared_directory_id = $1
-		ORDER BY sdm.joined_at ASC
-	`, sharedDirID)
+		ORDER BY sdm.joined_at ASC`
+	args := []any{sharedDirID}
+
+	if limit > 0 {
+		query += ` LIMIT $2`
+		args = append(args, limit)
+	}
+
+	rows, err := db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}

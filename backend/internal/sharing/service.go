@@ -79,7 +79,7 @@ func (s *Service) GetSharedWithMeStats(ctx context.Context, userID string) ([]Sh
 	return resp, nil
 }
 
-func (s *Service) GetMembers(ctx context.Context, userID, sharedDirID string) ([]MemberResponse, error) {
+func (s *Service) GetMembers(ctx context.Context, userID, sharedDirID string, limit int) ([]MemberResponse, error) {
 	sd, err := s.repo.FindByID(ctx, s.db, sharedDirID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -96,7 +96,7 @@ func (s *Service) GetMembers(ctx context.Context, userID, sharedDirID string) ([
 		return nil, apperror.Forbidden("доступ запрещён")
 	}
 
-	members, err := s.repo.FindMembers(ctx, s.db, sharedDirID)
+	members, err := s.repo.FindMembers(ctx, s.db, sharedDirID, limit)
 	if err != nil {
 		return nil, apperror.WrapInternal("ошибка поиска участников", err)
 	}
@@ -115,7 +115,7 @@ func (s *Service) Invite(ctx context.Context, userID, sharedDirID, username stri
 
 	canInvite := sd.OwnerID == userID
 	if !canInvite {
-		members, err := s.repo.FindMembers(ctx, s.db, sharedDirID)
+		members, err := s.repo.FindMembers(ctx, s.db, sharedDirID, 0)
 		if err != nil {
 			return nil, apperror.WrapInternal("ошибка поиска участников", err)
 		}
