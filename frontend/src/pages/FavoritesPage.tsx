@@ -6,7 +6,7 @@ import { ApiError } from '../api/client';
 import { Card, CardHeader, CardTitle } from '../components/ui/Card';
 import { FileItem } from '../components/ui/FileItem';
 import { EmptyState } from '../components/ui/EmptyState';
-import { formatBytes, formatDate } from '../utils/format';
+import { formatFileSize, formatDate } from '../utils/format';
 import { resolveFileIconType } from '../utils/fileType';
 
 const FavoritesPage: React.FC = () => {
@@ -80,7 +80,7 @@ const FavoritesPage: React.FC = () => {
                 id={file.id}
                 name={file.filename}
                 date={formatDate(file.favorited_at)}
-                size={formatBytes(file.size)}
+                size={formatFileSize(file.size)}
                 type={resolveFileIconType(file.mime_type, file.extension)}
                 to={`/files/${file.id}`}
                 isFavorite
