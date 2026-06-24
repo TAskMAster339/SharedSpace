@@ -1337,6 +1337,14 @@ const docTemplate = `{
                     "sharing"
                 ],
                 "summary": "Get user's shared directories for invitations",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Maximum number of directories to return",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
