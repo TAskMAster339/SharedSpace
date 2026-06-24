@@ -101,7 +101,7 @@ func (m *mockAccessChecker) Can(ctx context.Context, userID, directoryID string,
 
 func newTestService(repo RepositoryInterface) *Service {
 	return &Service{
-		beginTx:       func(_ context.Context, _ pgx.TxOptions) (transaction, error) { return nil, nil },
+		beginTx:       func(_ context.Context, _ pgx.TxOptions) (transaction, error) { return mockTX{}, nil },
 		db:            mockTX{},
 		repo:          repo,
 		accessChecker: &mockAccessChecker{canFn: func(_ context.Context, _, _ string, _ access.Action) (bool, error) { return true, nil }},
