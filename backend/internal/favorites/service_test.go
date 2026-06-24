@@ -28,7 +28,7 @@ func (m *mockRepo) Delete(_ context.Context, _ dbTX, _, _ string) error {
 	return m.deleteErr
 }
 
-func (m *mockRepo) FindAllByUserID(_ context.Context, _ dbTX, _ string) ([]favoriteFileRecord, error) {
+func (m *mockRepo) FindAllByUserID(_ context.Context, _ dbTX, _ string, _ int) ([]favoriteFileRecord, error) {
 	return m.findAllRes, m.findAllErr
 }
 
@@ -189,7 +189,7 @@ func TestServiceList(t *testing.T) {
 		}
 		svc := newTestService(repo)
 
-		resp, err := svc.List(context.Background(), "user-1")
+		resp, err := svc.List(context.Background(), "user-1", 0)
 		if err != nil {
 			t.Fatalf("List returned error: %v", err)
 		}
@@ -208,7 +208,7 @@ func TestServiceList(t *testing.T) {
 		repo := &mockRepo{findAllRes: []favoriteFileRecord{}}
 		svc := newTestService(repo)
 
-		resp, err := svc.List(context.Background(), "user-1")
+		resp, err := svc.List(context.Background(), "user-1", 0)
 		if err != nil {
 			t.Fatalf("List returned error: %v", err)
 		}
@@ -221,7 +221,7 @@ func TestServiceList(t *testing.T) {
 		repo := &mockRepo{findAllErr: errors.New("db error")}
 		svc := newTestService(repo)
 
-		_, err := svc.List(context.Background(), "user-1")
+		_, err := svc.List(context.Background(), "user-1", 0)
 		if err == nil {
 			t.Fatal("expected error")
 		}

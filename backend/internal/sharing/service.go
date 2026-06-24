@@ -35,8 +35,8 @@ func NewService(pool *pgxpool.Pool, repo RepositoryInterface, accessChecker acce
 	}
 }
 
-func (s *Service) GetSharedWithMe(ctx context.Context, userID string) ([]SharedDirectoryResponse, error) {
-	records, err := s.repo.FindByMember(ctx, s.db, userID)
+func (s *Service) GetSharedWithMe(ctx context.Context, userID string, limit int) ([]SharedDirectoryResponse, error) {
+	records, err := s.repo.FindByMember(ctx, s.db, userID, limit)
 	if err != nil {
 		return nil, apperror.WrapInternal("ошибка поиска общих директорий", err)
 	}

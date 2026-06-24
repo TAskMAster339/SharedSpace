@@ -61,6 +61,7 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 			if filesHandler != nil {
 				r.Route("/files", func(r chi.Router) {
 					r.Post("/", middleware.AppError(filesHandler.Upload))
+					r.Get("/recent", middleware.AppError(filesHandler.GetRecent))
 					r.Get("/favorites", middleware.AppError(favoritesHandler.List))
 					r.Post("/{id}/favorite", middleware.AppError(favoritesHandler.Add))
 					r.Delete("/{id}/favorite", middleware.AppError(favoritesHandler.Remove))

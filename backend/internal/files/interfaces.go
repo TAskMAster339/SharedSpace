@@ -19,6 +19,7 @@ type ServiceInterface interface {
 	Upload(ctx context.Context, userID, directoryID string, uploads []FileUpload) (UploadFilesResponse, error)
 	GetMetadata(ctx context.Context, userID, fileID string) (FileMetadataResponse, error)
 	GetContentURL(ctx context.Context, userID, fileID string) (FileContentResponse, error)
+	GetRecent(ctx context.Context, userID string, limit int) (RecentFilesResponse, error)
 }
 
 type RepositoryInterface interface {
@@ -27,6 +28,7 @@ type RepositoryInterface interface {
 	Save(context.Context, dbTX, fileRecord) (fileRecord, error)
 	GetUserStorage(ctx context.Context, db dbTX, userID string) (used, quota int64, err error)
 	AddUserStorageUsed(ctx context.Context, db dbTX, userID string, delta int64) error
+	FindRecentByUserID(ctx context.Context, db dbTX, userID string, limit int) ([]fileRecord, error)
 }
 
 type FileUpload struct {
@@ -39,6 +41,7 @@ type FileUpload struct {
 
 type dbTX interface {
 	QueryRow(context.Context, string, ...any) pgx.Row
+	Query(context.Context, string, ...any) (pgx.Rows, error)
 	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
 }
 

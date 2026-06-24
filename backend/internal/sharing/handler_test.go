@@ -29,7 +29,7 @@ type mockService struct {
 	removeMemberFn         func(string, string, string) error
 }
 
-func (m *mockService) GetSharedWithMe(_ context.Context, userID string) ([]SharedDirectoryResponse, error) {
+func (m *mockService) GetSharedWithMe(_ context.Context, userID string, limit int) ([]SharedDirectoryResponse, error) {
 	if m.getSharedWithMeFn != nil {
 		return m.getSharedWithMeFn(userID)
 	}

@@ -55,6 +55,40 @@ func (r *Repository) GetUserStorage(ctx context.Context, db dbTX, userID string)
 	return used, quota, err
 }
 
+func (r *Repository) FindRecentByUserID(ctx context.Context, db dbTX, userID string, limit int) ([]fileRecord, error) {
+	query := `
+		SELECT id, directory_id, owner_id, filename, extension, mime_type, size, object_key, created_at, updated_at
+		FROM files
+		WHERE owner_id = $1 AND deleted_at IS NULL
+		ORDER BY updated_at DESC`
+	args := []any{userID}
+
+	if limit > 0 {
+		query += ` LIMIT $2`
+		args = append(args, limit)
+	}
+
+	rows, err := db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var records []fileRecord
+	for rows.Next() {
+		var f fileRecord
+		if err := rows.Scan(
+			&f.ID, &f.DirectoryID, &f.OwnerID,
+			&f.Filename, &f.Extension, &f.MimeType,
+			&f.Size, &f.ObjectKey, &f.CreatedAt, &f.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		records = append(records, f)
+	}
+	return records, rows.Err()
+}
+
 func (r *Repository) AddUserStorageUsed(ctx context.Context, db dbTX, userID string, delta int64) error {
 	_, err := db.Exec(ctx, `
 		UPDATE users SET storage_used = storage_used + $1, updated_at = now()

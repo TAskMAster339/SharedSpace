@@ -24,6 +24,7 @@ func NewHandler(service ServiceInterface) *Handler {
 // @Tags sharing
 // @Security BearerAuth
 // @Produce json
+// @Param limit query int false "Maximum number of shared directories to return"
 // @Success 200 {array} SharedDirectoryResponse
 // @Failure 401 {object} apperror.Response
 // @Router /api/v1/shared/with-me [get]
@@ -33,7 +34,16 @@ func (h *Handler) GetSharedWithMe(w http.ResponseWriter, r *http.Request) error 
 		return apperror.Unauthorized("неавторизован")
 	}
 
-	resp, err := h.service.GetSharedWithMe(r.Context(), claims.UserID)
+	limit := 0
+	if l := r.URL.Query().Get("limit"); l != "" {
+		parsed, err := strconv.Atoi(l)
+		if err != nil || parsed < 0 {
+			return apperror.Validation("некорректный лимит")
+		}
+		limit = parsed
+	}
+
+	resp, err := h.service.GetSharedWithMe(r.Context(), claims.UserID, limit)
 	if err != nil {
 		return err
 	}
