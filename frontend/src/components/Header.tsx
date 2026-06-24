@@ -1,20 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Bell, Settings, LogOut, ChevronDown, MoonStar } from 'lucide-react';
+import { Settings, LogOut, ChevronDown, MoonStar } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { SearchBar } from './ui/SearchBar';
 
 const logo = '/logo-mark.png';
 
-interface HeaderProps {
-  hasUnreadInvites?: boolean;
-}
-
-// Пока мок, прописать логику получения кол-ва непрочитанных приглашений
-const unreadCount = 0;
-
-export const Header: React.FC<HeaderProps> = ({ hasUnreadInvites = unreadCount > 0 }) => {
+export const Header: React.FC = () => {
   const { isAuthenticated, firstName, lastName, avatar, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
@@ -110,17 +103,6 @@ export const Header: React.FC<HeaderProps> = ({ hasUnreadInvites = unreadCount >
                 className={theme === 'dark' ? 'text-brand' : 'text-theme-secondary'}
               />
             </button>
-
-            {/* Колокольчик */}
-            <Link
-              to="/invitations"
-              className="relative p-2 rounded-theme-full hover:bg-theme-hover transition-colors"
-            >
-              <Bell size={20} className="text-theme-secondary" />
-              {hasUnreadInvites && (
-                <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-brand rounded-theme-full border-2 border-theme-secondary" />
-              )}
-            </Link>
 
             {/* Профиль с выпадающим меню */}
             <div className="relative">
