@@ -19,7 +19,7 @@ import (
 type mockService struct {
 	getSharedWithMeFn      func(string) ([]SharedDirectoryResponse, error)
 	getSharedWithMeStatsFn func(string) ([]SharedDirectoryWithStatsResponse, error)
-	getMembersFn           func(string, string) ([]MemberResponse, error)
+	getMembersFn           func(string, string, int) ([]MemberResponse, error)
 	inviteFn               func(string, string, string) (*InvitationResponse, error)
 	getMyInvitationsFn     func(string) ([]InvitationResponse, error)
 	acceptInvitationFn     func(string, string) error
@@ -41,9 +41,9 @@ func (m *mockService) GetSharedWithMeStats(_ context.Context, userID string) ([]
 	return nil, nil
 }
 
-func (m *mockService) GetMembers(_ context.Context, userID, sharedDirID string) ([]MemberResponse, error) {
+func (m *mockService) GetMembers(_ context.Context, userID, sharedDirID string, limit int) ([]MemberResponse, error) {
 	if m.getMembersFn != nil {
-		return m.getMembersFn(userID, sharedDirID)
+		return m.getMembersFn(userID, sharedDirID, limit)
 	}
 	return nil, nil
 }
@@ -385,7 +385,7 @@ func TestHandlerGetMembers(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		svc := &mockService{
-			getMembersFn: func(userID, sharedDirID string) ([]MemberResponse, error) {
+			getMembersFn: func(userID, sharedDirID string, _ int) ([]MemberResponse, error) {
 				return []MemberResponse{
 					{ID: "mem-1", UserID: "user-1", Username: "alice", Role: RoleAdmin, JoinedAt: now},
 					{ID: "mem-2", UserID: "user-2", Username: "bob", Role: RoleViewer, JoinedAt: now},

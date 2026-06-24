@@ -3,6 +3,7 @@ package sharing
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 
@@ -76,6 +77,7 @@ func (h *Handler) GetSharedWithMeStats(w http.ResponseWriter, r *http.Request) e
 // @Security BearerAuth
 // @Produce json
 // @Param id path string true "Shared Directory ID"
+// @Param limit query int false "Maximum number of members to return"
 // @Success 200 {array} MemberResponse
 // @Failure 400 {object} apperror.Response
 // @Failure 401 {object} apperror.Response
@@ -93,7 +95,16 @@ func (h *Handler) GetMembers(w http.ResponseWriter, r *http.Request) error {
 		return apperror.Validation("требуется идентификатор общей директории")
 	}
 
-	resp, err := h.service.GetMembers(r.Context(), claims.UserID, sharedDirID)
+	limit := 0
+	if l := r.URL.Query().Get("limit"); l != "" {
+		parsed, err := strconv.Atoi(l)
+		if err != nil || parsed < 0 {
+			return apperror.Validation("некорректный лимит")
+		}
+		limit = parsed
+	}
+
+	resp, err := h.service.GetMembers(r.Context(), claims.UserID, sharedDirID, limit)
 	if err != nil {
 		return err
 	}
