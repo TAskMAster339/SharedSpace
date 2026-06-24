@@ -46,6 +46,7 @@ type directoryRecord struct {
 	OwnerID   string
 	ParentID  *string
 	Type      string
+	DeletedAt *time.Time
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
@@ -56,6 +57,8 @@ type fileRecord struct {
 	Extension string
 	MimeType  string
 	Size      int64
+	ObjectKey string
+	OwnerID   string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

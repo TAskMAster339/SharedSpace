@@ -39,6 +39,18 @@ func (m *mockService) GetContentURL(_ context.Context, userID, fileID string) (F
 	return FileContentResponse{}, nil
 }
 
+func (m *mockService) SoftDelete(_ context.Context, userID, fileID string) error {
+	return nil
+}
+
+func (m *mockService) Restore(_ context.Context, userID, fileID string) error {
+	return nil
+}
+
+func (m *mockService) PermanentDelete(_ context.Context, userID, fileID string) error {
+	return nil
+}
+
 func (m *mockService) GetRecent(_ context.Context, userID string, limit int) (RecentFilesResponse, error) {
 	return RecentFilesResponse{}, nil
 }
