@@ -56,6 +56,29 @@ func (s *Service) GetSharedWithMe(ctx context.Context, userID string) ([]SharedD
 	return resp, nil
 }
 
+func (s *Service) GetSharedWithMeStats(ctx context.Context, userID string) ([]SharedDirectoryWithStatsResponse, error) {
+	records, err := s.repo.FindByMemberWithStats(ctx, s.db, userID)
+	if err != nil {
+		return nil, apperror.WrapInternal("ошибка поиска общих директорий со статистикой", err)
+	}
+
+	resp := make([]SharedDirectoryWithStatsResponse, 0, len(records))
+	for _, r := range records {
+		resp = append(resp, SharedDirectoryWithStatsResponse{
+			ID:          r.ID,
+			DirectoryID: r.DirectoryID,
+			Name:        r.Name,
+			OwnerID:     r.OwnerID,
+			OwnerName:   r.OwnerName,
+			Role:        Role(r.Role),
+			MemberCount: r.MemberCount,
+			FileCount:   r.FileCount,
+			CreatedAt:   r.CreatedAt,
+		})
+	}
+	return resp, nil
+}
+
 func (s *Service) GetMembers(ctx context.Context, userID, sharedDirID string) ([]MemberResponse, error) {
 	sd, err := s.repo.FindByID(ctx, s.db, sharedDirID)
 	if err != nil {

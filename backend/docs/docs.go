@@ -1163,6 +1163,39 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/shared/with-me/stats": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sharing"
+                ],
+                "summary": "List shared directories with stats for current user",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/internal_sharing.SharedDirectoryWithStatsResponse"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/users/me": {
             "get": {
                 "security": [
@@ -1843,6 +1876,38 @@ const docTemplate = `{
                 },
                 "id": {
                     "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "owner_id": {
+                    "type": "string"
+                },
+                "owner_name": {
+                    "type": "string"
+                },
+                "role": {
+                    "$ref": "#/definitions/internal_sharing.Role"
+                }
+            }
+        },
+        "internal_sharing.SharedDirectoryWithStatsResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "directory_id": {
+                    "type": "string"
+                },
+                "file_count": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "member_count": {
+                    "type": "integer"
                 },
                 "name": {
                     "type": "string"
