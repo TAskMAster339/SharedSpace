@@ -40,3 +40,37 @@ export function getMembers(
     token: accessToken,
   });
 }
+
+export type InvitationStatus = 'pending' | 'accepted' | 'declined' | 'revoked';
+
+export interface Invitation {
+  id: string;
+  shared_directory_id: string;
+  directory_name: string;
+  invited_by_user_id: string;
+  invited_by_username: string;
+  role: SharingRole;
+  status: InvitationStatus;
+  created_at: string;
+}
+
+export function getMyInvitations(accessToken: string): Promise<Invitation[]> {
+  return apiRequest<Invitation[]>('/invitations', {
+    method: 'GET',
+    token: accessToken,
+  });
+}
+
+export function acceptInvitation(accessToken: string, invitationId: string): Promise<void> {
+  return apiRequest<void>(`/invitations/${invitationId}/accept`, {
+    method: 'POST',
+    token: accessToken,
+  });
+}
+
+export function declineInvitation(accessToken: string, invitationId: string): Promise<void> {
+  return apiRequest<void>(`/invitations/${invitationId}/decline`, {
+    method: 'POST',
+    token: accessToken,
+  });
+}

@@ -1,7 +1,131 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { Mail } from 'lucide-react';
+import { useAuthStore } from '../store/authStore';
+import { getMyInvitations, acceptInvitation, declineInvitation, Invitation } from '../api/sharing';
+import { ApiError } from '../api/client';
+import { EmptyState } from '../components/ui/EmptyState';
+import { Button } from '../components/ui/Button';
 
 const InvitationsPage: React.FC = () => {
-  return <h1>Приглашения</h1>;
+  const accessToken = useAuthStore((state) => state.accessToken);
+
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [pendingActionId, setPendingActionId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!accessToken) return;
+
+    let isMounted = true;
+    setIsLoading(true);
+    setError('');
+
+    getMyInvitations(accessToken)
+      .then((data) => {
+        if (isMounted) setInvitations(data.filter((inv) => inv.status === 'pending'));
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        setError(err instanceof ApiError ? err.message : 'Не удалось загрузить приглашения.');
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [accessToken]);
+
+  const handleAccept = async (id: string) => {
+    if (!accessToken) return;
+    setPendingActionId(id);
+    try {
+      await acceptInvitation(accessToken, id);
+      setInvitations((prev) => prev.filter((inv) => inv.id !== id));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Не удалось принять приглашение.');
+    } finally {
+      setPendingActionId(null);
+    }
+  };
+
+  const handleDecline = async (id: string) => {
+    if (!accessToken) return;
+    setPendingActionId(id);
+    try {
+      await declineInvitation(accessToken, id);
+      setInvitations((prev) => prev.filter((inv) => inv.id !== id));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Не удалось отклонить приглашение.');
+    } finally {
+      setPendingActionId(null);
+    }
+  };
+
+  return (
+    <div className="space-y-6 pb-10">
+      <div>
+        <h1 className="text-2xl font-semibold text-theme-primary mb-1">Приглашения</h1>
+        <p className="text-sm text-theme-muted">
+          Принимайте или отклоняйте приглашения к совместной работе
+        </p>
+      </div>
+
+      {isLoading ? (
+        <p className="text-sm text-theme-muted py-8 text-center">Загрузка...</p>
+      ) : error ? (
+        <p className="text-danger text-sm py-8 text-center">{error}</p>
+      ) : invitations.length === 0 ? (
+        <EmptyState icon={<Mail size={24} />} description="У вас нет новых приглашений." />
+      ) : (
+        <div className="space-y-3">
+          {invitations.map((inv) => (
+            <div
+              key={inv.id}
+              className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-theme-lg bg-theme-secondary border border-theme shadow-theme-card"
+            >
+              <img
+                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${inv.invited_by_username}`}
+                alt={inv.invited_by_username}
+                className="w-12 h-12 rounded-theme-full bg-theme-tertiary shrink-0"
+              />
+
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-theme-primary">
+                  <span className="font-medium">{inv.invited_by_username}</span> приглашает вас
+                  присоединиться к{' '}
+                  <span className="font-semibold text-brand">{inv.directory_name}</span>
+                </p>
+              </div>
+
+              <div className="flex gap-2 sm:shrink-0">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="flex-1 sm:flex-none"
+                  disabled={pendingActionId === inv.id}
+                  onClick={() => handleDecline(inv.id)}
+                >
+                  Отклонить
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  className="flex-1 sm:flex-none"
+                  disabled={pendingActionId === inv.id}
+                  onClick={() => handleAccept(inv.id)}
+                >
+                  Принять
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default InvitationsPage;
