@@ -29,7 +29,7 @@ func NewHandler(service ServiceInterface) *Handler {
 func (h *Handler) GetSharedWithMe(w http.ResponseWriter, r *http.Request) error {
 	claims, ok := auth.ClaimsFromCtx(r.Context())
 	if !ok {
-		return apperror.Unauthorized("unauthorized")
+		return apperror.Unauthorized("неавторизован")
 	}
 
 	resp, err := h.service.GetSharedWithMe(r.Context(), claims.UserID)
@@ -59,12 +59,12 @@ func (h *Handler) GetSharedWithMe(w http.ResponseWriter, r *http.Request) error 
 func (h *Handler) GetMembers(w http.ResponseWriter, r *http.Request) error {
 	claims, ok := auth.ClaimsFromCtx(r.Context())
 	if !ok {
-		return apperror.Unauthorized("unauthorized")
+		return apperror.Unauthorized("неавторизован")
 	}
 
 	sharedDirID := chi.URLParam(r, "id")
 	if sharedDirID == "" {
-		return apperror.Validation("shared directory id is required")
+		return apperror.Validation("требуется идентификатор общей директории")
 	}
 
 	resp, err := h.service.GetMembers(r.Context(), claims.UserID, sharedDirID)
@@ -79,8 +79,178 @@ func (h *Handler) GetMembers(w http.ResponseWriter, r *http.Request) error {
 	return writeJSON(w, http.StatusOK, resp)
 }
 
+// Invite sends an invitation to a user for a shared directory.
+// @Summary Invite user to shared directory
+// @Tags sharing
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "Shared Directory ID"
+// @Param body body InviteRequest true "Username to invite"
+// @Success 201 {object} InvitationResponse
+// @Failure 400 {object} apperror.Response
+// @Failure 401 {object} apperror.Response
+// @Failure 403 {object} apperror.Response
+// @Failure 404 {object} apperror.Response
+// @Failure 409 {object} apperror.Response
+// @Router /api/v1/shared-directories/{id}/invitations [post]
+func (h *Handler) Invite(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := auth.ClaimsFromCtx(r.Context())
+	if !ok {
+		return apperror.Unauthorized("неавторизован")
+	}
+
+	sharedDirID := chi.URLParam(r, "id")
+	if sharedDirID == "" {
+		return apperror.Validation("требуется идентификатор общей директории")
+	}
+
+	var req InviteRequest
+	if err := decodeJSON(r, &req); err != nil {
+		return err
+	}
+	if req.Username == "" {
+		return apperror.Validation("требуется имя пользователя")
+	}
+
+	resp, err := h.service.Invite(r.Context(), claims.UserID, sharedDirID, req.Username)
+	if err != nil {
+		return err
+	}
+
+	return writeJSON(w, http.StatusCreated, resp)
+}
+
+// GetMyInvitations returns all pending invitations for the authenticated user.
+// @Summary Get my invitations
+// @Tags sharing
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {array} InvitationResponse
+// @Failure 401 {object} apperror.Response
+// @Router /api/v1/invitations [get]
+func (h *Handler) GetMyInvitations(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := auth.ClaimsFromCtx(r.Context())
+	if !ok {
+		return apperror.Unauthorized("неавторизован")
+	}
+
+	resp, err := h.service.GetMyInvitations(r.Context(), claims.UserID)
+	if err != nil {
+		return err
+	}
+
+	if resp == nil {
+		resp = []InvitationResponse{}
+	}
+
+	return writeJSON(w, http.StatusOK, resp)
+}
+
+// AcceptInvitation accepts a pending invitation.
+// @Summary Accept invitation
+// @Tags sharing
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Invitation ID"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} apperror.Response
+// @Failure 401 {object} apperror.Response
+// @Failure 403 {object} apperror.Response
+// @Failure 404 {object} apperror.Response
+// @Failure 409 {object} apperror.Response
+// @Router /api/v1/invitations/{id}/accept [post]
+func (h *Handler) AcceptInvitation(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := auth.ClaimsFromCtx(r.Context())
+	if !ok {
+		return apperror.Unauthorized("неавторизован")
+	}
+
+	invitationID := chi.URLParam(r, "id")
+	if invitationID == "" {
+		return apperror.Validation("требуется идентификатор приглашения")
+	}
+
+	if err := h.service.AcceptInvitation(r.Context(), claims.UserID, invitationID); err != nil {
+		return err
+	}
+
+	return writeJSON(w, http.StatusOK, map[string]string{"status": "accepted"})
+}
+
+// DeclineInvitation declines a pending invitation.
+// @Summary Decline invitation
+// @Tags sharing
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Invitation ID"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} apperror.Response
+// @Failure 401 {object} apperror.Response
+// @Failure 403 {object} apperror.Response
+// @Failure 404 {object} apperror.Response
+// @Failure 409 {object} apperror.Response
+// @Router /api/v1/invitations/{id}/decline [post]
+func (h *Handler) DeclineInvitation(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := auth.ClaimsFromCtx(r.Context())
+	if !ok {
+		return apperror.Unauthorized("неавторизован")
+	}
+
+	invitationID := chi.URLParam(r, "id")
+	if invitationID == "" {
+		return apperror.Validation("требуется идентификатор приглашения")
+	}
+
+	if err := h.service.DeclineInvitation(r.Context(), claims.UserID, invitationID); err != nil {
+		return err
+	}
+
+	return writeJSON(w, http.StatusOK, map[string]string{"status": "declined"})
+}
+
+// RemoveInvitation revokes/deletes an invitation.
+// @Summary Remove/revoke invitation
+// @Tags sharing
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Invitation ID"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} apperror.Response
+// @Failure 401 {object} apperror.Response
+// @Failure 403 {object} apperror.Response
+// @Failure 404 {object} apperror.Response
+// @Router /api/v1/invitations/{id} [delete]
+func (h *Handler) RemoveInvitation(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := auth.ClaimsFromCtx(r.Context())
+	if !ok {
+		return apperror.Unauthorized("неавторизован")
+	}
+
+	invitationID := chi.URLParam(r, "id")
+	if invitationID == "" {
+		return apperror.Validation("требуется идентификатор приглашения")
+	}
+
+	if err := h.service.RemoveInvitation(r.Context(), claims.UserID, invitationID); err != nil {
+		return err
+	}
+
+	return writeJSON(w, http.StatusOK, map[string]string{"status": "revoked"})
+}
+
 func writeJSON(w http.ResponseWriter, status int, payload any) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	return json.NewEncoder(w).Encode(payload)
+}
+
+func decodeJSON(r *http.Request, v any) error {
+	defer r.Body.Close()
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(v); err != nil {
+		return apperror.Validation("неверный формат запроса")
+	}
+	return nil
 }

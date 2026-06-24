@@ -10,6 +10,15 @@ const (
 	RoleAdmin  Role = "admin"
 )
 
+type InvitationStatus string
+
+const (
+	InvitationPending  InvitationStatus = "pending"
+	InvitationAccepted InvitationStatus = "accepted"
+	InvitationDeclined InvitationStatus = "declined"
+	InvitationRevoked  InvitationStatus = "revoked"
+)
+
 type SharedDirectoryResponse struct {
 	ID          string    `json:"id"`
 	DirectoryID string    `json:"directory_id"`
@@ -28,6 +37,21 @@ type MemberResponse struct {
 	JoinedAt time.Time `json:"joined_at"`
 }
 
+type InvitationResponse struct {
+	ID                string           `json:"id"`
+	SharedDirectoryID string           `json:"shared_directory_id"`
+	DirectoryName     string           `json:"directory_name"`
+	InvitedByUserID   string           `json:"invited_by_user_id"`
+	InvitedByUsername string           `json:"invited_by_username"`
+	Role              Role             `json:"role"`
+	Status            InvitationStatus `json:"status"`
+	CreatedAt         time.Time        `json:"created_at"`
+}
+
+type InviteRequest struct {
+	Username string `json:"username"`
+}
+
 type sharedDirectoryRecord struct {
 	ID          string
 	DirectoryID string
@@ -44,4 +68,16 @@ type memberRecord struct {
 	Username string
 	Role     string
 	JoinedAt time.Time
+}
+
+type invitationRecord struct {
+	ID                string
+	SharedDirectoryID string
+	DirectoryName     string
+	InvitedUserID     string
+	InvitedByUserID   string
+	InvitedByUsername string
+	Role              string
+	Status            string
+	CreatedAt         time.Time
 }
