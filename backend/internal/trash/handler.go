@@ -28,7 +28,7 @@ func NewHandler(service ServiceInterface) *Handler {
 func (h *Handler) GetTrashList(w http.ResponseWriter, r *http.Request) error {
 	claims, ok := auth.ClaimsFromCtx(r.Context())
 	if !ok {
-		return apperror.Unauthorized("не авторизован")
+		return apperror.Unauthorized("unauthorized")
 	}
 
 	resp, err := h.service.GetTrashList(r.Context(), claims.UserID)
@@ -39,7 +39,7 @@ func (h *Handler) GetTrashList(w http.ResponseWriter, r *http.Request) error {
 	return writeJSON(w, http.StatusOK, resp)
 }
 
-// ClearTrash clears the trash (all items or selected ones)
+// ClearTrash clears the trash (all items or selected ones).
 // @Summary Clear trash
 // @Tags trash
 // @Security BearerAuth
@@ -53,7 +53,7 @@ func (h *Handler) GetTrashList(w http.ResponseWriter, r *http.Request) error {
 func (h *Handler) ClearTrash(w http.ResponseWriter, r *http.Request) error {
 	claims, ok := auth.ClaimsFromCtx(r.Context())
 	if !ok {
-		return apperror.Unauthorized("не авторизован")
+		return apperror.Unauthorized("unauthorized")
 	}
 
 	var req ClearTrashRequest
@@ -74,7 +74,7 @@ func decodeJSON(body io.ReadCloser, dst any) error {
 	dec := json.NewDecoder(body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(dst); err != nil {
-		return apperror.Validation("неверный формат JSON")
+		return apperror.Validation("invalid JSON format")
 	}
 	return nil
 }
@@ -83,7 +83,7 @@ func writeJSON(w http.ResponseWriter, status int, payload any) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(payload); err != nil {
-		return apperror.WrapInternal("ошибка кодирования ответа", err)
+		return apperror.WrapInternal("encode response", err)
 	}
 	return nil
 }

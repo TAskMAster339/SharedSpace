@@ -206,11 +206,11 @@ func writeJSON(w http.ResponseWriter, status int, payload any) error {
 func (h *Handler) SoftDelete(w http.ResponseWriter, r *http.Request) error {
 	claims, ok := auth.ClaimsFromCtx(r.Context())
 	if !ok {
-		return apperror.Unauthorized("не авторизован")
+		return apperror.Unauthorized("unauthorized")
 	}
 	dirID := chi.URLParam(r, "id")
 	if dirID == "" {
-		return apperror.Validation("id директории обязателен")
+		return apperror.Validation("directory id is required")
 	}
 	if err := h.service.SoftDelete(r.Context(), claims.UserID, dirID); err != nil {
 		return err
@@ -234,11 +234,11 @@ func (h *Handler) SoftDelete(w http.ResponseWriter, r *http.Request) error {
 func (h *Handler) Restore(w http.ResponseWriter, r *http.Request) error {
 	claims, ok := auth.ClaimsFromCtx(r.Context())
 	if !ok {
-		return apperror.Unauthorized("не авторизован")
+		return apperror.Unauthorized("unauthorized")
 	}
 	dirID := chi.URLParam(r, "id")
 	if dirID == "" {
-		return apperror.Validation("id директории обязателен")
+		return apperror.Validation("directory id is required")
 	}
 	if err := h.service.Restore(r.Context(), claims.UserID, dirID); err != nil {
 		return err
@@ -261,11 +261,11 @@ func (h *Handler) Restore(w http.ResponseWriter, r *http.Request) error {
 func (h *Handler) PermanentDelete(w http.ResponseWriter, r *http.Request) error {
 	claims, ok := auth.ClaimsFromCtx(r.Context())
 	if !ok {
-		return apperror.Unauthorized("не авторизован")
+		return apperror.Unauthorized("unauthorized")
 	}
 	dirID := chi.URLParam(r, "id")
 	if dirID == "" {
-		return apperror.Validation("id директории обязателен")
+		return apperror.Validation("directory id is required")
 	}
 	if err := h.service.PermanentDelete(r.Context(), claims.UserID, dirID); err != nil {
 		return err
