@@ -7,6 +7,7 @@ import { ApiError } from '../api/client';
 import { SearchBar } from './ui/SearchBar';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
+import { Avatar } from './ui/Avatar';
 import { cn } from '../utils/cn';
 
 const SEARCH_MIN_LENGTH = 2;
@@ -112,10 +113,10 @@ export const UserSearch: React.FC<{ className?: string }> = ({ className }) => {
                   key={user.id}
                   className="flex items-center gap-3 px-4 py-2.5 hover:bg-theme-hover transition-colors"
                 >
-                  <img
-                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`}
-                    alt={user.username}
-                    className="w-8 h-8 rounded-theme-full bg-theme-tertiary shrink-0"
+                  <Avatar
+                    username={user.username}
+                    displayName={user.first_name || user.second_name}
+                    className="w-8 h-8"
                   />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm text-theme-primary font-medium truncate">

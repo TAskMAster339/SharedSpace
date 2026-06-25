@@ -4,6 +4,7 @@ import { Folder, Star } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useAuthStore } from '../store/authStore';
 import { useDirectoryStore } from '../store/directoryStore';
+import { useFavorites } from '../hooks/useFavorites';
 import { getRecentFiles, FileMetadata } from '../api/files';
 import { getSharedWithMe, SharedDirectory } from '../api/sharing';
 import { getFavorites, FavoriteFile } from '../api/favorites';
@@ -25,6 +26,7 @@ const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const accessToken = useAuthStore((state) => state.accessToken);
   const { personalStorageId, isLoading: isStorageLoading } = useDirectoryStore();
+  const { isFavorite, toggleFavorite } = useFavorites();
 
   const [recentFiles, setRecentFiles] = useState<FileMetadata[]>([]);
   const [sharedDirectories, setSharedDirectories] = useState<SharedDirectory[]>([]);
@@ -79,6 +81,29 @@ const DashboardPage: React.FC = () => {
     navigate(`/directories/${personalStorageId}`);
   };
 
+  const handleToggleFavorite = (fileId: string) => {
+    const wasFavorite = isFavorite(fileId);
+    toggleFavorite(fileId);
+
+    if (wasFavorite) {
+      setFavorites((prev) => prev.filter((f) => f.id !== fileId));
+      return;
+    }
+
+    const file = recentFiles.find((f) => f.id === fileId);
+    if (file) {
+      setFavorites((prev) => {
+        if (prev.some((f) => f.id === fileId)) return prev;
+        return [{ ...file, favorited_at: new Date().toISOString() }, ...prev].slice(
+          0,
+          FAVORITES_LIMIT,
+        );
+      });
+    }
+  };
+
+  const favoritesFullWidth = recentFiles.length > 0 && favorites.length > 0;
+
   return (
     <div className="space-y-8 pb-10">
       {/* Приветствие */}
@@ -119,6 +144,8 @@ const DashboardPage: React.FC = () => {
                   size={formatFileSize(file.size)}
                   type={resolveFileIconType(file.mime_type, file.extension)}
                   to={`/files/${file.id}`}
+                  isFavorite={isFavorite(file.id)}
+                  onToggleFavorite={handleToggleFavorite}
                 />
               ))}
             </div>
@@ -155,15 +182,19 @@ const DashboardPage: React.FC = () => {
           )}
         </Card>
 
-        {/* Блок Избранного (ограничение 3) */}
-        <div className="lg:col-span-2">
+        {/* Блок Избранного: на всю ширину только если есть и недавние файлы, и избранное */}
+        <div className={favoritesFullWidth ? 'lg:col-span-2' : ''}>
           <Card>
             <CardHeader>
               <CardTitle>Избранное</CardTitle>
               <UILink to="/favorites">Смотреть все</UILink>
             </CardHeader>
             {favorites.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div
+                className={
+                  favoritesFullWidth ? 'grid grid-cols-1 sm:grid-cols-3 gap-4' : 'space-y-4'
+                }
+              >
                 {favorites.map((fav) => (
                   <FileItem
                     key={fav.id}
@@ -173,6 +204,8 @@ const DashboardPage: React.FC = () => {
                     size={formatFileSize(fav.size)}
                     type={resolveFileIconType(fav.mime_type, fav.extension)}
                     to={`/files/${fav.id}`}
+                    isFavorite={isFavorite(fav.id)}
+                    onToggleFavorite={handleToggleFavorite}
                   />
                 ))}
               </div>
@@ -182,7 +215,7 @@ const DashboardPage: React.FC = () => {
                 description="Избранных нет."
                 action={{
                   label: 'Отметь файл',
-                  onClick: () => navigate('/favorites'),
+                  onClick: handleUploadClick,
                 }}
                 size="sm"
               />

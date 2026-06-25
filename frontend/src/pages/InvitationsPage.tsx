@@ -5,6 +5,7 @@ import { getMyInvitations, acceptInvitation, declineInvitation, Invitation } fro
 import { ApiError } from '../api/client';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Button } from '../components/ui/Button';
+import { Avatar } from '../components/ui/Avatar';
 
 const InvitationsPage: React.FC = () => {
   const accessToken = useAuthStore((state) => state.accessToken);
@@ -86,10 +87,10 @@ const InvitationsPage: React.FC = () => {
               key={inv.id}
               className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-theme-lg bg-theme-secondary border border-theme shadow-theme-card"
             >
-              <img
-                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${inv.invited_by_username}`}
-                alt={inv.invited_by_username}
-                className="w-12 h-12 rounded-theme-full bg-theme-tertiary shrink-0"
+              <Avatar
+                username={inv.invited_by_username}
+                fallbackClassName="text-lg"
+                className="w-12 h-12"
               />
 
               <div className="flex-1 min-w-0">

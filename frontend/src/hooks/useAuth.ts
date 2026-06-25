@@ -15,7 +15,6 @@ export const useAuth = () => {
     isAuthenticated,
     firstName: user?.first_name ?? '',
     lastName: user?.second_name ?? '',
-    avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username ?? 'guest'}`,
     login,
     register,
     logout,

@@ -4,11 +4,12 @@ import { Settings, LogOut, ChevronDown, MoonStar } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { UserSearch } from './UserSearch';
+import { Avatar } from './ui/Avatar';
 
 const logo = '/logo-mark.png';
 
 export const Header: React.FC = () => {
-  const { isAuthenticated, firstName, lastName, avatar, logout } = useAuth();
+  const { isAuthenticated, user, firstName, lastName, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
@@ -107,10 +108,10 @@ export const Header: React.FC = () => {
                 onClick={() => setDropdownOpen(!dropdownOpen)}
                 className="flex items-center gap-2 p-1 rounded-theme-full hover:bg-theme-hover transition-colors outline-none"
               >
-                <img
-                  src={avatar}
-                  alt="User"
-                  className="w-8 h-8 rounded-theme-full border border-theme"
+                <Avatar
+                  username={user?.username ?? ''}
+                  displayName={firstName}
+                  className="w-8 h-8 border border-theme"
                 />
                 <span className="text-sm font-medium text-theme-primary hidden sm:block">
                   {firstName} {lastNameInitial}
