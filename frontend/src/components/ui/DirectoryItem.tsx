@@ -6,7 +6,7 @@ import { cn } from '../../utils/cn';
 interface DirectoryItemProps {
   id: string;
   name: string;
-  members: number;
+  members?: number;
   to: string;
   className?: string;
 }
@@ -32,7 +32,7 @@ export const DirectoryItem: React.FC<DirectoryItemProps> = ({
     </div>
     <div>
       <p className="text-sm text-theme-primary font-medium">{name}</p>
-      <p className="text-xs text-theme-muted">{members} участников</p>
+      {members !== undefined && <p className="text-xs text-theme-muted">{members} участников</p>}
     </div>
   </Link>
 );

@@ -6,6 +6,7 @@ import { ApiError } from '../api/client';
 import { Button } from '../components/ui/Button';
 import { Card, CardHeader, CardTitle } from '../components/ui/Card';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
+import { Avatar } from '../components/ui/Avatar';
 import { cn } from '../utils/cn';
 
 const MIN_PASSWORD_LENGTH = 8;
@@ -68,7 +69,7 @@ const InfoRow: React.FC<InfoRowProps> = ({ icon, label, value }) => (
 );
 
 const ProfileSettingsPage: React.FC = () => {
-  const { user, avatar, updateProfile, changePassword, deleteAccount } = useAuth();
+  const { user, updateProfile, changePassword, deleteAccount } = useAuth();
   const navigate = useNavigate();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -244,10 +245,11 @@ const ProfileSettingsPage: React.FC = () => {
       <Card className="relative overflow-hidden p-0">
         <div className="h-20 sm:h-24 bg-gradient-to-r from-brand to-brand-dark" />
         <div className="px-4 sm:px-6 pb-5 sm:pb-6 -mt-10 sm:-mt-12 flex flex-col sm:flex-row sm:items-end gap-4">
-          <img
-            src={avatar}
-            alt={user.username}
-            className="w-20 h-20 sm:w-24 sm:h-24 rounded-theme-full border-4 border-theme-secondary shadow-theme-card shrink-0"
+          <Avatar
+            username={user.username}
+            displayName={user.first_name || user.second_name}
+            fallbackClassName="text-3xl"
+            className="w-20 h-20 sm:w-24 sm:h-24 border-4 border-theme-secondary shadow-theme-card"
           />
           <div className="min-w-0 flex-1">
             <h1 className="text-lg sm:text-xl font-semibold text-theme-primary truncate">

@@ -14,6 +14,16 @@ export interface SharedDirectoryWithStats {
   created_at: string;
 }
 
+export interface SharedDirectory {
+  id: string;
+  directory_id: string;
+  name: string;
+  owner_id: string;
+  owner_name: string;
+  role: SharingRole;
+  created_at: string;
+}
+
 export interface Member {
   id: string;
   user_id: string;
@@ -24,6 +34,38 @@ export interface Member {
 
 export function getSharedWithMeStats(accessToken: string): Promise<SharedDirectoryWithStats[]> {
   return apiRequest<SharedDirectoryWithStats[]>('/shared/with-me/stats', {
+    method: 'GET',
+    token: accessToken,
+  });
+}
+
+export function getSharedWithMe(accessToken: string, limit?: number): Promise<SharedDirectory[]> {
+  const query = limit ? `?limit=${limit}` : '';
+  return apiRequest<SharedDirectory[]>(`/shared/with-me${query}`, {
+    method: 'GET',
+    token: accessToken,
+  });
+}
+
+export interface InvitableDirectory {
+  id: string;
+  directory_id: string;
+  name: string;
+  owner_id: string;
+  owner_name: string;
+  parent_id: string | null;
+  type: string;
+  role: SharingRole;
+  created_at: string;
+  updated_at: string;
+}
+
+export function getUserSharedDirectories(
+  accessToken: string,
+  limit?: number,
+): Promise<InvitableDirectory[]> {
+  const query = limit ? `?limit=${limit}` : '';
+  return apiRequest<InvitableDirectory[]>(`/shared/directories${query}`, {
     method: 'GET',
     token: accessToken,
   });
@@ -72,5 +114,17 @@ export function declineInvitation(accessToken: string, invitationId: string): Pr
   return apiRequest<void>(`/invitations/${invitationId}/decline`, {
     method: 'POST',
     token: accessToken,
+  });
+}
+
+export function inviteToDirectory(
+  accessToken: string,
+  sharedDirectoryId: string,
+  username: string,
+): Promise<Invitation> {
+  return apiRequest<Invitation>(`/shared-directories/${sharedDirectoryId}/invitations`, {
+    method: 'POST',
+    token: accessToken,
+    body: JSON.stringify({ username }),
   });
 }

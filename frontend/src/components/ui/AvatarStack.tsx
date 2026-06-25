@@ -1,4 +1,5 @@
 import React from 'react';
+import { Avatar } from './Avatar';
 
 interface AvatarStackProps {
   usernames: string[];
@@ -12,12 +13,12 @@ export const AvatarStack: React.FC<AvatarStackProps> = ({ usernames, max = 4 }) 
   return (
     <div className="flex items-center -space-x-2">
       {visible.map((username) => (
-        <img
+        <Avatar
           key={username}
-          src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`}
-          alt={username}
+          username={username}
           title={username}
-          className="w-7 h-7 rounded-theme-full border-2 border-theme-secondary bg-theme-tertiary"
+          fallbackClassName="text-xs"
+          className="w-7 h-7 border-2 border-theme-secondary"
         />
       ))}
       {overflow > 0 && (

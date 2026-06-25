@@ -268,21 +268,24 @@ func (r *Repository) RemoveMember(ctx context.Context, db dbTX, sharedDirID, use
 func (r *Repository) GetUserSharedDirectories(ctx context.Context, db dbTX, userID string, limit int) ([]SharedDirectoryResponse, error) {
 	query := `
 		SELECT
+			sd.id,
 			sd.id AS shared_directory_id,
 			d.id AS directory_id,
 			d.name,
 			d.owner_id,
+			owner.username AS owner_name,
 			d.parent_id,
 			d.type,
+			COALESCE(sdm.role, 'admin') AS role,
 			d.created_at,
 			d.updated_at
 		FROM shared_directories sd
 		JOIN directories d ON sd.directory_id = d.id
+		JOIN users owner ON owner.id = sd.owner_id
+		LEFT JOIN shared_directory_members sdm
+			ON sdm.shared_directory_id = sd.id AND sdm.user_id = $1
 		WHERE sd.owner_id = $1
-		   OR EXISTS (
-		     SELECT 1 FROM shared_directory_members sdm
-		     WHERE sdm.shared_directory_id = sd.id AND sdm.user_id = $1 AND sdm.role = 'admin'
-		   )
+		   OR (sdm.user_id = $1 AND sdm.role = 'admin')
 		ORDER BY d.created_at DESC`
 	args := []any{userID}
 
@@ -301,14 +304,18 @@ func (r *Repository) GetUserSharedDirectories(ctx context.Context, db dbTX, user
 	for rows.Next() {
 		var resp SharedDirectoryResponse
 		var parentID *string
+		var role string
 
 		err := rows.Scan(
+			&resp.ID,
 			&resp.SharedDirectoryID,
 			&resp.DirectoryID,
 			&resp.Name,
 			&resp.OwnerID,
+			&resp.OwnerName,
 			&parentID,
 			&resp.Type,
+			&role,
 			&resp.CreatedAt,
 			&resp.UpdatedAt,
 		)
@@ -316,9 +323,8 @@ func (r *Repository) GetUserSharedDirectories(ctx context.Context, db dbTX, user
 			return nil, err
 		}
 
-		if parentID != nil {
-			resp.ParentID = parentID
-		}
+		resp.ParentID = parentID
+		resp.Role = Role(role)
 
 		result = append(result, resp)
 	}

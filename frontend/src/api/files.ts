@@ -1,3 +1,5 @@
+import { apiRequest } from './client';
+
 export interface FileUploadResponse {
   id: string;
   filename: string;
@@ -13,6 +15,30 @@ export interface FileUploadResponse {
 
 export interface UploadFilesResponse {
   files: FileUploadResponse[];
+}
+
+export interface FileMetadata {
+  id: string;
+  filename: string;
+  extension: string;
+  mime_type: string;
+  size: number;
+  directory_id: string;
+  owner_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface RecentFilesResponse {
+  files: FileMetadata[];
+}
+
+export function getRecentFiles(accessToken: string, limit?: number): Promise<RecentFilesResponse> {
+  const query = limit ? `?limit=${limit}` : '';
+  return apiRequest<RecentFilesResponse>(`/files/recent${query}`, {
+    method: 'GET',
+    token: accessToken,
+  });
 }
 
 // Функция загрузки с прогрессом через XHR
