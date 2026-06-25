@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { cn } from '../../utils/cn';
 
 interface AvatarProps {
@@ -16,37 +16,18 @@ export const Avatar: React.FC<AvatarProps> = ({
   className,
   fallbackClassName = 'text-sm',
 }) => {
-  const [failed, setFailed] = useState(false);
-
-  // Сбрасываем ошибку, если поменялся пользователь.
-  useEffect(() => {
-    setFailed(false);
-  }, [username]);
-
   const initial = (displayName?.trim() || username?.trim() || '?').charAt(0).toUpperCase();
 
-  if (failed || !username) {
-    return (
-      <div
-        title={title}
-        className={cn(
-          'rounded-theme-full bg-brand-light text-brand flex items-center justify-center font-semibold shrink-0',
-          fallbackClassName,
-          className,
-        )}
-      >
-        {initial}
-      </div>
-    );
-  }
-
   return (
-    <img
-      src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(username)}`}
-      alt={username}
+    <div
       title={title}
-      onError={() => setFailed(true)}
-      className={cn('rounded-theme-full bg-theme-tertiary shrink-0', className)}
-    />
+      className={cn(
+        'rounded-theme-full bg-brand-light text-brand flex items-center justify-center font-semibold shrink-0',
+        fallbackClassName,
+        className,
+      )}
+    >
+      {initial}
+    </div>
   );
 };
