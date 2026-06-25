@@ -211,6 +211,14 @@
     background-color: var(--danger-light);
   }
 
+  .bg-danger {
+    background-color: var(--danger);
+  }
+
+  .hover\:bg-danger-hover:hover {
+    background-color: var(--danger-hover);
+  }
+
   /* Тени */
   .shadow-theme-card {
     box-shadow: var(--shadow-card);

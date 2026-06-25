@@ -112,3 +112,24 @@ export function getFileContentUrl(accessToken: string, fileId: string): Promise<
     token: accessToken,
   });
 }
+
+export function softDeleteFile(accessToken: string, fileId: string): Promise<void> {
+  return apiRequest<void>(`/files/${fileId}`, {
+    method: 'DELETE',
+    token: accessToken,
+  });
+}
+
+export function restoreFile(accessToken: string, fileId: string): Promise<void> {
+  return apiRequest<void>(`/files/${fileId}/restore`, {
+    method: 'POST',
+    token: accessToken,
+  });
+}
+
+export function permanentDeleteFile(accessToken: string, fileId: string): Promise<void> {
+  return apiRequest<void>(`/files/${fileId}/permanent`, {
+    method: 'DELETE',
+    token: accessToken,
+  });
+}
