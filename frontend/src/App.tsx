@@ -53,7 +53,6 @@ const App: React.FC = () => {
             </Layout>
           }
         />
-
         {/* Только гостевые маршруты */}
         <Route
           element={
