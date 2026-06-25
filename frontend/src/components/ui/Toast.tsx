@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { CheckCircle, XCircle, X } from 'lucide-react';
+import { CheckCircle, XCircle, X, Trash2, RotateCcw } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
-export type ToastVariant = 'success' | 'error' | 'info';
+export type ToastVariant = 'success' | 'error' | 'info' | 'undo';
 
 interface ToastProps {
   message: string;
   variant?: ToastVariant;
-  duration?: number; // в миллисекундах
+  duration?: number;
   onClose: () => void;
+  actionLabel?: string;
+  onAction?: () => void;
 }
 
 export const Toast: React.FC<ToastProps> = ({
@@ -16,6 +18,8 @@ export const Toast: React.FC<ToastProps> = ({
   variant = 'success',
   duration = 3000,
   onClose,
+  actionLabel,
+  onAction,
 }) => {
   const [isVisible, setIsVisible] = useState(true);
 
@@ -47,23 +51,42 @@ export const Toast: React.FC<ToastProps> = ({
       icon: CheckCircle,
       iconColor: 'text-blue-500',
     },
+    undo: {
+      bg: 'bg-amber-50 dark:bg-amber-950/50',
+      border: 'border-amber-200 dark:border-amber-800',
+      icon: Trash2,
+      iconColor: 'text-amber-500',
+    },
   };
 
-  const style = variants[variant];
+  const style = variants[variant] || variants.info;
   const Icon = style.icon;
 
   return (
     <div
       className={cn(
-        'flex items-start gap-3 px-4 py-3 rounded-theme-lg border shadow-theme-dropdown max-w-sm w-full',
+        'flex items-center gap-3 px-4 py-3 rounded-theme-lg border shadow-theme-dropdown max-w-sm w-full',
         'transition-all duration-300 transform',
         style.bg,
         style.border,
         isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0',
       )}
     >
-      <Icon size={20} className={cn('shrink-0 mt-0.5', style.iconColor)} />
+      <Icon size={20} className={cn('shrink-0', style.iconColor)} />
       <p className="text-sm text-theme-primary flex-1">{message}</p>
+      {actionLabel && onAction && (
+        <button
+          onClick={() => {
+            onAction();
+            setIsVisible(false);
+            setTimeout(onClose, 300);
+          }}
+          className="shrink-0 text-brand hover:text-brand-hover font-medium text-sm transition-colors flex items-center gap-1"
+        >
+          <RotateCcw size={14} />
+          {actionLabel}
+        </button>
+      )}
       <button
         onClick={() => {
           setIsVisible(false);

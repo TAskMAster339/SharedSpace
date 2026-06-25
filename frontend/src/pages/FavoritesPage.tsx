@@ -162,12 +162,15 @@ const FavoritesPage: React.FC = () => {
       </Card>
 
       {deletedToast && (
-        <Toast
-          message={`«${deletedToast.name}» перемещён в корзину`}
-          actionLabel="Отменить"
-          onAction={handleUndoDelete}
-          onClose={() => setDeletedToast(null)}
-        />
+        <div className="fixed bottom-4 right-4 z-50">
+          <Toast
+            variant="undo"
+            message={`«${deletedToast.name}» перемещён в корзину`}
+            actionLabel="Отменить"
+            onAction={handleUndoDelete}
+            onClose={() => setDeletedToast(null)}
+          />
+        </div>
       )}
     </div>
   );

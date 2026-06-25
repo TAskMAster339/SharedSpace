@@ -212,7 +212,7 @@ export const GlobalDropZone: React.FC<GlobalDropZoneProps> = ({
   }, [handleDragEnter, handleDragOver, handleDragLeave, handleDrop]);
 
   return (
-    <div ref={dropZoneRef} className="relative w-full h-full">
+    <div ref={dropZoneRef} className="relative flex-1 flex flex-col min-h-0">
       {children}
 
       {isDragging && isDndAllowed() && (
