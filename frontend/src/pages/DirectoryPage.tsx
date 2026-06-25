@@ -626,9 +626,7 @@ const DirectoryPage: React.FC = () => {
                         name={folder.name}
                         to={`/directories/${folder.id}`}
                         onDelete={
-                          canModify && !checkIsShared(folder.id)
-                            ? handleDeleteFolder
-                            : undefined
+                          canModify && !checkIsShared(folder.id) ? handleDeleteFolder : undefined
                         }
                       />
                     ))}
@@ -642,9 +640,7 @@ const DirectoryPage: React.FC = () => {
                         name={folder.name}
                         to={`/directories/${folder.id}`}
                         onDelete={
-                          canModify && !checkIsShared(folder.id)
-                            ? handleDeleteFolder
-                            : undefined
+                          canModify && !checkIsShared(folder.id) ? handleDeleteFolder : undefined
                         }
                       />
                     ))}
