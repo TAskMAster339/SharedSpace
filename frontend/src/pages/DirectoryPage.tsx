@@ -24,6 +24,7 @@ import { uploadFilesWithProgress } from '../api/files';
 import { formatFileSize, formatDate } from '../utils/format';
 import { useFavorites } from '../hooks/useFavorites';
 import { resolveFileIconType } from '../utils/fileType';
+import { useDragDropStore } from '../store/dragDropStore';
 
 interface BreadcrumbItem {
   id: string;
@@ -58,6 +59,7 @@ const DirectoryPage: React.FC = () => {
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const { isFavorite, toggleFavorite } = useFavorites();
   const [isShared, setIsShared] = useState(false);
+  const setDragDropTarget = useDragDropStore((state) => state.setTargetDirectoryId);
 
   // Breadcrumbs
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([]);
@@ -169,6 +171,7 @@ const DirectoryPage: React.FC = () => {
     async (dirId: string) => {
       if (!accessToken || !dirId) return;
 
+      setDragDropTarget(dirId);
       setIsLoading(true);
       setError(null);
 
@@ -198,7 +201,7 @@ const DirectoryPage: React.FC = () => {
         setIsLoading(false);
       }
     },
-    [accessToken, navigate, loadBreadcrumbs, checkIsShared],
+    [accessToken, navigate, loadBreadcrumbs, checkIsShared, setDragDropTarget],
   );
 
   // --- Обработчик навигации по breadcrumbs ---
@@ -259,6 +262,20 @@ const DirectoryPage: React.FC = () => {
       }
     }
   }, [isLoadingShared, actualId, accessToken, checkIsShared, loadBreadcrumbs, isShared]);
+
+  // --- Эффект 4: Обновляем DnD target при изменении actualId
+  useEffect(() => {
+    if (actualId) {
+      setDragDropTarget(actualId);
+    }
+  }, [actualId, setDragDropTarget]);
+
+  // --- Эффект 5: Очищаем DnD target при размонтировании
+  useEffect(() => {
+    return () => {
+      setDragDropTarget(null);
+    };
+  }, [setDragDropTarget]);
 
   // --- Сохраняем режим просмотра ---
   useEffect(() => {

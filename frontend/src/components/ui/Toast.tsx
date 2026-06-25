@@ -1,0 +1,78 @@
+import React, { useEffect, useState } from 'react';
+import { CheckCircle, XCircle, X } from 'lucide-react';
+import { cn } from '../../utils/cn';
+
+export type ToastVariant = 'success' | 'error' | 'info';
+
+interface ToastProps {
+  message: string;
+  variant?: ToastVariant;
+  duration?: number; // в миллисекундах
+  onClose: () => void;
+}
+
+export const Toast: React.FC<ToastProps> = ({
+  message,
+  variant = 'success',
+  duration = 3000,
+  onClose,
+}) => {
+  const [isVisible, setIsVisible] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsVisible(false);
+      setTimeout(onClose, 300);
+    }, duration);
+
+    return () => clearTimeout(timer);
+  }, [duration, onClose]);
+
+  const variants = {
+    success: {
+      bg: 'bg-emerald-50 dark:bg-emerald-950/50',
+      border: 'border-emerald-200 dark:border-emerald-800',
+      icon: CheckCircle,
+      iconColor: 'text-emerald-500',
+    },
+    error: {
+      bg: 'bg-red-50 dark:bg-red-950/50',
+      border: 'border-red-200 dark:border-red-800',
+      icon: XCircle,
+      iconColor: 'text-red-500',
+    },
+    info: {
+      bg: 'bg-blue-50 dark:bg-blue-950/50',
+      border: 'border-blue-200 dark:border-blue-800',
+      icon: CheckCircle,
+      iconColor: 'text-blue-500',
+    },
+  };
+
+  const style = variants[variant];
+  const Icon = style.icon;
+
+  return (
+    <div
+      className={cn(
+        'flex items-start gap-3 px-4 py-3 rounded-theme-lg border shadow-theme-dropdown max-w-sm w-full',
+        'transition-all duration-300 transform',
+        style.bg,
+        style.border,
+        isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0',
+      )}
+    >
+      <Icon size={20} className={cn('shrink-0 mt-0.5', style.iconColor)} />
+      <p className="text-sm text-theme-primary flex-1">{message}</p>
+      <button
+        onClick={() => {
+          setIsVisible(false);
+          setTimeout(onClose, 300);
+        }}
+        className="shrink-0 text-theme-muted hover:text-theme-primary transition-colors"
+      >
+        <X size={16} />
+      </button>
+    </div>
+  );
+};
