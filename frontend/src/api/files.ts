@@ -98,3 +98,17 @@ export function uploadFilesWithProgress(
     xhr.send(formData);
   });
 }
+
+export function getFileMetadata(accessToken: string, fileId: string): Promise<FileMetadata> {
+  return apiRequest<FileMetadata>(`/files/${fileId}`, {
+    method: 'GET',
+    token: accessToken,
+  });
+}
+
+export function getFileContentUrl(accessToken: string, fileId: string): Promise<{ url: string }> {
+  return apiRequest<{ url: string }>(`/files/${fileId}/content`, {
+    method: 'GET',
+    token: accessToken,
+  });
+}

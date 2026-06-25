@@ -1,13 +1,585 @@
-import React from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Download, Share2, Star, Image, EyeOff } from 'lucide-react';
+import { useAuthStore } from '../store/authStore';
+import { useFavorites } from '../hooks/useFavorites';
+import { getFileMetadata, getFileContentUrl, FileMetadata } from '../api/files';
+import { getDirectoryById, Directory } from '../api/directories';
+import { ApiError } from '../api/client';
+import { FileIcon } from '../components/ui/FileIcon';
+import { Button } from '../components/ui/Button';
+import { resolveFileIconType } from '../utils/fileType';
+import { formatFileSize, formatDate } from '../utils/format';
+import { cn } from '../utils/cn';
+
+// Определяем типы файлов для предпросмотра
+type PreviewType =
+  | 'image'
+  | 'video'
+  | 'audio'
+  | 'pdf'
+  | 'text'
+  | 'code'
+  | 'presentation'
+  | 'spreadsheet'
+  | 'doc'
+  | 'unsupported';
+
+// Расширения, которые поддерживаются для просмотра через iframe
+const SUPPORTED_EXTENSIONS_FOR_VIEW = new Set([
+  'pdf',
+  'txt',
+  'md',
+  'csv',
+  'xml',
+  'json',
+  'js',
+  'ts',
+  'jsx',
+  'tsx',
+  'html',
+  'css',
+  'scss',
+  'py',
+  'java',
+  'cpp',
+  'c',
+  'go',
+  'rs',
+  'rb',
+  'php',
+  'sh',
+  'bash',
+  'sql',
+  'yaml',
+  'yml',
+]);
+
+// Расширения для кода
+const CODE_EXTENSIONS = new Set([
+  'js',
+  'ts',
+  'jsx',
+  'tsx',
+  'html',
+  'css',
+  'scss',
+  'json',
+  'xml',
+  'yaml',
+  'yml',
+  'py',
+  'java',
+  'cpp',
+  'c',
+  'go',
+  'rs',
+  'rb',
+  'php',
+  'sh',
+  'bash',
+  'sql',
+]);
+
+// Расширения, которые часто блокируются браузером в iframe
+const PROBLEMATIC_EXTENSIONS = new Set(['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'go']);
 
 const FileViewPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const user = useAuthStore((state) => state.user);
+  const { isFavorite, toggleFavorite } = useFavorites();
+
+  const [file, setFile] = useState<FileMetadata | null>(null);
+  const [fileUrl, setFileUrl] = useState<string | null>(null);
+  const [directory, setDirectory] = useState<Directory | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [previewType, setPreviewType] = useState<PreviewType>('unsupported');
+  const [canPreview, setCanPreview] = useState(true);
+  const [iframeError, setIframeError] = useState(false);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  // Определяем тип для предпросмотра на основе MIME-типа и расширения
+  const determinePreviewType = useCallback((mimeType: string, extension: string): PreviewType => {
+    const ext = extension.replace(/^\./, '').toLowerCase();
+
+    if (mimeType.startsWith('image/')) return 'image';
+    if (mimeType.startsWith('video/')) return 'video';
+    if (mimeType.startsWith('audio/')) return 'audio';
+    if (mimeType === 'application/pdf') return 'pdf';
+    if (mimeType.startsWith('text/')) return 'text';
+    if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return 'spreadsheet';
+    if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) return 'presentation';
+    if (mimeType.includes('word') || mimeType.includes('document')) return 'doc';
+
+    // Проверка по расширению
+    if (SUPPORTED_EXTENSIONS_FOR_VIEW.has(ext)) {
+      if (CODE_EXTENSIONS.has(ext)) return 'code';
+      return 'text';
+    }
+
+    return 'unsupported';
+  }, []);
+
+  // Проверяем, проблемный ли файл для iframe
+  const isProblematicForIframe = useCallback((filename: string): boolean => {
+    const ext = filename.split('.').pop()?.toLowerCase() || '';
+    return PROBLEMATIC_EXTENSIONS.has(ext);
+  }, []);
+
+  // Загрузка данных файла
+  useEffect(() => {
+    if (!accessToken || !id) return;
+
+    let isMounted = true;
+    setIsLoading(true);
+    setError(null);
+    setCanPreview(true);
+    setIframeError(false);
+
+    const loadFileData = async () => {
+      try {
+        // Получаем метаданные файла
+        const fileData = await getFileMetadata(accessToken, id);
+        if (!isMounted) return;
+        setFile(fileData);
+
+        // Определяем тип для предпросмотра
+        const preview = determinePreviewType(fileData.mime_type, fileData.extension);
+        setPreviewType(preview);
+
+        // Проверяем, поддерживается ли просмотр
+        const isViewable = preview !== 'unsupported';
+        setCanPreview(isViewable);
+
+        // Если файл проблемный для iframe, сразу помечаем как непросматриваемый
+        if (isProblematicForIframe(fileData.filename)) {
+          setCanPreview(false);
+          if (isMounted) {
+            setIsLoading(false);
+          }
+          return;
+        }
+
+        // Загружаем URL для предпросмотра (только для поддерживаемых типов)
+        if (isViewable) {
+          try {
+            const content = await getFileContentUrl(accessToken, id);
+            if (isMounted) {
+              setFileUrl(content.url);
+            }
+          } catch (err) {
+            console.warn('Не удалось получить URL для предпросмотра:', err);
+          }
+        }
+
+        // Получаем информацию о директории
+        try {
+          const dir = await getDirectoryById(accessToken, fileData.directory_id);
+          if (isMounted) {
+            setDirectory(dir);
+          }
+        } catch (err) {
+          console.warn('Не удалось загрузить информацию о директории:', err);
+        }
+      } catch (err) {
+        if (!isMounted) return;
+        if (err instanceof ApiError) {
+          setError(err.message);
+        } else {
+          setError('Не удалось загрузить файл');
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadFileData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [accessToken, id, determinePreviewType, isProblematicForIframe]);
+
+  // Определяем, является ли файл изображением
+  const isImage = previewType === 'image';
+
+  // Получаем расширение файла без точки
+  const getFileExtension = (filename: string): string => {
+    const ext = filename.split('.').pop() || '';
+    return ext.toLowerCase();
+  };
+
+  // Функция для скачивания файла с правильным именем
+  const downloadFile = useCallback(async () => {
+    if (!accessToken || !id || !file) return;
+    try {
+      const content = await getFileContentUrl(accessToken, id);
+
+      // Используем fetch для получения файла с правильным именем
+      const response = await fetch(content.url);
+      const blob = await response.blob();
+
+      // Создаём ссылку для скачивания
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = file.filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Освобождаем URL объект
+      setTimeout(() => URL.revokeObjectURL(link.href), 100);
+    } catch (err) {
+      console.error('Ошибка скачивания:', err);
+      // Fallback: открыть в новой вкладке
+      try {
+        const content = await getFileContentUrl(accessToken, id);
+        window.open(content.url, '_blank');
+      } catch (e) {
+        console.error('Ошибка при fallback скачивании:', e);
+      }
+    }
+  }, [accessToken, id, file]);
+
+  // Обработчик переключения избранного
+  const handleToggleFavorite = useCallback(() => {
+    if (file) {
+      toggleFavorite(file.id);
+    }
+  }, [file, toggleFavorite]);
+
+  // Обработчик перехода назад
+  const handleGoBack = useCallback(() => {
+    if (directory) {
+      navigate(`/directories/${directory.id}`);
+    } else {
+      navigate(-1);
+    }
+  }, [directory, navigate]);
+
+  // Обработчик ошибки iframe
+  const handleIframeError = useCallback(() => {
+    setIframeError(true);
+    setCanPreview(false);
+  }, []);
+
+  // Функция для рендера сообщения о недоступности просмотра
+  const renderUnavailableMessage = (message?: string, subMessage?: string) => {
+    return (
+      <div className="bg-theme-tertiary rounded-theme-lg py-16 flex flex-col items-center gap-4 text-theme-muted">
+        <EyeOff size={64} className="text-theme-muted" />
+        <p className="text-base font-medium">{message || 'Просмотр недоступен'}</p>
+        <p className="text-sm">{subMessage || 'Файл не может быть отображён в браузере'}</p>
+        <button
+          onClick={downloadFile}
+          className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-brand text-theme-on-brand hover:bg-brand-hover rounded-theme-md transition-colors text-sm font-medium"
+        >
+          <Download size={16} />
+          Скачать файл
+        </button>
+      </div>
+    );
+  };
+
+  // Функция для рендера предпросмотра
+  const renderPreview = () => {
+    if (!file) return null;
+
+    // Если файл не поддерживается для просмотра или произошла ошибка в iframe
+    if (!canPreview || iframeError) {
+      const ext = getFileExtension(file.filename);
+      let message = 'Просмотр недоступен';
+      let subMessage = 'Файл не может быть отображён в браузере';
+
+      if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) {
+        subMessage = 'Архивы не поддерживаются для просмотра';
+      } else if (PROBLEMATIC_EXTENSIONS.has(ext)) {
+        message = 'Предпросмотр недоступен';
+        subMessage = 'Файлы этого формата не поддерживаются для просмотра в браузере';
+      }
+
+      return renderUnavailableMessage(message, subMessage);
+    }
+
+    switch (previewType) {
+      case 'image':
+        return (
+          <div className="flex items-center justify-center bg-theme-tertiary rounded-theme-lg overflow-hidden min-h-[400px]">
+            {fileUrl ? (
+              <img
+                src={fileUrl}
+                alt={file.filename}
+                className="max-w-full max-h-[70vh] object-contain"
+                onError={() => {
+                  setCanPreview(false);
+                  setIframeError(true);
+                }}
+              />
+            ) : (
+              <div className="flex flex-col items-center gap-4 py-12 text-theme-muted">
+                <Image size={48} />
+                <p>Загрузка изображения...</p>
+              </div>
+            )}
+          </div>
+        );
+
+      case 'video':
+        return (
+          <div className="bg-theme-tertiary rounded-theme-lg overflow-hidden">
+            {fileUrl ? (
+              <video
+                src={fileUrl}
+                controls
+                className="w-full max-h-[70vh]"
+                controlsList="nodownload"
+                onError={handleIframeError}
+              />
+            ) : (
+              <div className="flex flex-col items-center gap-4 py-12 text-theme-muted">
+                <FileIcon type="video" size={48} />
+                <p>Загрузка видео...</p>
+              </div>
+            )}
+          </div>
+        );
+
+      case 'audio':
+        return (
+          <div className="bg-theme-tertiary rounded-theme-lg p-8">
+            <div className="flex flex-col items-center gap-6">
+              <div className="w-24 h-24 rounded-theme-full bg-brand-light flex items-center justify-center text-brand">
+                <FileIcon type="audio" size={40} />
+              </div>
+              <p className="text-lg font-medium text-theme-primary">{file.filename}</p>
+              {fileUrl ? (
+                <audio
+                  src={fileUrl}
+                  controls
+                  className="w-full max-w-md"
+                  controlsList="nodownload"
+                  onError={handleIframeError}
+                />
+              ) : (
+                <p className="text-theme-muted">Загрузка аудио...</p>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'pdf':
+        return (
+          <div className="bg-theme-tertiary rounded-theme-lg overflow-hidden min-h-[500px] relative">
+            {fileUrl ? (
+              <object
+                data={fileUrl}
+                type="application/pdf"
+                className="w-full h-[70vh]"
+                onError={handleIframeError}
+              >
+                {renderUnavailableMessage(
+                  'Не удалось загрузить PDF',
+                  'Попробуйте скачать файл для просмотра',
+                )}
+              </object>
+            ) : (
+              <div className="flex flex-col items-center gap-4 py-12 text-theme-muted">
+                <FileIcon type="pdf" size={48} />
+                <p>Загрузка PDF...</p>
+              </div>
+            )}
+          </div>
+        );
+
+      case 'text':
+      case 'code':
+        return (
+          <div className="bg-theme-tertiary rounded-theme-lg overflow-hidden min-h-[400px] relative">
+            {fileUrl ? (
+              <iframe
+                ref={iframeRef}
+                src={fileUrl}
+                className="w-full h-[70vh]"
+                title={file.filename}
+                sandbox="allow-scripts allow-same-origin"
+                onError={handleIframeError}
+              />
+            ) : (
+              <div className="flex flex-col items-center gap-4 py-12 text-theme-muted">
+                <FileIcon type={previewType === 'code' ? 'code' : 'text'} size={48} />
+                <p>Загрузка файла...</p>
+              </div>
+            )}
+          </div>
+        );
+
+      case 'spreadsheet':
+      case 'presentation':
+      case 'doc':
+        return renderUnavailableMessage(
+          'Предпросмотр недоступен',
+          'Файлы офисных форматов не поддерживаются для просмотра в браузере',
+        );
+
+      default:
+        return renderUnavailableMessage();
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (error || !file) {
+    return (
+      <div className="py-12 text-center">
+        <p className="text-theme-secondary">{error || 'Файл не найден'}</p>
+        <Button variant="secondary" onClick={() => navigate('/dashboard')} className="mt-4">
+          Вернуться на дашборд
+        </Button>
+      </div>
+    );
+  }
+
+  const fileIconType = resolveFileIconType(file.mime_type, file.extension);
+  const isFav = isFavorite(file.id);
+  const isConvertible =
+    isImage &&
+    (file.mime_type === 'image/png' ||
+      file.mime_type === 'image/jpeg' ||
+      file.extension === 'png' ||
+      file.extension === 'jpg' ||
+      file.extension === 'jpeg');
+
   return (
-    <>
-      <h1>Просмотр файла: {id}</h1>
-      <Link to={`/files/${id}/convert`}>Конвертировать</Link>
-    </>
+    <div className="space-y-6 pb-10">
+      {/* Навигация назад */}
+      <div>
+        <button
+          onClick={handleGoBack}
+          className="inline-flex items-center gap-2 text-sm text-theme-secondary hover:text-theme-primary transition-colors"
+        >
+          <ArrowLeft size={16} />
+          Вернуться к файлам
+        </button>
+      </div>
+
+      {/* Основной контент: 2 колонки (предпросмотр) + 1 колонка (информация) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Левая часть: предпросмотр (2/3) */}
+        <div className="lg:col-span-2">
+          <div className="bg-theme-secondary border border-theme rounded-theme-lg p-4 shadow-theme-card">
+            <h2 className="text-sm font-medium text-theme-secondary mb-3">Предпросмотр</h2>
+            {renderPreview()}
+          </div>
+        </div>
+
+        {/* Правая часть: информация о файле (1/3) */}
+        <div className="space-y-4">
+          {/* Информация о файле */}
+          <div className="bg-theme-secondary border border-theme rounded-theme-lg p-5 shadow-theme-card">
+            <h3 className="font-medium text-theme-primary mb-3">Информация о файле</h3>
+
+            {/* Отображение файла (как в favorites, но без обертки и звезды) */}
+            <div className="flex items-center gap-3 p-3 bg-theme-tertiary rounded-theme-md border border-theme">
+              <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card shrink-0">
+                <FileIcon type={fileIconType} size={20} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm text-theme-primary font-medium truncate">{file.filename}</p>
+                <p className="text-xs text-theme-muted">Файл</p>
+              </div>
+            </div>
+
+            {/* Разделитель */}
+            <div className="my-4 border-t border-theme" />
+
+            {/* Характеристики */}
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-theme-secondary">Размер</span>
+                <span className="text-theme-primary font-medium">{formatFileSize(file.size)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-theme-secondary">Владелец</span>
+                <span className="text-theme-primary font-medium">
+                  {file.owner_id === user?.id ? 'Вы' : `Пользователь ${file.owner_id.slice(0, 8)}`}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-theme-secondary">Создан</span>
+                <span className="text-theme-primary font-medium">
+                  {formatDate(file.created_at)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Действия */}
+          <div className="bg-theme-secondary border border-theme rounded-theme-lg p-5 shadow-theme-card">
+            <h3 className="font-medium text-theme-primary mb-3">Действия</h3>
+            <div className="space-y-2">
+              <button
+                onClick={downloadFile}
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-brand text-theme-on-brand hover:bg-brand-hover rounded-theme-md transition-colors text-sm font-medium"
+              >
+                <Download size={16} />
+                Скачать
+              </button>
+
+              <button
+                onClick={() => console.log('Поделиться ссылкой')}
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium"
+              >
+                <Share2 size={16} />
+                Поделиться ссылкой
+              </button>
+
+              <button
+                onClick={handleToggleFavorite}
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium"
+              >
+                <Star size={16} className={cn(isFav ? 'text-yellow-400 fill-current' : '')} />
+                {isFav ? 'Убрать из Избранного' : 'Добавить в Избранное'}
+              </button>
+            </div>
+
+            {/* Конвертация изображений (только для PNG и JPG) */}
+            {isConvertible && (
+              <>
+                <div className="my-4 border-t border-theme" />
+                <div>
+                  <p className="text-xs text-theme-muted">Конвертировать изображение</p>
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={() => navigate(`/files/${file.id}/convert?format=png`)}
+                      className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium"
+                    >
+                      PNG
+                    </button>
+                    <button
+                      onClick={() => navigate(`/files/${file.id}/convert?format=jpg`)}
+                      className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium"
+                    >
+                      JPG
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 
