@@ -93,7 +93,10 @@ const LoginPage: React.FC = () => {
           </Button>
         </form>
         <p className="mt-4 text-center text-theme-secondary text-sm">
-          Нет аккаунта? <Link to="/register">Регистрация</Link>
+          Нет аккаунта?{' '}
+          <Link to="/register" className="text-brand hover:text-brand-hover font-medium">
+            Регистрация
+          </Link>
         </p>
       </Card>
     </div>

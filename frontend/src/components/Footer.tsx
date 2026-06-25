@@ -6,6 +6,7 @@ import { useAuth } from '../hooks/useAuth';
 const logo = '/logo-mark.png';
 
 const GITHUB_URL = 'https://github.com/TAskMAster339/SharedSpace';
+const PRIVACY_POLICY_URL = 'https://ifbest.org/politika-konfidentsialnosti';
 
 export const Footer: React.FC = () => {
   const { isAuthenticated } = useAuth();
@@ -49,15 +50,26 @@ export const Footer: React.FC = () => {
           © {year} SharedSpace. Учебный проект.
         </p>
 
-        <a
-          href={GITHUB_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-1.5 text-sm font-medium text-theme-secondary hover:text-theme-primary transition-colors"
-        >
-          <GitFork size={16} />
-          GitHub
-        </a>
+        <div className="flex items-center gap-4">
+          <a
+            href={PRIVACY_POLICY_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm font-medium text-theme-secondary hover:text-theme-primary transition-colors"
+          >
+            Политика конфиденциальности
+          </a>
+
+          <a
+            href={GITHUB_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-sm font-medium text-theme-secondary hover:text-theme-primary transition-colors"
+          >
+            <GitFork size={16} />
+            GitHub
+          </a>
+        </div>
       </div>
     </footer>
   );
