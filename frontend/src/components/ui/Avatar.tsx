@@ -3,7 +3,6 @@ import { cn } from '../../utils/cn';
 
 interface AvatarProps {
   username: string;
-  displayName?: string;
   title?: string;
   className?: string;
   fallbackClassName?: string;
@@ -11,12 +10,11 @@ interface AvatarProps {
 
 export const Avatar: React.FC<AvatarProps> = ({
   username,
-  displayName,
   title,
   className,
   fallbackClassName = 'text-sm',
 }) => {
-  const initial = (displayName?.trim() || username?.trim() || '?').charAt(0).toUpperCase();
+  const initial = (username?.trim() || '?').charAt(0).toUpperCase();
 
   return (
     <div

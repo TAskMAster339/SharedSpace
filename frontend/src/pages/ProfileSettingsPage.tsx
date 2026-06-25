@@ -247,7 +247,6 @@ const ProfileSettingsPage: React.FC = () => {
         <div className="px-4 sm:px-6 pb-5 sm:pb-6 -mt-10 sm:-mt-12 flex flex-col sm:flex-row sm:items-end gap-4">
           <Avatar
             username={user.username}
-            displayName={user.first_name || user.second_name}
             fallbackClassName="text-3xl"
             className="w-20 h-20 sm:w-24 sm:h-24 border-4 border-theme-secondary shadow-theme-card"
           />

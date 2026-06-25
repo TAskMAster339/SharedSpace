@@ -147,11 +147,7 @@ export const Header: React.FC = () => {
                 onClick={() => setDropdownOpen(!dropdownOpen)}
                 className="flex items-center gap-2 p-1 rounded-theme-full hover:bg-theme-hover transition-colors outline-none"
               >
-                <Avatar
-                  username={user?.username ?? ''}
-                  displayName={firstName}
-                  className="w-8 h-8 border border-theme"
-                />
+                <Avatar username={user?.username ?? ''} className="w-8 h-8 border border-theme" />
                 <span className="text-sm font-medium text-theme-primary hidden sm:block">
                   {firstName} {lastNameInitial}
                 </span>
