@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { UserPlus, Check } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { searchUsers, SearchedUser } from '../api/users';
-import { getSharedWithMe, inviteToDirectory, SharedDirectory } from '../api/sharing';
+import { getUserSharedDirectories, inviteToDirectory, InvitableDirectory } from '../api/sharing';
 import { ApiError } from '../api/client';
 import { SearchBar } from './ui/SearchBar';
 import { Modal } from './ui/Modal';
@@ -14,7 +14,6 @@ const SEARCH_DEBOUNCE_MS = 300;
 
 export const UserSearch: React.FC<{ className?: string }> = ({ className }) => {
   const accessToken = useAuthStore((state) => state.accessToken);
-  const userId = useAuthStore((state) => state.user?.id);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchedUser[]>([]);
@@ -22,9 +21,8 @@ export const UserSearch: React.FC<{ className?: string }> = ({ className }) => {
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
   const [invitableUser, setInvitableUser] = useState<SearchedUser | null>(null);
-  const [directories, setDirectories] = useState<SharedDirectory[]>([]);
+  const [directories, setDirectories] = useState<InvitableDirectory[]>([]);
   const [isLoadingDirectories, setIsLoadingDirectories] = useState(false);
-  const [directoryFilter, setDirectoryFilter] = useState('');
   const [selectedDirectoryId, setSelectedDirectoryId] = useState('');
   const [isInviting, setIsInviting] = useState(false);
   const [inviteError, setInviteError] = useState('');
@@ -61,16 +59,13 @@ export const UserSearch: React.FC<{ className?: string }> = ({ className }) => {
   const openInviteModal = (user: SearchedUser) => {
     setInvitableUser(user);
     setSelectedDirectoryId('');
-    setDirectoryFilter('');
     setInviteError('');
     setInviteSuccess(false);
 
     if (accessToken) {
       setIsLoadingDirectories(true);
-      getSharedWithMe(accessToken)
-        .then((all) =>
-          setDirectories(all.filter((dir) => dir.owner_id === userId || dir.role === 'admin')),
-        )
+      getUserSharedDirectories(accessToken, 3)
+        .then(setDirectories)
         .catch(() => setDirectories([]))
         .finally(() => setIsLoadingDirectories(false));
     }
@@ -174,42 +169,27 @@ export const UserSearch: React.FC<{ className?: string }> = ({ className }) => {
                 Нет директорий, в которые вы можете приглашать.
               </p>
             ) : (
-              <>
-                {directories.length > 5 && (
-                  <SearchBar
-                    placeholder="Фильтр по названию..."
-                    value={directoryFilter}
-                    onChange={setDirectoryFilter}
-                  />
-                )}
-
-                {(() => {
-                  const filtered = directories.filter((dir) =>
-                    dir.name.toLowerCase().includes(directoryFilter.trim().toLowerCase()),
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {directories.map((dir) => {
+                  const isSelected = selectedDirectoryId === dir.id;
+                  return (
+                    <button
+                      key={dir.id}
+                      type="button"
+                      onClick={() => setSelectedDirectoryId(dir.id)}
+                      className={cn(
+                        'w-full flex items-center justify-between gap-2 text-left px-4 py-2.5 rounded-theme-md border-2 transition-colors text-sm',
+                        isSelected
+                          ? 'border-brand bg-brand text-theme-on-brand font-medium'
+                          : 'border-theme-hover bg-theme-tertiary text-theme-secondary hover:border-brand/50',
+                      )}
+                    >
+                      <span className="truncate">{dir.name}</span>
+                      {isSelected && <Check size={16} className="shrink-0" />}
+                    </button>
                   );
-                  return filtered.length === 0 ? (
-                    <p className="text-sm text-theme-muted text-center py-4">Ничего не найдено.</p>
-                  ) : (
-                    <div className="space-y-2 max-h-60 overflow-y-auto">
-                      {filtered.map((dir) => (
-                        <button
-                          key={dir.id}
-                          type="button"
-                          onClick={() => setSelectedDirectoryId(dir.id)}
-                          className={cn(
-                            'w-full text-left px-4 py-2.5 rounded-theme-md border-2 transition-colors text-sm',
-                            selectedDirectoryId === dir.id
-                              ? 'border-brand bg-brand-light/20 text-theme-primary'
-                              : 'border-theme-hover bg-theme-tertiary text-theme-secondary hover:border-brand/50',
-                          )}
-                        >
-                          {dir.name}
-                        </button>
-                      ))}
-                    </div>
-                  );
-                })()}
-              </>
+                })}
+              </div>
             )}
 
             {inviteError && <p className="text-danger text-sm">{inviteError}</p>}

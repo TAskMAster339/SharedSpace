@@ -47,6 +47,30 @@ export function getSharedWithMe(accessToken: string, limit?: number): Promise<Sh
   });
 }
 
+export interface InvitableDirectory {
+  id: string;
+  directory_id: string;
+  name: string;
+  owner_id: string;
+  owner_name: string;
+  parent_id: string | null;
+  type: string;
+  role: SharingRole;
+  created_at: string;
+  updated_at: string;
+}
+
+export function getUserSharedDirectories(
+  accessToken: string,
+  limit?: number,
+): Promise<InvitableDirectory[]> {
+  const query = limit ? `?limit=${limit}` : '';
+  return apiRequest<InvitableDirectory[]>(`/shared/directories${query}`, {
+    method: 'GET',
+    token: accessToken,
+  });
+}
+
 export function getMembers(
   accessToken: string,
   sharedDirectoryId: string,
