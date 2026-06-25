@@ -44,6 +44,9 @@ const RegisterPage: React.FC = () => {
     if (confirmPassword !== password) {
       errors.confirmPassword = 'Пароли не совпадают';
     }
+    if (!policyAccepted) {
+      errors.policy = 'Необходимо согласиться с политикой конфиденциальности';
+    }
 
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
@@ -158,27 +161,32 @@ const RegisterPage: React.FC = () => {
 
           {formError && <p className="text-danger text-sm">{formError}</p>}
 
-          <label className="flex items-start gap-2 ml-3 text-sm text-theme-secondary cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={policyAccepted}
-              onChange={(e) => setPolicyAccepted(e.target.checked)}
-              className="mt-0.5 h-4 w-4 shrink-0 accent-brand cursor-pointer"
-            />
-            <span className="leading-5">
-              Я прочитал и согласен с{' '}
-              <a
-                href={PRIVACY_POLICY_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-brand hover:text-brand-hover underline"
-              >
-                политикой конфиденциальности
-              </a>
-            </span>
-          </label>
+          <div>
+            <label className="flex items-start gap-2 ml-3 text-sm text-theme-secondary cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={policyAccepted}
+                onChange={(e) => setPolicyAccepted(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 accent-brand cursor-pointer"
+              />
+              <span className="leading-5">
+                Я прочитал и согласен с{' '}
+                <a
+                  href={PRIVACY_POLICY_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-brand hover:text-brand-hover underline"
+                >
+                  политикой конфиденциальности
+                </a>
+              </span>
+            </label>
+            {fieldErrors.policy && (
+              <p className="text-danger text-sm mt-1 pl-3">{fieldErrors.policy}</p>
+            )}
+          </div>
 
-          <Button type="submit" disabled={isSubmitting || !policyAccepted} className="mt-1 w-full">
+          <Button type="submit" disabled={isSubmitting} className="mt-1 w-full">
             {isSubmitting ? 'Регистрация...' : 'Зарегистрироваться'}
           </Button>
         </form>
