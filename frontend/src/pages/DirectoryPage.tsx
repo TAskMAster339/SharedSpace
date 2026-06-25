@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Upload, FolderPlus, Settings, ChevronRight, Home, Users } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useDirectoryStore } from '../store/directoryStore';
+import { useDragDropStore } from '../store/dragDropStore';
 import { useSharedDirectories } from '../hooks/useSharedDirectories';
 import { Modal } from '../components/ui/Modal';
 import { DropZone } from '../components/ui/DropZone';
@@ -24,7 +25,6 @@ import { uploadFilesWithProgress } from '../api/files';
 import { formatFileSize, formatDate } from '../utils/format';
 import { useFavorites } from '../hooks/useFavorites';
 import { resolveFileIconType } from '../utils/fileType';
-import { useDragDropStore } from '../store/dragDropStore';
 
 interface BreadcrumbItem {
   id: string;
@@ -41,6 +41,7 @@ const DirectoryPage: React.FC = () => {
   const user = useAuthStore((s) => s.user);
   const { personalStorageId } = useDirectoryStore();
   const { isShared: checkIsShared, isLoading: isLoadingShared } = useSharedDirectories();
+  const { setTargetDirectoryId, setOnUploadComplete } = useDragDropStore();
 
   // Состояния
   const [directoryContents, setDirectoryContents] = useState<DirectoryContents | null>(null);
@@ -59,7 +60,6 @@ const DirectoryPage: React.FC = () => {
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const { isFavorite, toggleFavorite } = useFavorites();
   const [isShared, setIsShared] = useState(false);
-  const setDragDropTarget = useDragDropStore((state) => state.setTargetDirectoryId);
 
   // Breadcrumbs
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([]);
@@ -171,7 +171,8 @@ const DirectoryPage: React.FC = () => {
     async (dirId: string) => {
       if (!accessToken || !dirId) return;
 
-      setDragDropTarget(dirId);
+      setTargetDirectoryId(dirId);
+
       setIsLoading(true);
       setError(null);
 
@@ -201,7 +202,7 @@ const DirectoryPage: React.FC = () => {
         setIsLoading(false);
       }
     },
-    [accessToken, navigate, loadBreadcrumbs, checkIsShared, setDragDropTarget],
+    [accessToken, navigate, loadBreadcrumbs, checkIsShared, setTargetDirectoryId],
   );
 
   // --- Обработчик навигации по breadcrumbs ---
@@ -249,7 +250,7 @@ const DirectoryPage: React.FC = () => {
     }
   }, [id, actualId, accessToken, loadDirectory, isLoadingShared]);
 
-  // --- Эффект 3: Перепроверяем статус общей директории когда загрузились shared данные ---
+  // --- Эффект 3: Перепроверяем статус общей директории ---
   useEffect(() => {
     if (!isLoadingShared && actualId && accessToken) {
       const shared = checkIsShared(actualId);
@@ -263,19 +264,33 @@ const DirectoryPage: React.FC = () => {
     }
   }, [isLoadingShared, actualId, accessToken, checkIsShared, loadBreadcrumbs, isShared]);
 
-  // --- Эффект 4: Обновляем DnD target при изменении actualId
+  // --- Эффект 4: Обновляем DnD target при изменении actualId ---
   useEffect(() => {
     if (actualId) {
-      setDragDropTarget(actualId);
+      setTargetDirectoryId(actualId);
     }
-  }, [actualId, setDragDropTarget]);
+  }, [actualId, setTargetDirectoryId]);
 
-  // --- Эффект 5: Очищаем DnD target при размонтировании
+  // Эффект 5: Регистрируем callback для обновления после загрузки через DnD
+  useEffect(() => {
+    setOnUploadComplete(() => {
+      if (actualId) {
+        loadDirectory(actualId);
+      }
+    });
+
+    return () => {
+      setOnUploadComplete(null); // <-- меняем undefined на null
+    };
+  }, [actualId, loadDirectory, setOnUploadComplete]);
+
+  // Эффект 6: Очищаем DnD target при размонтировании
   useEffect(() => {
     return () => {
-      setDragDropTarget(null);
+      setTargetDirectoryId(null);
+      setOnUploadComplete(null); // <-- меняем undefined на null
     };
-  }, [setDragDropTarget]);
+  }, [setTargetDirectoryId, setOnUploadComplete]);
 
   // --- Сохраняем режим просмотра ---
   useEffect(() => {

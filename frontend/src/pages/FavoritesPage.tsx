@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Star } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import { useDragDropStore } from '../store/dragDropStore';
 import { useFavorites } from '../hooks/useFavorites';
 import { getFavorites, FavoriteFile } from '../api/favorites';
 import { ApiError } from '../api/client';
@@ -13,6 +14,7 @@ import { resolveFileIconType } from '../utils/fileType';
 const FavoritesPage: React.FC = () => {
   const accessToken = useAuthStore((state) => state.accessToken);
   const { toggleFavorite } = useFavorites();
+  const { setOnUploadComplete } = useDragDropStore();
   const [files, setFiles] = useState<FavoriteFile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -40,6 +42,37 @@ const FavoritesPage: React.FC = () => {
       isMounted = false;
     };
   }, [accessToken]);
+
+  const loadFavorites = useCallback(async () => {
+    if (!accessToken) return;
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const data = await getFavorites(accessToken);
+      setFiles(data.favorites);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Не удалось загрузить избранное.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [accessToken]);
+
+  useEffect(() => {
+    loadFavorites();
+  }, [accessToken, loadFavorites]);
+
+  // Регистрируем callback для обновления после загрузки через DnD
+  useEffect(() => {
+    setOnUploadComplete(() => {
+      loadFavorites();
+    });
+
+    return () => {
+      setOnUploadComplete(null);
+    };
+  }, [accessToken, setOnUploadComplete, loadFavorites]);
 
   const handleToggleFavorite = async (fileId: string) => {
     if (!accessToken) return;

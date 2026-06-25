@@ -25,7 +25,7 @@ export const GlobalDropZone: React.FC<GlobalDropZoneProps> = ({
   const location = useLocation();
   const accessToken = useAuthStore((state) => state.accessToken);
   const { personalStorageId } = useDirectoryStore();
-  const { targetDirectoryId } = useDragDropStore();
+  const { targetDirectoryId, triggerUploadComplete } = useDragDropStore();
   const { toggleFavorite } = useFavorites();
 
   const [isDragging, setIsDragging] = useState(false);
@@ -34,9 +34,27 @@ export const GlobalDropZone: React.FC<GlobalDropZoneProps> = ({
   const [currentDirectoryId, setCurrentDirectoryId] = useState<string | null>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
-  // Определяем целевую директорию на основе текущего пути и store
+  // Проверяем, разрешён ли DnD на текущей странице
+  const isDndAllowed = useCallback(() => {
+    const path = location.pathname;
+
+    // Точное совпадение для дашборда и избранного
+    if (path === '/dashboard' || path === '/favorites') {
+      return true;
+    }
+
+    // Для директорий - только если есть ID (не /directories)
+    if (path.startsWith('/directories/')) {
+      const id = path.split('/directories/')[1];
+      return id && id !== '' && id !== 'personal';
+    }
+
+    return false;
+  }, [location.pathname]);
+
+  // Определяем целевую директорию
   const getTargetDirectory = useCallback(() => {
-    // Если задана директория через store (например, из DirectoryPage) - используем её
+    // Если задана директория через store (из DirectoryPage) - используем её
     if (targetDirectoryId) {
       return targetDirectoryId;
     }
@@ -51,23 +69,32 @@ export const GlobalDropZone: React.FC<GlobalDropZoneProps> = ({
       }
     }
 
-    // Для всех остальных страниц - личное хранилище
+    // Для всех остальных - личное хранилище
     return personalStorageId;
   }, [location.pathname, personalStorageId, targetDirectoryId]);
 
-  // Обновляем текущую директорию при изменении пути или store
+  // Обновляем текущую директорию
   useEffect(() => {
     const dirId = getTargetDirectory();
     setCurrentDirectoryId(dirId);
   }, [getTargetDirectory]);
 
-  const handleDragEnter = useCallback((e: DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.dataTransfer?.types.includes('Files')) {
-      setIsDragging(true);
-    }
-  }, []);
+  const handleDragEnter = useCallback(
+    (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Проверяем, разрешён ли DnD на этой странице
+      if (!isDndAllowed()) {
+        return;
+      }
+
+      if (e.dataTransfer?.types.includes('Files')) {
+        setIsDragging(true);
+      }
+    },
+    [isDndAllowed],
+  );
 
   const handleDragOver = useCallback((e: DragEvent) => {
     e.preventDefault();
@@ -87,6 +114,11 @@ export const GlobalDropZone: React.FC<GlobalDropZoneProps> = ({
       e.preventDefault();
       e.stopPropagation();
       setIsDragging(false);
+
+      // Проверяем, разрешён ли DnD на этой странице
+      if (!isDndAllowed()) {
+        return;
+      }
 
       const files = e.dataTransfer?.files;
       if (!files || files.length === 0 || !accessToken) return;
@@ -111,7 +143,7 @@ export const GlobalDropZone: React.FC<GlobalDropZoneProps> = ({
           },
         );
 
-        const isOnFavorites = location.pathname.startsWith('/favorites');
+        const isOnFavorites = location.pathname === '/favorites';
         if (isOnFavorites && result.files.length > 0) {
           for (const file of result.files) {
             try {
@@ -131,6 +163,9 @@ export const GlobalDropZone: React.FC<GlobalDropZoneProps> = ({
           : `Файлы успешно загружены: ${fileNames}`;
 
         onFileUploaded?.(files[0], true, successMessage);
+
+        // Триггерим обновление страницы
+        triggerUploadComplete();
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Ошибка загрузки файлов';
         onFileUploaded?.(files[0], false, errorMessage);
@@ -149,6 +184,8 @@ export const GlobalDropZone: React.FC<GlobalDropZoneProps> = ({
       onFileUploaded,
       onUploadStart,
       onUploadEnd,
+      isDndAllowed,
+      triggerUploadComplete,
     ],
   );
 
@@ -178,7 +215,7 @@ export const GlobalDropZone: React.FC<GlobalDropZoneProps> = ({
     <div ref={dropZoneRef} className="relative w-full h-full">
       {children}
 
-      {isDragging && (
+      {isDragging && isDndAllowed() && (
         <div
           className={cn(
             'fixed inset-0 z-[100] flex items-center justify-center',
