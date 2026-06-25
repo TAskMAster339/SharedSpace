@@ -76,3 +76,24 @@ export function updateDirectory(
     body: JSON.stringify(data),
   });
 }
+
+export function softDeleteDirectory(token: string, directoryId: string): Promise<void> {
+  return apiRequest<void>(`/directories/${directoryId}`, {
+    method: 'DELETE',
+    token,
+  });
+}
+
+export function restoreDirectory(token: string, directoryId: string): Promise<void> {
+  return apiRequest<void>(`/directories/${directoryId}/restore`, {
+    method: 'POST',
+    token,
+  });
+}
+
+export function permanentDeleteDirectory(token: string, directoryId: string): Promise<void> {
+  return apiRequest<void>(`/directories/${directoryId}/permanent`, {
+    method: 'DELETE',
+    token,
+  });
+}

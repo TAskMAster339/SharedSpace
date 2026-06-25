@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/authStore';
 import { useDirectoryStore } from '../store/directoryStore';
 import { useSharedDirectories } from '../hooks/useSharedDirectories';
 import { Modal } from '../components/ui/Modal';
+import { Toast } from '../components/ui/Toast';
 import { DropZone } from '../components/ui/DropZone';
 import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
 import { Button } from '../components/ui/Button';
@@ -17,10 +18,12 @@ import {
   getDirectoryById,
   createDirectory,
   getDirectoryById as getDirectory,
+  softDeleteDirectory,
+  restoreDirectory,
   DirectoryContents,
   Directory,
 } from '../api/directories';
-import { uploadFilesWithProgress } from '../api/files';
+import { uploadFilesWithProgress, softDeleteFile, restoreFile } from '../api/files';
 import { formatFileSize, formatDate } from '../utils/format';
 import { useFavorites } from '../hooks/useFavorites';
 import { resolveFileIconType } from '../utils/fileType';
@@ -58,6 +61,11 @@ const DirectoryPage: React.FC = () => {
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const { isFavorite, toggleFavorite } = useFavorites();
   const [isShared, setIsShared] = useState(false);
+  const [deletedToast, setDeletedToast] = useState<{
+    id: string;
+    name: string;
+    kind: 'file' | 'directory';
+  } | null>(null);
 
   // Breadcrumbs
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([]);
@@ -355,6 +363,55 @@ const DirectoryPage: React.FC = () => {
     }
   }, [newFolderName, accessToken, actualId, loadDirectory]);
 
+  const handleDeleteFile = useCallback(
+    async (fileId: string) => {
+      if (!accessToken || !actualId) return;
+      const file = directoryContents?.files.find((f) => f.id === fileId);
+
+      try {
+        await softDeleteFile(accessToken, fileId);
+        await loadDirectory(actualId);
+        setDeletedToast({ id: fileId, name: file?.filename || 'Файл', kind: 'file' });
+      } catch (err) {
+        console.error('Failed to delete file:', err);
+        setError('Не удалось удалить файл');
+      }
+    },
+    [accessToken, actualId, directoryContents, loadDirectory],
+  );
+
+  const handleDeleteFolder = useCallback(
+    async (folderId: string) => {
+      if (!accessToken || !actualId) return;
+      const folder = filteredSubdirectories.find((f) => f.id === folderId);
+
+      try {
+        await softDeleteDirectory(accessToken, folderId);
+        await loadDirectory(actualId);
+        setDeletedToast({ id: folderId, name: folder?.name || 'Папка', kind: 'directory' });
+      } catch (err) {
+        console.error('Failed to delete folder:', err);
+        setError('Не удалось удалить папку');
+      }
+    },
+    [accessToken, actualId, filteredSubdirectories, loadDirectory],
+  );
+
+  const handleUndoDelete = useCallback(async () => {
+    if (!deletedToast || !accessToken) return;
+
+    try {
+      if (deletedToast.kind === 'file') {
+        await restoreFile(accessToken, deletedToast.id);
+      } else {
+        await restoreDirectory(accessToken, deletedToast.id);
+      }
+      if (actualId) await loadDirectory(actualId);
+    } catch (err) {
+      console.error('Failed to restore item:', err);
+    }
+  }, [deletedToast, accessToken, actualId, loadDirectory]);
+
   // --- Рендер breadcrumbs ---
   const renderBreadcrumbs = () => {
     if (isLoadingBreadcrumbs || isLoadingShared) {
@@ -568,6 +625,11 @@ const DirectoryPage: React.FC = () => {
                         id={folder.id}
                         name={folder.name}
                         to={`/directories/${folder.id}`}
+                        onDelete={
+                          canModify && !checkIsShared(folder.id)
+                            ? handleDeleteFolder
+                            : undefined
+                        }
                       />
                     ))}
                   </div>
@@ -579,6 +641,11 @@ const DirectoryPage: React.FC = () => {
                         id={folder.id}
                         name={folder.name}
                         to={`/directories/${folder.id}`}
+                        onDelete={
+                          canModify && !checkIsShared(folder.id)
+                            ? handleDeleteFolder
+                            : undefined
+                        }
                       />
                     ))}
                   </div>
@@ -603,6 +670,7 @@ const DirectoryPage: React.FC = () => {
                         to={`/files/${file.id}`}
                         isFavorite={file.isFavorite}
                         onToggleFavorite={toggleFavorite}
+                        onDelete={canModify ? handleDeleteFile : undefined}
                       />
                     ))}
                   </div>
@@ -619,6 +687,7 @@ const DirectoryPage: React.FC = () => {
                         to={`/files/${file.id}`}
                         isFavorite={file.isFavorite}
                         onToggleFavorite={toggleFavorite}
+                        onDelete={canModify ? handleDeleteFile : undefined}
                       />
                     ))}
                   </div>
@@ -686,6 +755,18 @@ const DirectoryPage: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Уведомление о перемещении в корзину */}
+      {deletedToast && (
+        <Toast
+          message={`«${deletedToast.name}» перемещ${
+            deletedToast.kind === 'directory' ? 'ена' : 'ён'
+          } в корзину`}
+          actionLabel="Отменить"
+          onAction={handleUndoDelete}
+          onClose={() => setDeletedToast(null)}
+        />
+      )}
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Star } from 'lucide-react';
+import { Star, Trash2 } from 'lucide-react';
 import { FileIcon } from './FileIcon';
 import { cn } from '../../utils/cn';
 import { FileIconType } from '../../utils/fileType';
@@ -15,6 +15,7 @@ interface FileItemProps {
   className?: string;
   isFavorite?: boolean;
   onToggleFavorite?: (id: string) => void;
+  onDelete?: (id: string) => void;
 }
 
 export const FileItem: React.FC<FileItemProps> = ({
@@ -27,6 +28,7 @@ export const FileItem: React.FC<FileItemProps> = ({
   className,
   isFavorite = false,
   onToggleFavorite,
+  onDelete,
 }) => (
   <Link
     key={id}
@@ -66,6 +68,21 @@ export const FileItem: React.FC<FileItemProps> = ({
             )}
             fill={isFavorite ? 'currentColor' : 'none'}
           />
+        </button>
+      )}
+      {onDelete && (
+        <button
+          type="button"
+          aria-label="Переместить в корзину"
+          title="Переместить в корзину"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onDelete(id);
+          }}
+          className="opacity-0 group-hover:opacity-100 text-theme-muted hover:text-danger transition-colors"
+        >
+          <Trash2 size={18} />
         </button>
       )}
     </div>
