@@ -73,7 +73,7 @@ const MainPage: React.FC = () => {
   return (
     <div>
       {/* Hero — на всю ширину экрана, заподлицо с шапкой, на полный экран */}
-      <section className="relative left-1/2 right-1/2 -mx-[50vw] -mt-4 sm:-mt-6 w-screen min-h-[calc(100vh-4rem)] flex items-center overflow-hidden bg-brand-gradient">
+      <section className="relative left-1/2 right-1/2 -mx-[50vw] -mt-4 sm:-mt-6 w-screen min-h-[calc(100vh-4vh)] flex items-center overflow-hidden bg-brand-gradient">
         <div className="absolute inset-0 bg-starfield opacity-60" />
         <div className="absolute -top-10 -right-10 w-80 h-80 bg-white/10 rounded-theme-full blur-3xl" />
         <div className="absolute bottom-0 left-10 w-64 h-64 bg-white/10 rounded-theme-full blur-3xl" />
@@ -127,7 +127,7 @@ const MainPage: React.FC = () => {
       {/* Возможности */}
       <section
         id="features"
-        className="min-h-[calc(100vh-4rem)] flex flex-col justify-center space-y-8 py-12"
+        className="min-h-[calc(100vh-4vh)] flex flex-col justify-center space-y-8 py-12"
       >
         <div className="text-center space-y-2">
           <h2 className="text-2xl sm:text-3xl font-bold text-theme-primary">Возможности</h2>
@@ -152,7 +152,7 @@ const MainPage: React.FC = () => {
       {/* Как это работает */}
       <section
         id="how-it-works"
-        className="min-h-[calc(100vh-4rem)] flex flex-col justify-center space-y-10 py-12"
+        className="min-h-[calc(100vh-4vh)] flex flex-col justify-center space-y-10 py-12"
       >
         <div className="text-center space-y-2">
           <h2 className="text-2xl sm:text-3xl font-bold text-theme-primary">Как это работает</h2>

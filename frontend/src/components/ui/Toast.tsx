@@ -62,7 +62,7 @@ export const Toast: React.FC<ToastProps> = ({
 
   const style = variants[variant] || variants.info;
   const Icon = style.icon;
-  
+
   // Автоматически делаем первую букву заглавной
   const formattedMessage = capitalize(message);
 

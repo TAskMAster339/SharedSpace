@@ -61,17 +61,14 @@ export const GlobalDropZone: React.FC<GlobalDropZoneProps> = ({
     setCurrentDirectoryId(dirId);
   }, [getTargetDirectory]);
 
-  const handleDragEnter = useCallback(
-    (e: DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
+  const handleDragEnter = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
 
-      if (e.dataTransfer?.types.includes('Files')) {
-        setIsDragging(true);
-      }
-    },
-    [],
-  );
+    if (e.dataTransfer?.types.includes('Files')) {
+      setIsDragging(true);
+    }
+  }, []);
 
   const handleDragOver = useCallback((e: DragEvent) => {
     e.preventDefault();
