@@ -34,24 +34,6 @@ export const GlobalDropZone: React.FC<GlobalDropZoneProps> = ({
   const [currentDirectoryId, setCurrentDirectoryId] = useState<string | null>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
-  // Проверяем, разрешён ли DnD на текущей странице
-  const isDndAllowed = useCallback(() => {
-    const path = location.pathname;
-
-    // Точное совпадение для дашборда и избранного
-    if (path === '/dashboard' || path === '/favorites') {
-      return true;
-    }
-
-    // Для директорий - только если есть ID (не /directories)
-    if (path.startsWith('/directories/')) {
-      const id = path.split('/directories/')[1];
-      return id && id !== '' && id !== 'personal';
-    }
-
-    return false;
-  }, [location.pathname]);
-
   // Определяем целевую директорию
   const getTargetDirectory = useCallback(() => {
     // Если задана директория через store (из DirectoryPage) - используем её
@@ -84,16 +66,11 @@ export const GlobalDropZone: React.FC<GlobalDropZoneProps> = ({
       e.preventDefault();
       e.stopPropagation();
 
-      // Проверяем, разрешён ли DnD на этой странице
-      if (!isDndAllowed()) {
-        return;
-      }
-
       if (e.dataTransfer?.types.includes('Files')) {
         setIsDragging(true);
       }
     },
-    [isDndAllowed],
+    [],
   );
 
   const handleDragOver = useCallback((e: DragEvent) => {
@@ -114,11 +91,6 @@ export const GlobalDropZone: React.FC<GlobalDropZoneProps> = ({
       e.preventDefault();
       e.stopPropagation();
       setIsDragging(false);
-
-      // Проверяем, разрешён ли DnD на этой странице
-      if (!isDndAllowed()) {
-        return;
-      }
 
       const files = e.dataTransfer?.files;
       if (!files || files.length === 0 || !accessToken) return;
@@ -184,7 +156,6 @@ export const GlobalDropZone: React.FC<GlobalDropZoneProps> = ({
       onFileUploaded,
       onUploadStart,
       onUploadEnd,
-      isDndAllowed,
       triggerUploadComplete,
     ],
   );
@@ -212,10 +183,10 @@ export const GlobalDropZone: React.FC<GlobalDropZoneProps> = ({
   }, [handleDragEnter, handleDragOver, handleDragLeave, handleDrop]);
 
   return (
-    <div ref={dropZoneRef} className="relative flex-1 flex flex-col min-h-0">
+    <div ref={dropZoneRef} className="relative w-full h-full">
       {children}
 
-      {isDragging && isDndAllowed() && (
+      {isDragging && (
         <div
           className={cn(
             'fixed inset-0 z-[100] flex items-center justify-center',
