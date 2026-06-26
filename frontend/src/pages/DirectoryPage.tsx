@@ -647,15 +647,15 @@ const DirectoryPage: React.FC = () => {
         <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} />
       </div>
 
-      {/* Настройки директории */}
-      {isSharedDirectory && perms?.invite && (
+      {/* Настройки директории / участники */}
+      {isSharedDirectory && (
         <div className="flex justify-end">
           <button
             onClick={() => navigate(`/shared/${actualId}/settings`)}
             className="inline-flex items-center gap-2 px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium"
           >
             <Settings size={16} />
-            Настройки директории
+            {perms?.invite ? 'Настройки директории' : 'Участники'}
           </button>
         </div>
       )}
