@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Folder, Trash2 } from 'lucide-react';
+import { Folder } from 'lucide-react';
+import { ItemActionsMenu } from './ItemActionsMenu';
 import { cn } from '../../utils/cn';
 
 interface FolderItemProps {
@@ -29,20 +30,6 @@ export const FolderItem: React.FC<FolderItemProps> = ({ id, name, to, className,
         <p className="text-xs text-theme-muted">Папка</p>
       </div>
     </div>
-    {onDelete && (
-      <button
-        type="button"
-        aria-label="Переместить в корзину"
-        title="Переместить в корзину"
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          onDelete(id);
-        }}
-        className="opacity-0 group-hover:opacity-100 text-theme-muted hover:text-danger transition-colors shrink-0"
-      >
-        <Trash2 size={18} />
-      </button>
-    )}
+    <ItemActionsMenu onDelete={onDelete ? () => onDelete(id) : undefined} className="shrink-0" />
   </Link>
 );

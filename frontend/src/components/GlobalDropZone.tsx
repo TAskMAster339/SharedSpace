@@ -7,6 +7,7 @@ import { useDragDropStore } from '../store/dragDropStore';
 import { useFavorites } from '../hooks/useFavorites';
 import { uploadFilesWithProgress } from '../api/files';
 import { addFavorite } from '../api/favorites';
+import { buildUploadSuccessMessage, buildUploadErrorMessage } from '../utils/uploadMessage';
 import { cn } from '../utils/cn';
 
 interface GlobalDropZoneProps {
@@ -124,20 +125,13 @@ export const GlobalDropZone: React.FC<GlobalDropZoneProps> = ({
           }
         }
 
-        const fileNames = Array.from(files)
-          .map((f) => f.name)
-          .join(', ');
-        const successMessage = isOnFavorites
-          ? `Файлы загружены и добавлены в избранное: ${fileNames}`
-          : `Файлы успешно загружены: ${fileNames}`;
-
-        onFileUploaded?.(files[0], true, successMessage);
+        onFileUploaded?.(files[0], true, buildUploadSuccessMessage(files, isOnFavorites));
 
         // Триггерим обновление страницы
         triggerUploadComplete();
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Ошибка загрузки файлов';
-        onFileUploaded?.(files[0], false, errorMessage);
+        const reason = err instanceof Error ? err.message : undefined;
+        onFileUploaded?.(files[0], false, buildUploadErrorMessage(files, reason));
       } finally {
         setIsUploading(false);
         setUploadProgress(0);
