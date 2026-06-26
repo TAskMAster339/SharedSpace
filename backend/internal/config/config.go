@@ -33,6 +33,7 @@ type Config struct {
 	MinIOSecretKey      string
 	MinIOBucket         string
 	MinIOPublicEndpoint string
+	MinIOTmpBucket      string
 
 	JWTSecret     string
 	JWTTTL        time.Duration
@@ -73,6 +74,7 @@ func Load() (*Config, error) {
 		MinIOSecretKey:      getEnv("MINIO_ROOT_PASSWORD", "minioadmin"),
 		MinIOBucket:         getEnv("MINIO_BUCKET", "sharedspace"),
 		MinIOPublicEndpoint: getEnv("MINIO_PUBLIC_ENDPOINT", "localhost:9002"),
+		MinIOTmpBucket:      getEnv("MINIO_TMP_BUCKET", "tmp"),
 
 		JWTSecret:     secret,
 		JWTTTL:        time.Duration(ttl) * time.Second,

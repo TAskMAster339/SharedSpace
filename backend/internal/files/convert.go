@@ -1,16 +1,14 @@
 package files
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
-	"image"
-	"image/jpeg"
-	_ "image/png"
+	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
-	"github.com/HugoSmits86/nativewebp"
+	ffmpeg "github.com/u2takey/ffmpeg-go"
 )
 
 var errUnsupportedConversion = errors.New("unsupported conversion")
@@ -20,33 +18,101 @@ var allowedConversions = map[string]map[string]bool{
 	"jpg": {"webp": true},
 }
 
+func ffmpegAvailable() bool {
+	_, err := exec.LookPath("ffmpeg")
+	return err == nil
+}
+
 func convertImageData(data []byte, target string) (out []byte, sourceFormat, mimeType, ext string, err error) {
-	img, format, err := image.Decode(bytes.NewReader(data))
-	if err != nil {
-		return nil, "", "", "", fmt.Errorf("декодирование: %w", err)
+	target = strings.ToLower(target)
+	if target == "jpeg" {
+		target = "jpg"
 	}
-	if format == "jpeg" {
-		format = "jpg"
+
+	sourceFormat = detectFormat(data)
+	if sourceFormat == "jpeg" {
+		sourceFormat = "jpg"
 	}
-	if !allowedConversions[format][target] {
+	if sourceFormat == "" {
+		return nil, "", "", "", fmt.Errorf("неизвестный формат исходного файла")
+	}
+	if !allowedConversions[sourceFormat][target] {
 		return nil, "", "", "", errUnsupportedConversion
 	}
 
-	var buf bytes.Buffer
+	inPath, err := writeTempFile(data, "convert_in_*")
+	if err != nil {
+		return nil, "", "", "", err
+	}
+	defer os.Remove(inPath)
+
+	outFile, err := os.CreateTemp("", "convert_out_*."+target)
+	if err != nil {
+		return nil, "", "", "", fmt.Errorf("create temp output: %w", err)
+	}
+	outPath := outFile.Name()
+	outFile.Close()
+	defer os.Remove(outPath)
+
+	codec := "mjpeg"
+	if target == "webp" {
+		codec = "libwebp"
+	}
+
+	if err := ffmpeg.Input(inPath).
+		Output(outPath, ffmpeg.KwArgs{"c:v": codec}).
+		OverWriteOutput().
+		Run(); err != nil {
+		return nil, "", "", "", fmt.Errorf("ffmpeg: %w", err)
+	}
+
+	out, err = os.ReadFile(outPath)
+	if err != nil {
+		return nil, "", "", "", fmt.Errorf("read output: %w", err)
+	}
+
 	switch target {
 	case "jpg":
-		err = jpeg.Encode(&buf, img, &jpeg.Options{Quality: 90})
 		mimeType, ext = "image/jpeg", "jpg"
 	case "webp":
-		err = nativewebp.Encode(&buf, img, nil)
 		mimeType, ext = "image/webp", "webp"
 	default:
-		return nil, "", "", "", errUnsupportedConversion
+		mimeType, ext = "application/octet-stream", target
 	}
+	return out, sourceFormat, mimeType, ext, nil
+}
+
+func writeTempFile(data []byte, pattern string) (string, error) {
+	f, err := os.CreateTemp("", pattern)
 	if err != nil {
-		return nil, "", "", "", fmt.Errorf("кодирование: %w", err)
+		return "", fmt.Errorf("create temp: %w", err)
 	}
-	return buf.Bytes(), format, mimeType, ext, nil
+	if _, err := f.Write(data); err != nil {
+		f.Close()
+		os.Remove(f.Name())
+		return "", fmt.Errorf("write temp: %w", err)
+	}
+	if err := f.Close(); err != nil {
+		os.Remove(f.Name())
+		return "", fmt.Errorf("close temp: %w", err)
+	}
+	return f.Name(), nil
+}
+
+func detectFormat(data []byte) string {
+	if len(data) < 12 {
+		return ""
+	}
+	if data[0] == 0x89 && data[1] == 0x50 && data[2] == 0x4E && data[3] == 0x47 {
+		return "png"
+	}
+	if data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF {
+		return "jpeg"
+	}
+	if string(data[0:4]) == "RIFF" && string(data[8:12]) == "WEBP" {
+		return "webp"
+	}
+	return ""
 }
 
 func replaceExt(filename, newExt string) string {

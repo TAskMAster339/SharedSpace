@@ -12,8 +12,10 @@ import (
 type StorageClient interface {
 	Upload(ctx context.Context, objectKey string, r io.Reader, size int64, contentType string) error
 	PresignedGetURL(ctx context.Context, objectKey string, expiry time.Duration) (string, error)
+	PresignedDownloadURL(ctx context.Context, objectKey string, expiry time.Duration, filename string) (string, error)
 	Get(ctx context.Context, objectKey string) (io.ReadCloser, error)
 	Delete(ctx context.Context, objectKey string) error
+	ListObjects(ctx context.Context, prefix string, olderThan time.Time) ([]string, error)
 }
 
 type ServiceInterface interface {
@@ -26,7 +28,7 @@ type ServiceInterface interface {
 	GetRecent(ctx context.Context, userID string, limit int) (RecentFilesResponse, error)
 	Update(ctx context.Context, userID, fileID string, req UpdateFileRequest) (FileMetadataResponse, error)
 	ConvertAndSave(ctx context.Context, userID, fileID, target string) (ConversionResponse, error)
-	ConvertAndDownload(ctx context.Context, userID, fileID, target string) (data []byte, mimeType, filename string, err error)
+	ConvertAndDownload(ctx context.Context, userID, fileID, target string) (downloadURL, filename string, err error)
 	ListConversions(ctx context.Context, userID, fileID string) (ConversionsListResponse, error)
 }
 

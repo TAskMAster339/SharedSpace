@@ -355,15 +355,14 @@ func (h *Handler) Convert(w http.ResponseWriter, r *http.Request) error {
 		return writeJSON(w, http.StatusCreated, resp)
 	}
 
-	data, mimeType, filename, err := h.service.ConvertAndDownload(r.Context(), claims.UserID, fileID, req.TargetFormat)
+	downloadURL, filename, err := h.service.ConvertAndDownload(r.Context(), claims.UserID, fileID, req.TargetFormat)
 	if err != nil {
 		return err
 	}
-	w.Header().Set("Content-Type", mimeType)
-	w.Header().Set("Content-Disposition", `attachment; filename="`+filename+`"`)
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(data)
-	return nil
+	return writeJSON(w, http.StatusOK, ConversionDownloadResponse{
+		DownloadURL: downloadURL,
+		Filename:    filename,
+	})
 }
 
 // ListConversions returns the conversion history for a file.

@@ -77,3 +77,32 @@ func (s *Storage) Delete(ctx context.Context, objectKey string) error {
 	}
 	return nil
 }
+
+func (s *Storage) PresignedDownloadURL(ctx context.Context, objectKey string, expiry time.Duration, filename string) (string, error) {
+	reqParams := url.Values{}
+	if filename != "" {
+		reqParams.Set("response-content-disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+	}
+	u, err := s.client.PresignedGetObject(ctx, s.bucket, objectKey, expiry, reqParams)
+	if err != nil {
+		return "", fmt.Errorf("presign %s: %w", objectKey, err)
+	}
+	u.Host = s.publicEndpoint
+	return u.String(), nil
+}
+
+func (s *Storage) ListObjects(ctx context.Context, prefix string, olderThan time.Time) ([]string, error) {
+	var keys []string
+	for obj := range s.client.ListObjects(ctx, s.bucket, minio.ListObjectsOptions{
+		Prefix:    prefix,
+		Recursive: true,
+	}) {
+		if obj.Err != nil {
+			return nil, fmt.Errorf("list objects: %w", obj.Err)
+		}
+		if obj.LastModified.Before(olderThan) {
+			keys = append(keys, obj.Key)
+		}
+	}
+	return keys, nil
+}

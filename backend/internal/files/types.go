@@ -86,3 +86,8 @@ type conversionRecord struct {
 	CreatedBy    string
 	CreatedAt    time.Time
 }
+
+type ConversionDownloadResponse struct {
+	DownloadURL string `json:"download_url"`
+	Filename    string `json:"filename"`
+}

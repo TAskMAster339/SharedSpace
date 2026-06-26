@@ -26,10 +26,11 @@ type Service struct {
 	db            dbTX
 	repo          RepositoryInterface
 	storage       StorageClient
+	tmpStorage    StorageClient
 	accessChecker access.AccessChecker
 }
 
-func NewService(pool *pgxpool.Pool, repo RepositoryInterface, storage StorageClient, accessChecker access.AccessChecker) *Service {
+func NewService(pool *pgxpool.Pool, repo RepositoryInterface, storage, tmpStorage StorageClient, accessChecker access.AccessChecker) *Service {
 	beginTx := func(ctx context.Context, opts pgx.TxOptions) (transaction, error) {
 		tx, err := pool.BeginTx(ctx, opts)
 		if err != nil {
@@ -37,7 +38,7 @@ func NewService(pool *pgxpool.Pool, repo RepositoryInterface, storage StorageCli
 		}
 		return txWrapper{Tx: tx}, nil
 	}
-	return &Service{beginTx: beginTx, db: pool, repo: repo, storage: storage, accessChecker: accessChecker}
+	return &Service{beginTx: beginTx, db: pool, repo: repo, storage: storage, tmpStorage: tmpStorage, accessChecker: accessChecker}
 }
 
 func (s *Service) Upload(ctx context.Context, userID, directoryID string, uploads []FileUpload) (UploadFilesResponse, error) {
@@ -133,7 +134,11 @@ func (s *Service) GetMetadata(ctx context.Context, userID, fileID string) (FileM
 		}
 		return FileMetadataResponse{}, apperror.WrapInternal("поиск файла", err)
 	}
-	if file.OwnerID != userID {
+	ok, err := s.accessChecker.Can(ctx, userID, file.DirectoryID, access.ActionView)
+	if err != nil {
+		return FileMetadataResponse{}, err
+	}
+	if !ok {
 		return FileMetadataResponse{}, apperror.Forbidden("доступ запрещён")
 	}
 	return toMetadataResponse(file), nil
@@ -147,7 +152,11 @@ func (s *Service) GetContentURL(ctx context.Context, userID, fileID string) (Fil
 		}
 		return FileContentResponse{}, apperror.WrapInternal("поиск файла", err)
 	}
-	if file.OwnerID != userID {
+	ok, err := s.accessChecker.Can(ctx, userID, file.DirectoryID, access.ActionDownload)
+	if err != nil {
+		return FileContentResponse{}, err
+	}
+	if !ok {
 		return FileContentResponse{}, apperror.Forbidden("доступ запрещён")
 	}
 
@@ -408,7 +417,7 @@ func (s *Service) produceConversion(ctx context.Context, userID, fileID, target 
 		}
 		return fileRecord{}, nil, "", "", "", apperror.WrapInternal("поиск файла", err)
 	}
-	ok, err := s.accessChecker.Can(ctx, userID, file.DirectoryID, access.ActionView)
+	ok, err := s.accessChecker.Can(ctx, userID, file.DirectoryID, access.ActionDownload)
 	if err != nil {
 		return fileRecord{}, nil, "", "", "", err
 	}
@@ -436,12 +445,21 @@ func (s *Service) produceConversion(ctx context.Context, userID, fileID, target 
 	return file, out, sourceFormat, mimeType, ext, nil
 }
 
-func (s *Service) ConvertAndDownload(ctx context.Context, userID, fileID, target string) ([]byte, string, string, error) {
+func (s *Service) ConvertAndDownload(ctx context.Context, userID, fileID, target string) (string, string, error) {
 	file, out, _, mimeType, ext, err := s.produceConversion(ctx, userID, fileID, target)
 	if err != nil {
-		return nil, "", "", err
+		return "", "", err
 	}
-	return out, mimeType, replaceExt(file.Filename, ext), nil
+	filename := replaceExt(file.Filename, ext)
+	key := "conv/" + uuid.NewString() + "." + ext
+	if err := s.tmpStorage.Upload(ctx, key, bytes.NewReader(out), int64(len(out)), mimeType); err != nil {
+		return "", "", apperror.WrapInternal("загрузка во временное хранилище", err)
+	}
+	url, err := s.tmpStorage.PresignedDownloadURL(ctx, key, 15*time.Minute, filename)
+	if err != nil {
+		return "", "", apperror.WrapInternal("генерация ссылки", err)
+	}
+	return url, filename, nil
 }
 
 func (s *Service) ConvertAndSave(ctx context.Context, userID, fileID, target string) (ConversionResponse, error) {

@@ -88,6 +88,8 @@ type mockStorage struct {
 	err         error
 	getData     []byte
 	getErr      error
+	listedKeys  []string
+	listErr     error
 }
 
 func (m *mockStorage) Upload(_ context.Context, objectKey string, _ io.Reader, _ int64, _ string) error {
@@ -99,12 +101,20 @@ func (m *mockStorage) PresignedGetURL(_ context.Context, _ string, _ time.Durati
 	return "http://localhost:9000/test-bucket/key", nil
 }
 
+func (m *mockStorage) PresignedDownloadURL(_ context.Context, key string, _ time.Duration, filename string) (string, error) {
+	return "http://localhost:9000/tmp/" + key + "?dl=" + filename, nil
+}
+
 func (m *mockStorage) Delete(_ context.Context, _ string) error {
 	return nil
 }
 
 func (m *mockStorage) Get(_ context.Context, _ string) (io.ReadCloser, error) {
 	return io.NopCloser(bytes.NewReader(m.getData)), m.getErr
+}
+
+func (m *mockStorage) ListObjects(_ context.Context, _ string, _ time.Time) ([]string, error) {
+	return nil, nil
 }
 
 type mockTx struct{}
@@ -160,6 +170,7 @@ func newTestService(repo RepositoryInterface, storage StorageClient) *Service {
 		db:            tx,
 		repo:          repo,
 		storage:       storage,
+		tmpStorage:    storage,
 		accessChecker: &mockAccessChecker{canFn: func(_ context.Context, _, _ string, _ access.Action) (bool, error) { return true, nil }},
 	}
 }
@@ -352,12 +363,12 @@ func TestServiceConvertAndDownload_Success(t *testing.T) {
 	storage := &mockStorage{getData: makePNG(t)}
 	svc := newTestService(repo, storage)
 
-	data, mime, filename, err := svc.ConvertAndDownload(context.Background(), "user-1", "src-1", "jpg")
+	url, filename, err := svc.ConvertAndDownload(context.Background(), "user-1", "src-1", "jpg")
 	if err != nil {
 		t.Fatalf("ConvertAndDownload: %v", err)
 	}
-	if mime != "image/jpeg" || filename != "photo.jpg" || len(data) == 0 {
-		t.Fatalf("unexpected: mime=%s file=%s len=%d", mime, filename, len(data))
+	if filename != "photo.jpg" || url == "" {
+		t.Fatalf("unexpected: url=%s file=%s", url, filename)
 	}
 }
 
@@ -382,7 +393,7 @@ func TestServiceConvert_UnsupportedPair(t *testing.T) {
 	storage := &mockStorage{getData: makeJPG(t)}
 	svc := newTestService(repo, storage)
 
-	_, _, _, err := svc.ConvertAndDownload(context.Background(), "user-1", "f-1", "png")
+	_, _, err := svc.ConvertAndDownload(context.Background(), "user-1", "f-1", "png")
 	appErr, ok := apperror.From(err)
 	if !ok || appErr.Code() != apperror.CodeValidation {
 		t.Fatalf("expected validation, got %v", err)
