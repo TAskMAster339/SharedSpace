@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Settings, LogOut, ChevronDown, MoonStar } from 'lucide-react';
+import { Settings, LogOut, ChevronDown, MoonStar, Menu, X, Search } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { UserSearch } from './UserSearch';
+import { MobileNavMenu } from './MobileNavMenu';
 import { Avatar } from './ui/Avatar';
 
 const logo = '/logo-mark.png';
@@ -15,7 +16,19 @@ export const Header: React.FC = () => {
   const location = useLocation();
   const isOnLandingPage = location.pathname === '/';
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const lastNameInitial = lastName ? lastName.charAt(0).toUpperCase() + '.' : '';
+
+  const toggleMobileNav = () => {
+    setMobileSearchOpen(false);
+    setMobileNavOpen((open) => !open);
+  };
+
+  const toggleMobileSearch = () => {
+    setMobileNavOpen(false);
+    setMobileSearchOpen((open) => !open);
+  };
 
   const handleLogout = () => {
     setDropdownOpen(false);
@@ -33,7 +46,20 @@ export const Header: React.FC = () => {
 
   return (
     <header className="h-16 bg-theme-secondary border-b border-theme flex items-center justify-between px-4 sm:px-6 sticky top-0 z-50 w-full shrink-0">
-      <div className="flex items-center gap-8 min-w-0">
+      <div className="flex items-center gap-2 sm:gap-8 min-w-0">
+        {isAuthenticated && (
+          <button
+            onClick={toggleMobileNav}
+            className="p-2 -ml-2 rounded-theme-full hover:bg-theme-hover transition-colors shrink-0 md:hidden"
+            aria-label="Открыть меню"
+          >
+            {mobileNavOpen ? (
+              <X size={20} className="text-theme-secondary" />
+            ) : (
+              <Menu size={20} className="text-theme-secondary" />
+            )}
+          </button>
+        )}
         {isOnLandingPage ? (
           <div className="flex items-center gap-2 shrink-0">
             <img
@@ -89,7 +115,20 @@ export const Header: React.FC = () => {
           <UserSearch className="flex-1 max-w-2xl mx-4 sm:mx-8 hidden md:block" />
 
           {/* Правая часть: Уведомления и Профиль */}
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-1 sm:gap-4">
+            {/* Кнопка поиска на мобильных */}
+            <button
+              onClick={toggleMobileSearch}
+              className="p-2 rounded-theme-full hover:bg-theme-hover transition-colors md:hidden"
+              aria-label="Поиск"
+            >
+              {mobileSearchOpen ? (
+                <X size={20} className="text-theme-secondary" />
+              ) : (
+                <Search size={20} className="text-theme-secondary" />
+              )}
+            </button>
+
             {/* Кнопка переключения темы*/}
             <button
               onClick={toggleTheme}
@@ -108,11 +147,7 @@ export const Header: React.FC = () => {
                 onClick={() => setDropdownOpen(!dropdownOpen)}
                 className="flex items-center gap-2 p-1 rounded-theme-full hover:bg-theme-hover transition-colors outline-none"
               >
-                <Avatar
-                  username={user?.username ?? ''}
-                  displayName={firstName}
-                  className="w-8 h-8 border border-theme"
-                />
+                <Avatar username={user?.username ?? ''} className="w-8 h-8 border border-theme" />
                 <span className="text-sm font-medium text-theme-primary hidden sm:block">
                   {firstName} {lastNameInitial}
                 </span>
@@ -143,6 +178,14 @@ export const Header: React.FC = () => {
               )}
             </div>
           </div>
+
+          {mobileNavOpen && <MobileNavMenu onNavigate={() => setMobileNavOpen(false)} />}
+
+          {mobileSearchOpen && (
+            <div className="absolute left-0 right-0 top-16 mx-3 z-40 md:hidden">
+              <UserSearch className="w-full ring-2 ring-brand/50 rounded-theme-full" />
+            </div>
+          )}
         </>
       ) : (
         // Неавторизованный вид
