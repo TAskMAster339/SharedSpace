@@ -17,6 +17,7 @@ interface FileItemProps {
   isFavorite?: boolean;
   onToggleFavorite?: (id: string) => void;
   onDelete?: (id: string) => void;
+  onMove?: (id: string) => void;
 }
 
 export const FileItem: React.FC<FileItemProps> = ({
@@ -30,6 +31,7 @@ export const FileItem: React.FC<FileItemProps> = ({
   isFavorite = false,
   onToggleFavorite,
   onDelete,
+  onMove,
 }) => (
   <Link
     key={id}
@@ -66,6 +68,7 @@ export const FileItem: React.FC<FileItemProps> = ({
         isFavorite={isFavorite}
         onToggleFavorite={onToggleFavorite ? () => onToggleFavorite(id) : undefined}
         onDelete={onDelete ? () => onDelete(id) : undefined}
+        onMove={onMove ? () => onMove(id) : undefined}
       />
     </div>
   </Link>

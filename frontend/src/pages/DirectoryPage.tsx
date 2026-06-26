@@ -14,6 +14,8 @@ import { FolderGridItem } from '../components/ui/FolderGridItem';
 import { FileGridItem } from '../components/ui/FileGridItem';
 import { FolderItem } from '../components/ui/FolderItem';
 import { FileItem } from '../components/ui/FileItem';
+import { MoveFileModal } from '../components/ui/MoveFileModal';
+import { DropZoneUp } from '../components/ui/DropZoneUp';
 import {
   getDirectoryContents,
   getDirectoryById,
@@ -24,7 +26,7 @@ import {
   DirectoryContents,
   Directory,
 } from '../api/directories';
-import { uploadFilesWithProgress, softDeleteFile, restoreFile } from '../api/files';
+import { uploadFilesWithProgress, softDeleteFile, restoreFile, moveFile } from '../api/files';
 import { formatFileSize, formatDate } from '../utils/format';
 import { useFavorites } from '../hooks/useFavorites';
 import { useToastStore } from '../hooks/useToast';
@@ -66,6 +68,11 @@ const DirectoryPage: React.FC = () => {
   const { isFavorite, toggleFavorite } = useFavorites();
   const showToast = useToastStore((state) => state.showToast);
   const [isShared, setIsShared] = useState(false);
+  const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
+  const [moveFileId, setMoveFileId] = useState<string>('');
+  const [moveFileName, setMoveFileName] = useState<string>('');
+  const [draggedFileId, setDraggedFileId] = useState<string | null>(null);
+  const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
   const [deletedToast, setDeletedToast] = useState<{
     id: string;
     name: string;
@@ -316,6 +323,7 @@ const DirectoryPage: React.FC = () => {
   // --- Вычисляемые значения ---
   const isPersonal = useMemo(() => directoryInfo?.type === 'root', [directoryInfo]);
   const isOwner = useMemo(() => directoryInfo?.owner_id === user?.id, [directoryInfo, user]);
+  const isRoot = useMemo(() => directoryInfo?.type === 'root', [directoryInfo]);
 
   const isSharedDirectory = useMemo(() => {
     return isShared && !isPersonal;
@@ -479,6 +487,60 @@ const DirectoryPage: React.FC = () => {
     }
     setFavoriteToast(null);
   }, [favoriteToast, toggleFavorite]);
+
+  const handleMoveFile = useCallback((fileId: string) => {
+    const file = directoryContents?.files.find((f) => f.id === fileId);
+    if (file) {
+      setMoveFileId(fileId);
+      setMoveFileName(file.filename);
+      setIsMoveModalOpen(true);
+    }
+  }, [directoryContents]);
+
+  const handleMoveComplete = useCallback(async () => {
+    if (actualId) {
+      await loadDirectory(actualId);
+    }
+  }, [actualId, loadDirectory]);
+
+  const handleFileDragStart = useCallback((e: React.DragEvent, fileId: string) => {
+    e.dataTransfer.setData('fileId', fileId);
+    e.dataTransfer.effectAllowed = 'move';
+    setDraggedFileId(fileId);
+  }, []);
+
+  const handleFileDragEnd = useCallback(() => {
+    setDraggedFileId(null);
+    setDragOverFolderId(null);
+  }, []);
+
+  const handleFolderDragOver = useCallback((e: React.DragEvent, folderId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverFolderId(folderId);
+  }, []);
+
+  const handleFolderDragLeave = useCallback(() => {
+    setDragOverFolderId(null);
+  }, []);
+
+  const handleFolderDrop = useCallback(async (e: React.DragEvent, folderId: string) => {
+    e.preventDefault();
+    const fileId = e.dataTransfer.getData('fileId');
+    if (!fileId || !accessToken) return;
+
+    setDragOverFolderId(null);
+    setDraggedFileId(null);
+
+    try {
+      await moveFile(accessToken, fileId, folderId);
+      if (actualId) await loadDirectory(actualId);
+      showToast('Файл перемещён', 'success');
+    } catch (err) {
+      console.error('Failed to move file:', err);
+      showToast('Не удалось переместить файл', 'error');
+    }
+  }, [accessToken, actualId, loadDirectory, showToast]);
 
   // --- Рендер breadcrumbs ---
   const renderBreadcrumbs = () => {
@@ -680,6 +742,25 @@ const DirectoryPage: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-6">
+          {canModify && !isRoot && (
+            <DropZoneUp
+              isVisible={draggedFileId !== null}
+              onDrop={async () => {
+                if (!draggedFileId || !accessToken || !directoryInfo?.parent_id) return;
+                try {
+                  await moveFile(accessToken, draggedFileId, directoryInfo.parent_id);
+                  if (actualId) await loadDirectory(actualId);
+                  showToast('Файл перемещён на уровень выше', 'success');
+                } catch (err) {
+                  console.error('Failed to move file:', err);
+                  showToast('Не удалось переместить файл', 'error');
+                }
+                setDraggedFileId(null);
+              }}
+              className="mb-4"
+            />
+          )}
+
           {/* Папки */}
           {filteredSubdirectories.length > 0 && (
             <div>
@@ -693,9 +774,12 @@ const DirectoryPage: React.FC = () => {
                         id={folder.id}
                         name={folder.name}
                         to={`/directories/${folder.id}`}
-                        onDelete={
-                          canModify && !checkIsShared(folder.id) ? handleDeleteFolder : undefined
-                        }
+                        onDelete={canModify && !checkIsShared(folder.id) ? handleDeleteFolder : undefined}
+                        draggable={false}
+                        onDragOver={canModify ? (e) => handleFolderDragOver(e, folder.id) : undefined}
+                        onDragLeave={handleFolderDragLeave}
+                        onDrop={canModify ? (e) => handleFolderDrop(e, folder.id) : undefined}
+                        isDragOver={dragOverFolderId === folder.id}
                       />
                     ))}
                   </div>
@@ -735,6 +819,10 @@ const DirectoryPage: React.FC = () => {
                         isFavorite={file.isFavorite}
                         onToggleFavorite={handleToggleFavorite}
                         onDelete={canModify ? handleDeleteFile : undefined}
+                        onMove={canModify ? handleMoveFile : undefined}
+                        draggable={canModify}
+                        onDragStart={(e) => handleFileDragStart(e, file.id)}
+                        onDragEnd={handleFileDragEnd}
                       />
                     ))}
                   </div>
@@ -819,6 +907,15 @@ const DirectoryPage: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      <MoveFileModal
+        isOpen={isMoveModalOpen}
+        onClose={() => setIsMoveModalOpen(false)}
+        fileId={moveFileId}
+        fileName={moveFileName}
+        currentDirectoryId={actualId || ''}
+        onMoveComplete={handleMoveComplete}
+      />
 
       {/* Уведомления */}
       {(deletedToast || favoriteToast) && (

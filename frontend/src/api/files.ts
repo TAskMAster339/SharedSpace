@@ -1,4 +1,5 @@
 import { apiRequest } from './client';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api/v1';
 
 export interface FileUploadResponse {
   id: string;
@@ -133,3 +134,23 @@ export function permanentDeleteFile(accessToken: string, fileId: string): Promis
     token: accessToken,
   });
 }
+
+export const moveFile = async (
+  accessToken: string,
+  fileId: string,
+  parentId: string
+): Promise<void> => {
+  const response = await fetch(`${API_BASE_URL}/files/${fileId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ parent_id: parentId }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Не удалось переместить файл');
+  }
+};

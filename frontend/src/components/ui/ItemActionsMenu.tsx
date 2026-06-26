@@ -1,18 +1,19 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { MoreVertical, Star, Trash2 } from 'lucide-react';
+import { MoreVertical, Star, Trash2, Move } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
 interface ItemActionsMenuProps {
   isFavorite?: boolean;
   onToggleFavorite?: () => void;
   onDelete?: () => void;
+  onMove?: () => void;
   className?: string;
   iconSize?: number;
 }
 
 const MENU_WIDTH = 192; // w-48
-const MENU_HEIGHT_EST = 100;
+const MENU_HEIGHT_EST = 140;
 const GAP = 4;
 const EDGE = 8;
 
@@ -20,6 +21,7 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
   isFavorite = false,
   onToggleFavorite,
   onDelete,
+  onMove,
   className,
   iconSize = 18,
 }) => {
@@ -87,7 +89,7 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
     };
   }, [isOpen, isMobile]);
 
-  if (!onToggleFavorite && !onDelete) return null;
+  if (!onToggleFavorite && !onDelete && !onMove) return null;
 
   const close = () => setIsOpen(false);
 
@@ -113,6 +115,17 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
             fill={isFavorite ? 'currentColor' : 'none'}
           />
           {isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'}
+        </button>
+      )}
+      {onMove && (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={(e) => handleSelect(e, onMove)}
+          className="flex items-center gap-3 w-full px-4 py-3.5 text-base text-theme-secondary hover:bg-theme-hover transition-colors sm:px-3 sm:py-2 sm:text-sm"
+        >
+          <Move size={18} />
+          Переместить
         </button>
       )}
       {onDelete && (

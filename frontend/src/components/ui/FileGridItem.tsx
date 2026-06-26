@@ -15,6 +15,10 @@ interface FileGridItemProps {
   isFavorite?: boolean;
   onToggleFavorite?: (id: string) => void;
   onDelete?: (id: string) => void;
+  onMove?: (id: string) => void;
+  draggable?: boolean;
+  onDragStart?: (e: React.DragEvent) => void;
+  onDragEnd?: (e: React.DragEvent) => void;
 }
 
 export const FileGridItem: React.FC<FileGridItemProps> = ({
@@ -26,6 +30,7 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
   isFavorite = false,
   onToggleFavorite,
   onDelete,
+  onMove,
 }) => {
   return (
     <Link
@@ -57,6 +62,7 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
           isFavorite={isFavorite}
           onToggleFavorite={onToggleFavorite ? () => onToggleFavorite(id) : undefined}
           onDelete={onDelete ? () => onDelete(id) : undefined}
+          onMove={onMove ? () => onMove(id) : undefined}
           iconSize={16}
         />
       </div>

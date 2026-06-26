@@ -3,15 +3,12 @@ import { apiRequest } from './client';
 export type SharingRole = 'viewer' | 'editor' | 'admin';
 
 export interface SharedDirectoryWithStats {
-  id: string;
   directory_id: string;
   name: string;
-  owner_id: string;
-  owner_name: string;
-  role: SharingRole;
+  role: string;
   member_count: number;
   file_count: number;
-  created_at: string;
+  member_usernames: string[];
 }
 
 export interface SharedDirectory {
@@ -32,12 +29,12 @@ export interface Member {
   joined_at: string;
 }
 
-export function getSharedWithMeStats(accessToken: string): Promise<SharedDirectoryWithStats[]> {
+export const getSharedWithMeStats = async (accessToken: string): Promise<SharedDirectoryWithStats[]> => {
   return apiRequest<SharedDirectoryWithStats[]>('/shared/with-me/stats', {
     method: 'GET',
     token: accessToken,
   });
-}
+};
 
 export function getSharedWithMe(accessToken: string, limit?: number): Promise<SharedDirectory[]> {
   const query = limit ? `?limit=${limit}` : '';
