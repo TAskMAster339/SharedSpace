@@ -23,6 +23,24 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT || '22' }}
           script: |
+            set -e
+
+            echo "Переход в папку проекта..."
             cd ${{ secrets.SERVER_DEPLOY_PATH }}
+
+            echo "Получение последних изменений из Git..."
             git pull origin main
+
+            echo "Остановка старых контейнеров..."
+            docker compose down || true
+
+            echo "Пересборка и запуск контейнеров..."
             docker compose up --build -d
+
+            echo "Проверка статуса контейнеров..."
+            docker compose ps
+
+            echo "Последние логи для проверки..."
+            docker compose logs --tail=20
+
+            echo "Деплой завершен успешно!"
