@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { CheckCircle, XCircle, X, Trash2, RotateCcw, Star } from 'lucide-react';
 import { cn } from '../../utils/cn';
-import { capitalize } from '../../utils/text';
 
 export type ToastVariant = 'success' | 'error' | 'info' | 'undo' | 'favorite';
 
@@ -73,9 +72,6 @@ export const Toast: React.FC<ToastProps> = ({
   const style = variants[variant] || variants.info;
   const Icon = style.icon;
 
-  // Автоматически делаем первую букву заглавной
-  const formattedMessage = capitalize(message);
-
   return (
     <div
       className={cn(
@@ -95,7 +91,7 @@ export const Toast: React.FC<ToastProps> = ({
         }}
       />
       <Icon size={20} className={cn('shrink-0', style.iconColor)} />
-      <p className="text-sm text-theme-primary flex-1">{formattedMessage}</p>
+      <p className="text-sm text-theme-primary flex-1">{message}</p>
       {actionLabel && onAction && (
         <button
           onClick={() => {
