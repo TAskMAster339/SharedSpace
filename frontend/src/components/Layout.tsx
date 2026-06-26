@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import React from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { Footer } from './Footer';
 import { ScrollToTopButton } from './ScrollToTopButton';
+import { ToastContainer } from './ui/ToastContainer';
+import { useToastStore } from '../hooks/useToast';
 import { useAuth } from '../hooks/useAuth';
 import { cn } from '../utils/cn';
 
@@ -13,27 +15,39 @@ interface LayoutProps {
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { isAuthenticated } = useAuth();
-  const [mainEl, setMainEl] = useState<HTMLElement | null>(null);
+  const location = useLocation();
+  const isOnLandingPage = location.pathname === '/';
+  const { toasts, removeToast } = useToastStore();
 
   return (
-    <div className="h-screen bg-theme-primary flex flex-col">
+    <div className="min-h-screen bg-theme-primary flex flex-col">
       <Header />
-      <div className="flex flex-1 overflow-hidden">
-        {isAuthenticated && <Sidebar />}
-        <main
-          ref={setMainEl}
-          className={cn(
-            'flex-1 overflow-y-auto overflow-x-clip flex flex-col',
-            isAuthenticated ? 'ml-0' : '',
-          )}
-        >
-          <div className="max-w-6xl mx-auto p-4 sm:p-6 flex-1 w-full">
-            {children ? children : <Outlet />}
+
+      <div className="flex flex-1 relative">
+        {isAuthenticated && (
+          <div className="sticky top-16 h-[calc(100vh-4rem)] shrink-0">
+            <Sidebar />
+          </div>
+        )}
+
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 overflow-y-auto overflow-x-clip">
+            <div
+              className={cn(
+                'max-w-6xl mx-auto',
+                isOnLandingPage ? 'p-0' : 'p-4 sm:p-6',
+                !isOnLandingPage && 'min-h-full',
+              )}
+            >
+              {children ? children : <Outlet />}
+            </div>
           </div>
           <Footer />
-        </main>
+        </div>
       </div>
-      <ScrollToTopButton scrollContainer={mainEl} />
+
+      <ScrollToTopButton />
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );
 };

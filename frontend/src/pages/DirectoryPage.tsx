@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Upload, FolderPlus, Settings, ChevronRight, Home, Users } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useDirectoryStore } from '../store/directoryStore';
+import { useDragDropStore } from '../store/dragDropStore';
 import { useSharedDirectories } from '../hooks/useSharedDirectories';
 import { Modal } from '../components/ui/Modal';
 import { Toast } from '../components/ui/Toast';
@@ -43,6 +44,7 @@ const DirectoryPage: React.FC = () => {
   const user = useAuthStore((s) => s.user);
   const { personalStorageId } = useDirectoryStore();
   const { isShared: checkIsShared, isLoading: isLoadingShared } = useSharedDirectories();
+  const { setTargetDirectoryId, setOnUploadComplete } = useDragDropStore();
 
   // Состояния
   const [directoryContents, setDirectoryContents] = useState<DirectoryContents | null>(null);
@@ -177,6 +179,8 @@ const DirectoryPage: React.FC = () => {
     async (dirId: string) => {
       if (!accessToken || !dirId) return;
 
+      setTargetDirectoryId(dirId);
+
       setIsLoading(true);
       setError(null);
 
@@ -206,7 +210,7 @@ const DirectoryPage: React.FC = () => {
         setIsLoading(false);
       }
     },
-    [accessToken, navigate, loadBreadcrumbs, checkIsShared],
+    [accessToken, navigate, loadBreadcrumbs, checkIsShared, setTargetDirectoryId],
   );
 
   // --- Обработчик навигации по breadcrumbs ---
@@ -254,7 +258,7 @@ const DirectoryPage: React.FC = () => {
     }
   }, [id, actualId, accessToken, loadDirectory, isLoadingShared]);
 
-  // --- Эффект 3: Перепроверяем статус общей директории когда загрузились shared данные ---
+  // --- Эффект 3: Перепроверяем статус общей директории ---
   useEffect(() => {
     if (!isLoadingShared && actualId && accessToken) {
       const shared = checkIsShared(actualId);
@@ -267,6 +271,34 @@ const DirectoryPage: React.FC = () => {
       }
     }
   }, [isLoadingShared, actualId, accessToken, checkIsShared, loadBreadcrumbs, isShared]);
+
+  // --- Эффект 4: Обновляем DnD target при изменении actualId ---
+  useEffect(() => {
+    if (actualId) {
+      setTargetDirectoryId(actualId);
+    }
+  }, [actualId, setTargetDirectoryId]);
+
+  // Эффект 5: Регистрируем callback для обновления после загрузки через DnD
+  useEffect(() => {
+    setOnUploadComplete(() => {
+      if (actualId) {
+        loadDirectory(actualId);
+      }
+    });
+
+    return () => {
+      setOnUploadComplete(null); // <-- меняем undefined на null
+    };
+  }, [actualId, loadDirectory, setOnUploadComplete]);
+
+  // Эффект 6: Очищаем DnD target при размонтировании
+  useEffect(() => {
+    return () => {
+      setTargetDirectoryId(null);
+      setOnUploadComplete(null); // <-- меняем undefined на null
+    };
+  }, [setTargetDirectoryId, setOnUploadComplete]);
 
   // --- Сохраняем режим просмотра ---
   useEffect(() => {
@@ -754,14 +786,15 @@ const DirectoryPage: React.FC = () => {
 
       {/* Уведомление о перемещении в корзину */}
       {deletedToast && (
-        <Toast
-          message={`«${deletedToast.name}» перемещ${
-            deletedToast.kind === 'directory' ? 'ена' : 'ён'
-          } в корзину`}
-          actionLabel="Отменить"
-          onAction={handleUndoDelete}
-          onClose={() => setDeletedToast(null)}
-        />
+        <div className="fixed bottom-4 right-4 z-50">
+          <Toast
+            variant="undo"
+            message={`«${deletedToast.name}» перемещ${deletedToast.kind === 'directory' ? 'ена' : 'ён'} в корзину`}
+            actionLabel="Отменить"
+            onAction={handleUndoDelete}
+            onClose={() => setDeletedToast(null)}
+          />
+        </div>
       )}
     </div>
   );

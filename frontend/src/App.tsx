@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import { Layout } from './components/Layout';
+import { DropZoneWrapper } from './components/DropZoneWrapper';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicRoute from './components/PublicRoute';
 import MainPage from './pages/MainPage';
@@ -53,6 +54,7 @@ const App: React.FC = () => {
             </Layout>
           }
         />
+
         {/* Только гостевые маршруты */}
         <Route
           element={
@@ -73,19 +75,43 @@ const App: React.FC = () => {
             </ProtectedRoute>
           }
         >
-          <Route path="/dashboard" element={<DashboardPage />} />
+          {/* Страницы с DropZone */}
+          <Route
+            path="/dashboard"
+            element={
+              <DropZoneWrapper>
+                <DashboardPage />
+              </DropZoneWrapper>
+            }
+          />
+          <Route
+            path="/directories/:id"
+            element={
+              <DropZoneWrapper>
+                <DirectoryPage />
+              </DropZoneWrapper>
+            }
+          />
+          <Route
+            path="/favorites"
+            element={
+              <DropZoneWrapper>
+                <FavoritesPage />
+              </DropZoneWrapper>
+            }
+          />
+
+          {/* Страницы без DropZone */}
           <Route path="/settings" element={<ProfileSettingsPage />} />
           <Route path="/directories" element={<SharedDirListPage />} />
-          <Route path="/directories/:id" element={<DirectoryPage />} />
           <Route path="/files/:id" element={<FileViewPage />} />
           <Route path="/shared/:id/settings" element={<SharedSettingsPage />} />
           <Route path="/invitations" element={<InvitationsPage />} />
-          <Route path="/favorites" element={<FavoritesPage />} />
           <Route path="/trash" element={<TrashPage />} />
           <Route path="/files/:id/convert" element={<ConvertPage />} />
         </Route>
 
-        {/* 404 */}
+        {/* 404 без DropZone */}
         <Route
           path="*"
           element={

@@ -536,10 +536,7 @@ const FileViewPage: React.FC = () => {
                 Скачать
               </button>
 
-              <button
-                onClick={() => console.log('Поделиться ссылкой')}
-                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium"
-              >
+              <button className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium">
                 <Share2 size={16} />
                 Поделиться ссылкой
               </button>

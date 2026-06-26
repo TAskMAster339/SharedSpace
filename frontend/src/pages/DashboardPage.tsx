@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Folder, Star } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useAuthStore } from '../store/authStore';
 import { useDirectoryStore } from '../store/directoryStore';
+import { useDragDropStore } from '../store/dragDropStore';
 import { useFavorites } from '../hooks/useFavorites';
 import { getRecentFiles, FileMetadata } from '../api/files';
 import { getSharedWithMe, SharedDirectory } from '../api/sharing';
@@ -27,6 +28,7 @@ const DashboardPage: React.FC = () => {
   const accessToken = useAuthStore((state) => state.accessToken);
   const { personalStorageId, isLoading: isStorageLoading } = useDirectoryStore();
   const { isFavorite, toggleFavorite } = useFavorites();
+  const { setOnUploadComplete } = useDragDropStore();
 
   const [recentFiles, setRecentFiles] = useState<FileMetadata[]>([]);
   const [sharedDirectories, setSharedDirectories] = useState<SharedDirectory[]>([]);
@@ -64,6 +66,43 @@ const DashboardPage: React.FC = () => {
       isMounted = false;
     };
   }, [accessToken]);
+
+  const loadDashboardData = useCallback(async () => {
+    if (!accessToken) return;
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const [recent, shared, favoritesRes] = await Promise.all([
+        getRecentFiles(accessToken, RECENT_FILES_LIMIT),
+        getSharedWithMe(accessToken, SHARED_DIRECTORIES_LIMIT),
+        getFavorites(accessToken, FAVORITES_LIMIT),
+      ]);
+      setRecentFiles(recent.files);
+      setSharedDirectories(shared);
+      setFavorites(favoritesRes.favorites);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Не удалось загрузить данные.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [accessToken]);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [accessToken, loadDashboardData]);
+
+  // Регистрируем callback для обновления после загрузки через DnD
+  useEffect(() => {
+    setOnUploadComplete(() => {
+      loadDashboardData();
+    });
+
+    return () => {
+      setOnUploadComplete(null);
+    };
+  }, [accessToken, setOnUploadComplete, loadDashboardData]);
 
   if (isStorageLoading || isLoading) {
     return (
