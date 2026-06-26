@@ -313,3 +313,85 @@ func (h *Handler) PermanentDelete(w http.ResponseWriter, r *http.Request) error 
 	}
 	return writeJSON(w, http.StatusOK, map[string]string{"message": "файл удалён навсегда"})
 }
+
+// Convert converts an image to another format (PNG→JPG, PNG→WEBP, JPG→WEBP).
+// @Summary Convert image format
+// @Tags files
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Produce application/octet-stream
+// @Param id path string true "File ID"
+// @Param body body ConvertRequest true "Целевой формат и флаг сохранения"
+// @Success 200 {file} binary "Сконвертированный файл (при save=false)"
+// @Success 201 {object} ConversionResponse "Запись о конверсии (при save=true)"
+// @Failure 400 {object} apperror.Response
+// @Failure 401 {object} apperror.Response
+// @Failure 403 {object} apperror.Response
+// @Failure 404 {object} apperror.Response
+// @Router /api/v1/files/{id}/convert [post]
+func (h *Handler) Convert(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := auth.ClaimsFromCtx(r.Context())
+	if !ok {
+		return apperror.Unauthorized("не авторизован")
+	}
+	fileID := chi.URLParam(r, "id")
+	if fileID == "" {
+		return apperror.Validation("id файла обязателен")
+	}
+	var req ConvertRequest
+	if err := h.decodeJSON(r, &req); err != nil {
+		return err
+	}
+	if req.TargetFormat == "" {
+		return apperror.Validation("target_format обязателен")
+	}
+
+	if req.Save {
+		resp, err := h.service.ConvertAndSave(r.Context(), claims.UserID, fileID, req.TargetFormat)
+		if err != nil {
+			return err
+		}
+		return writeJSON(w, http.StatusCreated, resp)
+	}
+
+	data, mimeType, filename, err := h.service.ConvertAndDownload(r.Context(), claims.UserID, fileID, req.TargetFormat)
+	if err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", mimeType)
+	w.Header().Set("Content-Disposition", `attachment; filename="`+filename+`"`)
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(data)
+	return nil
+}
+
+// ListConversions returns the conversion history for a file.
+// @Summary List file conversions
+// @Tags files
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "File ID"
+// @Success 200 {object} ConversionsListResponse
+// @Failure 401 {object} apperror.Response
+// @Failure 403 {object} apperror.Response
+// @Failure 404 {object} apperror.Response
+// @Router /api/v1/files/{id}/conversions [get]
+func (h *Handler) ListConversions(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := auth.ClaimsFromCtx(r.Context())
+	if !ok {
+		return apperror.Unauthorized("не авторизован")
+	}
+	fileID := chi.URLParam(r, "id")
+	if fileID == "" {
+		return apperror.Validation("id файла обязателен")
+	}
+	resp, err := h.service.ListConversions(r.Context(), claims.UserID, fileID)
+	if err != nil {
+		return err
+	}
+	if resp.Conversions == nil {
+		resp.Conversions = []ConversionResponse{}
+	}
+	return writeJSON(w, http.StatusOK, resp)
+}

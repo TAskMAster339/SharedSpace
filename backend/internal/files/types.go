@@ -57,3 +57,32 @@ type fileRecord struct {
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
+
+type ConvertRequest struct {
+	TargetFormat string `json:"target_format"`
+	Save         bool   `json:"save"`
+}
+
+type ConversionResponse struct {
+	ID           string    `json:"id"`
+	SourceFileID string    `json:"source_file_id"`
+	ResultFileID string    `json:"result_file_id"`
+	SourceFormat string    `json:"source_format"`
+	TargetFormat string    `json:"target_format"`
+	CreatedBy    string    `json:"created_by"`
+	CreatedAt    time.Time `json:"created_at"`
+}
+
+type ConversionsListResponse struct {
+	Conversions []ConversionResponse `json:"conversions"`
+}
+
+type conversionRecord struct {
+	ID           string
+	SourceFileID string
+	ResultFileID string
+	SourceFormat string
+	TargetFormat string
+	CreatedBy    string
+	CreatedAt    time.Time
+}

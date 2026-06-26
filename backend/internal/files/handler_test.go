@@ -59,6 +59,16 @@ func (m *mockService) Update(_ context.Context, userID, fileID string, req Updat
 	return FileMetadataResponse{}, nil
 }
 
+func (m *mockService) ConvertAndSave(_ context.Context, userID, fileID, target string) (ConversionResponse, error) {
+	return ConversionResponse{}, nil
+}
+func (m *mockService) ConvertAndDownload(_ context.Context, userID, fileID, target string) ([]byte, string, string, error) {
+	return []byte("data"), "image/webp", "x.webp", nil
+}
+func (m *mockService) ListConversions(_ context.Context, userID, fileID string) (ConversionsListResponse, error) {
+	return ConversionsListResponse{}, nil
+}
+
 func withClaims(ctx context.Context, userID string) context.Context {
 	return auth.SetClaims(ctx, &auth.Claims{UserID: userID})
 }

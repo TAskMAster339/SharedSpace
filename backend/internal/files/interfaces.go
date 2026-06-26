@@ -12,6 +12,7 @@ import (
 type StorageClient interface {
 	Upload(ctx context.Context, objectKey string, r io.Reader, size int64, contentType string) error
 	PresignedGetURL(ctx context.Context, objectKey string, expiry time.Duration) (string, error)
+	Get(ctx context.Context, objectKey string) (io.ReadCloser, error)
 	Delete(ctx context.Context, objectKey string) error
 }
 
@@ -24,6 +25,9 @@ type ServiceInterface interface {
 	PermanentDelete(ctx context.Context, userID, fileID string) error
 	GetRecent(ctx context.Context, userID string, limit int) (RecentFilesResponse, error)
 	Update(ctx context.Context, userID, fileID string, req UpdateFileRequest) (FileMetadataResponse, error)
+	ConvertAndSave(ctx context.Context, userID, fileID, target string) (ConversionResponse, error)
+	ConvertAndDownload(ctx context.Context, userID, fileID, target string) (data []byte, mimeType, filename string, err error)
+	ListConversions(ctx context.Context, userID, fileID string) (ConversionsListResponse, error)
 }
 
 type RepositoryInterface interface {
@@ -40,6 +44,8 @@ type RepositoryInterface interface {
 	FindRecentByUserID(ctx context.Context, db dbTX, userID string, limit int) ([]fileRecord, error)
 	MoveFile(ctx context.Context, db dbTX, fileID, newParentID string, newFilename *string) (fileRecord, error)
 	FindByFilenameAndDirectory(ctx context.Context, db dbTX, filename, directoryID string) (fileRecord, error)
+	SaveConversion(ctx context.Context, db dbTX, sourceFileID, resultFileID, sourceFormat, targetFormat, createdBy string) (conversionRecord, error)
+	FindConversionsByFile(ctx context.Context, db dbTX, fileID string) ([]conversionRecord, error)
 }
 
 type FileUpload struct {
