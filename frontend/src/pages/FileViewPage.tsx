@@ -8,7 +8,8 @@ import { getDirectoryById, Directory } from '../api/directories';
 import { ApiError } from '../api/client';
 import { FileIcon } from '../components/ui/FileIcon';
 import { Button } from '../components/ui/Button';
-import { resolveFileIconType } from '../utils/fileType';
+import { ConvertModal } from '../components/ui/ConvertModal';
+import { resolveFileIconType, getFileTypeDisplay } from '../utils/fileType';
 import { formatFileSize, formatDate } from '../utils/format';
 import { cn } from '../utils/cn';
 
@@ -90,6 +91,8 @@ const FileViewPage: React.FC = () => {
   const accessToken = useAuthStore((state) => state.accessToken);
   const user = useAuthStore((state) => state.user);
   const { isFavorite, toggleFavorite } = useFavorites();
+  const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
+  const [isConverting, setIsConverting] = useState(false);
 
   const [file, setFile] = useState<FileMetadata | null>(null);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
@@ -204,9 +207,6 @@ const FileViewPage: React.FC = () => {
       isMounted = false;
     };
   }, [accessToken, id, determinePreviewType, isProblematicForIframe]);
-
-  // Определяем, является ли файл изображением
-  const isImage = previewType === 'image';
 
   // Получаем расширение файла без точки
   const getFileExtension = (filename: string): string => {
@@ -431,6 +431,27 @@ const FileViewPage: React.FC = () => {
     }
   };
 
+  // Функция для конвертации
+  const handleConvert = useCallback(
+    async (targetFormat: string) => {
+      if (!accessToken || !id) return;
+
+      setIsConverting(true);
+      try {
+        // Здесь будет ваш API-запрос на конвертацию
+        // const result = await convertFile(accessToken, id, targetFormat);
+        // После успешной конвертации можно показать уведомление и обновить данные
+        console.log(`Конвертация в ${targetFormat} выполнена`);
+        setIsConvertModalOpen(false);
+      } catch (err) {
+        console.error('Ошибка конвертации:', err);
+      } finally {
+        setIsConverting(false);
+      }
+    },
+    [accessToken, id],
+  );
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -452,13 +473,6 @@ const FileViewPage: React.FC = () => {
 
   const fileIconType = resolveFileIconType(file.mime_type, file.extension);
   const isFav = isFavorite(file.id);
-  const isConvertible =
-    isImage &&
-    (file.mime_type === 'image/png' ||
-      file.mime_type === 'image/jpeg' ||
-      file.extension === 'png' ||
-      file.extension === 'jpg' ||
-      file.extension === 'jpeg');
 
   return (
     <div className="space-y-6 pb-10">
@@ -506,6 +520,12 @@ const FileViewPage: React.FC = () => {
             {/* Характеристики */}
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
+                <span className="text-theme-secondary">Тип</span>
+                <span className="text-theme-primary font-medium">
+                  {getFileTypeDisplay(file.mime_type, file.extension)}
+                </span>
+              </div>
+              <div className="flex justify-between">
                 <span className="text-theme-secondary">Размер</span>
                 <span className="text-theme-primary font-medium">{formatFileSize(file.size)}</span>
               </div>
@@ -519,6 +539,12 @@ const FileViewPage: React.FC = () => {
                 <span className="text-theme-secondary">Создан</span>
                 <span className="text-theme-primary font-medium">
                   {formatDate(file.created_at)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-theme-secondary">Изменён</span>
+                <span className="text-theme-primary font-medium">
+                  {formatDate(file.updated_at)}
                 </span>
               </div>
             </div>
@@ -550,29 +576,27 @@ const FileViewPage: React.FC = () => {
               </button>
             </div>
 
-            {/* Конвертация изображений (только для PNG и JPG) */}
-            {isConvertible && (
-              <>
-                <div className="my-4 border-t border-theme" />
-                <div>
-                  <p className="text-xs text-theme-muted">Конвертировать изображение</p>
-                  <div className="flex gap-2 mt-2">
-                    <button
-                      onClick={() => navigate(`/files/${file.id}/convert?format=png`)}
-                      className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium"
-                    >
-                      PNG
-                    </button>
-                    <button
-                      onClick={() => navigate(`/files/${file.id}/convert?format=jpg`)}
-                      className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium"
-                    >
-                      JPG
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
+            {/* Конвертация файла */}
+            <div className="mt-4 pt-4 border-t border-theme">
+              <button
+                onClick={() => setIsConvertModalOpen(true)}
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium"
+              >
+                <Image size={16} />
+                Конвертировать
+              </button>
+            </div>
+
+            <ConvertModal
+              isOpen={isConvertModalOpen}
+              onClose={() => setIsConvertModalOpen(false)}
+              fileId={file.id}
+              fileName={file.filename}
+              mimeType={file.mime_type}
+              extension={file.extension}
+              onConvert={handleConvert}
+              isConverting={isConverting}
+            />
           </div>
         </div>
       </div>
