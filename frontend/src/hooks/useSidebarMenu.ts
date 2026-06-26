@@ -1,9 +1,31 @@
 import { useEffect, useMemo } from 'react';
 import { LayoutDashboard, Folder, Users, Star, Mail, Trash2 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
-import { useDirectoryStore } from '../store/directoryStore';
+import { useDirectoryStore, DirectorySection } from '../store/directoryStore';
 
 const BYTES_TO_GB = 1024 * 1024 * 1024;
+
+// Открытая конкретная директория вида /directories/<id> (но не список /directories)
+const isDirectoryDetail = (path: string) => /^\/directories\/[^/]+/.test(path);
+
+// Подсветка пункта бокового меню. «Личное хранилище» и «Общие директории»
+// различаются не по URL, а по currentSection (его выставляет DirectoryPage).
+export const isSidebarItemActive = (
+  itemPath: string,
+  currentPath: string,
+  currentSection: DirectorySection,
+): boolean => {
+  if (itemPath === '/directories') {
+    return (
+      currentPath === '/directories' ||
+      (isDirectoryDetail(currentPath) && currentSection === 'shared')
+    );
+  }
+  if (itemPath.startsWith('/directories/')) {
+    return isDirectoryDetail(currentPath) && currentSection === 'personal';
+  }
+  return currentPath === itemPath;
+};
 
 export const useSidebarMenu = () => {
   const user = useAuthStore((s) => s.user);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Upload, FolderPlus, Settings, ChevronRight, Home, Users } from 'lucide-react';
+import { Upload, FolderPlus, Settings, ChevronRight, Home, Users, ArrowLeft } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useDirectoryStore } from '../store/directoryStore';
 import { useDragDropStore } from '../store/dragDropStore';
@@ -44,7 +44,7 @@ const DirectoryPage: React.FC = () => {
 
   const accessToken = useAuthStore((s) => s.accessToken);
   const user = useAuthStore((s) => s.user);
-  const { personalStorageId } = useDirectoryStore();
+  const { personalStorageId, setCurrentSection } = useDirectoryStore();
   const { isShared: checkIsShared, isLoading: isLoadingShared } = useSharedDirectories();
   const { setTargetDirectoryId, setOnUploadComplete } = useDragDropStore();
 
@@ -321,6 +321,17 @@ const DirectoryPage: React.FC = () => {
     return isShared && !isPersonal;
   }, [isShared, isPersonal]);
 
+  // Сообщаем боковому меню, в каком разделе мы находимся (личное/общее),
+  // чтобы оно подсвечивало правильный пункт. Сбрасываем при уходе со страницы.
+  useEffect(() => {
+    if (!directoryInfo) return;
+    setCurrentSection(isShared ? 'shared' : 'personal');
+  }, [directoryInfo, isShared, setCurrentSection]);
+
+  useEffect(() => {
+    return () => setCurrentSection(null);
+  }, [setCurrentSection]);
+
   // Фильтруем папки: в личном хранилище скрываем общие директории
   const filteredSubdirectories = useMemo(() => {
     if (!directoryContents) return [];
@@ -573,6 +584,17 @@ const DirectoryPage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-10">
+      {/* Назад к списку общих директорий */}
+      {isSharedDirectory && (
+        <button
+          onClick={() => navigate('/directories')}
+          className="inline-flex items-center gap-2 text-sm text-theme-secondary hover:text-theme-primary transition-colors"
+        >
+          <ArrowLeft size={16} />
+          Вернуться к общим директориям
+        </button>
+      )}
+
       {/* Заголовок */}
       <div>
         <h1 className="text-2xl font-semibold text-theme-primary flex items-center gap-2">

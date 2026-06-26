@@ -2,7 +2,8 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { StorageIndicator } from './ui/StorageIndicator';
 import { cn } from '../utils/cn';
-import { useSidebarMenu } from '../hooks/useSidebarMenu';
+import { useSidebarMenu, isSidebarItemActive } from '../hooks/useSidebarMenu';
+import { useDirectoryStore } from '../store/directoryStore';
 
 interface MobileNavMenuProps {
   onNavigate: () => void;
@@ -11,6 +12,7 @@ interface MobileNavMenuProps {
 export const MobileNavMenu: React.FC<MobileNavMenuProps> = ({ onNavigate }) => {
   const location = useLocation();
   const currentPath = location.pathname;
+  const currentSection = useDirectoryStore((s) => s.currentSection);
   const { menuItems, storageUsed, storageQuota, isLoading } = useSidebarMenu();
 
   return (
@@ -22,9 +24,7 @@ export const MobileNavMenu: React.FC<MobileNavMenuProps> = ({ onNavigate }) => {
       ) : (
         <div className="px-2 flex flex-col space-y-1">
           {menuItems.map((item) => {
-            const isActive =
-              currentPath === item.path ||
-              (item.path.startsWith('/directories/') && currentPath.startsWith('/directories/'));
+            const isActive = isSidebarItemActive(item.path, currentPath, currentSection);
             return (
               <Link
                 key={item.path}

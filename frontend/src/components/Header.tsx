@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Settings, LogOut, ChevronDown, MoonStar, Menu, X, Search } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
@@ -19,6 +19,42 @@ export const Header: React.FC = () => {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const lastNameInitial = lastName ? lastName.charAt(0).toUpperCase() + '.' : '';
+
+  const profileRef = useRef<HTMLDivElement>(null);
+  const mobileNavRef = useRef<HTMLDivElement>(null);
+  const mobileNavBtnRef = useRef<HTMLButtonElement>(null);
+  const mobileSearchRef = useRef<HTMLDivElement>(null);
+  const mobileSearchBtnRef = useRef<HTMLButtonElement>(null);
+
+  // Закрытие выпадающих элементов по клику в любом месте вне их самих и их триггеров
+  useEffect(() => {
+    if (!dropdownOpen && !mobileNavOpen && !mobileSearchOpen) return;
+
+    const handlePointerDown = (e: MouseEvent) => {
+      const target = e.target as Node;
+
+      if (dropdownOpen && !profileRef.current?.contains(target)) {
+        setDropdownOpen(false);
+      }
+      if (
+        mobileNavOpen &&
+        !mobileNavRef.current?.contains(target) &&
+        !mobileNavBtnRef.current?.contains(target)
+      ) {
+        setMobileNavOpen(false);
+      }
+      if (
+        mobileSearchOpen &&
+        !mobileSearchRef.current?.contains(target) &&
+        !mobileSearchBtnRef.current?.contains(target)
+      ) {
+        setMobileSearchOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => document.removeEventListener('mousedown', handlePointerDown);
+  }, [dropdownOpen, mobileNavOpen, mobileSearchOpen]);
 
   const toggleMobileNav = () => {
     setMobileSearchOpen(false);
@@ -49,6 +85,7 @@ export const Header: React.FC = () => {
       <div className="flex items-center gap-2 sm:gap-8 min-w-0">
         {isAuthenticated && (
           <button
+            ref={mobileNavBtnRef}
             onClick={toggleMobileNav}
             className="p-2 -ml-2 rounded-theme-full hover:bg-theme-hover transition-colors shrink-0 md:hidden"
             aria-label="Открыть меню"
@@ -118,6 +155,7 @@ export const Header: React.FC = () => {
           <div className="flex items-center gap-1 sm:gap-4">
             {/* Кнопка поиска на мобильных */}
             <button
+              ref={mobileSearchBtnRef}
               onClick={toggleMobileSearch}
               className="p-2 rounded-theme-full hover:bg-theme-hover transition-colors md:hidden"
               aria-label="Поиск"
@@ -142,7 +180,7 @@ export const Header: React.FC = () => {
             </button>
 
             {/* Профиль с выпадающим меню */}
-            <div className="relative">
+            <div className="relative" ref={profileRef}>
               <button
                 onClick={() => setDropdownOpen(!dropdownOpen)}
                 className="flex items-center gap-2 p-1 rounded-theme-full hover:bg-theme-hover transition-colors outline-none"
@@ -179,10 +217,17 @@ export const Header: React.FC = () => {
             </div>
           </div>
 
-          {mobileNavOpen && <MobileNavMenu onNavigate={() => setMobileNavOpen(false)} />}
+          {mobileNavOpen && (
+            <div ref={mobileNavRef} className="contents">
+              <MobileNavMenu onNavigate={() => setMobileNavOpen(false)} />
+            </div>
+          )}
 
           {mobileSearchOpen && (
-            <div className="absolute left-0 right-0 top-16 mx-3 z-40 md:hidden">
+            <div
+              ref={mobileSearchRef}
+              className="absolute left-0 right-0 top-16 mx-3 z-40 md:hidden"
+            >
               <UserSearch className="w-full ring-2 ring-brand/50 rounded-theme-full" />
             </div>
           )}
