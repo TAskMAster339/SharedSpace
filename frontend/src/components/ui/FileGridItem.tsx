@@ -30,7 +30,7 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
     <Link
       to={to}
       className={cn(
-        'group flex flex-col items-center p-3 rounded-theme-md transition-colors cursor-pointer relative',
+        'group flex flex-col items-center p-3 rounded-theme-md transition-colors cursor-pointer relative min-w-0',
         'bg-theme-tertiary hover:bg-theme-hover border border-theme',
         className,
       )}
