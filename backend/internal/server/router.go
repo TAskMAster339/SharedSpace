@@ -11,6 +11,7 @@ import (
 	"sharedspace/internal/favorites"
 	"sharedspace/internal/files"
 	"sharedspace/internal/middleware"
+	"sharedspace/internal/sharelinks"
 	"sharedspace/internal/sharing"
 	"sharedspace/internal/swagger"
 	"sharedspace/internal/trash"
@@ -26,7 +27,7 @@ func healthHandler(w http.ResponseWriter, _ *http.Request) {
 	json.NewEncoder(w).Encode(HealthResponse{Status: "ok"})
 }
 
-func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHandler *users.Handler, dirsHandler *dirs.Handler, filesHandler *files.Handler, sharingHandler *sharing.Handler, favoritesHandler *favorites.Handler, trashHandler *trash.Handler) http.Handler {
+func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHandler *users.Handler, dirsHandler *dirs.Handler, filesHandler *files.Handler, sharingHandler *sharing.Handler, favoritesHandler *favorites.Handler, trashHandler *trash.Handler, shareLinksHandler *sharelinks.Handler) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Recover)
@@ -44,6 +45,10 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 				r.Post("/refresh", middleware.AppError(authHandler.Refresh))
 				r.Post("/logout", middleware.AppError(authHandler.Logout))
 			})
+		}
+
+		if shareLinksHandler != nil {
+			r.Get("/s/{token}", middleware.AppError(shareLinksHandler.Resolve))
 		}
 
 		r.Group(func(r chi.Router) {
@@ -73,6 +78,11 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 					r.Delete("/{id}", middleware.AppError(filesHandler.SoftDelete))
 					r.Post("/{id}/restore", middleware.AppError(filesHandler.Restore))
 					r.Delete("/{id}/permanent", middleware.AppError(filesHandler.PermanentDelete))
+
+					if shareLinksHandler != nil {
+						r.Post("/{id}/share-links", middleware.AppError(shareLinksHandler.Create))
+						r.Get("/{id}/share-links", middleware.AppError(shareLinksHandler.ListByFile))
+					}
 					r.Post("/{id}/convert", middleware.AppError(filesHandler.Convert))
 					r.Get("/{id}/conversions", middleware.AppError(filesHandler.ListConversions))
 				})
@@ -110,6 +120,11 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 					r.Get("/", middleware.AppError(trashHandler.GetTrashList))
 					r.Delete("/", middleware.AppError(trashHandler.ClearTrash))
 				})
+			}
+
+			if shareLinksHandler != nil {
+				r.Patch("/share-links/{id}", middleware.AppError(shareLinksHandler.Update))
+				r.Delete("/share-links/{id}", middleware.AppError(shareLinksHandler.Delete))
 			}
 		})
 	})
