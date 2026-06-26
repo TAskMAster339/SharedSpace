@@ -54,6 +54,12 @@ func main() {
 		log.Fatalf("storage: %v", err)
 	}
 
+	tmpStore, err := storage.New(ctx, cfg.MinIOEndpoint, cfg.MinIOAccessKey,
+		cfg.MinIOSecretKey, cfg.MinIOTmpBucket, cfg.MinIOPublicEndpoint, false)
+	if err != nil {
+		log.Fatalf("tmp storage: %v", err)
+	}
+
 	// auth
 	authRepository := auth.NewRepository()
 	authService := auth.NewService(pool, authRepository, cfg.JWTSecret, cfg.JWTTTL, cfg.RefreshJWTTTL)
@@ -73,7 +79,8 @@ func main() {
 	dirsHandler := dirs.NewHandler(dirsService)
 	// file
 	filesRepository := files.NewRepository()
-	filesService := files.NewService(pool, filesRepository, store, accessChecker)
+	filesService := files.NewService(pool, filesRepository, store, tmpStore, accessChecker)
+	filesService.StartCleanupWorker(ctx)
 	filesHandler := files.NewHandler(filesService)
 	// sharing
 	sharingService := sharing.NewService(pool, sharingRepository, accessChecker)

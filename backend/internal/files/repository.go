@@ -164,3 +164,36 @@ func (r *Repository) HardDeleteFile(ctx context.Context, db dbTX, id string) err
 	_, err := db.Exec(ctx, `DELETE FROM files WHERE id=$1`, id)
 	return err
 }
+
+func (r *Repository) SaveConversion(ctx context.Context, db dbTX, sourceFileID, resultFileID, sourceFormat, targetFormat, createdBy string) (conversionRecord, error) {
+	var c conversionRecord
+	err := db.QueryRow(ctx, `
+		INSERT INTO file_conversions (source_file_id, result_file_id, source_format, target_format, created_by)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id, source_file_id, result_file_id, source_format, target_format, created_by, created_at
+	`, sourceFileID, resultFileID, sourceFormat, targetFormat, createdBy).Scan(
+		&c.ID, &c.SourceFileID, &c.ResultFileID, &c.SourceFormat, &c.TargetFormat, &c.CreatedBy, &c.CreatedAt)
+	return c, err
+}
+
+func (r *Repository) FindConversionsByFile(ctx context.Context, db dbTX, fileID string) ([]conversionRecord, error) {
+	rows, err := db.Query(ctx, `
+		SELECT id, source_file_id, result_file_id, source_format, target_format, created_by, created_at
+		FROM file_conversions
+		WHERE source_file_id = $1
+		ORDER BY created_at DESC
+	`, fileID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []conversionRecord
+	for rows.Next() {
+		var c conversionRecord
+		if err := rows.Scan(&c.ID, &c.SourceFileID, &c.ResultFileID, &c.SourceFormat, &c.TargetFormat, &c.CreatedBy, &c.CreatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}

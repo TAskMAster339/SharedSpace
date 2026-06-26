@@ -6,7 +6,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app/api ./cmd/api
 
 FROM alpine:latest
-RUN apk --no-cache add ca-certificates
+RUN apk --no-cache add ca-certificates ffmpeg
 WORKDIR /app
 COPY --from=builder /app/api /app/api
 COPY --from=builder /app/internal/database/migrations /app/migrations

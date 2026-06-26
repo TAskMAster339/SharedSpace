@@ -73,6 +73,8 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 					r.Delete("/{id}", middleware.AppError(filesHandler.SoftDelete))
 					r.Post("/{id}/restore", middleware.AppError(filesHandler.Restore))
 					r.Delete("/{id}/permanent", middleware.AppError(filesHandler.PermanentDelete))
+					r.Post("/{id}/convert", middleware.AppError(filesHandler.Convert))
+					r.Get("/{id}/conversions", middleware.AppError(filesHandler.ListConversions))
 				})
 			}
 

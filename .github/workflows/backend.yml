@@ -38,6 +38,12 @@ jobs:
           go-version: '1.26'
           cache-dependency-path: backend/go.sum
 
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          ffmpeg -version
+
       - name: Wait for MinIO
         run: |
           for i in $(seq 1 30); do
