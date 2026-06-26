@@ -1,10 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { getFavorites, addFavorite, removeFavorite } from '../api/favorites';
 
 export const useFavorites = () => {
   const accessToken = useAuthStore((state) => state.accessToken);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
+
+  // Актуальное значение для чтения внутри стабильных колбэков (без устаревших замыканий)
+  const favoritesRef = useRef(favorites);
+  favoritesRef.current = favorites;
 
   // Загружаем избранное
   useEffect(() => {
@@ -17,7 +21,7 @@ export const useFavorites = () => {
       .catch(() => {});
   }, [accessToken]);
 
-  // Проверка, избранный ли файл
+  // Проверка, избранный ли файл (зависит от favorites, чтобы мемоизации пересчитывались)
   const isFavorite = useCallback(
     (fileId: string) => {
       return favorites.has(fileId);
@@ -25,36 +29,42 @@ export const useFavorites = () => {
     [favorites],
   );
 
-  // Переключение избранного
+  // Переключение избранного.
+  // Возвращает true, если файл был добавлен в избранное, и false, если убран.
+  // Колбэк стабилен и читает актуальное состояние через ref, поэтому повторный
+  // вызов (например, при отмене действия) корректно переключает обратно.
   const toggleFavorite = useCallback(
-    async (fileId: string) => {
-      if (!accessToken) return;
+    async (fileId: string): Promise<boolean> => {
+      if (!accessToken) return false;
 
-      const isFav = favorites.has(fileId);
+      const makeFavorite = !favoritesRef.current.has(fileId);
 
       // Оптимистичное обновление
       setFavorites((prev) => {
         const next = new Set(prev);
-        isFav ? next.delete(fileId) : next.add(fileId);
+        makeFavorite ? next.add(fileId) : next.delete(fileId);
         return next;
       });
 
       try {
-        if (isFav) {
-          await removeFavorite(accessToken, fileId);
-        } else {
+        if (makeFavorite) {
           await addFavorite(accessToken, fileId);
+        } else {
+          await removeFavorite(accessToken, fileId);
         }
-      } catch {
+      } catch (err) {
         // Откат при ошибке
         setFavorites((prev) => {
           const next = new Set(prev);
-          isFav ? next.add(fileId) : next.delete(fileId);
+          makeFavorite ? next.delete(fileId) : next.add(fileId);
           return next;
         });
+        throw err;
       }
+
+      return makeFavorite;
     },
-    [accessToken, favorites],
+    [accessToken],
   );
 
   return { isFavorite, toggleFavorite };

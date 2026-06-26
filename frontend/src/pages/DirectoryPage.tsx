@@ -27,6 +27,8 @@ import {
 import { uploadFilesWithProgress, softDeleteFile, restoreFile } from '../api/files';
 import { formatFileSize, formatDate } from '../utils/format';
 import { useFavorites } from '../hooks/useFavorites';
+import { useToastStore } from '../hooks/useToast';
+import { buildUploadSuccessMessage, buildUploadErrorMessage } from '../utils/uploadMessage';
 import { resolveFileIconType } from '../utils/fileType';
 
 interface BreadcrumbItem {
@@ -62,11 +64,17 @@ const DirectoryPage: React.FC = () => {
   const [newFolderName, setNewFolderName] = useState('');
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const { isFavorite, toggleFavorite } = useFavorites();
+  const showToast = useToastStore((state) => state.showToast);
   const [isShared, setIsShared] = useState(false);
   const [deletedToast, setDeletedToast] = useState<{
     id: string;
     name: string;
     kind: 'file' | 'directory';
+  } | null>(null);
+  const [favoriteToast, setFavoriteToast] = useState<{
+    id: string;
+    name: string;
+    wasAdded: boolean;
   } | null>(null);
 
   // Breadcrumbs
@@ -357,6 +365,8 @@ const DirectoryPage: React.FC = () => {
 
         await loadDirectory(actualId);
 
+        showToast(buildUploadSuccessMessage(files), 'success');
+
         // Закрываем модалку после успешной загрузки
         setTimeout(() => {
           setIsUploadModalOpen(false);
@@ -365,12 +375,14 @@ const DirectoryPage: React.FC = () => {
         }, 500);
       } catch (err) {
         console.error('Upload failed:', err);
-        setUploadError(err instanceof Error ? err.message : 'Ошибка загрузки файлов');
+        const reason = err instanceof Error ? err.message : undefined;
+        setUploadError(reason || 'Ошибка загрузки файлов');
+        showToast(buildUploadErrorMessage(files, reason), 'error');
         setIsUploading(false);
         setUploadProgress(0);
       }
     },
-    [accessToken, actualId, loadDirectory],
+    [accessToken, actualId, loadDirectory, showToast],
   );
 
   const handleCreateFolder = useCallback(async () => {
@@ -443,6 +455,30 @@ const DirectoryPage: React.FC = () => {
       console.error('Failed to restore item:', err);
     }
   }, [deletedToast, accessToken, actualId, loadDirectory]);
+
+  const handleToggleFavorite = useCallback(
+    async (fileId: string) => {
+      const file = directoryContents?.files.find((f) => f.id === fileId);
+      try {
+        const wasAdded = await toggleFavorite(fileId);
+        setFavoriteToast({ id: fileId, name: file?.filename || 'Файл', wasAdded });
+      } catch (err) {
+        console.error('Failed to toggle favorite:', err);
+        setError('Не удалось обновить избранное');
+      }
+    },
+    [directoryContents, toggleFavorite],
+  );
+
+  const handleUndoFavorite = useCallback(async () => {
+    if (!favoriteToast) return;
+    try {
+      await toggleFavorite(favoriteToast.id);
+    } catch (err) {
+      console.error('Failed to undo favorite:', err);
+    }
+    setFavoriteToast(null);
+  }, [favoriteToast, toggleFavorite]);
 
   // --- Рендер breadcrumbs ---
   const renderBreadcrumbs = () => {
@@ -697,7 +733,7 @@ const DirectoryPage: React.FC = () => {
                         type={file.type}
                         to={`/files/${file.id}`}
                         isFavorite={file.isFavorite}
-                        onToggleFavorite={toggleFavorite}
+                        onToggleFavorite={handleToggleFavorite}
                         onDelete={canModify ? handleDeleteFile : undefined}
                       />
                     ))}
@@ -714,7 +750,7 @@ const DirectoryPage: React.FC = () => {
                         type={file.type}
                         to={`/files/${file.id}`}
                         isFavorite={file.isFavorite}
-                        onToggleFavorite={toggleFavorite}
+                        onToggleFavorite={handleToggleFavorite}
                         onDelete={canModify ? handleDeleteFile : undefined}
                       />
                     ))}
@@ -784,16 +820,27 @@ const DirectoryPage: React.FC = () => {
         </div>
       </Modal>
 
-      {/* Уведомление о перемещении в корзину */}
-      {deletedToast && (
-        <div className="fixed bottom-4 right-4 z-50">
-          <Toast
-            variant="undo"
-            message={`«${deletedToast.name}» перемещ${deletedToast.kind === 'directory' ? 'ена' : 'ён'} в корзину`}
-            actionLabel="Отменить"
-            onAction={handleUndoDelete}
-            onClose={() => setDeletedToast(null)}
-          />
+      {/* Уведомления */}
+      {(deletedToast || favoriteToast) && (
+        <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
+          {favoriteToast && (
+            <Toast
+              variant="favorite"
+              message={`«${favoriteToast.name}» ${favoriteToast.wasAdded ? 'добавлен в избранное' : 'удалён из избранного'}`}
+              actionLabel="Отменить"
+              onAction={handleUndoFavorite}
+              onClose={() => setFavoriteToast(null)}
+            />
+          )}
+          {deletedToast && (
+            <Toast
+              variant="undo"
+              message={`«${deletedToast.name}» перемещ${deletedToast.kind === 'directory' ? 'ена' : 'ён'} в корзину`}
+              actionLabel="Отменить"
+              onAction={handleUndoDelete}
+              onClose={() => setDeletedToast(null)}
+            />
+          )}
         </div>
       )}
     </div>

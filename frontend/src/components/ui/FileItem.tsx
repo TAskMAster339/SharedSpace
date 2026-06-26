@@ -1,7 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Star, Trash2 } from 'lucide-react';
+import { Star } from 'lucide-react';
 import { FileIcon } from './FileIcon';
+import { ItemActionsMenu } from './ItemActionsMenu';
 import { cn } from '../../utils/cn';
 import { FileIconType } from '../../utils/fileType';
 
@@ -40,8 +41,19 @@ export const FileItem: React.FC<FileItemProps> = ({
     )}
   >
     <div className="flex items-center gap-3 min-w-0">
-      <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card shrink-0">
-        <FileIcon type={type} size={20} />
+      <div className="relative shrink-0">
+        <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card">
+          <FileIcon type={type} size={20} />
+        </div>
+        {isFavorite && (
+          <span
+            className="absolute -top-1.5 -right-1.5 flex items-center justify-center rounded-full bg-theme-tertiary border border-theme p-0.5 shadow-theme-card"
+            aria-label="В избранном"
+            title="В избранном"
+          >
+            <Star size={11} className="text-yellow-400" fill="currentColor" />
+          </span>
+        )}
       </div>
       <div className="min-w-0">
         <p className="text-sm text-theme-primary font-medium truncate">{name}</p>
@@ -50,41 +62,11 @@ export const FileItem: React.FC<FileItemProps> = ({
     </div>
     <div className="flex items-center gap-3 shrink-0 ml-3">
       <span className="text-xs text-theme-muted hidden sm:inline">{size}</span>
-      {onToggleFavorite && (
-        <button
-          type="button"
-          aria-label={isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onToggleFavorite(id);
-          }}
-          className="transition-colors"
-        >
-          <Star
-            size={18}
-            className={cn(
-              isFavorite ? 'text-yellow-400' : 'text-theme-muted opacity-60 hover:text-yellow-400',
-            )}
-            fill={isFavorite ? 'currentColor' : 'none'}
-          />
-        </button>
-      )}
-      {onDelete && (
-        <button
-          type="button"
-          aria-label="Переместить в корзину"
-          title="Переместить в корзину"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onDelete(id);
-          }}
-          className="opacity-0 group-hover:opacity-100 text-theme-muted hover:text-danger transition-colors"
-        >
-          <Trash2 size={18} />
-        </button>
-      )}
+      <ItemActionsMenu
+        isFavorite={isFavorite}
+        onToggleFavorite={onToggleFavorite ? () => onToggleFavorite(id) : undefined}
+        onDelete={onDelete ? () => onDelete(id) : undefined}
+      />
     </div>
   </Link>
 );

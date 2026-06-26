@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { CheckCircle, XCircle, X, Trash2, RotateCcw } from 'lucide-react';
+import { CheckCircle, XCircle, X, Trash2, RotateCcw, Star } from 'lucide-react';
 import { cn } from '../../utils/cn';
-import { capitalize } from '../../utils/text';
 
-export type ToastVariant = 'success' | 'error' | 'info' | 'undo';
+export type ToastVariant = 'success' | 'error' | 'info' | 'undo' | 'favorite';
 
 interface ToastProps {
   message: string;
@@ -17,12 +16,13 @@ interface ToastProps {
 export const Toast: React.FC<ToastProps> = ({
   message,
   variant = 'success',
-  duration = 3000,
+  duration = 5000,
   onClose,
   actionLabel,
   onAction,
 }) => {
   const [isVisible, setIsVisible] = useState(true);
+  const [progress, setProgress] = useState(100);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -33,51 +33,65 @@ export const Toast: React.FC<ToastProps> = ({
     return () => clearTimeout(timer);
   }, [duration, onClose]);
 
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setProgress(0));
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  // Фон уведомления всегда непрозрачный и зависит только от темы
+  // (светлый в светлой теме, тёмный в тёмной). Цветом отличается только
+  // полоска времени и иконка, в зависимости от типа действия.
   const variants = {
     success: {
-      bg: 'bg-emerald-50 dark:bg-emerald-950/50',
-      border: 'border-emerald-200 dark:border-emerald-800',
       icon: CheckCircle,
       iconColor: 'text-emerald-500',
+      progressColor: 'bg-emerald-500',
     },
     error: {
-      bg: 'bg-red-50 dark:bg-red-950/50',
-      border: 'border-red-200 dark:border-red-800',
       icon: XCircle,
       iconColor: 'text-red-500',
+      progressColor: 'bg-red-500',
     },
     info: {
-      bg: 'bg-blue-50 dark:bg-blue-950/50',
-      border: 'border-blue-200 dark:border-blue-800',
       icon: CheckCircle,
       iconColor: 'text-blue-500',
+      progressColor: 'bg-blue-500',
     },
     undo: {
-      bg: 'bg-amber-50 dark:bg-amber-950/50',
-      border: 'border-amber-200 dark:border-amber-800',
       icon: Trash2,
-      iconColor: 'text-amber-500',
+      iconColor: 'text-red-500',
+      progressColor: 'bg-red-500',
+    },
+    favorite: {
+      icon: Star,
+      iconColor: 'text-yellow-400',
+      progressColor: 'bg-yellow-400',
     },
   };
 
   const style = variants[variant] || variants.info;
   const Icon = style.icon;
 
-  // Автоматически делаем первую букву заглавной
-  const formattedMessage = capitalize(message);
-
   return (
     <div
       className={cn(
-        'flex items-center gap-3 px-4 py-3 rounded-theme-lg border shadow-theme-dropdown max-w-sm w-full',
+        'relative overflow-hidden flex items-center gap-3 px-4 py-3 rounded-theme-lg border border-theme shadow-theme-dropdown max-w-sm w-full',
+        'bg-theme-secondary',
         'transition-all duration-300 transform',
-        style.bg,
-        style.border,
         isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0',
       )}
     >
+      <div
+        className={cn('absolute top-0 left-0 h-1', style.progressColor)}
+        style={{
+          width: `${progress}%`,
+          transitionProperty: 'width',
+          transitionTimingFunction: 'linear',
+          transitionDuration: `${duration}ms`,
+        }}
+      />
       <Icon size={20} className={cn('shrink-0', style.iconColor)} />
-      <p className="text-sm text-theme-primary flex-1">{formattedMessage}</p>
+      <p className="text-sm text-theme-primary flex-1 min-w-0 break-words">{message}</p>
       {actionLabel && onAction && (
         <button
           onClick={() => {

@@ -25,7 +25,7 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onRemove
           message={toast.message}
           variant={toast.variant}
           onClose={() => onRemove(toast.id)}
-          duration={3000}
+          duration={5000}
         />
       ))}
     </div>
