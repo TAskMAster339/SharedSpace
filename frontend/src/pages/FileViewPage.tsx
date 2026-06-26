@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/authStore';
 import { useFavorites } from '../hooks/useFavorites';
 import { getFileMetadata, getFileContentUrl, FileMetadata } from '../api/files';
 import { getDirectoryById, Directory } from '../api/directories';
+import { getUserById } from '../api/users'; // <-- добавляем
 import { ApiError } from '../api/client';
 import { FileIcon } from '../components/ui/FileIcon';
 import { Button } from '../components/ui/Button';
@@ -97,6 +98,7 @@ const FileViewPage: React.FC = () => {
   const [file, setFile] = useState<FileMetadata | null>(null);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const [directory, setDirectory] = useState<Directory | null>(null);
+  const [ownerUsername, setOwnerUsername] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [previewType, setPreviewType] = useState<PreviewType>('unsupported');
@@ -141,6 +143,7 @@ const FileViewPage: React.FC = () => {
     setError(null);
     setCanPreview(true);
     setIframeError(false);
+    setOwnerUsername(null);
 
     const loadFileData = async () => {
       try {
@@ -148,6 +151,19 @@ const FileViewPage: React.FC = () => {
         const fileData = await getFileMetadata(accessToken, id);
         if (!isMounted) return;
         setFile(fileData);
+
+        // Получаем username владельца, если он не текущий пользователь
+        if (fileData.owner_id !== user?.id) {
+          try {
+            const owner = await getUserById(accessToken, fileData.owner_id);
+            if (isMounted) {
+              setOwnerUsername(owner.username);
+            }
+          } catch (err) {
+            console.warn('Не удалось получить username владельца:', err);
+            // Оставляем null - будет показан fallback с ID
+          }
+        }
 
         // Определяем тип для предпросмотра
         const preview = determinePreviewType(fileData.mime_type, fileData.extension);
@@ -206,7 +222,15 @@ const FileViewPage: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [accessToken, id, determinePreviewType, isProblematicForIframe]);
+  }, [accessToken, id, determinePreviewType, isProblematicForIframe, user?.id]);
+
+  // Функция для получения отображаемого имени владельца
+  const getOwnerDisplayName = useCallback(() => {
+    if (!file) return '';
+    if (file.owner_id === user?.id) return 'Вы';
+    if (ownerUsername) return ownerUsername;
+    return `Пользователь ${file.owner_id.slice(0, 8)}`;
+  }, [file, user, ownerUsername]);
 
   // Получаем расширение файла без точки
   const getFileExtension = (filename: string): string => {
@@ -531,9 +555,7 @@ const FileViewPage: React.FC = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-theme-secondary">Владелец</span>
-                <span className="text-theme-primary font-medium">
-                  {file.owner_id === user?.id ? 'Вы' : `Пользователь ${file.owner_id.slice(0, 8)}`}
-                </span>
+                <span className="text-theme-primary font-medium">{getOwnerDisplayName()}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-theme-secondary">Создан</span>

@@ -2,32 +2,8 @@ import React, { useState } from 'react';
 import { X, AlertCircle } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { Button } from './Button';
-
-// Константа с поддерживаемыми форматами конвертации
-export const ALLOWED_CONVERT_FORMATS: Record<string, string[]> = {
-  'image/png': ['jpg', 'jpeg', 'webp'],
-  'image/jpeg': ['png', 'webp'],
-  'image/jpg': ['png', 'webp'],
-  'image/webp': ['png', 'jpg', 'jpeg'],
-  'image/gif': ['png', 'webp'],
-  'image/svg+xml': ['png', 'jpg'],
-  'image/bmp': ['png', 'jpg', 'webp'],
-  'image/tiff': ['png', 'jpg'],
-  'image/tif': ['png', 'jpg'],
-};
-
-// Также поддерживаем по расширению
-export const ALLOWED_CONVERT_BY_EXTENSION: Record<string, string[]> = {
-  png: ['jpg', 'jpeg', 'webp'],
-  jpg: ['png', 'webp'],
-  jpeg: ['png', 'webp'],
-  webp: ['png', 'jpg', 'jpeg'],
-  gif: ['png', 'webp'],
-  svg: ['png', 'jpg'],
-  bmp: ['png', 'jpg', 'webp'],
-  tiff: ['png', 'jpg'],
-  tif: ['png', 'jpg'],
-};
+import { getFileTypeDisplay } from '../../utils/fileType';
+import { getAvailableConvertFormats, isConvertSupported } from '../../constants/convertFormats';
 
 interface ConvertModalProps {
   isOpen: boolean;
@@ -54,22 +30,9 @@ export const ConvertModal: React.FC<ConvertModalProps> = ({
 
   if (!isOpen) return null;
 
-  // Определяем доступные форматы для конвертации
-  const getAvailableFormats = (): string[] => {
-    // Сначала пробуем по MIME-типу
-    const formats = ALLOWED_CONVERT_FORMATS[mimeType] || [];
-    if (formats.length > 0) return formats;
-
-    // Потом по расширению
-    const ext = extension.replace(/^\./, '').toLowerCase();
-    const extFormats = ALLOWED_CONVERT_BY_EXTENSION[ext] || [];
-    if (extFormats.length > 0) return extFormats;
-
-    return [];
-  };
-
-  const availableFormats = getAvailableFormats();
-  const isSupported = availableFormats.length > 0;
+  const availableFormats = getAvailableConvertFormats(mimeType, extension);
+  const isSupported = isConvertSupported(mimeType, extension);
+  const fileTypeDisplay = getFileTypeDisplay(mimeType, extension);
 
   const handleConvert = () => {
     if (selectedFormat) {
@@ -98,6 +61,9 @@ export const ConvertModal: React.FC<ConvertModalProps> = ({
             <p className="text-sm text-theme-secondary">
               Файл: <span className="text-theme-primary font-medium">{fileName}</span>
             </p>
+            <p className="text-sm text-theme-secondary mt-1">
+              Тип: <span className="text-theme-primary font-medium">{fileTypeDisplay}</span>
+            </p>
           </div>
 
           {isSupported ? (
@@ -125,8 +91,8 @@ export const ConvertModal: React.FC<ConvertModalProps> = ({
               <AlertCircle size={48} className="text-theme-muted mx-auto mb-4" />
               <p className="text-theme-secondary font-medium">Конвертация не поддерживается</p>
               <p className="text-sm text-theme-muted mt-1">
-                Для файлов формата <span className="font-medium">{extension || mimeType}</span>{' '}
-                конвертация пока недоступна
+                Для файлов типа <span className="font-medium">{fileTypeDisplay}</span> конвертация
+                пока недоступна
               </p>
             </div>
           )}

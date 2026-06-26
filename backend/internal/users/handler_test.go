@@ -17,17 +17,20 @@ type mockService struct {
 	changePassFn    func(string, ChangePasswordRequest) error
 	searchFn        func(string, string, int) (SearchUsersResponse, error)
 	deleteAccountFn func(string, DeleteAccountRequest) error
+	getUserByIDFn   func(string, string) (UserResponse, error)
 
-	getMeUserID         string
-	updateUserID        string
-	updateReq           UpdateProfileRequest
-	changeUserID        string
-	changeReq           ChangePasswordRequest
-	searchUserID        string
-	searchQuery         string
-	searchLimit         int
-	deleteAccountUserID string
-	deleteAccountReq    DeleteAccountRequest
+	getMeUserID            string
+	updateUserID           string
+	updateReq              UpdateProfileRequest
+	changeUserID           string
+	changeReq              ChangePasswordRequest
+	searchUserID           string
+	searchQuery            string
+	searchLimit            int
+	deleteAccountUserID    string
+	deleteAccountReq       DeleteAccountRequest
+	getUserByIDRequesterID string
+	getUserByIDTargetID    string
 }
 
 func (m *mockService) GetMe(_ context.Context, userID string) (UserResponse, error) {
@@ -73,6 +76,15 @@ func (m *mockService) DeleteAccount(_ context.Context, userID string, req Delete
 		return m.deleteAccountFn(userID, req)
 	}
 	return nil
+}
+
+func (m *mockService) GetUserByID(_ context.Context, requesterID, targetID string) (UserResponse, error) {
+	m.getUserByIDRequesterID = requesterID
+	m.getUserByIDTargetID = targetID
+	if m.getUserByIDFn != nil {
+		return m.getUserByIDFn(requesterID, targetID)
+	}
+	return UserResponse{}, nil
 }
 
 type mockAuthIdentity struct {
@@ -213,5 +225,43 @@ func TestHandlerSearchUsers(t *testing.T) {
 	}
 	if svc.searchUserID != "me-1" || svc.searchQuery != "iva" || svc.searchLimit != 10 {
 		t.Fatalf("unexpected search call: user=%q query=%q limit=%d", svc.searchUserID, svc.searchQuery, svc.searchLimit)
+	}
+}
+
+func TestHandlerGetUserByID(t *testing.T) {
+	svc := &mockService{
+		getUserByIDFn: func(requesterID, targetID string) (UserResponse, error) {
+			return UserResponse{ID: targetID, Username: "target_user", Email: "target@example.com"}, nil
+		},
+	}
+	authn := &mockAuthIdentity{
+		userIDFn: func(_ string) (string, error) { return "me-1", nil },
+	}
+	handler := NewHandler(svc, authn)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/users/target-id", nil)
+	req.Header.Set("Authorization", "Bearer access-token")
+	rec := httptest.NewRecorder()
+
+	if err := handler.GetUserByID(rec, req); err != nil {
+		t.Fatalf("handler returned error: %v", err)
+	}
+	if rec.Code != http.StatusOK {
+		t.Fatalf("unexpected status: %d", rec.Code)
+	}
+
+	if svc.getUserByIDRequesterID != "me-1" {
+		t.Fatalf("expected requesterID me-1, got %q", svc.getUserByIDRequesterID)
+	}
+	if svc.getUserByIDTargetID != "target-id" {
+		t.Fatalf("expected targetID target-id, got %q", svc.getUserByIDTargetID)
+	}
+
+	var resp UserResponse
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.ID != "target-id" || resp.Username != "target_user" {
+		t.Fatalf("unexpected response: %+v", resp)
 	}
 }
