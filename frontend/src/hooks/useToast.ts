@@ -15,12 +15,12 @@ export const useToastStore = create<ToastStore>((set) => ({
     set((state) => ({
       toasts: [...state.toasts, { id, message, variant }],
     }));
-    // Автоматически удаляем через 3 секунды
+    // Автоматически удаляем через 5 секунд
     setTimeout(() => {
       set((state) => ({
         toasts: state.toasts.filter((t) => t.id !== id),
       }));
-    }, 3000);
+    }, 5000);
   },
   removeToast: (id) => {
     set((state) => ({

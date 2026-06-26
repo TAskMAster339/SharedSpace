@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Star, Trash2 } from 'lucide-react';
 import { FileIcon } from './FileIcon';
+import { ItemActionsMenu } from './ItemActionsMenu';
 import { cn } from '../../utils/cn';
 import { FileIconType } from '../../utils/fileType';
 
@@ -43,40 +43,12 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
       </p>
 
       <div className="absolute top-2 right-2 flex items-center gap-1.5">
-        {onToggleFavorite && (
-          <button
-            type="button"
-            aria-label={isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onToggleFavorite(id);
-            }}
-            className={cn(
-              'transition-colors',
-              isFavorite
-                ? 'text-yellow-400 opacity-100'
-                : 'text-theme-muted opacity-60 hover:text-yellow-400',
-            )}
-          >
-            <Star size={16} fill={isFavorite ? 'currentColor' : 'none'} />
-          </button>
-        )}
-        {onDelete && (
-          <button
-            type="button"
-            aria-label="Переместить в корзину"
-            title="Переместить в корзину"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onDelete(id);
-            }}
-            className="opacity-0 group-hover:opacity-100 text-theme-muted hover:text-danger transition-colors"
-          >
-            <Trash2 size={16} />
-          </button>
-        )}
+        <ItemActionsMenu
+          isFavorite={isFavorite}
+          onToggleFavorite={onToggleFavorite ? () => onToggleFavorite(id) : undefined}
+          onDelete={onDelete ? () => onDelete(id) : undefined}
+          iconSize={16}
+        />
       </div>
     </Link>
   );
