@@ -10,6 +10,7 @@ import (
 
 type ServiceInterface interface {
 	GetMe(context.Context, string) (UserResponse, error)
+	GetUserByID(context.Context, string, string) (UserResponse, error) // <-- добавляем
 	UpdateMe(context.Context, string, UpdateProfileRequest) (UserResponse, error)
 	ChangePassword(context.Context, string, ChangePasswordRequest) error
 	SearchUsers(context.Context, string, string, int) (SearchUsersResponse, error)

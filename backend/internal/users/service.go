@@ -361,3 +361,19 @@ func (s *Service) DeleteAccount(ctx context.Context, userID string, req DeleteAc
 
 	return nil
 }
+
+func (s *Service) GetUserByID(ctx context.Context, requesterID, targetID string) (UserResponse, error) {
+	if requesterID == "" || targetID == "" {
+		return UserResponse{}, apperror.Validation("id пользователя обязателен")
+	}
+
+	user, err := s.repo.FindUserByID(ctx, s.db, targetID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return UserResponse{}, apperror.NotFound("пользователь не найден")
+		}
+		return UserResponse{}, apperror.WrapInternal("ошибка поиска пользователя", err)
+	}
+
+	return toUserResponse(user), nil
+}
