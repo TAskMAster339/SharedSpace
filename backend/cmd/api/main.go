@@ -80,7 +80,7 @@ func main() {
 	sharingHandler := sharing.NewHandler(sharingService)
 	// favorites
 	favoritesRepository := favorites.NewRepository()
-	favoritesService := favorites.NewService(pool, favoritesRepository)
+	favoritesService := favorites.NewService(pool, favoritesRepository, accessChecker)
 	favoritesHandler := favorites.NewHandler(favoritesService)
 	// trash
 	trashRepository := trash.NewRepository()

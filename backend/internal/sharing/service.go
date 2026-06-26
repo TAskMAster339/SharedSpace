@@ -113,20 +113,11 @@ func (s *Service) Invite(ctx context.Context, userID, sharedDirID, username stri
 		return nil, apperror.WrapInternal("ошибка поиска общей директории", err)
 	}
 
-	canInvite := sd.OwnerID == userID
-	if !canInvite {
-		members, err := s.repo.FindMembers(ctx, s.db, sharedDirID, 0)
-		if err != nil {
-			return nil, apperror.WrapInternal("ошибка поиска участников", err)
-		}
-		for _, m := range members {
-			if m.UserID == userID && m.Role == string(RoleAdmin) {
-				canInvite = true
-				break
-			}
-		}
+	ok, err := s.accessChecker.Can(ctx, userID, sd.DirectoryID, access.ActionInvite)
+	if err != nil {
+		return nil, err
 	}
-	if !canInvite {
+	if !ok {
 		return nil, apperror.Forbidden("только владелец или администратор может приглашать")
 	}
 
@@ -266,7 +257,11 @@ func (s *Service) RemoveInvitation(ctx context.Context, userID, invitationID str
 		return apperror.WrapInternal("ошибка поиска общей директории", err)
 	}
 
-	if inv.InvitedByUserID != userID && sd.OwnerID != userID {
+	ok, err := s.accessChecker.Can(ctx, userID, sd.DirectoryID, access.ActionInvite)
+	if err != nil {
+		return err
+	}
+	if !ok {
 		return apperror.Forbidden("нельзя отозвать это приглашение")
 	}
 

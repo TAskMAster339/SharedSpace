@@ -7,16 +7,18 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"sharedspace/internal/access"
 	"sharedspace/internal/apperror"
 )
 
 type Service struct {
-	beginTx beginTxFunc
-	db      dbTX
-	repo    RepositoryInterface
+	beginTx       beginTxFunc
+	db            dbTX
+	repo          RepositoryInterface
+	accessChecker access.AccessChecker
 }
 
-func NewService(pool *pgxpool.Pool, repo RepositoryInterface) *Service {
+func NewService(pool *pgxpool.Pool, repo RepositoryInterface, accessChecker access.AccessChecker) *Service {
 	beginTx := func(ctx context.Context, opts pgx.TxOptions) (transaction, error) {
 		tx, err := pool.BeginTx(ctx, opts)
 		if err != nil {
@@ -24,15 +26,24 @@ func NewService(pool *pgxpool.Pool, repo RepositoryInterface) *Service {
 		}
 		return txWrapper{Tx: tx}, nil
 	}
-	return &Service{beginTx: beginTx, db: pool, repo: repo}
+	return &Service{beginTx: beginTx, db: pool, repo: repo, accessChecker: accessChecker}
 }
 
 func (s *Service) Add(ctx context.Context, userID, fileID string) error {
-	if err := s.repo.FindFileByID(ctx, s.db, fileID); err != nil {
+	dirID, err := s.repo.FindFileByID(ctx, s.db, fileID)
+	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperror.NotFound("файл не найден")
 		}
 		return apperror.WrapInternal("проверка существования файла", err)
+	}
+
+	ok, err := s.accessChecker.Can(ctx, userID, dirID, access.ActionView)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return apperror.Forbidden("доступ запрещён")
 	}
 
 	if err := s.repo.Insert(ctx, s.db, userID, fileID); err != nil {
@@ -43,7 +54,7 @@ func (s *Service) Add(ctx context.Context, userID, fileID string) error {
 }
 
 func (s *Service) Remove(ctx context.Context, userID, fileID string) error {
-	if err := s.repo.FindFileByID(ctx, s.db, fileID); err != nil {
+	if _, err := s.repo.FindFileByID(ctx, s.db, fileID); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperror.NotFound("файл не найден")
 		}

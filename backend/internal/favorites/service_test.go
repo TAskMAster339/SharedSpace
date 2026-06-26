@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"sharedspace/internal/access"
 	"sharedspace/internal/apperror"
 )
 
@@ -17,6 +18,7 @@ type mockRepo struct {
 	deleteErr   error
 	findAllErr  error
 	findFileErr error
+	findFileDir string
 	findAllRes  []favoriteFileRecord
 }
 
@@ -32,8 +34,16 @@ func (m *mockRepo) FindAllByUserID(_ context.Context, _ dbTX, _ string, _ int) (
 	return m.findAllRes, m.findAllErr
 }
 
-func (m *mockRepo) FindFileByID(_ context.Context, _ dbTX, _ string) error {
-	return m.findFileErr
+func (m *mockRepo) FindFileByID(_ context.Context, _ dbTX, _ string) (string, error) {
+	return m.findFileDir, m.findFileErr
+}
+
+type mockAccessChecker struct {
+	canFn func(ctx context.Context, userID, directoryID string, action access.Action) (bool, error)
+}
+
+func (m *mockAccessChecker) Can(ctx context.Context, userID, directoryID string, action access.Action) (bool, error) {
+	return m.canFn(ctx, userID, directoryID, action)
 }
 
 type mockTx struct {
@@ -72,14 +82,15 @@ func newTestService(repo RepositoryInterface) *Service {
 		beginTx: func(_ context.Context, _ pgx.TxOptions) (transaction, error) {
 			return &mockTx{}, nil
 		},
-		db:   &mockTx{},
-		repo: repo,
+		db:            &mockTx{},
+		repo:          repo,
+		accessChecker: &mockAccessChecker{canFn: func(_ context.Context, _, _ string, _ access.Action) (bool, error) { return true, nil }},
 	}
 }
 
 func TestServiceAdd(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		repo := &mockRepo{findFileErr: nil}
+		repo := &mockRepo{findFileErr: nil, findFileDir: "dir-1"}
 		svc := newTestService(repo)
 
 		err := svc.Add(context.Background(), "user-1", "file-1")
@@ -105,6 +116,7 @@ func TestServiceAdd(t *testing.T) {
 	t.Run("insert error", func(t *testing.T) {
 		repo := &mockRepo{
 			findFileErr: nil,
+			findFileDir: "dir-1",
 			insertErr:   errors.New("db error"),
 		}
 		svc := newTestService(repo)
@@ -132,11 +144,26 @@ func TestServiceAdd(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
+
+	t.Run("access denied", func(t *testing.T) {
+		repo := &mockRepo{findFileErr: nil, findFileDir: "dir-1"}
+		svc := newTestService(repo)
+		svc.accessChecker = &mockAccessChecker{canFn: func(_ context.Context, _, _ string, _ access.Action) (bool, error) { return false, nil }}
+
+		err := svc.Add(context.Background(), "user-1", "file-1")
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeForbidden {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
 }
 
 func TestServiceRemove(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		repo := &mockRepo{findFileErr: nil}
+		repo := &mockRepo{findFileErr: nil, findFileDir: "dir-1"}
 		svc := newTestService(repo)
 
 		err := svc.Remove(context.Background(), "user-1", "file-1")
@@ -162,6 +189,7 @@ func TestServiceRemove(t *testing.T) {
 	t.Run("delete error", func(t *testing.T) {
 		repo := &mockRepo{
 			findFileErr: nil,
+			findFileDir: "dir-1",
 			deleteErr:   errors.New("db error"),
 		}
 		svc := newTestService(repo)
