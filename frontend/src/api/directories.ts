@@ -1,5 +1,17 @@
 import { apiRequest } from './client';
 
+export interface Permissions {
+  view: boolean;
+  download: boolean;
+  upload: boolean;
+  create_folder: boolean;
+  delete: boolean;
+  invite: boolean;
+  change_role: boolean;
+  remove_member: boolean;
+  delete_directory: boolean;
+}
+
 export interface Directory {
   id: string;
   name: string;
@@ -8,6 +20,7 @@ export interface Directory {
   type: 'root' | 'regular';
   created_at: string;
   updated_at: string;
+  permissions?: Permissions;
 }
 
 export interface File {

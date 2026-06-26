@@ -2740,6 +2740,9 @@ const docTemplate = `{
                 "parent_id": {
                     "type": "string"
                 },
+                "permissions": {
+                    "$ref": "#/definitions/sharedspace_internal_access.Permissions"
+                },
                 "type": {
                     "type": "string"
                 },
@@ -3345,6 +3348,38 @@ const docTemplate = `{
                 },
                 "username": {
                     "type": "string"
+                }
+            }
+        },
+        "sharedspace_internal_access.Permissions": {
+            "type": "object",
+            "properties": {
+                "change_role": {
+                    "type": "boolean"
+                },
+                "create_folder": {
+                    "type": "boolean"
+                },
+                "delete": {
+                    "type": "boolean"
+                },
+                "delete_directory": {
+                    "type": "boolean"
+                },
+                "download": {
+                    "type": "boolean"
+                },
+                "invite": {
+                    "type": "boolean"
+                },
+                "remove_member": {
+                    "type": "boolean"
+                },
+                "upload": {
+                    "type": "boolean"
+                },
+                "view": {
+                    "type": "boolean"
                 }
             }
         },
