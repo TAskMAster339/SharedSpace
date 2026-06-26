@@ -22,10 +22,21 @@ func NewRepository() *Repository {
 func (r *Repository) GetDirectoryInfo(ctx context.Context, db dbExecutor, directoryID string) (ownerID string, sharedDirectoryID *string, err error) {
 	var sharedID *string
 	err = db.QueryRow(ctx, `
-		SELECT d.owner_id, sd.id
-		FROM directories d
-		LEFT JOIN shared_directories sd ON sd.directory_id = d.id
-		WHERE d.id = $1
+		WITH RECURSIVE dir_ancestors AS (
+			SELECT id, parent_id, owner_id
+			FROM directories
+			WHERE id = $1
+			UNION ALL
+			SELECT d.id, d.parent_id, d.owner_id
+			FROM directories d
+			INNER JOIN dir_ancestors da ON da.parent_id = d.id
+		)
+		SELECT da.owner_id, sd.id
+		FROM dir_ancestors da
+		LEFT JOIN shared_directories sd ON sd.directory_id = da.id
+		WHERE sd.id IS NOT NULL OR da.parent_id IS NULL
+		ORDER BY sd.id IS NOT NULL DESC, da.parent_id IS NULL
+		LIMIT 1
 	`, directoryID).Scan(&ownerID, &sharedID)
 
 	if errors.Is(err, pgx.ErrNoRows) {

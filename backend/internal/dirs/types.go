@@ -1,6 +1,10 @@
 package dirs
 
-import "time"
+import (
+	"time"
+
+	"sharedspace/internal/access"
+)
 
 type CreateDirectoryRequest struct {
 	Name     string `json:"name"`
@@ -14,13 +18,14 @@ type UpdateDirectoryRequest struct {
 }
 
 type DirectoryResponse struct {
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	OwnerID   string    `json:"owner_id"`
-	ParentID  *string   `json:"parent_id"`
-	Type      string    `json:"type"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID          string              `json:"id"`
+	Name        string              `json:"name"`
+	OwnerID     string              `json:"owner_id"`
+	ParentID    *string             `json:"parent_id"`
+	Type        string              `json:"type"`
+	CreatedAt   time.Time           `json:"created_at"`
+	UpdatedAt   time.Time           `json:"updated_at"`
+	Permissions *access.Permissions `json:"permissions,omitempty"`
 }
 
 type FileItem struct {

@@ -111,11 +111,19 @@ type mockRow struct{}
 func (r mockRow) Scan(_ ...any) error { return nil }
 
 type mockAccessChecker struct {
-	canFn func(ctx context.Context, userID, directoryID string, action access.Action) (bool, error)
+	canFn            func(ctx context.Context, userID, directoryID string, action access.Action) (bool, error)
+	getPermissionsFn func(ctx context.Context, userID, directoryID string) (*access.Permissions, error)
 }
 
 func (m *mockAccessChecker) Can(ctx context.Context, userID, directoryID string, action access.Action) (bool, error) {
 	return m.canFn(ctx, userID, directoryID, action)
+}
+
+func (m *mockAccessChecker) GetPermissions(ctx context.Context, userID, directoryID string) (*access.Permissions, error) {
+	if m.getPermissionsFn != nil {
+		return m.getPermissionsFn(ctx, userID, directoryID)
+	}
+	return &access.Permissions{}, nil
 }
 
 func (m *mockRepo) FindByIDAnyState(_ context.Context, _ dbTX, _ string) (fileRecord, error) {
