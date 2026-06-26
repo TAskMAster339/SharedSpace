@@ -102,6 +102,17 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
 
   const menuItems = (
     <div className="py-1">
+      {onMove && (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={(e) => handleSelect(e, onMove)}
+          className="flex items-center gap-3 w-full px-4 py-3.5 text-base text-theme-secondary hover:bg-theme-hover transition-colors sm:px-3 sm:py-2 sm:text-sm"
+        >
+          <Move size={18} />
+          Переместить файл
+        </button>
+      )}
       {onToggleFavorite && (
         <button
           type="button"
@@ -115,17 +126,6 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
             fill={isFavorite ? 'currentColor' : 'none'}
           />
           {isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'}
-        </button>
-      )}
-      {onMove && (
-        <button
-          type="button"
-          role="menuitem"
-          onClick={(e) => handleSelect(e, onMove)}
-          className="flex items-center gap-3 w-full px-4 py-3.5 text-base text-theme-secondary hover:bg-theme-hover transition-colors sm:px-3 sm:py-2 sm:text-sm"
-        >
-          <Move size={18} />
-          Переместить
         </button>
       )}
       {onDelete && (

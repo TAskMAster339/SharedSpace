@@ -1,26 +1,17 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { 
-  X, 
-  Folder, 
-  ChevronRight, 
-  Home, 
-  Users, 
-  FolderPlus,
-  Check,
-  Loader2
-} from 'lucide-react';
+import { X, Folder, ChevronRight, Home, Users, FolderPlus, Check, Loader2 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { Modal } from './Modal';
 import { Button } from './Button';
 import { useAuthStore } from '../../store/authStore';
 import { useDirectoryStore } from '../../store/directoryStore';
 import { useSharedDirectories } from '../../hooks/useSharedDirectories';
-import { 
-  getDirectoryContents, 
+import {
+  getDirectoryContents,
   getDirectoryById,
   createDirectory,
   DirectoryContents,
-  Directory 
+  Directory,
 } from '../../api/directories';
 import { moveFile } from '../../api/files';
 import { useToastStore } from '../../hooks/useToast';
@@ -49,7 +40,7 @@ interface MoveFileModalProps {
   fileId: string;
   fileName: string;
   currentDirectoryId: string;
-  onMoveComplete?: () => void;
+  onMoveComplete?: (fileId: string, fileName: string, fromDirectoryId: string) => void;
 }
 
 export const MoveFileModal: React.FC<MoveFileModalProps> = ({
@@ -62,7 +53,7 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
 }) => {
   const accessToken = useAuthStore((s) => s.accessToken);
   const { personalStorageId } = useDirectoryStore();
-  const { sharedDirectories, isShared: checkIsShared } = useSharedDirectories();
+  const { sharedDirectories, isShared: checkIsShared, getUserRole } = useSharedDirectories();
   const showToast = useToastStore((s) => s.showToast);
 
   const [currentDirId, setCurrentDirId] = useState<string | null>(null);
@@ -76,97 +67,115 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
   const [showCreateFolder, setShowCreateFolder] = useState(false);
   const [selectedDirectoryId, setSelectedDirectoryId] = useState<string | null>(null);
 
+  const isRoot = directoryInfo?.type === 'root';
+  const canWrite = useMemo(() => {
+    // Личное хранилище - всегда можно создавать
+    if (isRoot) return true;
+
+    // Если директория общая - проверяем роль
+    if (currentDirId) {
+      const role = getUserRole(currentDirId);
+      // viewer не может создавать, editor и admin - могут
+      return role !== 'viewer';
+    }
+
+    // По умолчанию - можно
+    return true;
+  }, [isRoot, currentDirId, getUserRole]);
+
   // Загружаем содержимое директории
-  const loadDirectory = useCallback(async (dirId: string) => {
-    if (!accessToken) return;
+  const loadDirectory = useCallback(
+    async (dirId: string) => {
+      if (!accessToken) return;
 
-    setIsLoading(true);
-    try {
-      const [info, data] = await Promise.all([
-        getDirectoryById(accessToken, dirId),
-        getDirectoryContents(accessToken, dirId),
-      ]);
+      setIsLoading(true);
+      try {
+        const [info, data] = await Promise.all([
+          getDirectoryById(accessToken, dirId),
+          getDirectoryContents(accessToken, dirId),
+        ]);
 
-      setDirectoryInfo(info);
-      setContents(data);
+        setDirectoryInfo(info);
+        setContents(data);
 
-      // Определяем, является ли директория общей
-      const isShared = checkIsShared(dirId);
-      const isRoot = info.type === 'root';
+        // Определяем, является ли директория общей
+        const isRoot = info.type === 'root';
 
-      // Строим breadcrumbs
-      const crumbs: BreadcrumbItem[] = [];
-      
-      if (isRoot) {
-        crumbs.push({
-          id: info.id,
-          name: 'Личное хранилище',
-          isRoot: true,
-        });
-      } else if (isShared) {
-        crumbs.push({
-          id: info.id,
-          name: info.name,
-          isShared: true,
-        });
-      } else {
-        // Строим путь для обычной папки
-        let parentId = info.parent_id;
-        const path: BreadcrumbItem[] = [
-          { id: info.id, name: info.name }
-        ];
+        // Строим breadcrumbs
+        const crumbs: BreadcrumbItem[] = [];
 
-        while (parentId) {
-          const parent = await getDirectoryById(accessToken, parentId);
-          const parentIsShared = checkIsShared(parentId);
-          
-          if (parentIsShared) {
-            path.unshift({
-              id: parent.id,
-              name: parent.name,
-              isShared: true,
-            });
-            break;
-          } else if (parent.type === 'root') {
-            path.unshift({
-              id: parent.id,
-              name: 'Личное хранилище',
-              isRoot: true,
-            });
-            break;
-          } else {
-            path.unshift({
-              id: parent.id,
-              name: parent.name,
-            });
-            parentId = parent.parent_id;
+        if (isRoot) {
+          crumbs.push({
+            id: info.id,
+            name: 'Личное хранилище',
+            isRoot: true,
+          });
+        } else {
+          // Строим полный путь
+          const path: BreadcrumbItem[] = [];
+          let currentId = dirId;
+          let currentInfo = info;
+
+          while (currentId) {
+            const currentIsShared = checkIsShared(currentId);
+            const currentIsRoot = currentInfo.type === 'root';
+
+            if (currentIsRoot) {
+              path.unshift({
+                id: currentInfo.id,
+                name: 'Личное хранилище',
+                isRoot: true,
+              });
+              break;
+            } else if (currentIsShared) {
+              path.unshift({
+                id: currentInfo.id,
+                name: currentInfo.name,
+                isShared: true,
+              });
+              // Для общей директории останавливаемся, не поднимаемся выше
+              break;
+            } else {
+              path.unshift({
+                id: currentInfo.id,
+                name: currentInfo.name,
+              });
+
+              // Поднимаемся к родителю
+              if (currentInfo.parent_id) {
+                currentId = currentInfo.parent_id;
+                currentInfo = await getDirectoryById(accessToken, currentId);
+              } else {
+                break;
+              }
+            }
           }
+
+          crumbs.push(...path);
         }
 
-        crumbs.push(...path);
+        setBreadcrumbs(crumbs);
+      } catch (err) {
+        console.error('Failed to load directory:', err);
+        showToast('Не удалось загрузить содержимое директории', 'error');
+      } finally {
+        setIsLoading(false);
       }
+    },
+    [accessToken, checkIsShared, showToast],
+  );
 
-      setBreadcrumbs(crumbs);
-    } catch (err) {
-      console.error('Failed to load directory:', err);
-      showToast('Не удалось загрузить содержимое директории', 'error');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [accessToken, checkIsShared, showToast]);
-
-  // Инициализация - открываем личное хранилище или первый доступный
+  // Инициализация - открываем директорию, где находится файл
   useEffect(() => {
     if (!isOpen || !accessToken) return;
 
     const init = async () => {
-      // Начинаем с личного хранилища
-      let targetId = personalStorageId;
-      
-      // Если личное хранилище не загружено, пытаемся получить корневую
+      // Используем currentDirectoryId (где находится файл) как начальную директорию
+      let targetId = currentDirectoryId;
+
+      // Если currentDirectoryId не валидный, используем личное хранилище
       if (!targetId || targetId === 'personal') {
         try {
-          // Пробуем получить корневую директорию через API
           const rootContents = await getDirectoryContents(accessToken, 'personal');
           targetId = rootContents.id;
         } catch (err) {
@@ -182,14 +191,17 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
     };
 
     init();
-  }, [isOpen, accessToken, personalStorageId, loadDirectory, showToast, onClose]);
+  }, [isOpen, accessToken, currentDirectoryId, loadDirectory, showToast, onClose]);
 
   // Навигация по breadcrumbs
-  const navigateTo = useCallback(async (dirId: string) => {
-    setCurrentDirId(dirId);
-    setSelectedDirectoryId(dirId);
-    await loadDirectory(dirId);
-  }, [loadDirectory]);
+  const navigateTo = useCallback(
+    async (dirId: string) => {
+      setCurrentDirId(dirId);
+      setSelectedDirectoryId(dirId);
+      await loadDirectory(dirId);
+    },
+    [loadDirectory],
+  );
 
   // Создание папки
   const handleCreateFolder = useCallback(async () => {
@@ -219,7 +231,6 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
   const handleMove = useCallback(async () => {
     if (!accessToken || !selectedDirectoryId || !fileId) return;
 
-    // Проверяем, что файл не перемещается в ту же директорию
     if (selectedDirectoryId === currentDirectoryId) {
       showToast('Файл уже находится в этой директории', 'info');
       onClose();
@@ -229,9 +240,7 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
     setIsMoving(true);
     try {
       await moveFile(accessToken, fileId, selectedDirectoryId);
-
-      showToast(`Файл «${fileName}» перемещён`, 'success');
-      onMoveComplete?.();
+      onMoveComplete?.(fileId, fileName, currentDirectoryId);
       onClose();
     } catch (err) {
       console.error('Failed to move file:', err);
@@ -240,28 +249,16 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
     } finally {
       setIsMoving(false);
     }
-  }, [accessToken, selectedDirectoryId, fileId, currentDirectoryId, fileName, showToast, onMoveComplete, onClose]);
-
-  // Фильтруем папки: исключаем текущую и недоступные для записи
-  const availableFolders = useMemo(() => {
-    if (!contents) return [];
-
-    // Для личного хранилища показываем все папки
-    // Для общих - только те, где пользователь имеет права на загрузку
-    return contents.subdirectories.filter((folder) => {
-      // Не показываем текущую директорию (куда файл уже перемещён)
-      if (folder.id === currentDirectoryId) return false;
-      
-      // Проверяем права: если папка общая и пользователь viewer - не показываем
-      const isShared = checkIsShared(folder.id);
-      if (isShared) {
-        const sharedDir = sharedDirectories.find((d) => d.directory_id === folder.id);
-        if (sharedDir?.role === 'viewer') return false;
-      }
-      
-      return true;
-    });
-  }, [contents, currentDirectoryId, checkIsShared, sharedDirectories]);
+  }, [
+    accessToken,
+    selectedDirectoryId,
+    fileId,
+    currentDirectoryId,
+    fileName,
+    showToast,
+    onMoveComplete,
+    onClose,
+  ]);
 
   // Доступные корневые директории для навигации
   const rootDirectories = useMemo(() => {
@@ -292,19 +289,31 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
     return dirs;
   }, [personalStorageId, sharedDirectories]);
 
+  // Фильтруем папки: исключаем текущую и недоступные для записи
+  const availableFolders = useMemo(() => {
+    if (!contents) return [];
+
+    return contents.subdirectories.filter((folder) => {
+      const isShared = checkIsShared(folder.id);
+
+      // Если директория общая и мы на корневом уровне - скрываем (она уже в списке)
+      if (isShared && breadcrumbs.length <= 1) {
+        return false;
+      }
+
+      if (isShared) {
+        const role = getUserRole(folder.id);
+        if (role === 'viewer') return false;
+      }
+
+      return true;
+    });
+  }, [contents, breadcrumbs, checkIsShared, getUserRole]);
+
   if (!isOpen) return null;
 
-  const isRoot = directoryInfo?.type === 'root';
-  const isSharedDir = checkIsShared(currentDirId || '');
-  const canWrite = isRoot || !isSharedDir;
-
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={`Переместить файл «${fileName}»`}
-      maxWidth="lg"
-    >
+    <Modal isOpen={isOpen} onClose={onClose} title={`Переместить файл «${fileName}»`} maxWidth="lg">
       <div className="space-y-4">
         {/* Breadcrumbs */}
         <div className="flex items-center justify-between">
@@ -312,7 +321,7 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
             {breadcrumbs.map((crumb, index) => {
               const isLast = index === breadcrumbs.length - 1;
               const isFirst = index === 0;
-              
+
               return (
                 <React.Fragment key={crumb.id}>
                   {!isFirst && <ChevronRight size={14} className="text-theme-muted shrink-0" />}
@@ -371,11 +380,7 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
               disabled={!newFolderName.trim() || isCreatingFolder}
               className="px-3 py-1.5 bg-brand text-theme-on-brand rounded-theme-sm hover:bg-brand-hover transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isCreatingFolder ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                'Создать'
-              )}
+              {isCreatingFolder ? <Loader2 size={16} className="animate-spin" /> : 'Создать'}
             </button>
             <button
               onClick={() => setShowCreateFolder(false)}
@@ -393,37 +398,47 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
           </div>
         ) : (
           <div className="space-y-1 max-h-[400px] overflow-y-auto">
-            {/* Если мы на корневом уровне или в личном хранилище - показываем корневые директории */}
-            {breadcrumbs.length <= 1 && (
+            {/* Корневые директории */}
+            {breadcrumbs.length <= 1 && rootDirectories.length > 0 && (
               <div className="space-y-1 mb-2">
                 <div className="text-xs font-medium text-theme-muted uppercase tracking-wider px-2 py-1">
                   Директории
                 </div>
-                {rootDirectories.map((dir) => (
-                  <button
-                    key={dir.id}
-                    onClick={() => navigateTo(dir.id)}
-                    className={cn(
-                      'w-full flex items-center gap-3 px-3 py-2.5 rounded-theme-md transition-colors text-left',
-                      selectedDirectoryId === dir.id
-                        ? 'bg-brand-light text-brand'
-                        : 'hover:bg-theme-hover text-theme-primary'
-                    )}
-                  >
-                    <FolderIcon isRoot={dir.isRoot} isShared={dir.isShared} />
-                    <span className="flex-1 text-sm font-medium">{dir.name}</span>
-                    {selectedDirectoryId === dir.id && (
-                      <Check size={16} className="text-brand" />
-                    )}
-                  </button>
-                ))}
+                {rootDirectories.map((dir) => {
+                  const isCurrent = dir.id === currentDirectoryId;
+                  return (
+                    <button
+                      key={dir.id}
+                      onClick={() => {
+                        setSelectedDirectoryId(dir.id);
+                        navigateTo(dir.id);
+                      }}
+                      className={cn(
+                        'w-full flex items-center gap-3 px-3 py-2.5 rounded-theme-md transition-colors text-left',
+                        selectedDirectoryId === dir.id
+                          ? 'bg-brand-light text-brand'
+                          : 'hover:bg-theme-hover text-theme-primary',
+                        isCurrent && 'opacity-50',
+                      )}
+                    >
+                      <FolderIcon isRoot={dir.isRoot} isShared={dir.isShared} />
+                      <span className="flex-1 text-sm font-medium">
+                        {dir.name}
+                        {isCurrent && ' (текущая)'}
+                      </span>
+                      {selectedDirectoryId === dir.id && !isCurrent && (
+                        <Check size={16} className="text-brand" />
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             )}
 
             {/* Папки внутри текущей директории */}
             {availableFolders.length > 0 && (
               <div className="space-y-1">
-                {breadcrumbs.length <= 1 && (
+                {breadcrumbs.length <= 1 && rootDirectories.length > 0 && (
                   <div className="text-xs font-medium text-theme-muted uppercase tracking-wider px-2 py-1">
                     Папки
                   </div>
@@ -431,7 +446,8 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
                 {availableFolders.map((folder) => {
                   const isShared = checkIsShared(folder.id);
                   const isSelected = selectedDirectoryId === folder.id;
-                  
+                  const isCurrent = folder.id === currentDirectoryId;
+
                   return (
                     <button
                       key={folder.id}
@@ -443,19 +459,24 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
                         'w-full flex items-center gap-3 px-3 py-2.5 rounded-theme-md transition-colors text-left',
                         isSelected
                           ? 'bg-brand-light text-brand'
-                          : 'hover:bg-theme-hover text-theme-primary'
+                          : 'hover:bg-theme-hover text-theme-primary',
+                        isCurrent && 'opacity-50',
                       )}
                     >
-                      <Folder size={18} className={isSelected ? 'text-brand' : 'text-theme-muted'} />
-                      <span className="flex-1 text-sm font-medium">{folder.name}</span>
+                      <Folder
+                        size={18}
+                        className={isSelected ? 'text-brand' : 'text-theme-muted'}
+                      />
+                      <span className="flex-1 text-sm font-medium">
+                        {folder.name}
+                        {isCurrent && ' (текущая)'}
+                      </span>
                       {isShared && (
                         <span className="text-xs px-1.5 py-0.5 bg-brand/10 text-brand rounded-full">
                           Общая
                         </span>
                       )}
-                      {isSelected && (
-                        <Check size={16} className="text-brand" />
-                      )}
+                      {isSelected && !isCurrent && <Check size={16} className="text-brand" />}
                     </button>
                   );
                 })}
@@ -470,20 +491,17 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
           </div>
         )}
 
-        {/* Кнопки действий */}
+        {/* Кнопки */}
         <div className="flex gap-3 pt-4 border-t border-theme">
-          <Button
-            variant="secondary"
-            onClick={onClose}
-            disabled={isMoving}
-            className="flex-1"
-          >
+          <Button variant="secondary" onClick={onClose} disabled={isMoving} className="flex-1">
             Отмена
           </Button>
           <Button
             variant="primary"
             onClick={handleMove}
-            disabled={!selectedDirectoryId || selectedDirectoryId === currentDirectoryId || isMoving}
+            disabled={
+              !selectedDirectoryId || selectedDirectoryId === currentDirectoryId || isMoving
+            }
             className="flex-1"
           >
             {isMoving ? (
@@ -491,6 +509,8 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
                 <Loader2 size={16} className="animate-spin mr-2" />
                 Перемещение...
               </>
+            ) : selectedDirectoryId === currentDirectoryId ? (
+              'Файл уже здесь'
             ) : (
               'Переместить сюда'
             )}

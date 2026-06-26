@@ -10,11 +10,6 @@ interface FolderGridItemProps {
   to: string;
   className?: string;
   onDelete?: (id: string) => void;
-  isDragOver?: boolean;
-  onDragOver?: (e: React.DragEvent) => void;
-  onDragLeave?: (e: React.DragEvent) => void;
-  onDrop?: (e: React.DragEvent) => void;
-  draggable?: boolean;
 }
 
 export const FolderGridItem: React.FC<FolderGridItemProps> = ({
@@ -23,11 +18,6 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
   to,
   className,
   onDelete,
-  isDragOver = false,
-  onDragOver,
-  onDragLeave,
-  onDrop,
-  draggable = false,
 }) => {
   return (
     <Link
@@ -35,13 +25,8 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
       className={cn(
         'group flex flex-col items-center p-3 rounded-theme-md transition-colors cursor-pointer relative',
         'bg-theme-tertiary hover:bg-theme-hover border border-theme',
-        isDragOver && 'border-brand bg-brand-light/20 scale-105 shadow-theme-card',
         className,
       )}
-      draggable={draggable}
-      onDragOver={onDragOver}
-      onDragLeave={onDragLeave}
-      onDrop={onDrop}
     >
       <div className="w-16 h-16 flex items-center justify-center text-theme-muted group-hover:text-brand transition-colors">
         <Folder size={40} strokeWidth={1.5} />

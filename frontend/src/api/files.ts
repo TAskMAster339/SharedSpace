@@ -138,7 +138,7 @@ export function permanentDeleteFile(accessToken: string, fileId: string): Promis
 export const moveFile = async (
   accessToken: string,
   fileId: string,
-  parentId: string
+  parentId: string,
 ): Promise<void> => {
   const response = await fetch(`${API_BASE_URL}/files/${fileId}`, {
     method: 'PATCH',

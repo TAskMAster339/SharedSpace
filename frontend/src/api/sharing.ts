@@ -29,7 +29,9 @@ export interface Member {
   joined_at: string;
 }
 
-export const getSharedWithMeStats = async (accessToken: string): Promise<SharedDirectoryWithStats[]> => {
+export const getSharedWithMeStats = async (
+  accessToken: string,
+): Promise<SharedDirectoryWithStats[]> => {
   return apiRequest<SharedDirectoryWithStats[]>('/shared/with-me/stats', {
     method: 'GET',
     token: accessToken,

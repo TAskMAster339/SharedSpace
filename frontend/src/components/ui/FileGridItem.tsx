@@ -16,9 +16,6 @@ interface FileGridItemProps {
   onToggleFavorite?: (id: string) => void;
   onDelete?: (id: string) => void;
   onMove?: (id: string) => void;
-  draggable?: boolean;
-  onDragStart?: (e: React.DragEvent) => void;
-  onDragEnd?: (e: React.DragEvent) => void;
 }
 
 export const FileGridItem: React.FC<FileGridItemProps> = ({

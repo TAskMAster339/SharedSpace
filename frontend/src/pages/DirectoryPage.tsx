@@ -15,7 +15,6 @@ import { FileGridItem } from '../components/ui/FileGridItem';
 import { FolderItem } from '../components/ui/FolderItem';
 import { FileItem } from '../components/ui/FileItem';
 import { MoveFileModal } from '../components/ui/MoveFileModal';
-import { DropZoneUp } from '../components/ui/DropZoneUp';
 import {
   getDirectoryContents,
   getDirectoryById,
@@ -71,8 +70,6 @@ const DirectoryPage: React.FC = () => {
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
   const [moveFileId, setMoveFileId] = useState<string>('');
   const [moveFileName, setMoveFileName] = useState<string>('');
-  const [draggedFileId, setDraggedFileId] = useState<string | null>(null);
-  const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
   const [deletedToast, setDeletedToast] = useState<{
     id: string;
     name: string;
@@ -82,6 +79,11 @@ const DirectoryPage: React.FC = () => {
     id: string;
     name: string;
     wasAdded: boolean;
+  } | null>(null);
+  const [moveToast, setMoveToast] = useState<{
+    fileId: string;
+    fileName: string;
+    fromDirectoryId: string;
   } | null>(null);
 
   // Breadcrumbs
@@ -323,7 +325,6 @@ const DirectoryPage: React.FC = () => {
   // --- Вычисляемые значения ---
   const isPersonal = useMemo(() => directoryInfo?.type === 'root', [directoryInfo]);
   const isOwner = useMemo(() => directoryInfo?.owner_id === user?.id, [directoryInfo, user]);
-  const isRoot = useMemo(() => directoryInfo?.type === 'root', [directoryInfo]);
 
   const isSharedDirectory = useMemo(() => {
     return isShared && !isPersonal;
@@ -488,59 +489,44 @@ const DirectoryPage: React.FC = () => {
     setFavoriteToast(null);
   }, [favoriteToast, toggleFavorite]);
 
-  const handleMoveFile = useCallback((fileId: string) => {
-    const file = directoryContents?.files.find((f) => f.id === fileId);
-    if (file) {
-      setMoveFileId(fileId);
-      setMoveFileName(file.filename);
-      setIsMoveModalOpen(true);
-    }
-  }, [directoryContents]);
+  const handleMoveFile = useCallback(
+    (fileId: string) => {
+      const file = directoryContents?.files.find((f) => f.id === fileId);
+      if (file) {
+        setMoveFileId(fileId);
+        setMoveFileName(file.filename);
+        setIsMoveModalOpen(true);
+      }
+    },
+    [directoryContents],
+  );
 
-  const handleMoveComplete = useCallback(async () => {
-    if (actualId) {
-      await loadDirectory(actualId);
-    }
-  }, [actualId, loadDirectory]);
+  const handleMoveComplete = useCallback(
+    async (fileId: string, fileName: string, fromDirectoryId: string) => {
+      setMoveToast({ fileId, fileName, fromDirectoryId });
 
-  const handleFileDragStart = useCallback((e: React.DragEvent, fileId: string) => {
-    e.dataTransfer.setData('fileId', fileId);
-    e.dataTransfer.effectAllowed = 'move';
-    setDraggedFileId(fileId);
-  }, []);
+      if (actualId) {
+        await loadDirectory(actualId);
+      }
+    },
+    [actualId, loadDirectory],
+  );
 
-  const handleFileDragEnd = useCallback(() => {
-    setDraggedFileId(null);
-    setDragOverFolderId(null);
-  }, []);
-
-  const handleFolderDragOver = useCallback((e: React.DragEvent, folderId: string) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    setDragOverFolderId(folderId);
-  }, []);
-
-  const handleFolderDragLeave = useCallback(() => {
-    setDragOverFolderId(null);
-  }, []);
-
-  const handleFolderDrop = useCallback(async (e: React.DragEvent, folderId: string) => {
-    e.preventDefault();
-    const fileId = e.dataTransfer.getData('fileId');
-    if (!fileId || !accessToken) return;
-
-    setDragOverFolderId(null);
-    setDraggedFileId(null);
+  const handleUndoMove = useCallback(async () => {
+    if (!moveToast || !accessToken) return;
 
     try {
-      await moveFile(accessToken, fileId, folderId);
+      // Перемещаем файл обратно
+      await moveFile(accessToken, moveToast.fileId, moveToast.fromDirectoryId);
       if (actualId) await loadDirectory(actualId);
-      showToast('Файл перемещён', 'success');
+      showToast(`Файл «${moveToast.fileName}» возвращён`, 'success');
     } catch (err) {
-      console.error('Failed to move file:', err);
-      showToast('Не удалось переместить файл', 'error');
+      console.error('Failed to undo move:', err);
+      showToast('Не удалось отменить перемещение', 'error');
+    } finally {
+      setMoveToast(null);
     }
-  }, [accessToken, actualId, loadDirectory, showToast]);
+  }, [moveToast, accessToken, actualId, loadDirectory, showToast]);
 
   // --- Рендер breadcrumbs ---
   const renderBreadcrumbs = () => {
@@ -742,25 +728,6 @@ const DirectoryPage: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-6">
-          {canModify && !isRoot && (
-            <DropZoneUp
-              isVisible={draggedFileId !== null}
-              onDrop={async () => {
-                if (!draggedFileId || !accessToken || !directoryInfo?.parent_id) return;
-                try {
-                  await moveFile(accessToken, draggedFileId, directoryInfo.parent_id);
-                  if (actualId) await loadDirectory(actualId);
-                  showToast('Файл перемещён на уровень выше', 'success');
-                } catch (err) {
-                  console.error('Failed to move file:', err);
-                  showToast('Не удалось переместить файл', 'error');
-                }
-                setDraggedFileId(null);
-              }}
-              className="mb-4"
-            />
-          )}
-
           {/* Папки */}
           {filteredSubdirectories.length > 0 && (
             <div>
@@ -774,12 +741,9 @@ const DirectoryPage: React.FC = () => {
                         id={folder.id}
                         name={folder.name}
                         to={`/directories/${folder.id}`}
-                        onDelete={canModify && !checkIsShared(folder.id) ? handleDeleteFolder : undefined}
-                        draggable={false}
-                        onDragOver={canModify ? (e) => handleFolderDragOver(e, folder.id) : undefined}
-                        onDragLeave={handleFolderDragLeave}
-                        onDrop={canModify ? (e) => handleFolderDrop(e, folder.id) : undefined}
-                        isDragOver={dragOverFolderId === folder.id}
+                        onDelete={
+                          canModify && !checkIsShared(folder.id) ? handleDeleteFolder : undefined
+                        }
                       />
                     ))}
                   </div>
@@ -819,10 +783,7 @@ const DirectoryPage: React.FC = () => {
                         isFavorite={file.isFavorite}
                         onToggleFavorite={handleToggleFavorite}
                         onDelete={canModify ? handleDeleteFile : undefined}
-                        onMove={canModify ? handleMoveFile : undefined}
-                        draggable={canModify}
-                        onDragStart={(e) => handleFileDragStart(e, file.id)}
-                        onDragEnd={handleFileDragEnd}
+                        onMove={handleMoveFile}
                       />
                     ))}
                   </div>
@@ -840,6 +801,7 @@ const DirectoryPage: React.FC = () => {
                         isFavorite={file.isFavorite}
                         onToggleFavorite={handleToggleFavorite}
                         onDelete={canModify ? handleDeleteFile : undefined}
+                        onMove={handleMoveFile}
                       />
                     ))}
                   </div>
@@ -918,8 +880,17 @@ const DirectoryPage: React.FC = () => {
       />
 
       {/* Уведомления */}
-      {(deletedToast || favoriteToast) && (
+      {(deletedToast || favoriteToast || moveToast) && (
         <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
+          {moveToast && (
+            <Toast
+              variant="move"
+              message={`Файл «${moveToast.fileName}» перемещён`}
+              actionLabel="Отменить"
+              onAction={handleUndoMove}
+              onClose={() => setMoveToast(null)}
+            />
+          )}
           {favoriteToast && (
             <Toast
               variant="favorite"
