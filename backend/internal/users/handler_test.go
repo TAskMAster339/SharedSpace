@@ -9,6 +9,8 @@ import (
 	"testing"
 
 	"sharedspace/internal/apperror"
+
+	"github.com/go-chi/chi/v5"
 )
 
 type mockService struct {
@@ -239,8 +241,15 @@ func TestHandlerGetUserByID(t *testing.T) {
 	}
 	handler := NewHandler(svc, authn)
 
+	// Создаем запрос с chi-контекстом
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/users/target-id", nil)
 	req.Header.Set("Authorization", "Bearer access-token")
+
+	// Добавляем параметр URL через chi
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("id", "target-id")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+
 	rec := httptest.NewRecorder()
 
 	if err := handler.GetUserByID(rec, req); err != nil {
