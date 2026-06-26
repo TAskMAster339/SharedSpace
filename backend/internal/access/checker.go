@@ -36,3 +36,36 @@ func (c *Checker) Can(ctx context.Context, userID, directoryID string, action Ac
 
 	return Can(role, action), nil
 }
+
+func (c *Checker) GetPermissions(ctx context.Context, userID, directoryID string) (*Permissions, error) {
+	ownerID, sharedDirID, err := c.repo.GetDirectoryInfo(ctx, c.db, directoryID)
+	if err != nil {
+		return nil, err
+	}
+
+	if userID == ownerID {
+		return &Permissions{
+			View:         true,
+			Download:     true,
+			Upload:       true,
+			CreateFolder: true,
+			Delete:       true,
+			Invite:       true,
+			ChangeRole:   true,
+			RemoveMember: true,
+			DeleteDir:    true,
+		}, nil
+	}
+
+	if sharedDirID == nil {
+		return nil, nil
+	}
+
+	role, err := c.repo.GetUserRole(ctx, c.db, userID, *sharedDirID)
+	if err != nil {
+		return nil, err
+	}
+
+	perms := GetPermissions(role)
+	return &perms, nil
+}

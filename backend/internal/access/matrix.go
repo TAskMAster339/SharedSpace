@@ -22,3 +22,17 @@ func Can(role Role, action Action) bool {
 		return false
 	}
 }
+
+func GetPermissions(role Role) Permissions {
+	return Permissions{
+		View:         Can(role, ActionView),
+		Download:     Can(role, ActionDownload),
+		Upload:       Can(role, ActionUpload),
+		CreateFolder: Can(role, ActionCreateFolder),
+		Delete:       Can(role, ActionDelete),
+		Invite:       Can(role, ActionInvite),
+		ChangeRole:   Can(role, ActionChangeRole),
+		RemoveMember: Can(role, ActionRemoveMember),
+		DeleteDir:    Can(role, ActionDeleteDir),
+	}
+}

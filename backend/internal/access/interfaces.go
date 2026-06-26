@@ -9,4 +9,5 @@ type RepositoryInterface interface {
 
 type AccessChecker interface {
 	Can(ctx context.Context, userID, directoryID string, action Action) (bool, error)
+	GetPermissions(ctx context.Context, userID, directoryID string) (*Permissions, error)
 }

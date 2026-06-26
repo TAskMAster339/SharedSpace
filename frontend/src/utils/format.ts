@@ -27,6 +27,15 @@ export function formatDate(dateStr: string): string {
   }
 }
 
+// Абсолютная дата без относительных формулировок («12 июня 2025 г.»).
+export function formatDateLong(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('ru-RU', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
 const compactNumberFormatter = new Intl.NumberFormat('ru', { notation: 'compact' });
 
 export function formatCount(count: number): string {

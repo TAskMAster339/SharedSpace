@@ -120,11 +120,19 @@ func (mockTX) Commit(_ context.Context) error   { return nil }
 func (mockTX) Rollback(_ context.Context) error { return nil }
 
 type mockAccessChecker struct {
-	canFn func(ctx context.Context, userID, directoryID string, action access.Action) (bool, error)
+	canFn            func(ctx context.Context, userID, directoryID string, action access.Action) (bool, error)
+	getPermissionsFn func(ctx context.Context, userID, directoryID string) (*access.Permissions, error)
 }
 
 func (m *mockAccessChecker) Can(ctx context.Context, userID, directoryID string, action access.Action) (bool, error) {
 	return m.canFn(ctx, userID, directoryID, action)
+}
+
+func (m *mockAccessChecker) GetPermissions(ctx context.Context, userID, directoryID string) (*access.Permissions, error) {
+	if m.getPermissionsFn != nil {
+		return m.getPermissionsFn(ctx, userID, directoryID)
+	}
+	return &access.Permissions{}, nil
 }
 
 func newTestService(repo RepositoryInterface) *Service {

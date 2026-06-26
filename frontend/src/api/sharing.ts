@@ -127,3 +127,27 @@ export function inviteToDirectory(
     body: JSON.stringify({ username }),
   });
 }
+
+export function changeMemberRole(
+  accessToken: string,
+  sharedDirectoryId: string,
+  userId: string,
+  role: SharingRole,
+): Promise<void> {
+  return apiRequest<void>(`/shared-directories/${sharedDirectoryId}/members/${userId}`, {
+    method: 'PATCH',
+    token: accessToken,
+    body: JSON.stringify({ role }),
+  });
+}
+
+export function removeMember(
+  accessToken: string,
+  sharedDirectoryId: string,
+  userId: string,
+): Promise<void> {
+  return apiRequest<void>(`/shared-directories/${sharedDirectoryId}/members/${userId}`, {
+    method: 'DELETE',
+    token: accessToken,
+  });
+}

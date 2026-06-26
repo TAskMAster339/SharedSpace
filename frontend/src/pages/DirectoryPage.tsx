@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Upload, FolderPlus, Settings, ChevronRight, Home, Users } from 'lucide-react';
+import { Upload, FolderPlus, Settings, ChevronRight, Home, Users, ArrowLeft } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useDirectoryStore } from '../store/directoryStore';
 import { useDragDropStore } from '../store/dragDropStore';
@@ -45,7 +45,7 @@ const DirectoryPage: React.FC = () => {
 
   const accessToken = useAuthStore((s) => s.accessToken);
   const user = useAuthStore((s) => s.user);
-  const { personalStorageId } = useDirectoryStore();
+  const { personalStorageId, setCurrentSection } = useDirectoryStore();
   const { isShared: checkIsShared, isLoading: isLoadingShared } = useSharedDirectories();
   const { setTargetDirectoryId, setOnUploadComplete } = useDragDropStore();
 
@@ -325,10 +325,22 @@ const DirectoryPage: React.FC = () => {
   // --- Вычисляемые значения ---
   const isPersonal = useMemo(() => directoryInfo?.type === 'root', [directoryInfo]);
   const isOwner = useMemo(() => directoryInfo?.owner_id === user?.id, [directoryInfo, user]);
+  const perms = useMemo(() => directoryInfo?.permissions, [directoryInfo]);
 
   const isSharedDirectory = useMemo(() => {
     return isShared && !isPersonal;
   }, [isShared, isPersonal]);
+
+  // Сообщаем боковому меню, в каком разделе мы находимся (личное/общее),
+  // чтобы оно подсвечивало правильный пункт. Сбрасываем при уходе со страницы.
+  useEffect(() => {
+    if (!directoryInfo) return;
+    setCurrentSection(isShared ? 'shared' : 'personal');
+  }, [directoryInfo, isShared, setCurrentSection]);
+
+  useEffect(() => {
+    return () => setCurrentSection(null);
+  }, [setCurrentSection]);
 
   // Фильтруем папки: в личном хранилище скрываем общие директории
   const filteredSubdirectories = useMemo(() => {
@@ -617,10 +629,19 @@ const DirectoryPage: React.FC = () => {
   const { files } = directoryContents;
   const isEmpty = filteredSubdirectories.length === 0 && files.length === 0;
 
-  const canModify = isPersonal || isOwner;
-
   return (
     <div className="space-y-6 pb-10">
+      {/* Назад к списку общих директорий */}
+      {isSharedDirectory && (
+        <button
+          onClick={() => navigate('/directories')}
+          className="inline-flex items-center gap-2 text-sm text-theme-secondary hover:text-theme-primary transition-colors"
+        >
+          <ArrowLeft size={16} />
+          Вернуться к общим директориям
+        </button>
+      )}
+
       {/* Заголовок */}
       <div>
         <h1 className="text-2xl font-semibold text-theme-primary flex items-center gap-2">
@@ -647,8 +668,8 @@ const DirectoryPage: React.FC = () => {
       </div>
 
       {/* Кнопки действий */}
-      {(isPersonal || isOwner) && (
-        <div className="flex items-center justify-end gap-2 flex-wrap -mt-2">
+      <div className="flex items-center justify-end gap-2 flex-wrap -mt-2">
+        {perms?.upload && (
           <button
             onClick={() => {
               setUploadError(null);
@@ -659,7 +680,9 @@ const DirectoryPage: React.FC = () => {
             <Upload size={16} />
             Загрузить
           </button>
+        )}
 
+        {perms?.create_folder && (
           <button
             onClick={() => setIsCreateFolderModalOpen(true)}
             className="inline-flex items-center gap-2 px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium"
@@ -667,26 +690,20 @@ const DirectoryPage: React.FC = () => {
             <FolderPlus size={16} />
             Новая папка
           </button>
+        )}
 
-          <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} />
-        </div>
-      )}
+        <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} />
+      </div>
 
-      {!isPersonal && !isOwner && (
-        <div className="flex items-center justify-end gap-2 flex-wrap -mt-2">
-          <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} />
-        </div>
-      )}
-
-      {/* Настройки директории */}
-      {isSharedDirectory && isOwner && (
+      {/* Настройки директории / участники */}
+      {isSharedDirectory && (
         <div className="flex justify-end">
           <button
             onClick={() => navigate(`/shared/${actualId}/settings`)}
             className="inline-flex items-center gap-2 px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium"
           >
             <Settings size={16} />
-            Настройки директории
+            {perms?.invite ? 'Настройки директории' : 'Участники'}
           </button>
         </div>
       )}
@@ -694,7 +711,7 @@ const DirectoryPage: React.FC = () => {
       {/* Содержимое */}
       {isEmpty ? (
         <div className="mt-4">
-          {canModify ? (
+          {perms?.upload ? (
             <DropZone
               onFilesDrop={handleFilesDrop}
               isUploading={isUploading}
@@ -709,7 +726,7 @@ const DirectoryPage: React.FC = () => {
           )}
           <div className="text-center mt-6">
             <p className="text-sm text-theme-secondary">
-              {canModify ? (
+              {perms?.create_folder ? (
                 <>
                   <button
                     onClick={() => setIsCreateFolderModalOpen(true)}
@@ -742,7 +759,9 @@ const DirectoryPage: React.FC = () => {
                         name={folder.name}
                         to={`/directories/${folder.id}`}
                         onDelete={
-                          canModify && !checkIsShared(folder.id) ? handleDeleteFolder : undefined
+                          (folder.permissions?.delete ?? perms?.delete) && !checkIsShared(folder.id)
+                            ? handleDeleteFolder
+                            : undefined
                         }
                       />
                     ))}
@@ -756,7 +775,9 @@ const DirectoryPage: React.FC = () => {
                         name={folder.name}
                         to={`/directories/${folder.id}`}
                         onDelete={
-                          canModify && !checkIsShared(folder.id) ? handleDeleteFolder : undefined
+                          (folder.permissions?.delete ?? perms?.delete) && !checkIsShared(folder.id)
+                            ? handleDeleteFolder
+                            : undefined
                         }
                       />
                     ))}
@@ -782,7 +803,7 @@ const DirectoryPage: React.FC = () => {
                         to={`/files/${file.id}`}
                         isFavorite={file.isFavorite}
                         onToggleFavorite={handleToggleFavorite}
-                        onDelete={canModify ? handleDeleteFile : undefined}
+                        onDelete={perms?.delete ? handleDeleteFile : undefined}
                         onMove={handleMoveFile}
                       />
                     ))}
@@ -800,7 +821,7 @@ const DirectoryPage: React.FC = () => {
                         to={`/files/${file.id}`}
                         isFavorite={file.isFavorite}
                         onToggleFavorite={handleToggleFavorite}
-                        onDelete={canModify ? handleDeleteFile : undefined}
+                        onDelete={perms?.delete ? handleDeleteFile : undefined}
                         onMove={handleMoveFile}
                       />
                     ))}

@@ -2,11 +2,13 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { StorageIndicator } from './ui/StorageIndicator';
 import { cn } from '../utils/cn';
-import { useSidebarMenu } from '../hooks/useSidebarMenu';
+import { useSidebarMenu, isSidebarItemActive } from '../hooks/useSidebarMenu';
+import { useDirectoryStore } from '../store/directoryStore';
 
 export const Sidebar: React.FC = () => {
   const location = useLocation();
   const currentPath = location.pathname;
+  const currentSection = useDirectoryStore((s) => s.currentSection);
   const { menuItems, storageUsed, storageQuota, isLoading } = useSidebarMenu();
 
   if (isLoading) {
@@ -24,9 +26,7 @@ export const Sidebar: React.FC = () => {
           Меню
         </div>
         {menuItems.map((item) => {
-          const isActive =
-            currentPath === item.path ||
-            (item.path.startsWith('/directories/') && currentPath.startsWith('/directories/'));
+          const isActive = isSidebarItemActive(item.path, currentPath, currentSection);
           return (
             <Link
               key={item.path}

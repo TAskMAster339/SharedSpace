@@ -49,7 +49,7 @@ func (s *Service) GetRootContents(ctx context.Context, userID string) (Directory
 		}
 		return DirectoryContentsResponse{}, apperror.WrapInternal("ошибка поиска корневой директории", err)
 	}
-	return s.loadContents(ctx, root)
+	return s.loadContents(ctx, userID, root)
 }
 
 func (s *Service) GetContents(ctx context.Context, userID, dirID string) (DirectoryContentsResponse, error) {
@@ -67,7 +67,7 @@ func (s *Service) GetContents(ctx context.Context, userID, dirID string) (Direct
 	if !ok {
 		return DirectoryContentsResponse{}, apperror.Forbidden("доступ запрещён")
 	}
-	return s.loadContents(ctx, dir)
+	return s.loadContents(ctx, userID, dir)
 }
 
 func (s *Service) GetByID(ctx context.Context, userID, dirID string) (DirectoryResponse, error) {
@@ -85,7 +85,7 @@ func (s *Service) GetByID(ctx context.Context, userID, dirID string) (DirectoryR
 	if !ok {
 		return DirectoryResponse{}, apperror.Forbidden("доступ запрещён")
 	}
-	return toDirectoryResponse(dir), nil
+	return s.toDirectoryResponse(ctx, userID, dir), nil
 }
 
 func (s *Service) Create(ctx context.Context, userID string, req CreateDirectoryRequest) (DirectoryResponse, error) {
@@ -144,7 +144,7 @@ func (s *Service) Create(ctx context.Context, userID string, req CreateDirectory
 		return DirectoryResponse{}, apperror.WrapInternal("ошибка сохранения директории", err)
 	}
 
-	return toDirectoryResponse(dir), nil
+	return s.toDirectoryResponse(ctx, userID, dir), nil
 }
 
 func (s *Service) Update(ctx context.Context, userID, dirID string, req UpdateDirectoryRequest) (DirectoryResponse, error) {
@@ -232,10 +232,10 @@ func (s *Service) Update(ctx context.Context, userID, dirID string, req UpdateDi
 		return DirectoryResponse{}, apperror.WrapInternal("ошибка сохранения обновления директории", err)
 	}
 
-	return toDirectoryResponse(updated), nil
+	return s.toDirectoryResponse(ctx, userID, updated), nil
 }
 
-func (s *Service) loadContents(ctx context.Context, dir directoryRecord) (DirectoryContentsResponse, error) {
+func (s *Service) loadContents(ctx context.Context, userID string, dir directoryRecord) (DirectoryContentsResponse, error) {
 	subdirs, err := s.repo.FindSubdirectories(ctx, s.db, dir.ID)
 	if err != nil {
 		return DirectoryContentsResponse{}, apperror.WrapInternal("ошибка поиска поддиректорий", err)
@@ -248,7 +248,7 @@ func (s *Service) loadContents(ctx context.Context, dir directoryRecord) (Direct
 
 	subdirResponses := make([]DirectoryResponse, 0, len(subdirs))
 	for _, sd := range subdirs {
-		subdirResponses = append(subdirResponses, toDirectoryResponse(sd))
+		subdirResponses = append(subdirResponses, s.toDirectoryResponse(ctx, userID, sd))
 	}
 
 	fileItems := make([]FileItem, 0, len(files))
@@ -272,15 +272,17 @@ func (s *Service) loadContents(ctx context.Context, dir directoryRecord) (Direct
 	}, nil
 }
 
-func toDirectoryResponse(d directoryRecord) DirectoryResponse {
+func (s *Service) toDirectoryResponse(ctx context.Context, userID string, d directoryRecord) DirectoryResponse {
+	perms, _ := s.accessChecker.GetPermissions(ctx, userID, d.ID)
 	return DirectoryResponse{
-		ID:        d.ID,
-		Name:      d.Name,
-		OwnerID:   d.OwnerID,
-		ParentID:  d.ParentID,
-		Type:      d.Type,
-		CreatedAt: d.CreatedAt,
-		UpdatedAt: d.UpdatedAt,
+		ID:          d.ID,
+		Name:        d.Name,
+		OwnerID:     d.OwnerID,
+		ParentID:    d.ParentID,
+		Type:        d.Type,
+		CreatedAt:   d.CreatedAt,
+		UpdatedAt:   d.UpdatedAt,
+		Permissions: perms,
 	}
 }
 
