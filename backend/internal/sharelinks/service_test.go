@@ -72,11 +72,16 @@ type mockRow struct{}
 func (r mockRow) Scan(_ ...any) error { return nil }
 
 type mockAccessChecker struct {
-	canFn func(ctx context.Context, userID, directoryID string, action access.Action) (bool, error)
+	canFn            func(ctx context.Context, userID, directoryID string, action access.Action) (bool, error)
+	getPermissionsFn func(ctx context.Context, userID, directoryID string) (*access.Permissions, error)
 }
 
 func (m *mockAccessChecker) Can(ctx context.Context, userID, directoryID string, action access.Action) (bool, error) {
 	return m.canFn(ctx, userID, directoryID, action)
+}
+
+func (m *mockAccessChecker) GetPermissions(ctx context.Context, userID, directoryID string) (*access.Permissions, error) {
+	return m.getPermissionsFn(ctx, userID, directoryID)
 }
 
 func newTestService(repo RepositoryInterface) *Service {
@@ -88,9 +93,14 @@ func newTestService(repo RepositoryInterface) *Service {
 		db:      tx,
 		repo:    repo,
 		storage: &mockStorage{presignedURL: "http://minio/test/obj"},
-		accessChecker: &mockAccessChecker{canFn: func(_ context.Context, _, _ string, _ access.Action) (bool, error) {
-			return true, nil
-		}},
+		accessChecker: &mockAccessChecker{
+			canFn: func(_ context.Context, _, _ string, _ access.Action) (bool, error) {
+				return true, nil
+			},
+			getPermissionsFn: func(_ context.Context, _, _ string) (*access.Permissions, error) {
+				return &access.Permissions{}, nil
+			},
+		},
 	}
 }
 
