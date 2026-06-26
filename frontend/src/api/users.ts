@@ -75,3 +75,10 @@ export function searchUsers(
     token: accessToken,
   });
 }
+
+export function getUserById(accessToken: string, userId: string): Promise<AuthUser> {
+  return apiRequest<AuthUser>(`/users/${userId}`, {
+    method: 'GET',
+    token: accessToken,
+  });
+}

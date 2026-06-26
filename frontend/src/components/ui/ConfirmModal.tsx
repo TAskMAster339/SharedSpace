@@ -75,7 +75,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           <div className={cn('p-3 rounded-theme-full shrink-0', styles.iconBg, styles.iconColor)}>
             {icon || <AlertTriangle size={24} />}
           </div>
-          <div className="flex-1 min-w-0">{title}</div>
+          <div className="flex-1 min-w-0 break-words">{title}</div>
         </div>
 
         {description && <div className="mt-2">{description}</div>}

@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"sharedspace/internal/apperror"
+
+	"github.com/go-chi/chi/v5"
 )
 
 type Handler struct {
@@ -162,6 +164,35 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) error {
 
 	w.WriteHeader(http.StatusNoContent)
 	return nil
+}
+
+// GetUserByID returns user by ID.
+// @Summary Get user by ID
+// @Tags users
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "User ID"
+// @Success 200 {object} UserResponse
+// @Failure 401 {object} apperror.Error
+// @Failure 404 {object} apperror.Error
+// @Router /api/v1/users/{id} [get]
+func (h *Handler) GetUserByID(w http.ResponseWriter, r *http.Request) error {
+	userID, err := h.userIDFromRequest(r)
+	if err != nil {
+		return err
+	}
+
+	targetID := chi.URLParam(r, "id")
+	if targetID == "" {
+		return apperror.Validation("id пользователя обязателен")
+	}
+
+	resp, err := h.service.GetUserByID(r.Context(), userID, targetID)
+	if err != nil {
+		return err
+	}
+
+	return writeJSON(w, http.StatusOK, resp)
 }
 
 func decodeJSON(body io.ReadCloser, dst any) error {

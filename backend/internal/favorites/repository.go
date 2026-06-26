@@ -78,9 +78,11 @@ func (r *Repository) FindAllByUserID(ctx context.Context, db dbTX, userID string
 	return records, nil
 }
 
-func (r *Repository) FindFileByID(ctx context.Context, db dbTX, fileID string) error {
-	return db.QueryRow(ctx, `
-		SELECT id FROM files
+func (r *Repository) FindFileByID(ctx context.Context, db dbTX, fileID string) (string, error) {
+	var directoryID string
+	err := db.QueryRow(ctx, `
+		SELECT directory_id FROM files
 		WHERE id = $1 AND deleted_at IS NULL
-	`, fileID).Scan(new(string))
+	`, fileID).Scan(&directoryID)
+	return directoryID, err
 }

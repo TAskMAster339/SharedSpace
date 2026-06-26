@@ -30,6 +30,11 @@ type mockRepo struct {
 	softErr    error
 	restoreErr error
 	hardErr    error
+
+	conv        conversionRecord
+	convErr     error
+	convList    []conversionRecord
+	convListErr error
 }
 
 func (m *mockRepo) FindDirectoryByID(_ context.Context, _ dbTX, _ string) (directoryRecord, error) {
@@ -41,7 +46,7 @@ func (m *mockRepo) FindDirectoryByIDAnyState(_ context.Context, _ dbTX, _ string
 }
 
 func (m *mockRepo) FindByID(_ context.Context, _ dbTX, _ string) (fileRecord, error) {
-	return fileRecord{}, nil
+	return m.file, m.fileErr
 }
 
 func (m *mockRepo) Save(_ context.Context, _ dbTX, f fileRecord) (fileRecord, error) {
@@ -71,9 +76,20 @@ func (m *mockRepo) FindRecentByUserID(_ context.Context, _ dbTX, _ string, _ int
 	return nil, nil
 }
 
+func (m *mockRepo) SaveConversion(_ context.Context, _ dbTX, _, _, _, _, _ string) (conversionRecord, error) {
+	return m.conv, m.convErr
+}
+func (m *mockRepo) FindConversionsByFile(_ context.Context, _ dbTX, _ string) ([]conversionRecord, error) {
+	return m.convList, m.convListErr
+}
+
 type mockStorage struct {
 	uploadedKey string
 	err         error
+	getData     []byte
+	getErr      error
+	listedKeys  []string
+	listErr     error
 }
 
 func (m *mockStorage) Upload(_ context.Context, objectKey string, _ io.Reader, _ int64, _ string) error {
@@ -85,8 +101,20 @@ func (m *mockStorage) PresignedGetURL(_ context.Context, _ string, _ time.Durati
 	return "http://localhost:9000/test-bucket/key", nil
 }
 
+func (m *mockStorage) PresignedDownloadURL(_ context.Context, key string, _ time.Duration, filename string) (string, error) {
+	return "http://localhost:9000/tmp/" + key + "?dl=" + filename, nil
+}
+
 func (m *mockStorage) Delete(_ context.Context, _ string) error {
 	return nil
+}
+
+func (m *mockStorage) Get(_ context.Context, _ string) (io.ReadCloser, error) {
+	return io.NopCloser(bytes.NewReader(m.getData)), m.getErr
+}
+
+func (m *mockStorage) ListObjects(_ context.Context, _ string, _ time.Time) ([]string, error) {
+	return nil, nil
 }
 
 type mockTx struct{}
@@ -142,6 +170,7 @@ func newTestService(repo RepositoryInterface, storage StorageClient) *Service {
 		db:            tx,
 		repo:          repo,
 		storage:       storage,
+		tmpStorage:    storage,
 		accessChecker: &mockAccessChecker{canFn: func(_ context.Context, _, _ string, _ access.Action) (bool, error) { return true, nil }},
 	}
 }
@@ -326,5 +355,47 @@ func TestServicePermanentDelete_Success(t *testing.T) {
 	}
 	if repo.addedDelta != -100 {
 		t.Fatalf("expected storage_used -100, got %d", repo.addedDelta)
+	}
+}
+
+func TestServiceConvertAndDownload_Success(t *testing.T) {
+	repo := &mockRepo{file: fileRecord{ID: "src-1", DirectoryID: "d-1", Filename: "photo.png", Extension: "png", ObjectKey: "obj-1"}}
+	storage := &mockStorage{getData: makePNG(t)}
+	svc := newTestService(repo, storage)
+
+	url, filename, err := svc.ConvertAndDownload(context.Background(), "user-1", "src-1", "jpg")
+	if err != nil {
+		t.Fatalf("ConvertAndDownload: %v", err)
+	}
+	if filename != "photo.jpg" || url == "" {
+		t.Fatalf("unexpected: url=%s file=%s", url, filename)
+	}
+}
+
+func TestServiceConvertAndSave_Success(t *testing.T) {
+	repo := &mockRepo{file: fileRecord{ID: "src-1", DirectoryID: "d-1", OwnerID: "user-1", Filename: "photo.png", Extension: "png", ObjectKey: "obj-1"}}
+	storage := &mockStorage{getData: makePNG(t)}
+	svc := newTestService(repo, storage)
+
+	if _, err := svc.ConvertAndSave(context.Background(), "user-1", "src-1", "webp"); err != nil {
+		t.Fatalf("ConvertAndSave: %v", err)
+	}
+	if storage.uploadedKey == "" {
+		t.Fatal("expected converted object upload")
+	}
+	if repo.addedDelta <= 0 {
+		t.Fatalf("expected storage_used increase, got %d", repo.addedDelta)
+	}
+}
+
+func TestServiceConvert_UnsupportedPair(t *testing.T) {
+	repo := &mockRepo{file: fileRecord{DirectoryID: "d-1", Filename: "a.jpg", Extension: "jpg", ObjectKey: "o"}}
+	storage := &mockStorage{getData: makeJPG(t)}
+	svc := newTestService(repo, storage)
+
+	_, _, err := svc.ConvertAndDownload(context.Background(), "user-1", "f-1", "png")
+	appErr, ok := apperror.From(err)
+	if !ok || appErr.Code() != apperror.CodeValidation {
+		t.Fatalf("expected validation, got %v", err)
 	}
 }

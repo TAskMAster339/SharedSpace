@@ -61,6 +61,7 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 					r.Patch("/me/password", middleware.AppError(usersHandler.ChangePassword))
 					r.Delete("/me", middleware.AppError(usersHandler.DeleteAccount))
 					r.Get("/search", middleware.AppError(usersHandler.SearchUsers))
+					r.Get("/{id}", middleware.AppError(usersHandler.GetUserByID))
 				})
 			}
 
@@ -77,11 +78,12 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 					r.Delete("/{id}", middleware.AppError(filesHandler.SoftDelete))
 					r.Post("/{id}/restore", middleware.AppError(filesHandler.Restore))
 					r.Delete("/{id}/permanent", middleware.AppError(filesHandler.PermanentDelete))
-
+          r.Post("/{id}/convert", middleware.AppError(filesHandler.Convert))
+					r.Get("/{id}/conversions", middleware.AppError(filesHandler.ListConversions))
 					if shareLinksHandler != nil {
 						r.Post("/{id}/share-links", middleware.AppError(shareLinksHandler.Create))
 						r.Get("/{id}/share-links", middleware.AppError(shareLinksHandler.ListByFile))
-					}
+          }
 				})
 			}
 

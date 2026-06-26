@@ -21,6 +21,7 @@ const FavoritesPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [deletedToast, setDeletedToast] = useState<{ id: string; name: string } | null>(null);
+  const [favoriteToast, setFavoriteToast] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     if (!accessToken) return;
@@ -79,17 +80,32 @@ const FavoritesPage: React.FC = () => {
 
   const handleToggleFavorite = async (fileId: string) => {
     if (!accessToken) return;
+    const file = files.find((f) => f.id === fileId);
     // Оптимистично удаляем файл из списка
-    setFiles((prev) => prev.filter((file) => file.id !== fileId));
+    setFiles((prev) => prev.filter((f) => f.id !== fileId));
 
     try {
       // Вызываем toggleFavorite из хука
       await toggleFavorite(fileId);
+      setFavoriteToast({ id: fileId, name: file?.filename || 'Файл' });
     } catch {
       // Если ошибка - возвращаем файл обратно в список
       const data = await getFavorites(accessToken!);
       setFiles(data.favorites);
     }
+  };
+
+  const handleUndoFavorite = async () => {
+    if (!favoriteToast || !accessToken) return;
+    try {
+      // Возвращаем файл в избранное
+      await toggleFavorite(favoriteToast.id);
+      const data = await getFavorites(accessToken);
+      setFiles(data.favorites);
+    } catch (err) {
+      console.error('Failed to undo favorite:', err);
+    }
+    setFavoriteToast(null);
   };
 
   const handleDeleteFile = async (fileId: string) => {
@@ -161,15 +177,26 @@ const FavoritesPage: React.FC = () => {
         )}
       </Card>
 
-      {deletedToast && (
-        <div className="fixed bottom-4 right-4 z-50">
-          <Toast
-            variant="undo"
-            message={`«${deletedToast.name}» перемещён в корзину`}
-            actionLabel="Отменить"
-            onAction={handleUndoDelete}
-            onClose={() => setDeletedToast(null)}
-          />
+      {(deletedToast || favoriteToast) && (
+        <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
+          {favoriteToast && (
+            <Toast
+              variant="favorite"
+              message={`«${favoriteToast.name}» удалён из избранного`}
+              actionLabel="Отменить"
+              onAction={handleUndoFavorite}
+              onClose={() => setFavoriteToast(null)}
+            />
+          )}
+          {deletedToast && (
+            <Toast
+              variant="undo"
+              message={`«${deletedToast.name}» перемещён в корзину`}
+              actionLabel="Отменить"
+              onAction={handleUndoDelete}
+              onClose={() => setDeletedToast(null)}
+            />
+          )}
         </div>
       )}
     </div>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Folder, Trash2 } from 'lucide-react';
+import { Folder } from 'lucide-react';
+import { ItemActionsMenu } from './ItemActionsMenu';
 import { cn } from '../../utils/cn';
 
 interface FolderGridItemProps {
@@ -22,7 +23,7 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
     <Link
       to={to}
       className={cn(
-        'group flex flex-col items-center p-3 rounded-theme-md transition-colors cursor-pointer relative',
+        'group flex flex-col items-center p-3 rounded-theme-md transition-colors cursor-pointer relative min-w-0',
         'bg-theme-tertiary hover:bg-theme-hover border border-theme',
         className,
       )}
@@ -34,21 +35,11 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
         {name}
       </p>
 
-      {onDelete && (
-        <button
-          type="button"
-          aria-label="Переместить в корзину"
-          title="Переместить в корзину"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onDelete(id);
-          }}
-          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-theme-muted hover:text-danger transition-colors"
-        >
-          <Trash2 size={16} />
-        </button>
-      )}
+      <ItemActionsMenu
+        onDelete={onDelete ? () => onDelete(id) : undefined}
+        className="absolute top-2 right-2"
+        iconSize={16}
+      />
     </Link>
   );
 };
