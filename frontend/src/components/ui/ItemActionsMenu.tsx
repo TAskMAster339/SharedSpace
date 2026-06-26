@@ -60,15 +60,7 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
   };
 
   return (
-    <div ref={containerRef} className={cn('relative flex items-center gap-1.5', className)}>
-      {isFavorite && (
-        <Star
-          size={iconSize}
-          className="text-yellow-400 shrink-0"
-          fill="currentColor"
-          aria-label="В избранном"
-        />
-      )}
+    <div ref={containerRef} className={cn('relative inline-flex', className)}>
       <button
         ref={triggerRef}
         type="button"

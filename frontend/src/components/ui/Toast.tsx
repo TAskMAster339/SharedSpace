@@ -91,7 +91,7 @@ export const Toast: React.FC<ToastProps> = ({
         }}
       />
       <Icon size={20} className={cn('shrink-0', style.iconColor)} />
-      <p className="text-sm text-theme-primary flex-1">{message}</p>
+      <p className="text-sm text-theme-primary flex-1 min-w-0 break-words">{message}</p>
       {actionLabel && onAction && (
         <button
           onClick={() => {
