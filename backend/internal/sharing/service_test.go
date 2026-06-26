@@ -315,11 +315,11 @@ func TestServiceInvite(t *testing.T) {
 	t.Run("forbidden for non-admin member", func(t *testing.T) {
 		repo := &mockRepo{
 			findByIDResult: sharedDirectoryRecord{ID: "s-1", DirectoryID: "d-1", OwnerID: "user-2"},
-			findMembersResult: []memberRecord{
-				{UserID: "user-1", Role: "viewer"},
-			},
 		}
 		svc := newTestService(repo)
+		svc.accessChecker = &mockAccessChecker{canFn: func(_ context.Context, _, _ string, _ access.Action) (bool, error) {
+			return false, nil
+		}}
 
 		_, err := svc.Invite(context.Background(), "user-1", "s-1", "bob")
 		if err == nil {
@@ -577,9 +577,12 @@ func TestServiceRemoveInvitation(t *testing.T) {
 			findInvitationResult: invitationRecord{
 				ID: "inv-1", SharedDirectoryID: "s-1", InvitedByUserID: "user-2",
 			},
-			findByIDResult: sharedDirectoryRecord{ID: "s-1", OwnerID: "user-3"},
+			findByIDResult: sharedDirectoryRecord{ID: "s-1", DirectoryID: "d-1", OwnerID: "user-3"},
 		}
 		svc := newTestService(repo)
+		svc.accessChecker = &mockAccessChecker{canFn: func(_ context.Context, _, _ string, _ access.Action) (bool, error) {
+			return false, nil
+		}}
 
 		err := svc.RemoveInvitation(context.Background(), "user-1", "inv-1")
 		if err == nil {

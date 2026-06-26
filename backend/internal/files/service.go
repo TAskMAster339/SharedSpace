@@ -131,7 +131,11 @@ func (s *Service) GetMetadata(ctx context.Context, userID, fileID string) (FileM
 		}
 		return FileMetadataResponse{}, apperror.WrapInternal("поиск файла", err)
 	}
-	if file.OwnerID != userID {
+	ok, err := s.accessChecker.Can(ctx, userID, file.DirectoryID, access.ActionView)
+	if err != nil {
+		return FileMetadataResponse{}, err
+	}
+	if !ok {
 		return FileMetadataResponse{}, apperror.Forbidden("доступ запрещён")
 	}
 	return toMetadataResponse(file), nil
@@ -145,7 +149,11 @@ func (s *Service) GetContentURL(ctx context.Context, userID, fileID string) (Fil
 		}
 		return FileContentResponse{}, apperror.WrapInternal("поиск файла", err)
 	}
-	if file.OwnerID != userID {
+	ok, err := s.accessChecker.Can(ctx, userID, file.DirectoryID, access.ActionDownload)
+	if err != nil {
+		return FileContentResponse{}, err
+	}
+	if !ok {
 		return FileContentResponse{}, apperror.Forbidden("доступ запрещён")
 	}
 
