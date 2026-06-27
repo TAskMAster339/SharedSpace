@@ -16,9 +16,10 @@ type Storage struct {
 	bucket         string
 	publicEndpoint string
 	useSSL         bool
+	publicUseSSL   bool
 }
 
-func New(ctx context.Context, endpoint, accessKey, secretKey, bucket, publicEndpoint string, useSSL bool) (*Storage, error) {
+func New(ctx context.Context, endpoint, accessKey, secretKey, bucket, publicEndpoint string, useSSL bool, publicUseSSL bool) (*Storage, error) {
 	client, err := minio.New(endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
 		Secure: useSSL,
@@ -37,7 +38,7 @@ func New(ctx context.Context, endpoint, accessKey, secretKey, bucket, publicEndp
 		}
 	}
 
-	return &Storage{client: client, bucket: bucket, publicEndpoint: publicEndpoint, useSSL: useSSL}, nil
+	return &Storage{client: client, bucket: bucket, publicEndpoint: publicEndpoint, useSSL: useSSL, publicUseSSL: publicUseSSL}, nil
 }
 
 func (s *Storage) Upload(ctx context.Context, objectKey string, r io.Reader, size int64, contentType string) error {
@@ -68,7 +69,7 @@ func (s *Storage) PresignedGetURL(ctx context.Context, objectKey string, expiry 
 	}
 
 	u.Host = s.publicEndpoint
-	if s.useSSL {
+	if s.publicUseSSL {
 		u.Scheme = "https"
 	} else {
 		u.Scheme = "http"
@@ -94,7 +95,7 @@ func (s *Storage) PresignedDownloadURL(ctx context.Context, objectKey string, ex
 		return "", fmt.Errorf("presign %s: %w", objectKey, err)
 	}
 	u.Host = s.publicEndpoint
-	if s.useSSL {
+	if s.publicUseSSL {
 		u.Scheme = "https"
 	} else {
 		u.Scheme = "http"
