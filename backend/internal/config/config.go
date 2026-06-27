@@ -32,6 +32,7 @@ type Config struct {
 	MinIOAccessKey      string
 	MinIOSecretKey      string
 	MinIOBucket         string
+	MinIOUseSSL         bool
 	MinIOPublicEndpoint string
 	MinIOTmpBucket      string
 
@@ -74,6 +75,7 @@ func Load() (*Config, error) {
 		MinIOSecretKey:      getEnv("MINIO_ROOT_PASSWORD", "minioadmin"),
 		MinIOBucket:         getEnv("MINIO_BUCKET", "sharedspace"),
 		MinIOPublicEndpoint: getEnv("MINIO_PUBLIC_ENDPOINT", "localhost:9002"),
+		MinIOUseSSL:         getEnv("MINIO_USE_SSL", "false") == "true",
 		MinIOTmpBucket:      getEnv("MINIO_TMP_BUCKET", "tmp"),
 
 		JWTSecret:     secret,
