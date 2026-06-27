@@ -197,3 +197,20 @@ func (r *Repository) FindConversionsByFile(ctx context.Context, db dbTX, fileID 
 	}
 	return out, rows.Err()
 }
+
+func (r *Repository) IncrementFilesCount(ctx context.Context, db dbTX, directoryID string, delta int) error {
+	_, err := db.Exec(ctx, `
+		WITH RECURSIVE ancestors AS (
+			SELECT id, parent_id FROM directories WHERE id = $1
+			UNION ALL
+			SELECT d.id, d.parent_id
+			FROM directories d
+			JOIN ancestors a ON d.id = a.parent_id
+		)
+		UPDATE directories
+		SET files_count = files_count + $2,
+		    updated_at  = now()
+		WHERE id IN (SELECT id FROM ancestors)
+	`, directoryID, delta)
+	return err
+}

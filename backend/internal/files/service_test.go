@@ -169,6 +169,10 @@ func (m *mockRepo) FindByFilenameAndDirectory(_ context.Context, _ dbTX, _, _ st
 	return fileRecord{}, pgx.ErrNoRows
 }
 
+func (m *mockRepo) IncrementFilesCount(_ context.Context, _ dbTX, _ string, _ int) error {
+	return nil
+}
+
 func newTestService(repo RepositoryInterface, storage StorageClient) *Service {
 	tx := &mockTx{}
 	return &Service{

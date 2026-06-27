@@ -14,27 +14,27 @@ func NewRepository() *Repository {
 func (r *Repository) FindByID(ctx context.Context, db dbTX, id string) (directoryRecord, error) {
 	var d directoryRecord
 	err := db.QueryRow(ctx, `
-		SELECT id, name, owner_id, parent_id, type, created_at, updated_at
+		SELECT id, name, owner_id, parent_id, type, files_count, created_at, updated_at
 		FROM directories
 		WHERE id = $1 AND deleted_at IS NULL
-	`, id).Scan(&d.ID, &d.Name, &d.OwnerID, &d.ParentID, &d.Type, &d.CreatedAt, &d.UpdatedAt)
+	`, id).Scan(&d.ID, &d.Name, &d.OwnerID, &d.ParentID, &d.Type, &d.FilesCount, &d.CreatedAt, &d.UpdatedAt)
 	return d, err
 }
 
 func (r *Repository) FindRootByOwner(ctx context.Context, db dbTX, ownerID string) (directoryRecord, error) {
 	var d directoryRecord
 	err := db.QueryRow(ctx, `
-		SELECT id, name, owner_id, parent_id, type, created_at, updated_at
+		SELECT id, name, owner_id, parent_id, type, files_count, created_at, updated_at
 		FROM directories
 		WHERE owner_id = $1 AND type = 'root' AND deleted_at IS NULL
 		LIMIT 1
-	`, ownerID).Scan(&d.ID, &d.Name, &d.OwnerID, &d.ParentID, &d.Type, &d.CreatedAt, &d.UpdatedAt)
+	`, ownerID).Scan(&d.ID, &d.Name, &d.OwnerID, &d.ParentID, &d.Type, &d.FilesCount, &d.CreatedAt, &d.UpdatedAt)
 	return d, err
 }
 
 func (r *Repository) FindSubdirectories(ctx context.Context, db dbTX, parentID string) ([]directoryRecord, error) {
 	rows, err := db.Query(ctx, `
-		SELECT id, name, owner_id, parent_id, type, created_at, updated_at
+		SELECT id, name, owner_id, parent_id, type, files_count, created_at, updated_at
 		FROM directories
 		WHERE parent_id = $1 AND deleted_at IS NULL
 		ORDER BY name ASC
@@ -47,7 +47,7 @@ func (r *Repository) FindSubdirectories(ctx context.Context, db dbTX, parentID s
 	var dirs []directoryRecord
 	for rows.Next() {
 		var d directoryRecord
-		if err := rows.Scan(&d.ID, &d.Name, &d.OwnerID, &d.ParentID, &d.Type, &d.CreatedAt, &d.UpdatedAt); err != nil {
+		if err := rows.Scan(&d.ID, &d.Name, &d.OwnerID, &d.ParentID, &d.Type, &d.FilesCount, &d.CreatedAt, &d.UpdatedAt); err != nil {
 			return nil, err
 		}
 		dirs = append(dirs, d)
@@ -81,11 +81,11 @@ func (r *Repository) FindFiles(ctx context.Context, db dbTX, directoryID string)
 func (r *Repository) FindByNameAndParent(ctx context.Context, db dbTX, name, parentID, ownerID string) (directoryRecord, error) {
 	var d directoryRecord
 	err := db.QueryRow(ctx, `
-		SELECT id, name, owner_id, parent_id, type, created_at, updated_at
+		SELECT id, name, owner_id, parent_id, type, files_count, created_at, updated_at
 		FROM directories
 		WHERE name = $1 AND parent_id = $2 AND owner_id = $3 AND deleted_at IS NULL
 		LIMIT 1
-	`, name, parentID, ownerID).Scan(&d.ID, &d.Name, &d.OwnerID, &d.ParentID, &d.Type, &d.CreatedAt, &d.UpdatedAt)
+	`, name, parentID, ownerID).Scan(&d.ID, &d.Name, &d.OwnerID, &d.ParentID, &d.Type, &d.FilesCount, &d.CreatedAt, &d.UpdatedAt)
 	return d, err
 }
 
@@ -94,8 +94,8 @@ func (r *Repository) Create(ctx context.Context, db dbTX, name, ownerID, parentI
 	err := db.QueryRow(ctx, `
 		INSERT INTO directories (name, owner_id, parent_id, type)
 		VALUES ($1, $2, $3, 'regular')
-		RETURNING id, name, owner_id, parent_id, type, created_at, updated_at
-	`, name, ownerID, parentID).Scan(&d.ID, &d.Name, &d.OwnerID, &d.ParentID, &d.Type, &d.CreatedAt, &d.UpdatedAt)
+		RETURNING id, name, owner_id, parent_id, type, files_count, created_at, updated_at
+	`, name, ownerID, parentID).Scan(&d.ID, &d.Name, &d.OwnerID, &d.ParentID, &d.Type, &d.FilesCount, &d.CreatedAt, &d.UpdatedAt)
 	return d, err
 }
 
@@ -108,17 +108,17 @@ func (r *Repository) UpdateNameAndParent(ctx context.Context, db dbTX, id string
 			parent_id = CASE WHEN $3::uuid IS NULL THEN parent_id ELSE $3 END,
 			updated_at = now()
 		WHERE id = $1 AND deleted_at IS NULL
-		RETURNING id, name, owner_id, parent_id, type, created_at, updated_at
-	`, id, name, parentID).Scan(&d.ID, &d.Name, &d.OwnerID, &d.ParentID, &d.Type, &d.CreatedAt, &d.UpdatedAt)
+		RETURNING id, name, owner_id, parent_id, type, files_count, created_at, updated_at
+	`, id, name, parentID).Scan(&d.ID, &d.Name, &d.OwnerID, &d.ParentID, &d.Type, &d.FilesCount, &d.CreatedAt, &d.UpdatedAt)
 	return d, err
 }
 
 func (r *Repository) FindByIDAnyState(ctx context.Context, db dbTX, id string) (directoryRecord, error) {
 	var d directoryRecord
 	err := db.QueryRow(ctx, `
-		SELECT id, name, owner_id, parent_id, type, deleted_at, created_at, updated_at
+		SELECT id, name, owner_id, parent_id, type, files_count, deleted_at, created_at, updated_at
 		FROM directories WHERE id = $1
-	`, id).Scan(&d.ID, &d.Name, &d.OwnerID, &d.ParentID, &d.Type, &d.DeletedAt, &d.CreatedAt, &d.UpdatedAt)
+	`, id).Scan(&d.ID, &d.Name, &d.OwnerID, &d.ParentID, &d.Type, &d.FilesCount, &d.DeletedAt, &d.CreatedAt, &d.UpdatedAt)
 	return d, err
 }
 
@@ -227,5 +227,22 @@ func (r *Repository) DecrementSharedDirsCount(ctx context.Context, db dbTX, user
 	_, err := db.Exec(ctx, `
 		UPDATE users SET shared_dirs_count = GREATEST(shared_dirs_count - 1, 0), updated_at = now() WHERE id = $1
 	`, userID)
+	return err
+}
+
+func (r *Repository) IncrementFilesCount(ctx context.Context, db dbTX, directoryID string, delta int) error {
+	_, err := db.Exec(ctx, `
+		WITH RECURSIVE ancestors AS (
+			SELECT id, parent_id FROM directories WHERE id = $1
+			UNION ALL
+			SELECT d.id, d.parent_id
+			FROM directories d
+			JOIN ancestors a ON d.id = a.parent_id
+		)
+		UPDATE directories
+		SET files_count = files_count + $2,
+		    updated_at  = now()
+		WHERE id IN (SELECT id FROM ancestors)
+	`, directoryID, delta)
 	return err
 }

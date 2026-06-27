@@ -1,0 +1,1 @@
+ALTER TABLE directories DROP COLUMN IF EXISTS files_count;

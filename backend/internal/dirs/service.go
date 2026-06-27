@@ -293,6 +293,7 @@ func (s *Service) toDirectoryResponse(ctx context.Context, userID string, d dire
 		OwnerID:     d.OwnerID,
 		ParentID:    d.ParentID,
 		Type:        d.Type,
+		FilesCount:  d.FilesCount,
 		CreatedAt:   d.CreatedAt,
 		UpdatedAt:   d.UpdatedAt,
 		Permissions: perms,
@@ -331,6 +332,11 @@ func (s *Service) SoftDelete(ctx context.Context, userID, dirID string) error {
 		return apperror.WrapInternal("обход поддерева", err)
 	}
 
+	aliveFiles, err := s.repo.FindFilesInDirs(ctx, s.db, ids)
+	if err != nil {
+		return apperror.WrapInternal("поиск активных файлов", err)
+	}
+
 	tx, err := s.beginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return apperror.WrapInternal("начало транзакции", err)
@@ -344,6 +350,13 @@ func (s *Service) SoftDelete(ctx context.Context, userID, dirID string) error {
 	if err := s.repo.SoftDeleteSubtree(ctx, tx, ids, at); err != nil {
 		return apperror.WrapInternal("удаление директорий", err)
 	}
+
+	if len(aliveFiles) > 0 && dir.ParentID != nil {
+		if err := s.repo.IncrementFilesCount(ctx, tx, *dir.ParentID, -len(aliveFiles)); err != nil {
+			return apperror.WrapInternal("обновление счётчика файлов", err)
+		}
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		return apperror.WrapInternal("сохранение", err)
 	}
@@ -393,12 +406,24 @@ func (s *Service) Restore(ctx context.Context, userID, dirID string) error {
 	}
 	defer tx.Rollback(ctx)
 
+	restoredFiles, err := s.repo.FindDeletedFilesInDirs(ctx, s.db, ids)
+	if err != nil {
+		return apperror.WrapInternal("поиск восстанавливаемых файлов", err)
+	}
+
 	if err := s.repo.RestoreFilesInDirs(ctx, tx, ids, *dir.DeletedAt); err != nil {
 		return apperror.WrapInternal("восстановление файлов", err)
 	}
 	if err := s.repo.RestoreSubtree(ctx, tx, ids); err != nil {
 		return apperror.WrapInternal("восстановление директорий", err)
 	}
+
+	if len(restoredFiles) > 0 && dir.ParentID != nil {
+		if err := s.repo.IncrementFilesCount(ctx, tx, *dir.ParentID, len(restoredFiles)); err != nil {
+			return apperror.WrapInternal("обновление счётчика файлов", err)
+		}
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		return apperror.WrapInternal("сохранение", err)
 	}
@@ -465,6 +490,13 @@ func (s *Service) PermanentDelete(ctx context.Context, userID, dirID string) err
 			return apperror.WrapInternal("удаление объекта из хранилища", err)
 		}
 	}
+
+	if len(alive) > 0 && dir.ParentID != nil {
+		if err := s.repo.IncrementFilesCount(ctx, tx, *dir.ParentID, -len(alive)); err != nil {
+			return apperror.WrapInternal("обновление счётчика файлов", err)
+		}
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		return apperror.WrapInternal("сохранение", err)
 	}

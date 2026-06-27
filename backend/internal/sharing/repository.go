@@ -77,7 +77,7 @@ func (r *Repository) FindByMemberWithStats(ctx context.Context, db dbTX, userID 
 			u.username,
 			sdm.role,
 			(SELECT COUNT(*) FROM shared_directory_members sdm2 WHERE sdm2.shared_directory_id = sd.id),
-			(SELECT COUNT(*) FROM files f WHERE f.directory_id = sd.directory_id AND f.deleted_at IS NULL),
+			d.files_count,
 			sd.created_at
 		FROM shared_directories sd
 		JOIN shared_directory_members sdm ON sdm.shared_directory_id = sd.id
