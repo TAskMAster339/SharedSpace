@@ -186,7 +186,7 @@ const RegisterPage: React.FC = () => {
             )}
           </div>
 
-          <Button type="submit" disabled={isSubmitting} className="mt-1 w-full">
+          <Button type="submit" disabled={isSubmitting || !policyAccepted} className="mt-1 w-full">
             {isSubmitting ? 'Регистрация...' : 'Зарегистрироваться'}
           </Button>
         </form>

@@ -12,7 +12,7 @@ interface ItemActionsMenuProps {
   iconSize?: number;
 }
 
-const MENU_WIDTH = 192; // w-48
+const MENU_WIDTH = 216;
 const MENU_HEIGHT_EST = 140;
 const GAP = 4;
 const EDGE = 8;
@@ -101,15 +101,15 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
   };
 
   const menuItems = (
-    <div className="py-1">
+    <div>
       {onMove && (
         <button
           type="button"
           role="menuitem"
           onClick={(e) => handleSelect(e, onMove)}
-          className="flex items-center gap-3 w-full px-4 py-3.5 text-base text-theme-secondary hover:bg-theme-hover transition-colors sm:px-3 sm:py-2 sm:text-sm"
+          className="group flex items-center gap-3 w-full px-4 py-3.5 text-base text-theme-secondary hover:bg-theme-hover transition-colors sm:px-3 sm:py-2 sm:text-sm"
         >
-          <Move size={18} />
+          <Move size={18} className="group-hover:text-green-500 transition-colors" />
           Переместить файл
         </button>
       )}
@@ -118,11 +118,11 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
           type="button"
           role="menuitem"
           onClick={(e) => handleSelect(e, onToggleFavorite)}
-          className="flex items-center gap-3 w-full px-4 py-3.5 text-base text-theme-secondary hover:bg-theme-hover transition-colors sm:px-3 sm:py-2 sm:text-sm"
+          className="group flex items-center gap-3 w-full px-4 py-3.5 text-base text-theme-secondary hover:bg-theme-hover transition-colors sm:px-3 sm:py-2 sm:text-sm"
         >
           <Star
             size={18}
-            className={isFavorite ? 'text-yellow-400' : 'text-theme-muted'}
+            className={`${isFavorite ? 'text-yellow-400' : 'text-theme-muted'} group-hover:text-yellow-400 transition-colors`}
             fill={isFavorite ? 'currentColor' : 'none'}
           />
           {isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'}
@@ -133,9 +133,9 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
           type="button"
           role="menuitem"
           onClick={(e) => handleSelect(e, onDelete)}
-          className="flex items-center gap-3 w-full px-4 py-3.5 text-base text-danger hover:bg-danger-light transition-colors sm:px-3 sm:py-2 sm:text-sm"
+          className="group flex items-center gap-3 w-full px-4 py-3.5 text-base text-theme-secondary hover:bg-theme-hover transition-colors sm:px-3 sm:py-2 sm:text-sm"
         >
-          <Trash2 size={18} />
+          <Trash2 size={18} className="group-hover:text-red-500 transition-colors" />
           Переместить в корзину
         </button>
       )}

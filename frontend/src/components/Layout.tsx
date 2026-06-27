@@ -36,7 +36,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               className={cn(
                 'max-w-6xl mx-auto',
                 isOnLandingPage ? 'p-0' : 'p-4 sm:p-6',
-                !isOnLandingPage && 'min-h-full',
               )}
             >
               {children ? children : <Outlet />}
