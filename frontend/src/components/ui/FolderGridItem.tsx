@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Folder } from 'lucide-react';
 import { ItemActionsMenu } from './ItemActionsMenu';
@@ -10,6 +10,7 @@ interface FolderGridItemProps {
   to: string;
   className?: string;
   onDelete?: (id: string) => void;
+  onDrop?: (e: React.DragEvent, id: string) => void;
 }
 
 export const FolderGridItem: React.FC<FolderGridItemProps> = ({
@@ -18,13 +19,59 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
   to,
   className,
   onDelete,
+  onDrop,
 }) => {
+  const [isDragOver, setIsDragOver] = useState(false);
+  const dragCounter = useRef(0);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    if (!onDrop) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    if (!onDrop) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current++;
+    if (dragCounter.current === 1) {
+      setIsDragOver(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    if (!onDrop) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current--;
+    if (dragCounter.current === 0) {
+      setIsDragOver(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    if (!onDrop) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current = 0;
+    setIsDragOver(false);
+    onDrop(e, id);
+  };
+
   return (
     <Link
       to={to}
+      draggable={false}
+      onDragOver={handleDragOver}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
       className={cn(
         'group flex flex-col items-center p-3 rounded-theme-md transition-colors cursor-pointer relative min-w-0',
         'bg-theme-tertiary hover:bg-theme-hover border border-theme',
+        isDragOver && '!border-brand !bg-brand/20 !shadow-lg !ring-2 !ring-brand/40',
         className,
       )}
     >

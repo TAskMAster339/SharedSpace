@@ -151,6 +151,6 @@ export const moveFile = async (
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.message || 'Не удалось переместить файл');
+    throw new Error(error.error || 'Не удалось переместить файл');
   }
 };

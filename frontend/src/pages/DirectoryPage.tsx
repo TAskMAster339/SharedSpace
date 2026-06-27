@@ -96,8 +96,9 @@ const DirectoryPage: React.FC = () => {
   const [actualId, setActualId] = useState<string | null>(null);
 
   // --- Функция загрузки breadcrumbs ---
+  // Принимает опциональный currentDir — если передан, пропускает первый запрос getDirectory
   const loadBreadcrumbs = useCallback(
-    async (directoryId: string, isSharedDir: boolean) => {
+    async (directoryId: string, isSharedDir: boolean, currentDir?: Directory) => {
       if (!accessToken) return;
 
       // Предотвращаем повторные вызовы
@@ -113,10 +114,10 @@ const DirectoryPage: React.FC = () => {
         const crumbs: BreadcrumbItem[] = [];
 
         if (isSharedDir) {
-          const currentDir = await getDirectory(accessToken, directoryId);
+          const dir = currentDir || await getDirectory(accessToken, directoryId);
           crumbs.push({
-            id: currentDir.id,
-            name: currentDir.name,
+            id: dir.id,
+            name: dir.name,
             isRoot: false,
             isShared: true,
           });
@@ -126,10 +127,10 @@ const DirectoryPage: React.FC = () => {
           return;
         }
 
-        const currentDir = await getDirectory(accessToken, directoryId);
-        if (currentDir.type === 'root') {
+        const current = currentDir || await getDirectory(accessToken, directoryId);
+        if (current.type === 'root') {
           crumbs.push({
-            id: currentDir.id,
+            id: current.id,
             name: 'Личное хранилище',
             isRoot: true,
           });
@@ -139,10 +140,10 @@ const DirectoryPage: React.FC = () => {
           return;
         }
 
-        let parentId = currentDir.parent_id;
+        let parentId = current.parent_id;
         crumbs.push({
-          id: currentDir.id,
-          name: currentDir.name,
+          id: current.id,
+          name: current.name,
         });
 
         while (parentId) {
@@ -193,12 +194,14 @@ const DirectoryPage: React.FC = () => {
 
   // --- Функция загрузки содержимого ---
   const loadDirectory = useCallback(
-    async (dirId: string) => {
+    async (dirId: string, skipLoading = false) => {
       if (!accessToken || !dirId) return;
 
       setTargetDirectoryId(dirId);
 
-      setIsLoading(true);
+      if (!skipLoading) {
+        setIsLoading(true);
+      }
       setError(null);
 
       try {
@@ -215,7 +218,9 @@ const DirectoryPage: React.FC = () => {
         setIsShared(shared);
 
         // Загружаем breadcrumbs
-        await loadBreadcrumbs(dirId, shared);
+        if (!skipLoading) {
+          await loadBreadcrumbs(dirId, shared, info);
+        }
       } catch (err) {
         console.error('Failed to load directory:', err);
         if (err instanceof Error && err.message?.includes('404')) {
@@ -224,7 +229,9 @@ const DirectoryPage: React.FC = () => {
           setError('Не удалось загрузить содержимое директории');
         }
       } finally {
-        setIsLoading(false);
+        if (!skipLoading) {
+          setIsLoading(false);
+        }
       }
     },
     [accessToken, navigate, loadBreadcrumbs, checkIsShared, setTargetDirectoryId],
@@ -275,19 +282,15 @@ const DirectoryPage: React.FC = () => {
     }
   }, [id, actualId, accessToken, loadDirectory, isLoadingShared]);
 
-  // --- Эффект 3: Перепроверяем статус общей директории ---
+  // Эффект 3: Перепроверяем статус общей директории
   useEffect(() => {
     if (!isLoadingShared && actualId && accessToken) {
       const shared = checkIsShared(actualId);
-
-      // Обновляем статус только если он изменился
       if (shared !== isShared) {
         setIsShared(shared);
-        // Перезагружаем breadcrumbs только если статус изменился
-        loadBreadcrumbs(actualId, shared);
       }
     }
-  }, [isLoadingShared, actualId, accessToken, checkIsShared, loadBreadcrumbs, isShared]);
+  }, [isLoadingShared, actualId, accessToken, checkIsShared, isShared]);
 
   // --- Эффект 4: Обновляем DnD target при изменении actualId ---
   useEffect(() => {
@@ -384,7 +387,7 @@ const DirectoryPage: React.FC = () => {
           setUploadProgress(progress);
         });
 
-        await loadDirectory(actualId);
+        await loadDirectory(actualId, true);
 
         showToast(buildUploadSuccessMessage(files), 'success');
 
@@ -417,7 +420,7 @@ const DirectoryPage: React.FC = () => {
         shared: false,
       });
 
-      await loadDirectory(actualId);
+      await loadDirectory(actualId, true);
       setIsCreateFolderModalOpen(false);
       setNewFolderName('');
     } catch (err) {
@@ -435,7 +438,7 @@ const DirectoryPage: React.FC = () => {
 
       try {
         await softDeleteFile(accessToken, fileId);
-        await loadDirectory(actualId);
+        await loadDirectory(actualId, true);
         setDeletedToast({ id: fileId, name: file?.filename || 'Файл', kind: 'file' });
       } catch (err) {
         console.error('Failed to delete file:', err);
@@ -452,7 +455,7 @@ const DirectoryPage: React.FC = () => {
 
       try {
         await softDeleteDirectory(accessToken, folderId);
-        await loadDirectory(actualId);
+        await loadDirectory(actualId, true);
         setDeletedToast({ id: folderId, name: folder?.name || 'Папка', kind: 'directory' });
       } catch (err) {
         console.error('Failed to delete folder:', err);
@@ -471,7 +474,7 @@ const DirectoryPage: React.FC = () => {
       } else {
         await restoreDirectory(accessToken, deletedToast.id);
       }
-      if (actualId) await loadDirectory(actualId);
+      if (actualId) await loadDirectory(actualId, true);
     } catch (err) {
       console.error('Failed to restore item:', err);
     }
@@ -518,7 +521,7 @@ const DirectoryPage: React.FC = () => {
       setMoveToast({ fileId, fileName, fromDirectoryId });
 
       if (actualId) {
-        await loadDirectory(actualId);
+        await loadDirectory(actualId, true);
       }
     },
     [actualId, loadDirectory],
@@ -528,17 +531,44 @@ const DirectoryPage: React.FC = () => {
     if (!moveToast || !accessToken) return;
 
     try {
-      // Перемещаем файл обратно
       await moveFile(accessToken, moveToast.fileId, moveToast.fromDirectoryId);
-      if (actualId) await loadDirectory(actualId);
+      if (actualId) await loadDirectory(actualId, true);
       showToast(`Файл «${moveToast.fileName}» возвращён`, 'success');
+      setMoveToast(null);
     } catch (err) {
       console.error('Failed to undo move:', err);
-      showToast('Не удалось отменить перемещение', 'error');
-    } finally {
-      setMoveToast(null);
+      const message = err instanceof Error ? err.message : 'Не удалось отменить перемещение';
+      showToast(message, 'error');
     }
   }, [moveToast, accessToken, actualId, loadDirectory, showToast]);
+
+  const handleFileDragStart = useCallback(
+    (e: React.DragEvent, fileId: string, fileName: string) => {
+      e.dataTransfer.setData('application/x-sharedspace-file-id', fileId);
+      e.dataTransfer.setData('application/x-sharedspace-file-name', fileName);
+      e.dataTransfer.effectAllowed = 'move';
+    },
+    [],
+  );
+
+  const handleFolderDrop = useCallback(
+    async (e: React.DragEvent, folderId: string) => {
+      const fileId = e.dataTransfer.getData('application/x-sharedspace-file-id');
+      const fileName = e.dataTransfer.getData('application/x-sharedspace-file-name');
+      if (!fileId || !accessToken || !actualId) return;
+
+      try {
+        await moveFile(accessToken, fileId, folderId);
+        await loadDirectory(actualId, true);
+        setMoveToast({ fileId, fileName, fromDirectoryId: actualId });
+      } catch (err) {
+        console.error('Failed to move file via drag & drop:', err);
+        const message = err instanceof Error ? err.message : 'Не удалось переместить файл';
+        showToast(message, 'error');
+      }
+    },
+    [accessToken, actualId, loadDirectory, showToast],
+  );
 
   // --- Рендер breadcrumbs ---
   const renderBreadcrumbs = () => {
@@ -763,6 +793,7 @@ const DirectoryPage: React.FC = () => {
                             ? handleDeleteFolder
                             : undefined
                         }
+                        onDrop={handleFolderDrop}
                       />
                     ))}
                   </div>
@@ -779,6 +810,7 @@ const DirectoryPage: React.FC = () => {
                             ? handleDeleteFolder
                             : undefined
                         }
+                        onDrop={handleFolderDrop}
                       />
                     ))}
                   </div>
@@ -805,6 +837,7 @@ const DirectoryPage: React.FC = () => {
                         onToggleFavorite={handleToggleFavorite}
                         onDelete={perms?.delete ? handleDeleteFile : undefined}
                         onMove={handleMoveFile}
+                        onDragStart={handleFileDragStart}
                       />
                     ))}
                   </div>
@@ -823,6 +856,7 @@ const DirectoryPage: React.FC = () => {
                         onToggleFavorite={handleToggleFavorite}
                         onDelete={perms?.delete ? handleDeleteFile : undefined}
                         onMove={handleMoveFile}
+                        onDragStart={handleFileDragStart}
                       />
                     ))}
                   </div>
