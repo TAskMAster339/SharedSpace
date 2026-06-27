@@ -116,7 +116,7 @@ const DirectoryPage: React.FC = () => {
         const crumbs: BreadcrumbItem[] = [];
 
         if (isSharedDir) {
-          const dir = currentDir || await getDirectory(accessToken, directoryId);
+          const dir = currentDir || (await getDirectory(accessToken, directoryId));
           crumbs.push({
             id: dir.id,
             name: dir.name,
@@ -129,7 +129,7 @@ const DirectoryPage: React.FC = () => {
           return;
         }
 
-        const current = currentDir || await getDirectory(accessToken, directoryId);
+        const current = currentDir || (await getDirectory(accessToken, directoryId));
         if (current.type === 'root') {
           crumbs.push({
             id: current.id,

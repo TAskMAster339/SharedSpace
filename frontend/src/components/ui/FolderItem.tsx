@@ -13,7 +13,14 @@ interface FolderItemProps {
   onDrop?: (e: React.DragEvent, id: string) => void;
 }
 
-export const FolderItem: React.FC<FolderItemProps> = ({ id, name, to, className, onDelete, onDrop }) => {
+export const FolderItem: React.FC<FolderItemProps> = ({
+  id,
+  name,
+  to,
+  className,
+  onDelete,
+  onDrop,
+}) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const dragCounter = useRef(0);
 
