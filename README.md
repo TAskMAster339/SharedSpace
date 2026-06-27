@@ -1,5 +1,8 @@
 # SharedSpace
 
+## Screenshots
+
+![Preview](frontend/public/prefab.png)
 
 ## Quick Start
 
