@@ -17,6 +17,8 @@ interface FileItemProps {
   isFavorite?: boolean;
   onToggleFavorite?: (id: string) => void;
   onDelete?: (id: string) => void;
+  onMove?: (id: string) => void;
+  onDragStart?: (e: React.DragEvent, id: string, name: string) => void;
 }
 
 export const FileItem: React.FC<FileItemProps> = ({
@@ -30,10 +32,14 @@ export const FileItem: React.FC<FileItemProps> = ({
   isFavorite = false,
   onToggleFavorite,
   onDelete,
+  onMove,
+  onDragStart,
 }) => (
   <Link
     key={id}
     to={to}
+    draggable={!!onDragStart}
+    onDragStart={(e) => onDragStart?.(e, id, name)}
     className={cn(
       'group flex items-center justify-between p-3 rounded-theme-md transition-colors cursor-pointer',
       'bg-theme-tertiary hover:bg-theme-hover border border-theme',
@@ -66,6 +72,7 @@ export const FileItem: React.FC<FileItemProps> = ({
         isFavorite={isFavorite}
         onToggleFavorite={onToggleFavorite ? () => onToggleFavorite(id) : undefined}
         onDelete={onDelete ? () => onDelete(id) : undefined}
+        onMove={onMove ? () => onMove(id) : undefined}
       />
     </div>
   </Link>

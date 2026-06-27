@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { CheckCircle, XCircle, X, Trash2, RotateCcw, Star } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
-export type ToastVariant = 'success' | 'error' | 'info' | 'undo' | 'favorite';
+export type ToastVariant = 'success' | 'error' | 'info' | 'undo' | 'favorite' | 'move';
 
 interface ToastProps {
   message: string;
@@ -66,6 +66,11 @@ export const Toast: React.FC<ToastProps> = ({
       icon: Star,
       iconColor: 'text-yellow-400',
       progressColor: 'bg-yellow-400',
+    },
+    move: {
+      icon: CheckCircle,
+      iconColor: 'text-emerald-500',
+      progressColor: 'bg-emerald-500',
     },
   };
 

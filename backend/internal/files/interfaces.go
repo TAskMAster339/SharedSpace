@@ -45,7 +45,7 @@ type RepositoryInterface interface {
 	HardDeleteFile(ctx context.Context, db dbTX, fileID string) error
 	FindRecentByUserID(ctx context.Context, db dbTX, userID string, limit int) ([]fileRecord, error)
 	MoveFile(ctx context.Context, db dbTX, fileID, newParentID string, newFilename *string) (fileRecord, error)
-	FindByFilenameAndDirectory(ctx context.Context, db dbTX, filename, directoryID string) (fileRecord, error)
+	FindByFilenameAndDirectory(ctx context.Context, db dbTX, filename, directoryID string, excludeFileID ...string) (fileRecord, error)
 	SaveConversion(ctx context.Context, db dbTX, sourceFileID, resultFileID, sourceFormat, targetFormat, createdBy string) (conversionRecord, error)
 	FindConversionsByFile(ctx context.Context, db dbTX, fileID string) ([]conversionRecord, error)
 }

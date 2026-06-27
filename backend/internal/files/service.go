@@ -236,17 +236,17 @@ func (s *Service) Update(ctx context.Context, userID, fileID string, req UpdateF
 		}
 	}
 
-	if _, err := s.repo.FindByFilenameAndDirectory(ctx, s.db, targetFilename, targetParent); err == nil {
-		return FileMetadataResponse{}, apperror.Conflict("файл с таким именем уже существует в целевой директории")
-	} else if !errors.Is(err, pgx.ErrNoRows) {
-		return FileMetadataResponse{}, apperror.WrapInternal("проверка дубликата имени", err)
-	}
-
 	tx, err := s.beginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return FileMetadataResponse{}, apperror.WrapInternal("начало транзакции", err)
 	}
 	defer tx.Rollback(ctx)
+
+	if _, err := s.repo.FindByFilenameAndDirectory(ctx, tx, targetFilename, targetParent, fileID); err == nil {
+		return FileMetadataResponse{}, apperror.Conflict("файл с таким именем уже существует в целевой директории")
+	} else if !errors.Is(err, pgx.ErrNoRows) {
+		return FileMetadataResponse{}, apperror.WrapInternal("проверка дубликата имени", err)
+	}
 
 	updated, err := s.repo.MoveFile(ctx, tx, fileID, targetParent, req.Filename)
 	if err != nil {

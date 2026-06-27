@@ -165,7 +165,7 @@ func (m *mockRepo) HardDeleteFile(_ context.Context, _ dbTX, _ string) error { r
 func (m *mockRepo) MoveFile(_ context.Context, _ dbTX, _, _ string, _ *string) (fileRecord, error) {
 	return fileRecord{}, nil
 }
-func (m *mockRepo) FindByFilenameAndDirectory(_ context.Context, _ dbTX, _, _ string) (fileRecord, error) {
+func (m *mockRepo) FindByFilenameAndDirectory(_ context.Context, _ dbTX, _, _ string, _ ...string) (fileRecord, error) {
 	return fileRecord{}, pgx.ErrNoRows
 }
 
