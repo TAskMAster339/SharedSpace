@@ -38,6 +38,9 @@ type RepositoryInterface interface {
 	RestoreFilesInDirs(context.Context, dbTX, []string, time.Time) error
 	HardDeleteSubtree(context.Context, dbTX, []string) error
 	AddUserStorageUsed(context.Context, dbTX, string, int64) error
+	GetSharedDirsStats(ctx context.Context, db dbTX, userID string) (count, quota int, err error)
+	IncrementSharedDirsCount(ctx context.Context, db dbTX, userID string) error
+	DecrementSharedDirsCount(ctx context.Context, db dbTX, userID string) error
 }
 
 type SharingRepository interface {

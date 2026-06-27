@@ -3340,6 +3340,12 @@ const docTemplate = `{
                 "second_name": {
                     "type": "string"
                 },
+                "shared_dirs_count": {
+                    "type": "integer"
+                },
+                "shared_dirs_quota": {
+                    "type": "integer"
+                },
                 "storage_quota": {
                     "type": "integer"
                 },

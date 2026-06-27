@@ -57,15 +57,17 @@ type UpdateProfileInput struct {
 }
 
 type record struct {
-	ID           string
-	Username     string
-	FirstName    string
-	SecondName   string
-	Email        string
-	PasswordHash string
-	StorageQuota int64
-	StorageUsed  int64
-	CreatedAt    time.Time
+	ID              string
+	Username        string
+	FirstName       string
+	SecondName      string
+	Email           string
+	PasswordHash    string
+	StorageQuota    int64
+	StorageUsed     int64
+	SharedDirsCount int
+	SharedDirsQuota int
+	CreatedAt       time.Time
 }
 
 type refreshTokenRecord struct {

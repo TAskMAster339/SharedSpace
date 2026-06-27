@@ -222,14 +222,16 @@ func (s *Service) SearchUsers(ctx context.Context, userID, query string, limit i
 
 func toUserResponse(user record) UserResponse {
 	return UserResponse{
-		ID:           user.ID,
-		Email:        user.Email,
-		Username:     user.Username,
-		FirstName:    user.FirstName,
-		SecondName:   user.SecondName,
-		StorageQuota: user.StorageQuota,
-		StorageUsed:  user.StorageUsed,
-		CreatedAt:    user.CreatedAt,
+		ID:              user.ID,
+		Email:           user.Email,
+		Username:        user.Username,
+		FirstName:       user.FirstName,
+		SecondName:      user.SecondName,
+		StorageQuota:    user.StorageQuota,
+		StorageUsed:     user.StorageUsed,
+		SharedDirsCount: user.SharedDirsCount,
+		SharedDirsQuota: user.SharedDirsQuota,
+		CreatedAt:       user.CreatedAt,
 	}
 }
 

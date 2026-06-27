@@ -162,7 +162,7 @@ func newTestService(repo RepositoryInterface) (*Service, *mockTx) {
 func TestServiceGetMe(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		repo := &mockRepo{
-			userByID: record{ID: "user-1", Username: "ivan", Email: "ivan@example.com", FirstName: "Ivan", CreatedAt: time.Unix(100, 0).UTC()},
+			userByID: record{ID: "user-1", Username: "ivan", Email: "ivan@example.com", FirstName: "Ivan", SharedDirsQuota: 5, CreatedAt: time.Unix(100, 0).UTC()},
 		}
 		service, _ := newTestService(repo)
 
@@ -197,7 +197,7 @@ func TestServiceUpdateMe(t *testing.T) {
 		repo := &mockRepo{
 			findUserByEmailErr:    pgx.ErrNoRows,
 			findUserByUsernameErr: pgx.ErrNoRows,
-			updatedProfileUser:    record{ID: "user-1", Username: "ivan", Email: "new@example.com", FirstName: "Ivan", CreatedAt: time.Unix(100, 0).UTC()},
+			updatedProfileUser:    record{ID: "user-1", Username: "ivan", Email: "new@example.com", FirstName: "Ivan", SharedDirsQuota: 5, CreatedAt: time.Unix(100, 0).UTC()},
 		}
 		service, tx := newTestService(repo)
 
