@@ -310,6 +310,10 @@ func (m *mockAccessChecker) GetPermissions(ctx context.Context, userID, director
 	return &access.Permissions{}, nil
 }
 
+func (m *mockRepo) IncrementFilesCount(_ context.Context, _ dbTX, _ string, _ int) error {
+	return nil
+}
+
 func newTestService(repo RepositoryInterface) (*Service, *mockTx) {
 	tx := &mockTx{}
 	service := &Service{

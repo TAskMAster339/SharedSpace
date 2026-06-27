@@ -103,6 +103,7 @@ func (s *Service) Upload(ctx context.Context, userID, directoryID string, upload
 		return UploadFilesResponse{}, apperror.Validation("превышен лимит хранилища")
 	}
 
+	filesPerDir := make(map[string]int, len(records))
 	results := make([]UploadResponse, 0, len(records))
 	for _, rec := range records {
 		saved, err := s.repo.Save(ctx, tx, rec)
@@ -110,7 +111,15 @@ func (s *Service) Upload(ctx context.Context, userID, directoryID string, upload
 			s.cleanupObjects(uploadedKeys)
 			return UploadFilesResponse{}, apperror.WrapInternal("сохранение метаданных файла", err)
 		}
+		filesPerDir[rec.DirectoryID]++
 		results = append(results, toUploadResponse(saved))
+	}
+
+	for dirID, count := range filesPerDir {
+		if err := s.repo.IncrementFilesCount(ctx, tx, dirID, count); err != nil {
+			s.cleanupObjects(uploadedKeys)
+			return UploadFilesResponse{}, apperror.WrapInternal("обновление счётчика файлов", err)
+		}
 	}
 
 	if err := s.repo.AddUserStorageUsed(ctx, tx, userID, totalSize); err != nil {
@@ -328,6 +337,9 @@ func (s *Service) SoftDelete(ctx context.Context, userID, fileID string) error {
 	if err := s.repo.SoftDeleteFile(ctx, s.db, fileID, time.Now().UTC()); err != nil {
 		return apperror.WrapInternal("удаление файла в корзину", err)
 	}
+	if err := s.repo.IncrementFilesCount(ctx, s.db, file.DirectoryID, -1); err != nil {
+		return apperror.WrapInternal("обновление счётчика файлов", err)
+	}
 	return nil
 }
 
@@ -364,6 +376,9 @@ func (s *Service) Restore(ctx context.Context, userID, fileID string) error {
 	if err := s.repo.RestoreFile(ctx, s.db, fileID); err != nil {
 		return apperror.WrapInternal("восстановление файла", err)
 	}
+	if err := s.repo.IncrementFilesCount(ctx, s.db, file.DirectoryID, +1); err != nil {
+		return apperror.WrapInternal("обновление счётчика файлов", err)
+	}
 	return nil
 }
 
@@ -394,6 +409,11 @@ func (s *Service) PermanentDelete(ctx context.Context, userID, fileID string) er
 	}
 	if err := s.repo.AddUserStorageUsed(ctx, tx, file.OwnerID, -file.Size); err != nil {
 		return apperror.WrapInternal("обновление объёма", err)
+	}
+	if file.DeletedAt == nil {
+		if err := s.repo.IncrementFilesCount(ctx, tx, file.DirectoryID, -1); err != nil {
+			return apperror.WrapInternal("обновление счётчика файлов", err)
+		}
 	}
 	if err := s.storage.Delete(ctx, file.ObjectKey); err != nil {
 		return apperror.WrapInternal("удаление объекта из хранилища", err)
@@ -515,6 +535,10 @@ func (s *Service) ConvertAndSave(ctx context.Context, userID, fileID, target str
 	if err := s.repo.AddUserStorageUsed(ctx, tx, userID, size); err != nil {
 		s.cleanupObjects([]string{objectKey})
 		return ConversionResponse{}, apperror.WrapInternal("обновление объёма", err)
+	}
+	if err := s.repo.IncrementFilesCount(ctx, tx, file.DirectoryID, +1); err != nil {
+		s.cleanupObjects([]string{objectKey})
+		return ConversionResponse{}, apperror.WrapInternal("обновление счётчика файлов", err)
 	}
 
 	conv, err := s.repo.SaveConversion(ctx, tx, file.ID, newFile.ID, sourceFormat, target, userID)

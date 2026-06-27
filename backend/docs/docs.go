@@ -2728,6 +2728,9 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "files_count": {
+                    "type": "integer"
+                },
                 "id": {
                     "type": "string"
                 },

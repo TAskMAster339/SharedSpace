@@ -48,6 +48,7 @@ type RepositoryInterface interface {
 	FindByFilenameAndDirectory(ctx context.Context, db dbTX, filename, directoryID string, excludeFileID ...string) (fileRecord, error)
 	SaveConversion(ctx context.Context, db dbTX, sourceFileID, resultFileID, sourceFormat, targetFormat, createdBy string) (conversionRecord, error)
 	FindConversionsByFile(ctx context.Context, db dbTX, fileID string) ([]conversionRecord, error)
+	IncrementFilesCount(ctx context.Context, db dbTX, directoryID string, delta int) error
 }
 
 type FileUpload struct {

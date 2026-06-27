@@ -41,6 +41,7 @@ type RepositoryInterface interface {
 	GetSharedDirsStats(ctx context.Context, db dbTX, userID string) (count, quota int, err error)
 	IncrementSharedDirsCount(ctx context.Context, db dbTX, userID string) error
 	DecrementSharedDirsCount(ctx context.Context, db dbTX, userID string) error
+	IncrementFilesCount(ctx context.Context, db dbTX, directoryID string, delta int) error
 }
 
 type SharingRepository interface {
