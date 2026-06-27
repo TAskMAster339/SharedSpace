@@ -1,19 +1,16 @@
-name: Deploy
+name: Deploy to Production
 
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+    branches:
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.0
@@ -21,26 +18,46 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          port: ${{ secrets.SERVER_PORT || '22' }}
+          port: ${{ secrets.SERVER_PORT }}
           script: |
             set -e
+            DEPLOY_PATH=/home/${{ secrets.SERVER_USER }}/SharedSpace
 
-            echo "Переход в папку проекта..."
-            cd ${{ secrets.SERVER_DEPLOY_PATH }}
-
-            echo "Получение последних изменений из Git..."
+            echo "=== Обновляем код ==="
+            cd $DEPLOY_PATH
             git pull origin main
 
-            echo "Остановка старых контейнеров..."
-            docker compose down || true
+            echo "=== Собираем бэкенд ==="
+            cd $DEPLOY_PATH/backend
 
-            echo "Пересборка и запуск контейнеров..."
-            docker compose up --build -d
+            if [ ! -L migrations ]; then
+              ln -s internal/database/migrations migrations
+            fi
 
-            echo "Проверка статуса контейнеров..."
-            docker compose ps
+            export PATH=$PATH:/usr/local/go/bin
+            go mod download
+            go build -o /tmp/sharedspace-backend ./cmd/api
 
-            echo "Последние логи для проверки..."
-            docker compose logs --tail=20
+            echo "=== Останавливаем бэкенд ==="
+            sudo /etc/init.d/sharedspace-backend stop
+            sleep 2
 
-            echo "Деплой завершен успешно!"
+            echo "=== Заменяем бинарник ==="
+            sudo cp /tmp/sharedspace-backend /usr/local/bin/sharedspace-backend
+
+            echo "=== Запускаем бэкенд ==="
+            sudo /etc/init.d/sharedspace-backend start
+
+            echo "=== Собираем фронтенд ==="
+            cd $DEPLOY_PATH/frontend
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            npm install
+            npm run build
+            sudo rm -rf /var/www/sharedspace/*
+            sudo cp -r build/* /var/www/sharedspace/
+
+            echo "=== Перезапускаем сервисы ==="
+            sudo /etc/init.d/nginx reload
+
+            echo "✅ Deployment completed!"

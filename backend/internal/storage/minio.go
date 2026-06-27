@@ -15,6 +15,7 @@ type Storage struct {
 	client         *minio.Client
 	bucket         string
 	publicEndpoint string
+	useSSL         bool
 }
 
 func New(ctx context.Context, endpoint, accessKey, secretKey, bucket, publicEndpoint string, useSSL bool) (*Storage, error) {
@@ -36,7 +37,7 @@ func New(ctx context.Context, endpoint, accessKey, secretKey, bucket, publicEndp
 		}
 	}
 
-	return &Storage{client: client, bucket: bucket, publicEndpoint: publicEndpoint}, nil
+	return &Storage{client: client, bucket: bucket, publicEndpoint: publicEndpoint, useSSL: useSSL}, nil
 }
 
 func (s *Storage) Upload(ctx context.Context, objectKey string, r io.Reader, size int64, contentType string) error {
@@ -67,6 +68,11 @@ func (s *Storage) PresignedGetURL(ctx context.Context, objectKey string, expiry 
 	}
 
 	u.Host = s.publicEndpoint
+	if s.useSSL {
+		u.Scheme = "https"
+	} else {
+		u.Scheme = "http"
+	}
 
 	return u.String(), nil
 }
@@ -88,6 +94,11 @@ func (s *Storage) PresignedDownloadURL(ctx context.Context, objectKey string, ex
 		return "", fmt.Errorf("presign %s: %w", objectKey, err)
 	}
 	u.Host = s.publicEndpoint
+	if s.useSSL {
+		u.Scheme = "https"
+	} else {
+		u.Scheme = "http"
+	}
 	return u.String(), nil
 }
 
