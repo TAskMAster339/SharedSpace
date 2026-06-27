@@ -67,3 +67,8 @@ type fileRecord struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
+
+type SharedDirsInfo struct {
+	Count int `json:"shared_dirs_count"`
+	Quota int `json:"shared_dirs_quota"`
+}

@@ -3,6 +3,7 @@ package dirs
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -135,8 +136,20 @@ func (s *Service) Create(ctx context.Context, userID string, req CreateDirectory
 	}
 
 	if req.Shared {
+		count, quota, err := s.repo.GetSharedDirsStats(ctx, tx, userID)
+		if err != nil {
+			return DirectoryResponse{}, apperror.WrapInternal("ошибка получения статистики общих директорий", err)
+		}
+		if count >= quota {
+			return DirectoryResponse{}, apperror.Validation(
+				fmt.Sprintf("достигнут лимит общих директорий (%d из %d)", count, quota),
+			)
+		}
 		if err := s.sharingRepo.CreateShared(ctx, tx, dir.ID, userID); err != nil {
 			return DirectoryResponse{}, apperror.WrapInternal("ошибка создания общей директории", err)
+		}
+		if err := s.repo.IncrementSharedDirsCount(ctx, tx, userID); err != nil {
+			return DirectoryResponse{}, apperror.WrapInternal("ошибка обновления счётчика", err)
 		}
 	}
 

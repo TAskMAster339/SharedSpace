@@ -163,6 +163,12 @@ type mockRepo struct {
 	restoreFilesErr        error
 	hardDeleteSubtreeErr   error
 	addUserStorageUsedErr  error
+
+	sharedDirsCount    int
+	sharedDirsQuota    int
+	sharedDirsStatsErr error
+	incrementErr       error
+	decrementErr       error
 }
 
 func (m *mockRepo) FindByID(_ context.Context, _ dbTX, _ string) (directoryRecord, error) {
@@ -241,6 +247,26 @@ func (m *mockRepo) HardDeleteSubtree(_ context.Context, _ dbTX, _ []string) erro
 
 func (m *mockRepo) AddUserStorageUsed(_ context.Context, _ dbTX, _ string, _ int64) error {
 	return m.addUserStorageUsedErr
+}
+
+func (m *mockRepo) GetSharedDirsStats(_ context.Context, _ dbTX, _ string) (int, int, error) {
+	quota := m.sharedDirsQuota
+	if quota == 0 {
+		quota = 5
+	}
+	return m.sharedDirsCount, quota, m.sharedDirsStatsErr
+}
+
+func (m *mockRepo) IncrementSharedDirsCount(_ context.Context, _ dbTX, _ string) error {
+	m.sharedDirsCount++
+	return m.incrementErr
+}
+
+func (m *mockRepo) DecrementSharedDirsCount(_ context.Context, _ dbTX, _ string) error {
+	if m.sharedDirsCount > 0 {
+		m.sharedDirsCount--
+	}
+	return m.decrementErr
 }
 
 type mockStorage struct {
@@ -541,6 +567,55 @@ func TestServiceCreate(t *testing.T) {
 		appErr, ok := apperror.From(err)
 		if !ok || appErr.Code() != apperror.CodeConflict {
 			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+}
+
+func TestServiceCreate_SharedQuota(t *testing.T) {
+	t.Run("shared success within quota", func(t *testing.T) {
+		now := time.Now()
+		repo := &mockRepo{
+			findByIDResult:  directoryRecord{ID: "parent-1", Name: "parent", OwnerID: "user-1", Type: "regular", CreatedAt: now, UpdatedAt: now},
+			findByNameErr:   pgx.ErrNoRows,
+			createResult:    directoryRecord{ID: "new-1", Name: "shared", OwnerID: "user-1", ParentID: strPtr("parent-1"), Type: "regular", CreatedAt: now, UpdatedAt: now},
+			sharedDirsCount: 3,
+			sharedDirsQuota: 5,
+		}
+		service, tx := newTestService(repo)
+
+		resp, err := service.Create(context.Background(), "user-1", CreateDirectoryRequest{Name: "shared", ParentID: "parent-1", Shared: true})
+		if err != nil {
+			t.Fatalf("Create returned error: %v", err)
+		}
+		if resp.ID != "new-1" {
+			t.Fatalf("unexpected response: %+v", resp)
+		}
+		if tx.commitCount != 1 {
+			t.Fatalf("commit count = %d, want 1", tx.commitCount)
+		}
+		if repo.sharedDirsCount != 4 {
+			t.Fatalf("expected count 4, got %d", repo.sharedDirsCount)
+		}
+	})
+
+	t.Run("shared quota exceeded", func(t *testing.T) {
+		now := time.Now()
+		repo := &mockRepo{
+			findByIDResult:  directoryRecord{ID: "parent-1", Name: "parent", OwnerID: "user-1", Type: "regular", CreatedAt: now, UpdatedAt: now},
+			findByNameErr:   pgx.ErrNoRows,
+			createResult:    directoryRecord{ID: "new-1", Name: "shared", OwnerID: "user-1", ParentID: strPtr("parent-1"), Type: "regular", CreatedAt: now, UpdatedAt: now},
+			sharedDirsCount: 5,
+			sharedDirsQuota: 5,
+		}
+		service, _ := newTestService(repo)
+
+		_, err := service.Create(context.Background(), "user-1", CreateDirectoryRequest{Name: "shared", ParentID: "parent-1", Shared: true})
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeValidation {
+			t.Fatalf("expected validation error, got: %v", err)
 		}
 	})
 }

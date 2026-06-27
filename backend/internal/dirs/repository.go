@@ -208,3 +208,24 @@ func (r *Repository) AddUserStorageUsed(ctx context.Context, db dbTX, userID str
 	_, err := db.Exec(ctx, `UPDATE users SET storage_used = storage_used + $1, updated_at = now() WHERE id = $2`, delta, userID)
 	return err
 }
+
+func (r *Repository) GetSharedDirsStats(ctx context.Context, db dbTX, userID string) (count, quota int, err error) {
+	err = db.QueryRow(ctx, `
+		SELECT shared_dirs_count, shared_dirs_quota FROM users WHERE id = $1 FOR UPDATE
+	`, userID).Scan(&count, &quota)
+	return
+}
+
+func (r *Repository) IncrementSharedDirsCount(ctx context.Context, db dbTX, userID string) error {
+	_, err := db.Exec(ctx, `
+		UPDATE users SET shared_dirs_count = shared_dirs_count + 1, updated_at = now() WHERE id = $1
+	`, userID)
+	return err
+}
+
+func (r *Repository) DecrementSharedDirsCount(ctx context.Context, db dbTX, userID string) error {
+	_, err := db.Exec(ctx, `
+		UPDATE users SET shared_dirs_count = GREATEST(shared_dirs_count - 1, 0), updated_at = now() WHERE id = $1
+	`, userID)
+	return err
+}
