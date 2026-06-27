@@ -84,6 +84,7 @@ const DirectoryPage: React.FC = () => {
     fileId: string;
     fileName: string;
     fromDirectoryId: string;
+    directoryId: string;
   } | null>(null);
 
   // Breadcrumbs
@@ -93,6 +94,7 @@ const DirectoryPage: React.FC = () => {
   // Используем refs для предотвращения повторных вызовов
   const redirectDone = useRef(false);
   const isLoadingBreadcrumbsRef = useRef(false);
+  const isUndoingRef = useRef(false);
   const [actualId, setActualId] = useState<string | null>(null);
 
   // --- Функция загрузки breadcrumbs ---
@@ -277,6 +279,7 @@ const DirectoryPage: React.FC = () => {
   // --- Эффект 2: Обновление при изменении ID в URL ---
   useEffect(() => {
     if (id && id !== 'personal' && id !== actualId && accessToken && !isLoadingShared) {
+      setMoveToast(null);
       setActualId(id);
       loadDirectory(id);
     }
@@ -518,7 +521,7 @@ const DirectoryPage: React.FC = () => {
 
   const handleMoveComplete = useCallback(
     async (fileId: string, fileName: string, fromDirectoryId: string) => {
-      setMoveToast({ fileId, fileName, fromDirectoryId });
+      setMoveToast({ fileId, fileName, fromDirectoryId, directoryId: actualId || '' });
 
       if (actualId) {
         await loadDirectory(actualId, true);
@@ -528,19 +531,22 @@ const DirectoryPage: React.FC = () => {
   );
 
   const handleUndoMove = useCallback(async () => {
-    if (!moveToast || !accessToken) return;
+    if (!moveToast || !accessToken || isUndoingRef.current) return;
+    isUndoingRef.current = true;
 
     try {
       await moveFile(accessToken, moveToast.fileId, moveToast.fromDirectoryId);
-      if (actualId) await loadDirectory(actualId, true);
+      if (moveToast.directoryId) await loadDirectory(moveToast.directoryId, true);
       showToast(`Файл «${moveToast.fileName}» возвращён`, 'success');
       setMoveToast(null);
     } catch (err) {
       console.error('Failed to undo move:', err);
       const message = err instanceof Error ? err.message : 'Не удалось отменить перемещение';
       showToast(message, 'error');
+    } finally {
+      isUndoingRef.current = false;
     }
-  }, [moveToast, accessToken, actualId, loadDirectory, showToast]);
+  }, [moveToast, accessToken, loadDirectory, showToast]);
 
   const handleFileDragStart = useCallback(
     (e: React.DragEvent, fileId: string, fileName: string) => {
@@ -560,7 +566,7 @@ const DirectoryPage: React.FC = () => {
       try {
         await moveFile(accessToken, fileId, folderId);
         await loadDirectory(actualId, true);
-        setMoveToast({ fileId, fileName, fromDirectoryId: actualId });
+        setMoveToast({ fileId, fileName, fromDirectoryId: actualId, directoryId: actualId });
       } catch (err) {
         console.error('Failed to move file via drag & drop:', err);
         const message = err instanceof Error ? err.message : 'Не удалось переместить файл';

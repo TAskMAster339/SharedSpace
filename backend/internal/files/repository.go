@@ -129,13 +129,18 @@ func (r *Repository) RestoreFile(ctx context.Context, db dbTX, id string) error 
 	return err
 }
 
-func (r *Repository) FindByFilenameAndDirectory(ctx context.Context, db dbTX, filename, directoryID string) (fileRecord, error) {
+func (r *Repository) FindByFilenameAndDirectory(ctx context.Context, db dbTX, filename, directoryID string, excludeFileID ...string) (fileRecord, error) {
 	var f fileRecord
-	err := db.QueryRow(ctx, `
+	query := `
 		SELECT id, directory_id, owner_id, filename, extension, mime_type, size, object_key, created_at, updated_at
 		FROM files
-		WHERE filename = $1 AND directory_id = $2 AND deleted_at IS NULL
-	`, filename, directoryID).Scan(
+		WHERE filename = $1 AND directory_id = $2 AND deleted_at IS NULL`
+	args := []any{filename, directoryID}
+	if len(excludeFileID) > 0 && excludeFileID[0] != "" {
+		query += ` AND id != $3`
+		args = append(args, excludeFileID[0])
+	}
+	err := db.QueryRow(ctx, query, args...).Scan(
 		&f.ID, &f.DirectoryID, &f.OwnerID,
 		&f.Filename, &f.Extension, &f.MimeType,
 		&f.Size, &f.ObjectKey, &f.CreatedAt, &f.UpdatedAt,
