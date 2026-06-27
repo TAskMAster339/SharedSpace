@@ -39,7 +39,7 @@ jobs:
             go build -o /tmp/sharedspace-backend ./cmd/api
 
             echo "=== Останавливаем бэкенд ==="
-            sudo /etc/init.d/sharedspace-backend stop
+            sudo /etc/init.d/sharedspace-backend stop || true
             sleep 2
 
             echo "=== Заменяем бинарник ==="
