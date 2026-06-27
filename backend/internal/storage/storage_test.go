@@ -28,6 +28,7 @@ func newTestStorage(t *testing.T) *Storage {
 		"test-bucket",
 		"localhost:9000",
 		false,
+		false,
 	)
 	if err != nil {
 		t.Skipf("MinIO недоступен (%v) — пропускаю интеграционный тест", err)
