@@ -154,3 +154,63 @@ export const moveFile = async (
     throw new Error(error.error || 'Не удалось переместить файл');
   }
 };
+
+export interface ConvertRequest {
+  target_format: string;
+  save: boolean;
+  directory_id?: string; 
+}
+
+export interface ConversionResponse {
+  id: string;
+  source_file_id: string;
+  result_file_id: string;
+  source_format: string;
+  target_format: string;
+  created_by: string;
+  created_at: string;
+}
+
+export interface ConversionDownloadResponse {
+  download_url: string;
+  filename: string;
+}
+
+// Конвертация с сохранением в директорию
+export function convertAndSave(
+  accessToken: string,
+  fileId: string,
+  targetFormat: string,
+  directoryId?: string,
+): Promise<ConversionResponse> {
+  const body: ConvertRequest = {
+    target_format: targetFormat,
+    save: true,
+  };
+  
+  if (directoryId) {
+    body.directory_id = directoryId;
+  }
+  
+  return apiRequest<ConversionResponse>(`/files/${fileId}/convert`, {
+    method: 'POST',
+    token: accessToken,
+    body: JSON.stringify(body),
+  });
+}
+
+// Конвертация с скачиванием (без сохранения)
+export function convertAndDownload(
+  accessToken: string,
+  fileId: string,
+  targetFormat: string,
+): Promise<ConversionDownloadResponse> {
+  return apiRequest<ConversionDownloadResponse>(`/files/${fileId}/convert`, {
+    method: 'POST',
+    token: accessToken,
+    body: JSON.stringify({
+      target_format: targetFormat,
+      save: false,
+    }),
+  });
+}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, AlertCircle } from 'lucide-react';
+import { X, AlertCircle, Download, Save } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { Button } from './Button';
 import { getFileTypeDisplay } from '../../utils/fileType';
@@ -12,7 +12,8 @@ interface ConvertModalProps {
   fileName: string;
   mimeType: string;
   extension: string;
-  onConvert: (format: string) => void;
+  onConvertAndDownload: (format: string) => Promise<void>;
+  onConvertAndSave: (format: string) => Promise<string | null>;
   isConverting?: boolean;
 }
 
@@ -23,10 +24,12 @@ export const ConvertModal: React.FC<ConvertModalProps> = ({
   fileName,
   mimeType,
   extension,
-  onConvert,
+  onConvertAndDownload,
+  onConvertAndSave,
   isConverting = false,
 }) => {
   const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
+  const [actionType, setActionType] = useState<'download' | 'save'>('download');
 
   if (!isOpen) return null;
 
@@ -34,9 +37,21 @@ export const ConvertModal: React.FC<ConvertModalProps> = ({
   const isSupported = isConvertSupported(mimeType, extension);
   const fileTypeDisplay = getFileTypeDisplay(mimeType, extension);
 
-  const handleConvert = () => {
-    if (selectedFormat) {
-      onConvert(selectedFormat);
+  const handleConvert = async () => {
+    if (!selectedFormat) return;
+
+    try {
+      if (actionType === 'download') {
+        await onConvertAndDownload(selectedFormat);
+        onClose();
+      } else {
+        const resultFileId = await onConvertAndSave(selectedFormat);
+        if (resultFileId) {
+          onClose();
+        }
+      }
+    } catch (err) {
+      // Ошибка уже обработана в хуке
     }
   };
 
@@ -56,8 +71,8 @@ export const ConvertModal: React.FC<ConvertModalProps> = ({
         </div>
 
         {/* Тело */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="mb-4">
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          <div>
             <p className="text-sm text-theme-secondary">
               Файл: <span className="text-theme-primary font-medium">{fileName}</span>
             </p>
@@ -68,22 +83,68 @@ export const ConvertModal: React.FC<ConvertModalProps> = ({
 
           {isSupported ? (
             <>
-              <p className="text-sm text-theme-secondary mb-4">Выберите формат для конвертации:</p>
-              <div className="flex flex-wrap gap-2">
-                {availableFormats.map((format) => (
+              {/* Выбор формата */}
+              <div>
+                <p className="text-sm text-theme-secondary mb-2">Выберите формат:</p>
+                <div className="flex flex-wrap gap-2">
+                  {availableFormats.map((format) => (
+                    <button
+                      key={format}
+                      onClick={() => setSelectedFormat(format)}
+                      className={cn(
+                        'px-4 py-2 rounded-theme-md text-sm font-medium transition-colors border',
+                        selectedFormat === format
+                          ? 'bg-brand text-theme-on-brand border-brand hover:bg-brand-hover'
+                          : 'bg-theme-tertiary text-theme-secondary border-theme hover:bg-theme-hover',
+                      )}
+                    >
+                      {format.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Выбор действия */}
+              <div>
+                <p className="text-sm text-theme-secondary mb-2">Выберите действие:</p>
+                <div className="flex gap-2">
                   <button
-                    key={format}
-                    onClick={() => setSelectedFormat(format)}
+                    onClick={() => setActionType('download')}
                     className={cn(
-                      'px-4 py-2 rounded-theme-md text-sm font-medium transition-colors border',
-                      selectedFormat === format
-                        ? 'bg-brand text-theme-on-brand border-brand hover:bg-brand-hover'
-                        : 'bg-theme-tertiary text-theme-secondary border-theme hover:bg-theme-hover',
+                      'flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-theme-md text-sm font-medium transition-colors border',
+                      actionType === 'download'
+                        ? 'bg-brand-light border-brand text-brand'
+                        : 'bg-theme-tertiary border-theme text-theme-secondary hover:bg-theme-hover',
                     )}
                   >
-                    {format.toUpperCase()}
+                    <Download size={16} />
+                    Скачать
                   </button>
-                ))}
+                  <button
+                    onClick={() => setActionType('save')}
+                    className={cn(
+                      'flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-theme-md text-sm font-medium transition-colors border',
+                      actionType === 'save'
+                        ? 'bg-brand-light border-brand text-brand'
+                        : 'bg-theme-tertiary border-theme text-theme-secondary hover:bg-theme-hover',
+                    )}
+                  >
+                    <Save size={16} />
+                    Сохранить
+                  </button>
+                </div>
+                {actionType === 'save' && (
+                  <p className="text-xs text-theme-muted mt-2 flex items-center gap-1">
+                    <Save size={12} />
+                    Файл будет сохранён в ту же директорию
+                  </p>
+                )}
+                {actionType === 'download' && (
+                  <p className="text-xs text-theme-muted mt-2 flex items-center gap-1">
+                    <Download size={12} />
+                    Файл будет скачан без сохранения в облаке
+                  </p>
+                )}
               </div>
             </>
           ) : (
@@ -93,6 +154,9 @@ export const ConvertModal: React.FC<ConvertModalProps> = ({
               <p className="text-sm text-theme-muted mt-1">
                 Для файлов типа <span className="font-medium">{fileTypeDisplay}</span> конвертация
                 пока недоступна
+              </p>
+              <p className="text-xs text-theme-muted mt-2">
+                Поддерживается: PNG → JPG, WEBP; JPG → WEBP
               </p>
             </div>
           )}
@@ -112,7 +176,9 @@ export const ConvertModal: React.FC<ConvertModalProps> = ({
             >
               {isConverting
                 ? 'Конвертация...'
-                : `Конвертировать в ${selectedFormat?.toUpperCase() || ''}`}
+                : actionType === 'download'
+                  ? `Скачать ${selectedFormat?.toUpperCase() || ''}`
+                  : `Сохранить как ${selectedFormat?.toUpperCase() || ''}`}
             </Button>
           )}
         </div>

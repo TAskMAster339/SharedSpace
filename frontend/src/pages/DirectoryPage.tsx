@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Upload, FolderPlus, Settings, ChevronRight, Home, Users, ArrowLeft } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useDirectoryStore } from '../store/directoryStore';
@@ -90,6 +90,7 @@ const DirectoryPage: React.FC = () => {
   // Breadcrumbs
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([]);
   const [isLoadingBreadcrumbs, setIsLoadingBreadcrumbs] = useState(false);
+  const location = useLocation();
 
   // Используем refs для предотвращения повторных вызовов
   const redirectDone = useRef(false);
@@ -103,7 +104,6 @@ const DirectoryPage: React.FC = () => {
     async (directoryId: string, isSharedDir: boolean, currentDir?: Directory) => {
       if (!accessToken) return;
 
-      // Предотвращаем повторные вызовы
       if (isLoadingBreadcrumbsRef.current) {
         return;
       }
@@ -114,75 +114,98 @@ const DirectoryPage: React.FC = () => {
 
       try {
         const crumbs: BreadcrumbItem[] = [];
-
-        if (isSharedDir) {
-          const dir = currentDir || (await getDirectory(accessToken, directoryId));
-          crumbs.push({
-            id: dir.id,
-            name: dir.name,
-            isRoot: false,
-            isShared: true,
-          });
-          setBreadcrumbs([...crumbs]);
-          setIsLoadingBreadcrumbs(false);
-          isLoadingBreadcrumbsRef.current = false;
-          return;
-        }
-
+        
+        // Получаем текущую директорию
         const current = currentDir || (await getDirectory(accessToken, directoryId));
+
+        // Если это корневая директория личного хранилища
         if (current.type === 'root') {
           crumbs.push({
             id: current.id,
             name: 'Личное хранилище',
             isRoot: true,
           });
-          setBreadcrumbs([...crumbs]);
+          setBreadcrumbs(crumbs);
           setIsLoadingBreadcrumbs(false);
           isLoadingBreadcrumbsRef.current = false;
           return;
         }
 
-        let parentId = current.parent_id;
+        // Проверяем, является ли текущая директория общей
+        const currentIsShared = checkIsShared(directoryId);
+
+        if (currentIsShared) {
+          // Для общей директории — только она сама, НЕ поднимаемся выше
+          crumbs.push({
+            id: current.id,
+            name: current.name,
+            isRoot: false,
+            isShared: true,
+          });
+          setBreadcrumbs(crumbs);
+          setIsLoadingBreadcrumbs(false);
+          isLoadingBreadcrumbsRef.current = false;
+          return;
+        }
+
+        // Для обычной папки: строим путь
         crumbs.push({
           id: current.id,
           name: current.name,
         });
 
-        while (parentId) {
-          const parentDir = await getDirectory(accessToken, parentId);
-          const parentIsShared = checkIsShared(parentId);
+        let parentId = current.parent_id;
 
-          if (parentIsShared) {
-            crumbs.unshift({
-              id: parentDir.id,
-              name: parentDir.name,
-              isRoot: false,
-              isShared: true,
-            });
+        // Поднимаемся вверх по родителям
+        while (parentId) {
+          // Используем try-catch с полным подавлением ошибок
+          try {
+            const parent = await getDirectory(accessToken, parentId);
+            
+            // Проверяем, является ли родитель общей директорией
+            const parentIsShared = checkIsShared(parent.id);
+
+            if (parentIsShared) {
+              // Если родитель — общая директория, добавляем её и останавливаемся
+              crumbs.unshift({
+                id: parent.id,
+                name: parent.name,
+                isRoot: false,
+                isShared: true,
+              });
+              break;
+            } else if (parent.type === 'root') {
+              // Если родитель — корневая директория личного хранилища
+              crumbs.unshift({
+                id: parent.id,
+                name: 'Личное хранилище',
+                isRoot: true,
+              });
+              break;
+            } else {
+              // Обычная папка
+              crumbs.unshift({
+                id: parent.id,
+                name: parent.name,
+              });
+              parentId = parent.parent_id;
+            }
+          } catch (err) {
+            // Полностью игнорируем любые ошибки при получении родителей
+            // Это нормально для общих директорий и папок, где нет доступа к родителю
             break;
-          } else if (parentDir.type === 'root') {
-            crumbs.unshift({
-              id: parentDir.id,
-              name: 'Личное хранилище',
-              isRoot: true,
-            });
-            break;
-          } else {
-            crumbs.unshift({
-              id: parentDir.id,
-              name: parentDir.name,
-            });
-            parentId = parentDir.parent_id;
           }
         }
 
-        setBreadcrumbs([...crumbs]);
+        setBreadcrumbs(crumbs);
       } catch (err) {
-        console.error('Failed to load breadcrumbs:', err);
+        // Игнорируем ошибки при получении текущей директории
+        // Fallback: показываем только текущую папку
+        const fallbackName = currentDir?.name || directoryInfo?.name || 'Текущая папка';
         setBreadcrumbs([
           {
             id: directoryId,
-            name: directoryInfo?.name || 'Текущая папка',
+            name: fallbackName,
             isShared: isSharedDir,
           },
         ]);
@@ -215,13 +238,27 @@ const DirectoryPage: React.FC = () => {
         setDirectoryInfo(info);
         setDirectoryContents(contents);
 
-        // Проверяем, является ли директория общей
-        const shared = checkIsShared(dirId);
+        // Определяем, является ли директория общей
+        let shared = checkIsShared(dirId);
+
+        // Если директория принадлежит текущему пользователю, проверяем её тип
+        // и наличие permissions (признак того, что это общая директория)
+        if (info.owner_id === user?.id && info.type !== 'root') {
+          // Если у директории есть permissions и она не root, значит она общая
+          // (даже если checkIsShared ещё не вернул true из-за задержки)
+          if (info.permissions !== undefined) {
+            shared = true;
+          }
+        }
+
         setIsShared(shared);
 
         // Загружаем breadcrumbs
-        if (!skipLoading) {
+        try {
           await loadBreadcrumbs(dirId, shared, info);
+        } catch (err) {
+          // Игнорируем ошибки breadcrumbs - они не должны блокировать отображение страницы
+          console.debug('Breadcrumbs loading failed, continuing with page render');
         }
       } catch (err) {
         console.error('Failed to load directory:', err);
@@ -236,7 +273,7 @@ const DirectoryPage: React.FC = () => {
         }
       }
     },
-    [accessToken, navigate, loadBreadcrumbs, checkIsShared, setTargetDirectoryId],
+    [accessToken, navigate, loadBreadcrumbs, checkIsShared, setTargetDirectoryId, user?.id],
   );
 
   // --- Обработчик навигации по breadcrumbs ---
@@ -287,13 +324,26 @@ const DirectoryPage: React.FC = () => {
 
   // Эффект 3: Перепроверяем статус общей директории
   useEffect(() => {
-    if (!isLoadingShared && actualId && accessToken) {
+    if (!isLoadingShared && actualId && accessToken && directoryInfo) {
       const shared = checkIsShared(actualId);
-      if (shared !== isShared) {
-        setIsShared(shared);
+      // Если директория принадлежит текущему пользователю и имеет permissions,
+      // но checkIsShared вернул false (ещё не загрузилось), проверяем по permissions
+      let effectiveShared = shared;
+      if (directoryInfo.owner_id === user?.id && 
+          directoryInfo.type !== 'root' && 
+          directoryInfo.permissions !== undefined) {
+        effectiveShared = true;
+      }
+      
+      if (effectiveShared !== isShared) {
+        setIsShared(effectiveShared);
+        // Перезагружаем breadcrumbs с новым статусом
+        if (directoryInfo) {
+          loadBreadcrumbs(actualId, effectiveShared, directoryInfo);
+        }
       }
     }
-  }, [isLoadingShared, actualId, accessToken, checkIsShared, isShared]);
+  }, [isLoadingShared, actualId, accessToken, checkIsShared, isShared, directoryInfo, user?.id, loadBreadcrumbs]);
 
   // --- Эффект 4: Обновляем DnD target при изменении actualId ---
   useEffect(() => {
@@ -322,6 +372,26 @@ const DirectoryPage: React.FC = () => {
       setOnUploadComplete(null); // <-- меняем undefined на null
     };
   }, [setTargetDirectoryId, setOnUploadComplete]);
+
+  // Эффект 7: Обработка возврата из просмотра файла
+  useEffect(() => {
+    if (!accessToken || !id) return;
+
+    const state = location.state as { fromFile?: boolean; directoryId?: string } | null;
+    
+    if (state?.fromFile && state?.directoryId) {
+      // Сбрасываем state, чтобы при обновлении страницы не было проблем
+      navigate(location.pathname, { replace: true, state: {} });
+      
+      // Если ID из state отличается от текущего в URL, загружаем его
+      if (state.directoryId !== id) {
+        loadDirectory(state.directoryId);
+      } else {
+        // Если тот же ID, просто перезагружаем
+        loadDirectory(id);
+      }
+    }
+  }, [accessToken, id, location.state, location.pathname, navigate, loadDirectory]);
 
   // --- Сохраняем режим просмотра ---
   useEffect(() => {
