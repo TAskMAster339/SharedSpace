@@ -31,13 +31,13 @@ export const DirectoryCard: React.FC<DirectoryCardProps> = ({
     key={id}
     to={to}
     className={cn(
-      'block p-5 rounded-theme-lg bg-theme-secondary border border-theme shadow-theme-card',
-      'hover:bg-theme-hover transition-colors',
+      'block p-5 rounded-theme-lg bg-theme-secondary border border-theme shadow-theme-card group',
+      'hover:bg-brand-light transition-colors',
       className,
     )}
   >
     <div className="flex items-start justify-between mb-4">
-      <div className="w-12 h-12 rounded-theme-md bg-brand-light flex items-center justify-center text-brand">
+      <div className="w-12 h-12 rounded-theme-md bg-brand-light group-hover:bg-theme-secondary flex items-center justify-center text-brand transition-colors">
         <Folder size={22} />
       </div>
       <Badge>{role}</Badge>

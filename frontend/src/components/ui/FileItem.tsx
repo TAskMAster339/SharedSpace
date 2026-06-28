@@ -49,7 +49,7 @@ export const FileItem: React.FC<FileItemProps> = ({
     <div className="flex items-center gap-3 min-w-0">
       <div className="relative shrink-0">
         <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card">
-          <FileIcon type={type} size={20} />
+          <FileIcon type={type} size={20} className="group-hover:text-brand transition-colors" />
         </div>
         {isFavorite && (
           <span

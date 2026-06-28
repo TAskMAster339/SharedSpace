@@ -198,7 +198,7 @@ export const Header: React.FC = () => {
               </button>
 
               {dropdownOpen && (
-                <div className="absolute right-0 top-12 w-48 bg-theme-secondary rounded-theme-xl shadow-theme-dropdown border border-theme py-1 z-20 overflow-hidden">
+                <div className="absolute right-0 top-12 w-48 bg-theme-secondary rounded-theme-xl shadow-theme-dropdown border border-theme z-20 overflow-hidden">
                   <Link
                     to="/settings"
                     className="flex items-center gap-3 px-4 py-2.5 text-sm text-theme-secondary hover:bg-theme-hover transition-colors"

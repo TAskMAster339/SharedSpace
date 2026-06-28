@@ -43,7 +43,7 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
       )}
     >
       <div className="relative w-16 h-16 flex items-center justify-center text-theme-muted group-hover:text-brand transition-colors">
-        <FileIcon type={type} size={40} />
+        <FileIcon type={type} size={40} className="group-hover:text-brand transition-colors" />
         {isFavorite && (
           <span
             className="absolute top-0 right-0 flex items-center justify-center rounded-full bg-theme-tertiary border border-theme p-0.5 shadow-theme-card"

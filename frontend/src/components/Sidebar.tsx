@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { Star, Trash2 } from 'lucide-react';
 import { StorageIndicator } from './ui/StorageIndicator';
 import { cn } from '../utils/cn';
 import { useSidebarMenu, isSidebarItemActive } from '../hooks/useSidebarMenu';
@@ -32,7 +33,7 @@ export const Sidebar: React.FC = () => {
               key={item.path}
               to={item.path}
               className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-theme-xl text-sm font-medium transition-colors relative',
+                'group flex items-center gap-3 px-3 py-2.5 rounded-theme-xl text-sm font-medium transition-colors relative',
                 isActive
                   ? 'bg-brand-light text-brand dark:bg-brand-light'
                   : 'text-theme-secondary hover:bg-theme-hover',
@@ -40,7 +41,16 @@ export const Sidebar: React.FC = () => {
             >
               <item.icon
                 size={18}
-                className={cn('size-[18px]', isActive ? 'text-brand' : 'text-theme-muted')}
+                className={cn(
+                  'size-[18px] transition-colors',
+                  isActive
+                    ? 'text-brand'
+                    : item.icon === Star
+                      ? 'text-theme-muted group-hover:text-yellow-400'
+                      : item.icon === Trash2
+                        ? 'text-theme-muted group-hover:text-red-500'
+                        : 'text-theme-muted group-hover:text-brand',
+                )}
               />
               {item.label}
             </Link>

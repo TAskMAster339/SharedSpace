@@ -77,7 +77,7 @@ export const FolderItem: React.FC<FolderItemProps> = ({
     >
       <div className="flex items-center gap-3 min-w-0">
         <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card shrink-0">
-          <Folder size={20} className="text-theme-muted" />
+          <Folder size={20} className="text-theme-muted group-hover:text-brand transition-colors" />
         </div>
         <div className="min-w-0">
           <p className="text-sm text-theme-primary font-medium truncate">{name}</p>
