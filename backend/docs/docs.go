@@ -3010,6 +3010,27 @@ const docTemplate = `{
         "internal_sharelinks.FileContentResponse": {
             "type": "object",
             "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "extension": {
+                    "type": "string"
+                },
+                "file_id": {
+                    "type": "string"
+                },
+                "filename": {
+                    "type": "string"
+                },
+                "mime_type": {
+                    "type": "string"
+                },
+                "owner_username": {
+                    "type": "string"
+                },
+                "size": {
+                    "type": "integer"
+                },
                 "url": {
                     "type": "string"
                 }

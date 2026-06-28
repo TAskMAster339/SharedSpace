@@ -14,13 +14,14 @@ import (
 )
 
 type mockRepo struct {
-	createFn       func(shareLinkRecord) (shareLinkRecord, error)
-	findByIDFn     func(string) (shareLinkRecord, error)
-	findByTokenFn  func(string) (shareLinkRecord, error)
-	findByFileIDFn func(string, int) ([]shareLinkRecord, error)
-	updateFn       func(string, shareLinkRecord) (shareLinkRecord, error)
-	deleteFn       func(string) error
-	getFileByIDFn  func(string) (fileRecord, error)
+	createFn          func(shareLinkRecord) (shareLinkRecord, error)
+	findByIDFn        func(string) (shareLinkRecord, error)
+	findByTokenFn     func(string) (shareLinkRecord, error)
+	findByFileIDFn    func(string, int) ([]shareLinkRecord, error)
+	updateFn          func(string, shareLinkRecord) (shareLinkRecord, error)
+	deleteFn          func(string) error
+	getFileByIDFn     func(string) (fileRecord, error)
+	getUsernameByIDFn func(string) (string, error)
 }
 
 func (m *mockRepo) Create(_ context.Context, _ dbTX, link shareLinkRecord) (shareLinkRecord, error) {
@@ -43,6 +44,12 @@ func (m *mockRepo) Delete(_ context.Context, _ dbTX, id string) error {
 }
 func (m *mockRepo) GetFileByID(_ context.Context, _ dbTX, fileID string) (fileRecord, error) {
 	return m.getFileByIDFn(fileID)
+}
+func (m *mockRepo) GetUsernameByID(_ context.Context, _ dbTX, userID string) (string, error) {
+	if m.getUsernameByIDFn != nil {
+		return m.getUsernameByIDFn(userID)
+	}
+	return "testuser", nil
 }
 
 type mockStorage struct {
@@ -105,7 +112,7 @@ func newTestService(repo RepositoryInterface) *Service {
 }
 
 func defaultFile() fileRecord {
-	return fileRecord{ID: "file-1", DirectoryID: "dir-1", OwnerID: "user-1", ObjectKey: "obj-key-1"}
+	return fileRecord{ID: "file-1", DirectoryID: "dir-1", OwnerID: "user-1", ObjectKey: "obj-key-1", Filename: "test.txt", Extension: "txt", MimeType: "text/plain", Size: 100, CreatedAt: time.Unix(100, 0).UTC()}
 }
 
 func existingLink() shareLinkRecord {

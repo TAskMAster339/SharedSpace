@@ -264,12 +264,26 @@ func (s *Service) Resolve(ctx context.Context, token, password string, authentic
 		return FileContentResponse{}, apperror.WrapInternal("поиск файла", err)
 	}
 
+	username, err := s.repo.GetUsernameByID(ctx, s.db, file.OwnerID)
+	if err != nil {
+		username = ""
+	}
+
 	url, err := s.storage.PresignedGetURL(ctx, file.ObjectKey, 24*time.Hour)
 	if err != nil {
 		return FileContentResponse{}, apperror.WrapInternal("генерация ссылки", err)
 	}
 
-	return FileContentResponse{URL: url}, nil
+	return FileContentResponse{
+		URL:           url,
+		FileID:        file.ID,
+		Filename:      file.Filename,
+		Extension:     file.Extension,
+		MimeType:      file.MimeType,
+		Size:          file.Size,
+		OwnerUsername: username,
+		CreatedAt:     file.CreatedAt,
+	}, nil
 }
 
 func generateToken() (string, error) {

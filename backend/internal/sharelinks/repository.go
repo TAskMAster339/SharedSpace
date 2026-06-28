@@ -92,8 +92,14 @@ func (r *Repository) Delete(ctx context.Context, db dbTX, id string) error {
 func (r *Repository) GetFileByID(ctx context.Context, db dbTX, fileID string) (fileRecord, error) {
 	var f fileRecord
 	err := db.QueryRow(ctx, `
-		SELECT id, directory_id, owner_id, object_key
+		SELECT id, directory_id, owner_id, object_key, filename, extension, mime_type, size, created_at
 		FROM files WHERE id = $1 AND deleted_at IS NULL
-	`, fileID).Scan(&f.ID, &f.DirectoryID, &f.OwnerID, &f.ObjectKey)
+	`, fileID).Scan(&f.ID, &f.DirectoryID, &f.OwnerID, &f.ObjectKey, &f.Filename, &f.Extension, &f.MimeType, &f.Size, &f.CreatedAt)
 	return f, err
+}
+
+func (r *Repository) GetUsernameByID(ctx context.Context, db dbTX, userID string) (string, error) {
+	var username string
+	err := db.QueryRow(ctx, `SELECT username FROM users WHERE id = $1`, userID).Scan(&username)
+	return username, err
 }

@@ -221,6 +221,14 @@
     border-color: var(--border-dashed);
   }
 
+  .border-brand {
+    border-color: var(--brand);
+  }
+
+  .hover\:border-brand:hover {
+    border-color: var(--brand);
+  }
+
   /* Статусы */
   .text-danger {
     color: var(--danger);

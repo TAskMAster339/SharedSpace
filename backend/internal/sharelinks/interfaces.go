@@ -26,6 +26,7 @@ type RepositoryInterface interface {
 	Update(ctx context.Context, db dbTX, id string, link shareLinkRecord) (shareLinkRecord, error)
 	Delete(ctx context.Context, db dbTX, id string) error
 	GetFileByID(ctx context.Context, db dbTX, fileID string) (fileRecord, error)
+	GetUsernameByID(ctx context.Context, db dbTX, userID string) (string, error)
 }
 
 type StorageClient interface {
