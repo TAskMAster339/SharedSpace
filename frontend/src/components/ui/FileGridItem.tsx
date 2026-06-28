@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Star } from 'lucide-react';
 import { FileIcon } from './FileIcon';
@@ -31,11 +31,18 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
   onMove,
   onDragStart,
 }) => {
+  const [contextMenuOpen, setContextMenuOpen] = useState(false);
+
   return (
     <Link
       to={to}
       draggable={!!onDragStart}
       onDragStart={(e) => onDragStart?.(e, id, name)}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setContextMenuOpen(true);
+      }}
       className={cn(
         'group flex flex-col items-center p-3 rounded-theme-md transition-colors cursor-pointer relative min-w-0',
         'bg-theme-tertiary hover:bg-theme-hover border border-theme',
@@ -43,7 +50,7 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
       )}
     >
       <div className="relative w-16 h-16 flex items-center justify-center text-theme-muted group-hover:text-brand transition-colors">
-        <FileIcon type={type} size={40} />
+        <FileIcon type={type} size={40} className="group-hover:text-brand transition-colors" />
         {isFavorite && (
           <span
             className="absolute top-0 right-0 flex items-center justify-center rounded-full bg-theme-tertiary border border-theme p-0.5 shadow-theme-card"
@@ -65,6 +72,8 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
           onDelete={onDelete ? () => onDelete(id) : undefined}
           onMove={onMove ? () => onMove(id) : undefined}
           iconSize={16}
+          openMenu={contextMenuOpen}
+          onCloseMenu={() => setContextMenuOpen(false)}
         />
       </div>
     </Link>

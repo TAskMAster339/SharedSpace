@@ -1,17 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { ArrowUp } from 'lucide-react';
+import { cn } from '../utils/cn';
 
 const SHOW_AFTER_PX = 300;
+const FOOTER_BUFFER = 100;
 
 export const ScrollToTopButton: React.FC = () => {
   const [visible, setVisible] = useState(false);
+  const [nearBottom, setNearBottom] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
-      setVisible(window.scrollY > SHOW_AFTER_PX);
+      const scrollY = window.scrollY;
+      const viewport = window.innerHeight;
+      const docHeight = document.documentElement.scrollHeight;
+      setVisible(scrollY > SHOW_AFTER_PX);
+      setNearBottom(scrollY + viewport >= docHeight - FOOTER_BUFFER);
     };
 
-    // Проверяем при первом рендере
     handleScroll();
 
     window.addEventListener('scroll', handleScroll);
@@ -26,7 +32,10 @@ export const ScrollToTopButton: React.FC = () => {
     <button
       onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
       aria-label="Наверх"
-      className="fixed bottom-6 right-6 z-40 w-11 h-11 flex items-center justify-center rounded-theme-full bg-brand text-theme-on-brand shadow-theme-dropdown hover:bg-brand-hover transition-colors animate-in fade-in"
+      className={cn(
+        'fixed right-6 z-40 w-11 h-11 flex items-center justify-center rounded-theme-full bg-brand text-theme-on-brand shadow-theme-dropdown hover:bg-brand-hover transition-all duration-200 animate-in fade-in',
+        nearBottom ? 'bottom-24' : 'bottom-6',
+      )}
     >
       <ArrowUp size={20} />
     </button>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { Star, Trash2 } from 'lucide-react';
 import { StorageIndicator } from './ui/StorageIndicator';
 import { cn } from '../utils/cn';
 import { useSidebarMenu, isSidebarItemActive } from '../hooks/useSidebarMenu';
@@ -32,7 +33,7 @@ export const Sidebar: React.FC = () => {
               key={item.path}
               to={item.path}
               className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-theme-xl text-sm font-medium transition-colors relative',
+                'group flex items-center gap-3 px-3 py-2.5 rounded-theme-xl text-sm font-medium transition-colors relative',
                 isActive
                   ? 'bg-brand-light text-brand dark:bg-brand-light'
                   : 'text-theme-secondary hover:bg-theme-hover',
@@ -40,7 +41,20 @@ export const Sidebar: React.FC = () => {
             >
               <item.icon
                 size={18}
-                className={cn('size-[18px]', isActive ? 'text-brand' : 'text-theme-muted')}
+                className={cn(
+                  'size-[18px] transition-colors',
+                  isActive && item.icon === Star
+                    ? 'text-yellow-400'
+                    : isActive && item.icon === Trash2
+                      ? 'text-red-500'
+                      : isActive
+                        ? 'text-brand'
+                        : item.icon === Star
+                          ? 'text-theme-muted group-hover:text-yellow-400'
+                          : item.icon === Trash2
+                            ? 'text-theme-muted group-hover:text-red-500'
+                            : 'text-theme-muted group-hover:text-brand',
+                )}
               />
               {item.label}
             </Link>
@@ -50,7 +64,7 @@ export const Sidebar: React.FC = () => {
 
       {/* Индикатор места внизу */}
       <div className="mt-auto mb-6 pt-6 border-t border-theme">
-        <div className="bg-theme-tertiary rounded-theme-xl p-4 shadow-theme-card border border-theme/50">
+        <div className="group bg-theme-tertiary hover:bg-theme-hover rounded-theme-xl p-4 shadow-theme-card border border-theme/50 transition-colors cursor-default">
           <StorageIndicator used={storageUsed} total={storageQuota} />
         </div>
       </div>

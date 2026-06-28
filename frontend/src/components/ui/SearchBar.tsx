@@ -15,8 +15,11 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   onChange,
   className,
 }) => (
-  <div className={cn('relative', className)}>
-    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-muted" size={16} />
+  <div className={cn('relative group', className)}>
+    <Search
+      className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-muted group-hover:text-brand transition-colors"
+      size={16}
+    />
     <input
       type="text"
       placeholder={placeholder}

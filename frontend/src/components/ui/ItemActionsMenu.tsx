@@ -10,9 +10,11 @@ interface ItemActionsMenuProps {
   onMove?: () => void;
   className?: string;
   iconSize?: number;
+  openMenu?: boolean;
+  onCloseMenu?: () => void;
 }
 
-const MENU_WIDTH = 192; // w-48
+const MENU_WIDTH = 216;
 const MENU_HEIGHT_EST = 140;
 const GAP = 4;
 const EDGE = 8;
@@ -24,6 +26,8 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
   onMove,
   className,
   iconSize = 18,
+  openMenu,
+  onCloseMenu,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -58,6 +62,12 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
     setCoords({ top, left, openUp });
   }, []);
 
+  // Открытие по правому клику (контролируемый режим)
+  useEffect(() => {
+    if (!openMenu) return;
+    setIsOpen(true);
+  }, [openMenu]);
+
   useLayoutEffect(() => {
     if (isOpen && !isMobile) updatePosition();
   }, [isOpen, isMobile, updatePosition]);
@@ -70,17 +80,21 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
       const target = e.target as Node;
       if (triggerRef.current?.contains(target) || menuRef.current?.contains(target)) return;
       setIsOpen(false);
+      onCloseMenu?.();
     };
 
     document.addEventListener('mousedown', onPointerDown);
     return () => document.removeEventListener('mousedown', onPointerDown);
-  }, [isOpen]);
+  }, [isOpen, onCloseMenu]);
 
   // На десктопе позиция фиксированная, поэтому при скролле/ресайзе просто закрываем меню
   useEffect(() => {
     if (!isOpen || isMobile) return;
 
-    const close = () => setIsOpen(false);
+    const close = () => {
+      setIsOpen(false);
+      onCloseMenu?.();
+    };
     window.addEventListener('scroll', close, true);
     window.addEventListener('resize', close);
     return () => {
@@ -101,15 +115,15 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
   };
 
   const menuItems = (
-    <div className="py-1">
+    <div>
       {onMove && (
         <button
           type="button"
           role="menuitem"
           onClick={(e) => handleSelect(e, onMove)}
-          className="flex items-center gap-3 w-full px-4 py-3.5 text-base text-theme-secondary hover:bg-theme-hover transition-colors sm:px-3 sm:py-2 sm:text-sm"
+          className="group flex items-center gap-3 w-full px-4 py-3.5 text-base text-theme-secondary hover:bg-theme-hover transition-colors sm:px-3 sm:py-2 sm:text-sm"
         >
-          <Move size={18} />
+          <Move size={18} className="group-hover:text-green-500 transition-colors" />
           Переместить файл
         </button>
       )}
@@ -118,12 +132,16 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
           type="button"
           role="menuitem"
           onClick={(e) => handleSelect(e, onToggleFavorite)}
-          className="flex items-center gap-3 w-full px-4 py-3.5 text-base text-theme-secondary hover:bg-theme-hover transition-colors sm:px-3 sm:py-2 sm:text-sm"
+          className="group flex items-center gap-3 w-full px-4 py-3.5 text-base text-theme-secondary hover:bg-theme-hover transition-colors sm:px-3 sm:py-2 sm:text-sm"
         >
           <Star
             size={18}
-            className={isFavorite ? 'text-yellow-400' : 'text-theme-muted'}
-            fill={isFavorite ? 'currentColor' : 'none'}
+            fill={isFavorite ? 'currentColor' : 'transparent'}
+            className={cn(
+              'transition-[fill,color] duration-200',
+              isFavorite ? 'text-yellow-400' : 'text-theme-muted group-hover:fill-transparent',
+              isFavorite ? '' : 'group-hover:text-yellow-400',
+            )}
           />
           {isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'}
         </button>
@@ -133,9 +151,9 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
           type="button"
           role="menuitem"
           onClick={(e) => handleSelect(e, onDelete)}
-          className="flex items-center gap-3 w-full px-4 py-3.5 text-base text-danger hover:bg-danger-light transition-colors sm:px-3 sm:py-2 sm:text-sm"
+          className="group flex items-center gap-3 w-full px-4 py-3.5 text-base text-theme-secondary hover:bg-theme-hover transition-colors sm:px-3 sm:py-2 sm:text-sm"
         >
-          <Trash2 size={18} />
+          <Trash2 size={18} className="group-hover:text-red-500 transition-colors" />
           Переместить в корзину
         </button>
       )}

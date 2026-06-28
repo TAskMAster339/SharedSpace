@@ -95,10 +95,37 @@
       system-ui,
       -apple-system,
       sans-serif;
+    scrollbar-gutter: stable;
   }
 
   * {
     border-color: var(--border);
+  }
+
+  /* Кастомный скроллбар */
+  * {
+    scrollbar-color: var(--text-muted) transparent;
+    scrollbar-width: thin;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-clip: content-box;
+    border: 2px solid transparent;
+    background-color: var(--text-muted);
+    border-radius: var(--radius-full);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--text-secondary);
   }
 }
 
@@ -278,6 +305,7 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -287,8 +315,24 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(-360deg);
+  }
+}
+
+@keyframes ss-bounce-up {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  40% {
+    transform: translateY(-6px);
+  }
+
+  60% {
+    transform: translateY(-3px);
   }
 }
 
@@ -298,6 +342,10 @@
 
 .animate-orbit-reverse {
   animation: ss-orbit-reverse 36s linear infinite;
+}
+
+.animate-bounce-up {
+  animation: ss-bounce-up 1s ease-in-out;
 }
 
 @media (prefers-reduced-motion: reduce) {

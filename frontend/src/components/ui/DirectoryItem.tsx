@@ -22,13 +22,13 @@ export const DirectoryItem: React.FC<DirectoryItemProps> = ({
     key={id}
     to={to}
     className={cn(
-      'flex items-center gap-3 p-3 rounded-theme-md transition-colors cursor-pointer',
+      'group flex items-center gap-3 p-3 rounded-theme-md transition-colors cursor-pointer',
       'bg-theme-tertiary hover:bg-theme-hover border border-theme',
       className,
     )}
   >
     <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card shrink-0">
-      <Folder size={20} className="text-theme-muted" />
+      <Folder size={20} className="text-theme-muted group-hover:text-brand transition-colors" />
     </div>
     <div>
       <p className="text-sm text-theme-primary font-medium">{name}</p>
