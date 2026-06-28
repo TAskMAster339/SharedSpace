@@ -243,12 +243,16 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
             </div>
           </div>
 
-
           {/* Пароль */}
           <div className="space-y-1">
-            <label className="text-xs text-theme-secondary font-medium">Пароль (необязательно)</label>
+            <label className="text-xs text-theme-secondary font-medium">
+              Пароль (необязательно)
+            </label>
             <div className="relative">
-              <KeyRound size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-muted" />
+              <KeyRound
+                size={14}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-muted"
+              />
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={password}

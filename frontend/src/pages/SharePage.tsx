@@ -9,16 +9,57 @@ import { resolveFileIconType, getFileTypeDisplay } from '../utils/fileType';
 import { formatFileSize, formatDate } from '../utils/format';
 
 const SUPPORTED_EXTENSIONS_FOR_VIEW = new Set([
-  'pdf', 'txt', 'md', 'csv', 'xml', 'json',
-  'js', 'ts', 'jsx', 'tsx', 'html', 'css', 'scss',
-  'py', 'java', 'cpp', 'c', 'go', 'rs', 'rb', 'php',
-  'sh', 'bash', 'sql', 'yaml', 'yml',
+  'pdf',
+  'txt',
+  'md',
+  'csv',
+  'xml',
+  'json',
+  'js',
+  'ts',
+  'jsx',
+  'tsx',
+  'html',
+  'css',
+  'scss',
+  'py',
+  'java',
+  'cpp',
+  'c',
+  'go',
+  'rs',
+  'rb',
+  'php',
+  'sh',
+  'bash',
+  'sql',
+  'yaml',
+  'yml',
 ]);
 
 const CODE_EXTENSIONS = new Set([
-  'js', 'ts', 'jsx', 'tsx', 'html', 'css', 'scss', 'json', 'xml',
-  'yaml', 'yml', 'py', 'java', 'cpp', 'c', 'go', 'rs', 'rb', 'php',
-  'sh', 'bash', 'sql',
+  'js',
+  'ts',
+  'jsx',
+  'tsx',
+  'html',
+  'css',
+  'scss',
+  'json',
+  'xml',
+  'yaml',
+  'yml',
+  'py',
+  'java',
+  'cpp',
+  'c',
+  'go',
+  'rs',
+  'rb',
+  'php',
+  'sh',
+  'bash',
+  'sql',
 ]);
 
 const PROBLEMATIC_EXTENSIONS = new Set(['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx']);
@@ -160,7 +201,10 @@ const SharePage: React.FC = () => {
                 src={file.url}
                 alt={file.filename}
                 className="max-w-full max-h-[70vh] object-contain"
-                onError={() => { setCanPreview(false); setIframeError(true); }}
+                onError={() => {
+                  setCanPreview(false);
+                  setIframeError(true);
+                }}
               />
             ) : (
               <div className="flex flex-col items-center gap-4 py-12 text-theme-muted">
@@ -174,7 +218,12 @@ const SharePage: React.FC = () => {
       case 'video':
         return (
           <div className="bg-theme-tertiary rounded-theme-lg overflow-hidden">
-            <video src={file.url} controls className="w-full max-h-[70vh]" onError={handleIframeError} />
+            <video
+              src={file.url}
+              controls
+              className="w-full max-h-[70vh]"
+              onError={handleIframeError}
+            />
           </div>
         );
 
@@ -186,7 +235,12 @@ const SharePage: React.FC = () => {
                 <FileIcon type="audio" size={40} />
               </div>
               <p className="text-lg font-medium text-theme-primary">{file.filename}</p>
-              <audio src={file.url} controls className="w-full max-w-md" onError={handleIframeError} />
+              <audio
+                src={file.url}
+                controls
+                className="w-full max-w-md"
+                onError={handleIframeError}
+              />
             </div>
           </div>
         );
@@ -195,7 +249,12 @@ const SharePage: React.FC = () => {
         return (
           <div className="bg-theme-tertiary rounded-theme-lg overflow-hidden min-h-[500px]">
             {file.url ? (
-              <object data={file.url} type="application/pdf" className="w-full h-[70vh]" onError={handleIframeError}>
+              <object
+                data={file.url}
+                type="application/pdf"
+                className="w-full h-[70vh]"
+                onError={handleIframeError}
+              >
                 {renderUnavailableMessage('Не удалось загрузить PDF', 'Попробуйте скачать файл')}
               </object>
             ) : (
@@ -246,7 +305,10 @@ const SharePage: React.FC = () => {
             <p className="text-sm text-theme-muted">Введите пароль для доступа к файлу</p>
           </div>
           <div className="relative">
-            <KeyRound size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-muted" />
+            <KeyRound
+              size={14}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-muted"
+            />
             <input
               type={showPassword ? 'text' : 'password'}
               value={password}
@@ -265,9 +327,7 @@ const SharePage: React.FC = () => {
               {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
             </button>
           </div>
-          {passwordError && (
-            <p className="text-sm text-danger">{passwordError}</p>
-          )}
+          {passwordError && <p className="text-sm text-danger">{passwordError}</p>}
           <button
             onClick={handlePasswordSubmit}
             disabled={!password || isSubmittingPassword}
@@ -276,7 +336,10 @@ const SharePage: React.FC = () => {
             {isSubmittingPassword ? 'Проверка...' : 'Открыть файл'}
           </button>
           <div className="text-center">
-            <Link to="/" className="text-sm text-theme-secondary hover:text-theme-primary transition-colors">
+            <Link
+              to="/"
+              className="text-sm text-theme-secondary hover:text-theme-primary transition-colors"
+            >
               ← SharedSpace
             </Link>
           </div>
@@ -303,7 +366,9 @@ const SharePage: React.FC = () => {
           <h1 className="text-xl font-semibold text-theme-primary">Файл недоступен</h1>
           <p className="text-sm text-theme-secondary">{error || 'Файл не найден'}</p>
           <Link to="/">
-            <Button variant="primary" className="mt-2">На главную</Button>
+            <Button variant="primary" className="mt-2">
+              На главную
+            </Button>
           </Link>
         </div>
       </div>
@@ -324,70 +389,75 @@ const SharePage: React.FC = () => {
           SharedSpace
         </Link>
       </div>
-        {/* Основной контент: 2 колонки (предпросмотр) + 1 колонка (информация) */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Левая часть: предпросмотр (2/3) */}
-          <div className="lg:col-span-2">
-            <div className="bg-theme-secondary border border-theme rounded-theme-lg p-4 shadow-theme-card">
-              <h2 className="text-sm font-medium text-theme-secondary mb-3">Предпросмотр</h2>
-              {renderPreview()}
+      {/* Основной контент: 2 колонки (предпросмотр) + 1 колонка (информация) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Левая часть: предпросмотр (2/3) */}
+        <div className="lg:col-span-2">
+          <div className="bg-theme-secondary border border-theme rounded-theme-lg p-4 shadow-theme-card">
+            <h2 className="text-sm font-medium text-theme-secondary mb-3">Предпросмотр</h2>
+            {renderPreview()}
+          </div>
+        </div>
+
+        {/* Правая часть: информация (1/3) */}
+        <div className="space-y-4">
+          {/* Информация о файле */}
+          <div className="bg-theme-secondary border border-theme rounded-theme-lg p-5 shadow-theme-card">
+            <h3 className="font-medium text-theme-primary mb-3">Информация о файле</h3>
+
+            <div className="flex items-center gap-3 p-3 bg-theme-tertiary rounded-theme-md border border-theme">
+              <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card shrink-0">
+                <FileIcon type={fileIconType} size={20} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm text-theme-primary font-medium truncate">{file.filename}</p>
+                <p className="text-xs text-theme-muted">Файл</p>
+              </div>
+            </div>
+
+            <div className="my-4 border-t border-theme" />
+
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-theme-secondary">Тип</span>
+                <span className="text-theme-primary font-medium">
+                  {getFileTypeDisplay(file.mime_type, file.extension)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-theme-secondary">Размер</span>
+                <span className="text-theme-primary font-medium">{formatFileSize(file.size)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-theme-secondary">Владелец</span>
+                <span className="text-theme-primary font-medium">{file.owner_username}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-theme-secondary">Создан</span>
+                <span className="text-theme-primary font-medium">
+                  {formatDate(file.created_at)}
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* Правая часть: информация (1/3) */}
-          <div className="space-y-4">
-            {/* Информация о файле */}
-            <div className="bg-theme-secondary border border-theme rounded-theme-lg p-5 shadow-theme-card">
-              <h3 className="font-medium text-theme-primary mb-3">Информация о файле</h3>
-
-              <div className="flex items-center gap-3 p-3 bg-theme-tertiary rounded-theme-md border border-theme">
-                <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card shrink-0">
-                  <FileIcon type={fileIconType} size={20} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm text-theme-primary font-medium truncate">{file.filename}</p>
-                  <p className="text-xs text-theme-muted">Файл</p>
-                </div>
-              </div>
-
-              <div className="my-4 border-t border-theme" />
-
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-theme-secondary">Тип</span>
-                  <span className="text-theme-primary font-medium">
-                    {getFileTypeDisplay(file.mime_type, file.extension)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-theme-secondary">Размер</span>
-                  <span className="text-theme-primary font-medium">{formatFileSize(file.size)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-theme-secondary">Владелец</span>
-                  <span className="text-theme-primary font-medium">{file.owner_username}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-theme-secondary">Создан</span>
-                  <span className="text-theme-primary font-medium">{formatDate(file.created_at)}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Действия */}
-            <div className="bg-theme-secondary border border-theme rounded-theme-lg p-5 shadow-theme-card">
-              <h3 className="font-medium text-theme-primary mb-3">Действия</h3>
-              <button
-                onClick={handleDownload}
-                className="group w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-brand text-theme-on-brand hover:bg-brand-hover rounded-theme-md transition-colors text-sm font-medium"
-              >
-                <Download size={16} className="group-hover:[animation:ss-bounce-up_0.4s_ease-in-out]" />
-                Скачать
-              </button>
-            </div>
+          {/* Действия */}
+          <div className="bg-theme-secondary border border-theme rounded-theme-lg p-5 shadow-theme-card">
+            <h3 className="font-medium text-theme-primary mb-3">Действия</h3>
+            <button
+              onClick={handleDownload}
+              className="group w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-brand text-theme-on-brand hover:bg-brand-hover rounded-theme-md transition-colors text-sm font-medium"
+            >
+              <Download
+                size={16}
+                className="group-hover:[animation:ss-bounce-up_0.4s_ease-in-out]"
+              />
+              Скачать
+            </button>
           </div>
         </div>
       </div>
+    </div>
   );
 };
 
