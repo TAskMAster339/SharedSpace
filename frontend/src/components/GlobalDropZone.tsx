@@ -177,11 +177,34 @@ export const GlobalDropZone: React.FC<GlobalDropZoneProps> = ({
     <div ref={dropZoneRef} className="relative w-full h-full">
       {children}
 
-      {isDragging && (
+      {/* Оверлей загрузки (показывается пока файлы загружаются) */}
+      {isUploading && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-theme-primary/80 backdrop-blur-[2px] transition-opacity duration-200 opacity-100">
+          <div className="w-[420px] max-w-[90vw] p-12 rounded-theme-xl text-center border-2 border-dashed border-brand bg-theme-secondary shadow-theme-dropdown transition-all duration-200 scale-100">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-theme-full bg-brand-light flex items-center justify-center">
+              <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin" />
+            </div>
+            <p className="text-sm font-medium text-theme-primary">Загрузка...</p>
+            <div className="mt-3 w-full h-2 bg-theme-border rounded-full overflow-hidden">
+              <div
+                className="h-full bg-brand rounded-full transition-all duration-300"
+                style={{ width: `${uploadProgress}%` }}
+              />
+            </div>
+            <p className="text-xs text-theme-muted mt-1.5">{uploadProgress}%</p>
+            <p className="text-xs text-theme-muted mt-2">
+              {currentDirectoryId ? 'Загрузка в текущую папку' : 'Загрузка...'}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Оверлей drag (только до начала загрузки) */}
+      {isDragging && !isUploading && (
         <div
           className={cn(
             'fixed inset-0 z-[100] flex items-center justify-center',
-            'bg-brand/5 backdrop-blur-[2px]',
+            'bg-theme-primary/80 backdrop-blur-[2px]',
             'transition-opacity duration-200',
             isDragging ? 'opacity-100' : 'opacity-0 pointer-events-none',
           )}
@@ -190,42 +213,19 @@ export const GlobalDropZone: React.FC<GlobalDropZoneProps> = ({
             className={cn(
               'w-[420px] max-w-[90vw] p-12 rounded-theme-xl text-center',
               'border-2 border-dashed border-brand',
-              'bg-white/95 dark:bg-slate-900/95',
+              'bg-theme-secondary',
               'shadow-theme-dropdown',
               'transition-all duration-200',
               isDragging ? 'scale-100' : 'scale-95',
             )}
           >
-            {isUploading ? (
-              <>
-                <div className="w-16 h-16 mx-auto mb-4 rounded-theme-full bg-brand-light flex items-center justify-center">
-                  <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin" />
-                </div>
-                <p className="text-sm font-medium text-theme-primary">Загрузка...</p>
-                <div className="mt-3 w-full h-2 bg-theme-border rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-brand rounded-full transition-all duration-300"
-                    style={{ width: `${uploadProgress}%` }}
-                  />
-                </div>
-                <p className="text-xs text-theme-muted mt-1.5">{uploadProgress}%</p>
-                <p className="text-xs text-theme-muted mt-2">
-                  {currentDirectoryId ? 'Загрузка в текущую папку' : 'Загрузка...'}
-                </p>
-              </>
-            ) : (
-              <>
-                <div className="w-20 h-20 mx-auto mb-4 rounded-theme-full bg-brand-light flex items-center justify-center">
-                  <Upload size={36} className="text-brand" />
-                </div>
-                <p className="text-lg font-semibold text-theme-primary">
-                  Отпустите файл для загрузки
-                </p>
-                <p className="text-sm text-theme-muted mt-1">
-                  Отпустите файл в любом месте этой области
-                </p>
-              </>
-            )}
+            <div className="w-20 h-20 mx-auto mb-4 rounded-theme-full bg-brand-light flex items-center justify-center">
+              <Upload size={36} className="text-brand" />
+            </div>
+            <p className="text-lg font-semibold text-theme-primary">Отпустите файл для загрузки</p>
+            <p className="text-sm text-theme-muted mt-1">
+              Отпустите файл в любом месте этой области
+            </p>
           </div>
         </div>
       )}
