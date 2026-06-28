@@ -1,14 +1,15 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, Share2, Star, Image, EyeOff } from 'lucide-react';
+import { ArrowLeft, Download, Share2, Star, Image, EyeOff, Trash2 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useFavorites } from '../hooks/useFavorites';
-import { getFileMetadata, getFileContentUrl, FileMetadata } from '../api/files';
+import { getFileMetadata, getFileContentUrl, FileMetadata, softDeleteFile } from '../api/files';
 import { getDirectoryById, Directory } from '../api/directories';
-import { getUserById } from '../api/users'; // <-- добавляем
+import { getUserById } from '../api/users';
 import { ApiError } from '../api/client';
 import { FileIcon } from '../components/ui/FileIcon';
 import { Button } from '../components/ui/Button';
+import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { ConvertModal } from '../components/ui/ConvertModal';
 import { resolveFileIconType, getFileTypeDisplay } from '../utils/fileType';
 import { formatFileSize, formatDate } from '../utils/format';
@@ -94,6 +95,9 @@ const FileViewPage: React.FC = () => {
   const { isFavorite, toggleFavorite } = useFavorites();
   const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
   const [isConverting, setIsConverting] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   const [file, setFile] = useState<FileMetadata | null>(null);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
@@ -285,6 +289,29 @@ const FileViewPage: React.FC = () => {
       navigate(-1);
     }
   }, [directory, navigate]);
+
+  // Обработчик удаления файла
+  const handleDeleteFile = useCallback(async () => {
+    if (!accessToken || !id) return;
+
+    setIsDeleting(true);
+    setDeleteError('');
+    try {
+      await softDeleteFile(accessToken, id);
+      setIsDeleteModalOpen(false);
+      if (directory) {
+        navigate(`/directories/${directory.id}`);
+      } else {
+        navigate('/dashboard');
+      }
+    } catch (err) {
+      setDeleteError(
+        err instanceof ApiError ? err.message : 'Не удалось удалить файл',
+      );
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [accessToken, id, directory, navigate]);
 
   // Обработчик ошибки iframe
   const handleIframeError = useCallback(() => {
@@ -578,23 +605,31 @@ const FileViewPage: React.FC = () => {
             <div className="space-y-2">
               <button
                 onClick={downloadFile}
-                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-brand text-theme-on-brand hover:bg-brand-hover rounded-theme-md transition-colors text-sm font-medium"
+                className="group w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-brand text-theme-on-brand hover:bg-brand-hover rounded-theme-md transition-colors text-sm font-medium"
               >
-                <Download size={16} />
+                <Download size={16} className="group-hover:[animation:ss-bounce-up_0.4s_ease-in-out]" />
                 Скачать
               </button>
 
-              <button className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium">
-                <Share2 size={16} />
+              <button className="group w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium">
+                <Share2 size={16} className="group-hover:text-green-500 transition-colors" />
                 Поделиться ссылкой
               </button>
 
               <button
                 onClick={handleToggleFavorite}
-                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium"
+                className="group w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium"
               >
-                <Star size={16} className={cn(isFav ? 'text-yellow-400 fill-current' : '')} />
+                <Star size={16} className={cn('transition-colors', isFav ? 'text-yellow-400 fill-current' : '', 'group-hover:text-yellow-400')} />
                 {isFav ? 'Убрать из Избранного' : 'Добавить в Избранное'}
+              </button>
+
+              <button
+                onClick={() => setIsDeleteModalOpen(true)}
+                className="group w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium"
+              >
+                <Trash2 size={16} className="group-hover:text-red-500 transition-colors" />
+                Удалить файл
               </button>
             </div>
 
@@ -602,9 +637,9 @@ const FileViewPage: React.FC = () => {
             <div className="mt-4 pt-4 border-t border-theme">
               <button
                 onClick={() => setIsConvertModalOpen(true)}
-                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium"
+                className="group w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium"
               >
-                <Image size={16} />
+                <Image size={16} className="group-hover:text-brand transition-colors" />
                 Конвертировать
               </button>
             </div>
@@ -618,6 +653,26 @@ const FileViewPage: React.FC = () => {
               extension={file.extension}
               onConvert={handleConvert}
               isConverting={isConverting}
+            />
+
+            <ConfirmModal
+              isOpen={isDeleteModalOpen}
+              onClose={() => !isDeleting && setIsDeleteModalOpen(false)}
+              onConfirm={handleDeleteFile}
+              variant="danger"
+              isConfirming={isDeleting}
+              confirmLabel="Удалить"
+              error={deleteError}
+              title={
+                <h3 className="font-medium text-theme-primary">
+                  Удалить «{file.filename}»?
+                </h3>
+              }
+              description={
+                <p className="text-sm text-theme-secondary">
+                  Файл будет перемещён в корзину. Вы сможете восстановить его позже.
+                </p>
+              }
             />
           </div>
         </div>
