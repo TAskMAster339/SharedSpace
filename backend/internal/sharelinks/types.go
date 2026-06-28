@@ -26,7 +26,14 @@ type ShareLinkResponse struct {
 }
 
 type FileContentResponse struct {
-	URL string `json:"url"`
+	URL           string    `json:"url"`
+	FileID        string    `json:"file_id"`
+	Filename      string    `json:"filename"`
+	Extension     string    `json:"extension"`
+	MimeType      string    `json:"mime_type"`
+	Size          int64     `json:"size"`
+	OwnerUsername string    `json:"owner_username"`
+	CreatedAt     time.Time `json:"created_at"`
 }
 
 type shareLinkRecord struct {
@@ -45,4 +52,9 @@ type fileRecord struct {
 	DirectoryID string
 	OwnerID     string
 	ObjectKey   string
+	Filename    string
+	Extension   string
+	MimeType    string
+	Size        int64
+	CreatedAt   time.Time
 }
