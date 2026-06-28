@@ -618,7 +618,7 @@ const DirectoryPage: React.FC = () => {
               ) : (
                 <button
                   onClick={() => handleBreadcrumbClick(crumb.id)}
-                  className="text-theme-secondary hover:text-brand transition-colors hover:underline cursor-pointer"
+                  className="text-theme-secondary hover:text-brand transition-colors cursor-pointer"
                 >
                   {crumb.isRoot ? (
                     <span className="flex items-center gap-1">

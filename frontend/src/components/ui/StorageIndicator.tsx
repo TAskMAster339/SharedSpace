@@ -34,8 +34,11 @@ export const StorageIndicator: React.FC<StorageIndicatorProps> = ({ used, total,
           />{' '}
           Хранилище
         </span>
-        <span className="text-sm" title={`${formatBytes(used)} из ${formatBytes(total)}`}>
-          {used.toFixed(1)} / {total} ГБ
+        <span
+          className="text-sm font-semibold"
+          title={`${formatBytes(used)} из ${formatBytes(total)}`}
+        >
+          {used.toFixed(1)} ГБ из {total} ГБ
         </span>
       </div>
       <div className="w-full h-1.5 bg-theme-border rounded-full overflow-hidden">

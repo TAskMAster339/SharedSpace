@@ -10,6 +10,8 @@ interface ItemActionsMenuProps {
   onMove?: () => void;
   className?: string;
   iconSize?: number;
+  openMenu?: boolean;
+  onCloseMenu?: () => void;
 }
 
 const MENU_WIDTH = 216;
@@ -24,6 +26,8 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
   onMove,
   className,
   iconSize = 18,
+  openMenu,
+  onCloseMenu,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -58,6 +62,12 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
     setCoords({ top, left, openUp });
   }, []);
 
+  // Открытие по правому клику (контролируемый режим)
+  useEffect(() => {
+    if (!openMenu) return;
+    setIsOpen(true);
+  }, [openMenu]);
+
   useLayoutEffect(() => {
     if (isOpen && !isMobile) updatePosition();
   }, [isOpen, isMobile, updatePosition]);
@@ -70,17 +80,21 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
       const target = e.target as Node;
       if (triggerRef.current?.contains(target) || menuRef.current?.contains(target)) return;
       setIsOpen(false);
+      onCloseMenu?.();
     };
 
     document.addEventListener('mousedown', onPointerDown);
     return () => document.removeEventListener('mousedown', onPointerDown);
-  }, [isOpen]);
+  }, [isOpen, onCloseMenu]);
 
   // На десктопе позиция фиксированная, поэтому при скролле/ресайзе просто закрываем меню
   useEffect(() => {
     if (!isOpen || isMobile) return;
 
-    const close = () => setIsOpen(false);
+    const close = () => {
+      setIsOpen(false);
+      onCloseMenu?.();
+    };
     window.addEventListener('scroll', close, true);
     window.addEventListener('resize', close);
     return () => {

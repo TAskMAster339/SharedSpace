@@ -48,7 +48,7 @@ export const DirectoryCard: React.FC<DirectoryCardProps> = ({
       {formatCount(memberCount)}{' '}
       {formatCountWord(memberCount, 'участник', 'участника', 'участников')} &bull;{' '}
       <span title="Учтены файлы только в этой папке, без вложенных">
-        {formatCount(fileCount)}+ {formatCountWord(fileCount, 'файл', 'файла', 'файлов')}
+        {formatCount(fileCount)} {formatCountWord(fileCount, 'файл', 'файла', 'файлов')}
       </span>
     </p>
 

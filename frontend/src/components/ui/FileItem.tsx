@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Star } from 'lucide-react';
 import { FileIcon } from './FileIcon';
@@ -34,46 +34,57 @@ export const FileItem: React.FC<FileItemProps> = ({
   onDelete,
   onMove,
   onDragStart,
-}) => (
-  <Link
-    key={id}
-    to={to}
-    draggable={!!onDragStart}
-    onDragStart={(e) => onDragStart?.(e, id, name)}
-    className={cn(
-      'group flex items-center justify-between p-3 rounded-theme-md transition-colors cursor-pointer',
-      'bg-theme-tertiary hover:bg-theme-hover border border-theme',
-      className,
-    )}
-  >
-    <div className="flex items-center gap-3 min-w-0">
-      <div className="relative shrink-0">
-        <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card">
-          <FileIcon type={type} size={20} className="group-hover:text-brand transition-colors" />
+}) => {
+  const [contextMenuOpen, setContextMenuOpen] = useState(false);
+
+  return (
+    <Link
+      key={id}
+      to={to}
+      draggable={!!onDragStart}
+      onDragStart={(e) => onDragStart?.(e, id, name)}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setContextMenuOpen(true);
+      }}
+      className={cn(
+        'group flex items-center justify-between p-3 rounded-theme-md transition-colors cursor-pointer',
+        'bg-theme-tertiary hover:bg-theme-hover border border-theme',
+        className,
+      )}
+    >
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="relative shrink-0">
+          <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card">
+            <FileIcon type={type} size={20} className="group-hover:text-brand transition-colors" />
+          </div>
+          {isFavorite && (
+            <span
+              className="absolute -top-1.5 -right-1.5 flex items-center justify-center rounded-full bg-theme-tertiary border border-theme p-0.5 shadow-theme-card"
+              aria-label="В избранном"
+              title="В избранном"
+            >
+              <Star size={11} className="text-yellow-400" fill="currentColor" />
+            </span>
+          )}
         </div>
-        {isFavorite && (
-          <span
-            className="absolute -top-1.5 -right-1.5 flex items-center justify-center rounded-full bg-theme-tertiary border border-theme p-0.5 shadow-theme-card"
-            aria-label="В избранном"
-            title="В избранном"
-          >
-            <Star size={11} className="text-yellow-400" fill="currentColor" />
-          </span>
-        )}
+        <div className="min-w-0">
+          <p className="text-sm text-theme-primary font-medium truncate">{name}</p>
+          <p className="text-xs text-theme-muted">{date}</p>
+        </div>
       </div>
-      <div className="min-w-0">
-        <p className="text-sm text-theme-primary font-medium truncate">{name}</p>
-        <p className="text-xs text-theme-muted">{date}</p>
+      <div className="flex items-center gap-3 shrink-0 ml-3">
+        <span className="text-xs text-theme-muted hidden sm:inline">{size}</span>
+        <ItemActionsMenu
+          isFavorite={isFavorite}
+          onToggleFavorite={onToggleFavorite ? () => onToggleFavorite(id) : undefined}
+          onDelete={onDelete ? () => onDelete(id) : undefined}
+          onMove={onMove ? () => onMove(id) : undefined}
+          openMenu={contextMenuOpen}
+          onCloseMenu={() => setContextMenuOpen(false)}
+        />
       </div>
-    </div>
-    <div className="flex items-center gap-3 shrink-0 ml-3">
-      <span className="text-xs text-theme-muted hidden sm:inline">{size}</span>
-      <ItemActionsMenu
-        isFavorite={isFavorite}
-        onToggleFavorite={onToggleFavorite ? () => onToggleFavorite(id) : undefined}
-        onDelete={onDelete ? () => onDelete(id) : undefined}
-        onMove={onMove ? () => onMove(id) : undefined}
-      />
-    </div>
-  </Link>
-);
+    </Link>
+  );
+};

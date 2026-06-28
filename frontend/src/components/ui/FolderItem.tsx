@@ -23,6 +23,7 @@ export const FolderItem: React.FC<FolderItemProps> = ({
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const dragCounter = useRef(0);
+  const [contextMenuOpen, setContextMenuOpen] = useState(false);
 
   const handleDragOver = (e: React.DragEvent) => {
     if (!onDrop) return;
@@ -68,6 +69,11 @@ export const FolderItem: React.FC<FolderItemProps> = ({
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setContextMenuOpen(true);
+      }}
       className={cn(
         'group flex items-center justify-between gap-3 p-3 rounded-theme-md transition-colors cursor-pointer',
         'bg-theme-tertiary hover:bg-theme-hover border border-theme',
@@ -84,7 +90,12 @@ export const FolderItem: React.FC<FolderItemProps> = ({
           <p className="text-xs text-theme-muted">Папка</p>
         </div>
       </div>
-      <ItemActionsMenu onDelete={onDelete ? () => onDelete(id) : undefined} className="shrink-0" />
+      <ItemActionsMenu
+        onDelete={onDelete ? () => onDelete(id) : undefined}
+        className="shrink-0"
+        openMenu={contextMenuOpen}
+        onCloseMenu={() => setContextMenuOpen(false)}
+      />
     </Link>
   );
 };
