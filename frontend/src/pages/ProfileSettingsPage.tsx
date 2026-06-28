@@ -1,5 +1,17 @@
 import React, { useState } from 'react';
-import { User, AtSign, Mail, Lock, Pencil, Check, X, KeyRound, Trash2 } from 'lucide-react';
+import {
+  User,
+  AtSign,
+  Mail,
+  Lock,
+  Pencil,
+  Check,
+  X,
+  KeyRound,
+  Trash2,
+  Eye,
+  EyeOff,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { ApiError } from '../api/client';
@@ -29,26 +41,44 @@ const Field: React.FC<FieldProps> = ({
   type = 'text',
   placeholder,
   error,
-}) => (
-  <div>
-    <label className="text-xs font-medium text-theme-secondary mb-1.5 block">{label}</label>
-    <div className="relative">
-      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-muted">{icon}</span>
-      <input
-        type={type}
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={cn(
-          'w-full pl-10 pr-3 py-2.5 rounded-theme-md border-2 outline-none transition-colors text-sm',
-          'bg-theme-tertiary text-theme-primary placeholder:text-theme-muted',
-          error ? 'border-danger' : 'border-theme-hover focus:border-brand',
+}) => {
+  const [showPassword, setShowPassword] = useState(false);
+  const isPassword = type === 'password';
+
+  return (
+    <div>
+      <label className="text-xs font-medium text-theme-secondary mb-1.5 block">{label}</label>
+      <div className="relative group">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-muted group-hover:text-brand transition-colors">
+          {icon}
+        </span>
+        <input
+          type={isPassword && showPassword ? 'text' : type}
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={cn(
+            'w-full py-2.5 rounded-theme-md border-2 outline-none transition-colors text-sm',
+            'bg-theme-tertiary text-theme-primary placeholder:text-theme-muted',
+            error ? 'border-danger' : 'border-theme-hover focus:border-brand',
+            isPassword ? 'pl-10 pr-10' : 'pl-10 pr-3',
+          )}
+        />
+        {isPassword && (
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            tabIndex={-1}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-theme-muted hover:text-brand transition-colors"
+          >
+            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
         )}
-      />
+      </div>
+      {error && <p className="text-danger text-xs mt-1.5 pl-10">{error}</p>}
     </div>
-    {error && <p className="text-danger text-xs mt-1.5 pl-10">{error}</p>}
-  </div>
-);
+  );
+};
 
 interface InfoRowProps {
   icon: React.ReactNode;
@@ -57,8 +87,8 @@ interface InfoRowProps {
 }
 
 const InfoRow: React.FC<InfoRowProps> = ({ icon, label, value }) => (
-  <div className="flex items-center gap-3 py-3 border-b border-theme last:border-b-0">
-    <span className="flex items-center justify-center w-9 h-9 rounded-theme-full bg-theme-tertiary text-theme-muted shrink-0">
+  <div className="group flex items-center gap-3 py-3 border-b border-theme last:border-b-0">
+    <span className="flex items-center justify-center w-9 h-9 rounded-theme-full bg-theme-tertiary text-theme-muted group-hover:text-brand transition-colors shrink-0">
       {icon}
     </span>
     <div className="min-w-0">
@@ -322,13 +352,6 @@ const ProfileSettingsPage: React.FC = () => {
 
             <div className="flex flex-col sm:flex-row gap-3 mt-1">
               <Button
-                type="submit"
-                disabled={isSavingProfile}
-                className="flex-1 flex items-center justify-center gap-1.5"
-              >
-                <Check size={16} /> {isSavingProfile ? 'Сохранение...' : 'Сохранить'}
-              </Button>
-              <Button
                 type="button"
                 variant="secondary"
                 onClick={cancelEditing}
@@ -336,6 +359,13 @@ const ProfileSettingsPage: React.FC = () => {
                 className="flex-1 flex items-center justify-center gap-1.5"
               >
                 <X size={16} /> Отмена
+              </Button>
+              <Button
+                type="submit"
+                disabled={isSavingProfile}
+                className="flex-1 flex items-center justify-center gap-1.5"
+              >
+                <Check size={16} /> {isSavingProfile ? 'Сохранение...' : 'Сохранить'}
               </Button>
             </div>
           </form>
@@ -393,13 +423,6 @@ const ProfileSettingsPage: React.FC = () => {
 
             <div className="flex flex-col sm:flex-row gap-3 mt-1">
               <Button
-                type="submit"
-                disabled={isSavingPassword}
-                className="flex-1 flex items-center justify-center gap-1.5"
-              >
-                <Check size={16} /> {isSavingPassword ? 'Сохранение...' : 'Изменить пароль'}
-              </Button>
-              <Button
                 type="button"
                 variant="secondary"
                 onClick={cancelChangingPassword}
@@ -407,6 +430,13 @@ const ProfileSettingsPage: React.FC = () => {
                 className="flex-1 flex items-center justify-center gap-1.5"
               >
                 <X size={16} /> Отмена
+              </Button>
+              <Button
+                type="submit"
+                disabled={isSavingPassword}
+                className="flex-1 flex items-center justify-center gap-1.5"
+              >
+                <Check size={16} /> {isSavingPassword ? 'Сохранение...' : 'Изменить пароль'}
               </Button>
             </div>
           </form>
@@ -417,18 +447,22 @@ const ProfileSettingsPage: React.FC = () => {
       <Card>
         <CardHeader>
           <CardTitle className="text-danger">Удаление аккаунта</CardTitle>
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={openDeleteModal}
+            className="flex items-center gap-1.5"
+          >
+            <Trash2 size={14} /> Удалить аккаунт
+          </Button>
         </CardHeader>
-        <div className="border border-danger/20 rounded-theme-md p-4 bg-danger-light/10">
-          <p className="text-sm text-theme-secondary mb-3">
+        <div className="border border-danger/20 rounded-theme-md p-4 bg-danger-light/10 mx-4 sm:mx-6 mb-5 sm:mb-6">
+          <p className="text-sm text-theme-secondary">
             Удаление аккаунта приведёт к безвозвратному удалению всех ваших файлов, директорий и
             данных.
             <br />
             Это действие нельзя отменить.
           </p>
-          <Button variant="danger" onClick={openDeleteModal} className="flex items-center gap-2">
-            <Trash2 size={16} />
-            Удалить аккаунт
-          </Button>
         </div>
       </Card>
 
