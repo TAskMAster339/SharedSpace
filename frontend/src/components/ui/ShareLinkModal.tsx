@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { Modal } from './Modal';
 import { Button } from './Button';
+import { EditShareLinkModal } from './EditShareLinkModal';
+import { useToastStore } from '../../hooks/useToast';
 import {
   ShareLink,
   ShareLinkAccess,
@@ -96,6 +98,11 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
   // Copied state per link id
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
+  // Редактирование ссылки
+  const [editingLink, setEditingLink] = useState<ShareLink | null>(null);
+
+  const showToast = useToastStore((s) => s.showToast);
+
   const loadLinks = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -135,6 +142,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
       setExpiry('');
       setPassword('');
       setShowPassword(false);
+      showToast('Ссылка общего доступа создана');
     } catch (err: any) {
       setError(err?.message || 'Не удалось создать ссылку');
     } finally {
@@ -142,7 +150,8 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
     }
   };
 
-  const handleDelete = async (linkId: string) => {
+  const handleDelete = async (e: React.MouseEvent, linkId: string) => {
+    e.stopPropagation();
     try {
       await deleteShareLink(accessToken, linkId);
       setLinks((prev) => prev.filter((l) => l.id !== linkId));
@@ -151,7 +160,8 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
     }
   };
 
-  const handleCopy = async (link: ShareLink) => {
+  const handleCopy = async (e: React.MouseEvent, link: ShareLink) => {
+    e.stopPropagation();
     const url = `${SHARE_BASE_URL}/${link.token}`;
     try {
       await navigator.clipboard.writeText(url);
@@ -160,6 +170,14 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
     } catch {
       // fallback
     }
+  };
+
+  const handleEditLink = (link: ShareLink) => {
+    setEditingLink(link);
+  };
+
+  const handleEditSaved = (updated: ShareLink) => {
+    setLinks((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
   };
 
   return (
@@ -196,7 +214,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
                   'flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-theme-md border text-sm transition-colors',
                   access === 'public'
                     ? 'border-brand bg-brand/10 text-brand'
-                    : 'border-theme bg-theme-secondary text-theme-secondary hover:bg-theme-hover',
+                    : 'border-theme bg-theme-secondary text-theme-secondary hover:border-brand hover:text-brand hover:bg-brand-light',
                 )}
               >
                 <Globe size={15} />
@@ -208,7 +226,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
                   'flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-theme-md border text-sm transition-colors',
                   access === 'authenticated'
                     ? 'border-brand bg-brand/10 text-brand'
-                    : 'border-theme bg-theme-secondary text-theme-secondary hover:bg-theme-hover',
+                    : 'border-theme bg-theme-secondary text-theme-secondary hover:border-brand hover:text-brand hover:bg-brand-light',
                 )}
               >
                 <Lock size={15} />
@@ -234,7 +252,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
                     'px-3 py-1.5 rounded-theme-md border text-xs transition-colors',
                     expiry === opt.value
                       ? 'border-brand bg-brand/10 text-brand'
-                      : 'border-theme bg-theme-secondary text-theme-secondary hover:bg-theme-hover',
+                      : 'border-theme bg-theme-secondary text-theme-secondary hover:border-brand hover:text-brand hover:bg-brand-light',
                   )}
                 >
                   {opt.label}
@@ -248,10 +266,10 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
             <label className="text-xs text-theme-secondary font-medium">
               Пароль (необязательно)
             </label>
-            <div className="relative">
+            <div className="relative group">
               <KeyRound
                 size={14}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-muted"
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-muted group-hover:text-brand transition-colors"
               />
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -264,7 +282,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-theme-muted hover:text-theme-secondary transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-theme-muted hover:text-brand transition-colors"
               >
                 {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
               </button>
@@ -274,6 +292,14 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
           {/* Кнопки */}
           <div className="flex gap-2 pt-1">
             <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setShowCreateForm(false)}
+              className="flex-1 border border-theme"
+            >
+              Отмена
+            </Button>
+            <Button
               variant="primary"
               size="sm"
               onClick={handleCreate}
@@ -281,14 +307,6 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
               className="flex-1"
             >
               {isCreating ? 'Создание...' : 'Создать'}
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setShowCreateForm(false)}
-              className="flex-1 border border-theme"
-            >
-              Отмена
             </Button>
           </div>
         </div>
@@ -324,11 +342,12 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
           return (
             <div
               key={link.id}
+              onClick={() => handleEditLink(link)}
               className={cn(
-                'flex items-start gap-3 p-3 rounded-theme-md border transition-colors',
+                'flex items-start gap-3 p-3 rounded-theme-md border transition-colors cursor-pointer',
                 expired
                   ? 'border-theme bg-theme-tertiary opacity-60'
-                  : 'border-theme bg-theme-secondary',
+                  : 'border-theme bg-theme-secondary hover:border-brand/30 hover:bg-brand-light',
               )}
             >
               {/* Иконка типа */}
@@ -374,19 +393,22 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
               <div className="flex items-center gap-1 shrink-0">
                 {!expired && (
                   <button
-                    onClick={() => handleCopy(link)}
+                    onClick={(e) => handleCopy(e, link)}
                     title="Скопировать ссылку"
-                    className="p-1.5 rounded-theme-sm hover:bg-theme-hover transition-colors"
+                    className="p-1.5 rounded-theme-sm hover:bg-theme-hover transition-colors group"
                   >
                     {isCopied ? (
                       <Check size={14} className="text-green-500" />
                     ) : (
-                      <Copy size={14} className="text-theme-secondary" />
+                      <Copy
+                        size={14}
+                        className="text-theme-secondary group-hover:text-brand transition-colors"
+                      />
                     )}
                   </button>
                 )}
                 <button
-                  onClick={() => handleDelete(link.id)}
+                  onClick={(e) => handleDelete(e, link.id)}
                   title="Удалить ссылку"
                   className="p-1.5 rounded-theme-sm hover:bg-danger-light text-theme-secondary hover:text-danger transition-colors"
                 >
@@ -397,6 +419,14 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
           );
         })}
       </div>
+
+      <EditShareLinkModal
+        isOpen={editingLink !== null}
+        onClose={() => setEditingLink(null)}
+        link={editingLink}
+        accessToken={accessToken}
+        onSaved={handleEditSaved}
+      />
     </Modal>
   );
 };
