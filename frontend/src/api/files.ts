@@ -158,7 +158,7 @@ export const moveFile = async (
 export interface ConvertRequest {
   target_format: string;
   save: boolean;
-  directory_id?: string; 
+  directory_id?: string;
 }
 
 export interface ConversionResponse {
@@ -187,11 +187,11 @@ export function convertAndSave(
     target_format: targetFormat,
     save: true,
   };
-  
+
   if (directoryId) {
     body.directory_id = directoryId;
   }
-  
+
   return apiRequest<ConversionResponse>(`/files/${fileId}/convert`, {
     method: 'POST',
     token: accessToken,

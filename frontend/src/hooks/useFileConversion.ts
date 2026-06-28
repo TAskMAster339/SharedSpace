@@ -17,77 +17,75 @@ export function useFileConversion(): UseFileConversionReturn {
   const [isConverting, setIsConverting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const showToast = useToastStore((state) => state.showToast);
-  
-  const handleConvertAndDownload = useCallback(async (
-    fileId: string,
-    format: string,
-    filename: string,
-  ): Promise<void> => {
-    if (!accessToken) {
-      setError('Не авторизован');
-      showToast('Не авторизован', 'error');
-      return;
-    }
 
-    setIsConverting(true);
-    setError(null);
+  const handleConvertAndDownload = useCallback(
+    async (fileId: string, format: string, filename: string): Promise<void> => {
+      if (!accessToken) {
+        setError('Не авторизован');
+        showToast('Не авторизован', 'error');
+        return;
+      }
 
-    try {
-      const normalizedFormat = normalizeFormat(format);
-      const result = await convertAndDownload(accessToken, fileId, normalizedFormat);
+      setIsConverting(true);
+      setError(null);
 
-      const response = await fetch(result.download_url);
-      const blob = await response.blob();
+      try {
+        const normalizedFormat = normalizeFormat(format);
+        const result = await convertAndDownload(accessToken, fileId, normalizedFormat);
 
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = result.filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      setTimeout(() => URL.revokeObjectURL(link.href), 100);
+        const response = await fetch(result.download_url);
+        const blob = await response.blob();
 
-      showToast(`Файл «${filename}» сконвертирован и скачан`, 'success');
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : 'Ошибка конвертации';
-      setError(message);
-      showToast(`Ошибка конвертации: ${message}`, 'error');
-      throw err;
-    } finally {
-      setIsConverting(false);
-    }
-  }, [accessToken, showToast]);
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = result.filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(link.href), 100);
 
-  const handleConvertAndSave = useCallback(async (
-    fileId: string,
-    format: string,
-    filename: string,
-  ): Promise<string | null> => {
-    if (!accessToken) {
-      setError('Не авторизован');
-      showToast('Не авторизован', 'error');
-      return null;
-    }
+        showToast(`Файл «${filename}» сконвертирован и скачан`, 'success');
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : 'Ошибка конвертации';
+        setError(message);
+        showToast(`Ошибка конвертации: ${message}`, 'error');
+        throw err;
+      } finally {
+        setIsConverting(false);
+      }
+    },
+    [accessToken, showToast],
+  );
 
-    setIsConverting(true);
-    setError(null);
+  const handleConvertAndSave = useCallback(
+    async (fileId: string, format: string, filename: string): Promise<string | null> => {
+      if (!accessToken) {
+        setError('Не авторизован');
+        showToast('Не авторизован', 'error');
+        return null;
+      }
 
-    try {
-      const normalizedFormat = normalizeFormat(format);
-      const result = await convertAndSave(accessToken, fileId, normalizedFormat);
-      
-      const ext = format.toLowerCase();
-      showToast(`Файл «${filename}» сконвертирован в ${ext.toUpperCase()} и сохранён`, 'success');
-      return result.result_file_id;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : 'Ошибка конвертации';
-      setError(message);
-      showToast(`Ошибка конвертации: ${message}`, 'error');
-      throw err;
-    } finally {
-      setIsConverting(false);
-    }
-  }, [accessToken, showToast]);
+      setIsConverting(true);
+      setError(null);
+
+      try {
+        const normalizedFormat = normalizeFormat(format);
+        const result = await convertAndSave(accessToken, fileId, normalizedFormat);
+
+        const ext = format.toLowerCase();
+        showToast(`Файл «${filename}» сконвертирован в ${ext.toUpperCase()} и сохранён`, 'success');
+        return result.result_file_id;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : 'Ошибка конвертации';
+        setError(message);
+        showToast(`Ошибка конвертации: ${message}`, 'error');
+        throw err;
+      } finally {
+        setIsConverting(false);
+      }
+    },
+    [accessToken, showToast],
+  );
 
   return {
     isConverting,

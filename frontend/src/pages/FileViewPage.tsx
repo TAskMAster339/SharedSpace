@@ -286,10 +286,10 @@ const FileViewPage: React.FC = () => {
   const handleGoBack = useCallback(() => {
     if (directory) {
       navigate(`/directories/${directory.id}`, {
-        state: { 
+        state: {
           fromFile: true,
           directoryId: directory.id,
-        }
+        },
       });
     } else {
       navigate(-1);
@@ -664,7 +664,7 @@ const FileViewPage: React.FC = () => {
               mimeType={file.mime_type}
               extension={file.extension}
               onConvertAndDownload={handleConvertAndDownload}
-              onConvertAndSave={handleConvertAndSave} 
+              onConvertAndSave={handleConvertAndSave}
               isConverting={isConverting}
             />
 

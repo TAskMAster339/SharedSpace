@@ -114,7 +114,7 @@ const DirectoryPage: React.FC = () => {
 
       try {
         const crumbs: BreadcrumbItem[] = [];
-        
+
         // Получаем текущую директорию
         const current = currentDir || (await getDirectory(accessToken, directoryId));
 
@@ -161,7 +161,7 @@ const DirectoryPage: React.FC = () => {
           // Используем try-catch с полным подавлением ошибок
           try {
             const parent = await getDirectory(accessToken, parentId);
-            
+
             // Проверяем, является ли родитель общей директорией
             const parentIsShared = checkIsShared(parent.id);
 
@@ -329,12 +329,14 @@ const DirectoryPage: React.FC = () => {
       // Если директория принадлежит текущему пользователю и имеет permissions,
       // но checkIsShared вернул false (ещё не загрузилось), проверяем по permissions
       let effectiveShared = shared;
-      if (directoryInfo.owner_id === user?.id && 
-          directoryInfo.type !== 'root' && 
-          directoryInfo.permissions !== undefined) {
+      if (
+        directoryInfo.owner_id === user?.id &&
+        directoryInfo.type !== 'root' &&
+        directoryInfo.permissions !== undefined
+      ) {
         effectiveShared = true;
       }
-      
+
       if (effectiveShared !== isShared) {
         setIsShared(effectiveShared);
         // Перезагружаем breadcrumbs с новым статусом
@@ -343,7 +345,16 @@ const DirectoryPage: React.FC = () => {
         }
       }
     }
-  }, [isLoadingShared, actualId, accessToken, checkIsShared, isShared, directoryInfo, user?.id, loadBreadcrumbs]);
+  }, [
+    isLoadingShared,
+    actualId,
+    accessToken,
+    checkIsShared,
+    isShared,
+    directoryInfo,
+    user?.id,
+    loadBreadcrumbs,
+  ]);
 
   // --- Эффект 4: Обновляем DnD target при изменении actualId ---
   useEffect(() => {
@@ -378,11 +389,11 @@ const DirectoryPage: React.FC = () => {
     if (!accessToken || !id) return;
 
     const state = location.state as { fromFile?: boolean; directoryId?: string } | null;
-    
+
     if (state?.fromFile && state?.directoryId) {
       // Сбрасываем state, чтобы при обновлении страницы не было проблем
       navigate(location.pathname, { replace: true, state: {} });
-      
+
       // Если ID из state отличается от текущего в URL, загружаем его
       if (state.directoryId !== id) {
         loadDirectory(state.directoryId);
