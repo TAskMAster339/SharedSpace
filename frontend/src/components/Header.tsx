@@ -157,13 +157,16 @@ export const Header: React.FC = () => {
             <button
               ref={mobileSearchBtnRef}
               onClick={toggleMobileSearch}
-              className="p-2 rounded-theme-full hover:bg-theme-hover transition-colors md:hidden"
+              className="group p-2 rounded-theme-full hover:bg-theme-hover transition-colors md:hidden"
               aria-label="Поиск"
             >
               {mobileSearchOpen ? (
                 <X size={20} className="text-theme-secondary" />
               ) : (
-                <Search size={20} className="text-theme-secondary" />
+                <Search
+                  size={20}
+                  className="text-theme-secondary group-hover:text-brand transition-colors"
+                />
               )}
             </button>
 

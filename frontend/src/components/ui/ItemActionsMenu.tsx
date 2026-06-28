@@ -122,8 +122,12 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
         >
           <Star
             size={18}
-            className={`${isFavorite ? 'text-yellow-400' : 'text-theme-muted'} group-hover:text-yellow-400 transition-colors`}
-            fill={isFavorite ? 'currentColor' : 'none'}
+            fill={isFavorite ? 'currentColor' : 'transparent'}
+            className={cn(
+              'transition-[fill,color] duration-200',
+              isFavorite ? 'text-yellow-400' : 'text-theme-muted group-hover:fill-transparent',
+              isFavorite ? '' : 'group-hover:text-yellow-400',
+            )}
           />
           {isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'}
         </button>

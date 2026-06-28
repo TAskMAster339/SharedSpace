@@ -43,13 +43,17 @@ export const Sidebar: React.FC = () => {
                 size={18}
                 className={cn(
                   'size-[18px] transition-colors',
-                  isActive
-                    ? 'text-brand'
-                    : item.icon === Star
-                      ? 'text-theme-muted group-hover:text-yellow-400'
-                      : item.icon === Trash2
-                        ? 'text-theme-muted group-hover:text-red-500'
-                        : 'text-theme-muted group-hover:text-brand',
+                  isActive && item.icon === Star
+                    ? 'text-yellow-400'
+                    : isActive && item.icon === Trash2
+                      ? 'text-red-500'
+                      : isActive
+                        ? 'text-brand'
+                        : item.icon === Star
+                          ? 'text-theme-muted group-hover:text-yellow-400'
+                          : item.icon === Trash2
+                            ? 'text-theme-muted group-hover:text-red-500'
+                            : 'text-theme-muted group-hover:text-brand',
                 )}
               />
               {item.label}
@@ -60,7 +64,7 @@ export const Sidebar: React.FC = () => {
 
       {/* Индикатор места внизу */}
       <div className="mt-auto mb-6 pt-6 border-t border-theme">
-        <div className="bg-theme-tertiary rounded-theme-xl p-4 shadow-theme-card border border-theme/50">
+        <div className="group bg-theme-tertiary hover:bg-theme-hover rounded-theme-xl p-4 shadow-theme-card border border-theme/50 transition-colors cursor-default">
           <StorageIndicator used={storageUsed} total={storageQuota} />
         </div>
       </div>

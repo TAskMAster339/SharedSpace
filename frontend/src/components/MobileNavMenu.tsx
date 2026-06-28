@@ -47,7 +47,7 @@ export const MobileNavMenu: React.FC<MobileNavMenuProps> = ({ onNavigate }) => {
           })}
 
           <div className="mt-2 pt-3 px-1 border-t border-theme">
-            <div className="bg-theme-tertiary rounded-theme-xl p-4 shadow-theme-card border border-theme/50">
+            <div className="group bg-theme-tertiary hover:bg-theme-hover rounded-theme-xl p-4 shadow-theme-card border border-theme/50 transition-colors">
               <StorageIndicator used={storageUsed} total={storageQuota} />
             </div>
           </div>

@@ -25,10 +25,14 @@ export const StorageIndicator: React.FC<StorageIndicatorProps> = ({ used, total,
   const percentage = total > 0 ? Math.min((used / total) * 100, 100) : 0;
 
   return (
-    <div className={cn('w-full', className)}>
+    <div className={cn('w-full select-none', className)}>
       <div className="flex items-center justify-between text-xs text-theme-secondary mb-3">
         <span className="flex items-center gap-1.5 text-sm font-medium">
-          <HardDrive size={14} className="text-theme-muted" /> Хранилище
+          <HardDrive
+            size={14}
+            className="text-theme-muted group-hover:text-brand transition-colors"
+          />{' '}
+          Хранилище
         </span>
         <span className="text-sm" title={`${formatBytes(used)} из ${formatBytes(total)}`}>
           {used.toFixed(1)} / {total} ГБ

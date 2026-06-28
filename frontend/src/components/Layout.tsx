@@ -32,12 +32,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
         <div className="flex-1 flex flex-col min-h-0 min-w-0">
           <div className="flex-1 min-w-0 overflow-y-auto overflow-x-clip">
-            <div
-              className={cn(
-                'max-w-6xl mx-auto',
-                isOnLandingPage ? 'p-0' : 'p-4 sm:p-6',
-              )}
-            >
+            <div className={cn('max-w-6xl mx-auto', isOnLandingPage ? 'p-0' : 'p-4 sm:p-6')}>
               {children ? children : <Outlet />}
             </div>
           </div>

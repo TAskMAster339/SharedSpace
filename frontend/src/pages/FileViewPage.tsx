@@ -305,9 +305,7 @@ const FileViewPage: React.FC = () => {
         navigate('/dashboard');
       }
     } catch (err) {
-      setDeleteError(
-        err instanceof ApiError ? err.message : 'Не удалось удалить файл',
-      );
+      setDeleteError(err instanceof ApiError ? err.message : 'Не удалось удалить файл');
     } finally {
       setIsDeleting(false);
     }
@@ -607,7 +605,10 @@ const FileViewPage: React.FC = () => {
                 onClick={downloadFile}
                 className="group w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-brand text-theme-on-brand hover:bg-brand-hover rounded-theme-md transition-colors text-sm font-medium"
               >
-                <Download size={16} className="group-hover:[animation:ss-bounce-up_0.4s_ease-in-out]" />
+                <Download
+                  size={16}
+                  className="group-hover:[animation:ss-bounce-up_0.4s_ease-in-out]"
+                />
                 Скачать
               </button>
 
@@ -620,8 +621,18 @@ const FileViewPage: React.FC = () => {
                 onClick={handleToggleFavorite}
                 className="group w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium"
               >
-                <Star size={16} className={cn('transition-colors', isFav ? 'text-yellow-400 fill-current' : '', 'group-hover:text-yellow-400')} />
-                {isFav ? 'Убрать из Избранного' : 'Добавить в Избранное'}
+                <Star
+                  size={16}
+                  fill={isFav ? 'currentColor' : 'transparent'}
+                  className={cn(
+                    'transition-[fill,color] duration-200',
+                    isFav ? 'text-yellow-400' : 'text-theme-muted group-hover:fill-transparent',
+                    isFav ? '' : 'group-hover:text-yellow-400',
+                  )}
+                />
+                <span className="min-w-[150px] text-left">
+                  {isFav ? 'Убрать из Избранного' : 'Добавить в Избранное'}
+                </span>
               </button>
 
               <button
@@ -663,11 +674,7 @@ const FileViewPage: React.FC = () => {
               isConfirming={isDeleting}
               confirmLabel="Удалить"
               error={deleteError}
-              title={
-                <h3 className="font-medium text-theme-primary">
-                  Удалить «{file.filename}»?
-                </h3>
-              }
+              title={<h3 className="font-medium text-theme-primary">Удалить «{file.filename}»?</h3>}
               description={
                 <p className="text-sm text-theme-secondary">
                   Файл будет перемещён в корзину. Вы сможете восстановить его позже.
