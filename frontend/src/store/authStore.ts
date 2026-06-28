@@ -18,7 +18,7 @@ import { getCookie, setCookie, removeCookie } from '../utils/cookies';
 
 const REFRESH_COOKIE = 'refresh_token';
 
-interface AuthState {
+export interface AuthState {
   user: AuthUser | null;
   accessToken: string | null;
   isAuthenticated: boolean;

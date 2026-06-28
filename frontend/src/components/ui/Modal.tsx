@@ -61,9 +61,12 @@ export const Modal: React.FC<ModalProps> = ({
           <h2 className="text-lg font-semibold text-theme-primary">{title}</h2>
           <button
             onClick={onClose}
-            className="p-1 rounded-theme-full hover:bg-theme-hover transition-colors"
+            className="p-1 rounded-theme-full hover:bg-theme-hover transition-colors group"
           >
-            <X size={20} className="text-theme-secondary" />
+            <X
+              size={20}
+              className="text-theme-secondary group-hover:text-brand transition-colors"
+            />
           </button>
         </div>
 

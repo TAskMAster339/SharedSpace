@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Download, Share2, Star, Image, EyeOff, Trash2 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import type { AuthState } from '../store/authStore';
 import { useFavorites } from '../hooks/useFavorites';
 import { getFileMetadata, getFileContentUrl, FileMetadata, softDeleteFile } from '../api/files';
 import { getDirectoryById, Directory } from '../api/directories';
@@ -12,6 +13,7 @@ import { Button } from '../components/ui/Button';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { ConvertModal } from '../components/ui/ConvertModal';
 import { useFileConversion } from '../hooks/useFileConversion';
+import { ShareLinkModal } from '../components/ui/ShareLinkModal';
 import { resolveFileIconType, getFileTypeDisplay } from '../utils/fileType';
 import { formatFileSize, formatDate } from '../utils/format';
 import { cn } from '../utils/cn';
@@ -91,14 +93,15 @@ const PROBLEMATIC_EXTENSIONS = new Set(['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pp
 const FileViewPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const accessToken = useAuthStore((state) => state.accessToken);
-  const user = useAuthStore((state) => state.user);
+  const accessToken = useAuthStore((state: AuthState) => state.accessToken);
+  const user = useAuthStore((state: AuthState) => state.user);
   const { isFavorite, toggleFavorite } = useFavorites();
   const { isConverting, convertAndDownload, convertAndSave } = useFileConversion();
   const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   const [file, setFile] = useState<FileMetadata | null>(null);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
@@ -613,7 +616,10 @@ const FileViewPage: React.FC = () => {
                 Скачать
               </button>
 
-              <button className="group w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium">
+              <button
+                onClick={() => setIsShareModalOpen(true)}
+                className="group w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium"
+              >
                 <Share2 size={16} className="group-hover:text-green-500 transition-colors" />
                 Поделиться ссылкой
               </button>
@@ -667,6 +673,16 @@ const FileViewPage: React.FC = () => {
               onConvertAndSave={handleConvertAndSave}
               isConverting={isConverting}
             />
+
+            {accessToken && (
+              <ShareLinkModal
+                isOpen={isShareModalOpen}
+                onClose={() => setIsShareModalOpen(false)}
+                fileId={file.id}
+                fileName={file.filename}
+                accessToken={accessToken}
+              />
+            )}
 
             <ConfirmModal
               isOpen={isDeleteModalOpen}
