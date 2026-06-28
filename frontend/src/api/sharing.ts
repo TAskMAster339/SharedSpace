@@ -3,8 +3,10 @@ import { apiRequest } from './client';
 export type SharingRole = 'viewer' | 'editor' | 'admin';
 
 export interface SharedDirectoryWithStats {
+  id: string;
   directory_id: string;
   name: string;
+  owner_id: string;
   role: string;
   member_count: number;
   file_count: number;

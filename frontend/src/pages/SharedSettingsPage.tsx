@@ -77,7 +77,7 @@ const SharedSettingsPage: React.FC = () => {
       setSharedDirId(sd.id);
       setDirName(sd.name);
       setOwnerId(sd.owner_id);
-      setCurrentUserRole(sd.role);
+      setCurrentUserRole(sd.role as SharingRole);
 
       const memberList = await getMembers(accessToken, sd.id);
       setMembers(memberList);
