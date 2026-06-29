@@ -64,7 +64,7 @@ func (r *Repository) UpdateUserProfile(ctx context.Context, db dbTX, userID stri
 			second_name = CASE WHEN $5::text IS NULL THEN second_name ELSE $5 END,
 			updated_at = now()
 		WHERE id = $1
-		RETURNING id, username, first_name, second_name, email, password_hash, storage_quota, storage_used, created_at
+		RETURNING id, username, first_name, second_name, email, password_hash, storage_quota, storage_used, shared_dirs_count, shared_dirs_quota, created_at
 	`, userID, input.Email, input.Username, input.FirstName, input.SecondName).Scan(
 		&user.ID, &user.Username, &user.FirstName, &user.SecondName, &user.Email, &user.PasswordHash, &user.StorageQuota, &user.StorageUsed, &user.SharedDirsCount, &user.SharedDirsQuota, &user.CreatedAt,
 	)
