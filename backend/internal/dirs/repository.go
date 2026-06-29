@@ -230,6 +230,49 @@ func (r *Repository) DecrementSharedDirsCount(ctx context.Context, db dbTX, user
 	return err
 }
 
+func (r *Repository) CheckShareLinks(ctx context.Context, db dbTX, fileIDs, dirIDs []string) (fileLinks map[string]bool, dirLinks map[string]bool, err error) {
+	fileLinks = make(map[string]bool)
+	dirLinks = make(map[string]bool)
+
+	if len(fileIDs) == 0 && len(dirIDs) == 0 {
+		return
+	}
+
+	query := `SELECT file_id, directory_id FROM share_links WHERE`
+	args := make([]any, 0, 2)
+
+	if len(fileIDs) > 0 && len(dirIDs) > 0 {
+		query += ` (file_id = ANY($1) OR directory_id = ANY($2))`
+		args = append(args, fileIDs, dirIDs)
+	} else if len(fileIDs) > 0 {
+		query += ` file_id = ANY($1)`
+		args = append(args, fileIDs)
+	} else {
+		query += ` directory_id = ANY($1)`
+		args = append(args, dirIDs)
+	}
+
+	rows, err := db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var fileID, dirID *string
+		if err := rows.Scan(&fileID, &dirID); err != nil {
+			return nil, nil, err
+		}
+		if fileID != nil {
+			fileLinks[*fileID] = true
+		}
+		if dirID != nil {
+			dirLinks[*dirID] = true
+		}
+	}
+	return fileLinks, dirLinks, rows.Err()
+}
+
 func (r *Repository) IncrementFilesCount(ctx context.Context, db dbTX, directoryID string, delta int) error {
 	_, err := db.Exec(ctx, `
 		WITH RECURSIVE ancestors AS (

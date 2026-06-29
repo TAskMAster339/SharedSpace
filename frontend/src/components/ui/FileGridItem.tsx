@@ -66,7 +66,7 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
         )}
         {hasShareLinks && (
           <span
-            className="absolute top-0 right-0 z-20 flex items-center justify-center rounded-full bg-theme-tertiary border border-theme p-0.5 shadow-theme-card"
+            className="absolute top-0 left-0 flex items-center justify-center rounded-full bg-theme-tertiary border border-theme p-0.5 shadow-theme-card"
             aria-label="Есть ссылки общего доступа"
             title="Есть ссылки общего доступа"
           >

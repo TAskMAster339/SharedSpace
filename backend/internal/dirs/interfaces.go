@@ -42,6 +42,7 @@ type RepositoryInterface interface {
 	IncrementSharedDirsCount(ctx context.Context, db dbTX, userID string) error
 	DecrementSharedDirsCount(ctx context.Context, db dbTX, userID string) error
 	IncrementFilesCount(ctx context.Context, db dbTX, directoryID string, delta int) error
+	CheckShareLinks(ctx context.Context, db dbTX, fileIDs, dirIDs []string) (fileLinks map[string]bool, dirLinks map[string]bool, err error)
 }
 
 type SharingRepository interface {

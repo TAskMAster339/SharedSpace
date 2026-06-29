@@ -8,7 +8,6 @@ import {
   Eye,
   EyeOff,
   Home,
-  EyeOff as EyeOffIcon,
   ChevronRight,
 } from 'lucide-react';
 import {
@@ -19,8 +18,10 @@ import {
 import { useAuthStore } from '../store/authStore';
 import { FileIcon } from '../components/ui/FileIcon';
 import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
+import { Card } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
 import { resolveFileIconType, getFileTypeDisplay } from '../utils/fileType';
-import { formatFileSize } from '../utils/format';
+import { formatFileSize, formatDate } from '../utils/format';
 
 const SUPPORTED_EXTENSIONS_FOR_VIEW = new Set([
   'pdf',
@@ -261,57 +262,59 @@ const SharedDirectoryPage: React.FC = () => {
 
   if (needsPassword && !data) {
     return (
-      <div className="flex items-center justify-center py-20 px-4">
-        <div className="w-full max-w-sm space-y-4">
-          <div className="text-center space-y-1">
+      <div className="flex items-center justify-center min-h-[80vh] px-4">
+        <Card className="w-full max-w-md">
+          <div className="text-center space-y-1 mb-6">
             <div className="w-12 h-12 mx-auto flex items-center justify-center bg-brand/10 rounded-full mb-3">
               <KeyRound size={22} className="text-brand" />
             </div>
-            <h2 className="text-base font-semibold text-theme-primary">
+            <h2 className="text-xl font-semibold text-theme-primary">
               Директория защищена паролем
             </h2>
             <p className="text-sm text-theme-muted">Введите пароль для доступа</p>
           </div>
-          <div className="relative">
-            <KeyRound
-              size={14}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-muted"
-            />
-            <input
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handlePasswordSubmit()}
-              placeholder="Пароль"
-              autoComplete="new-password"
-              autoFocus
-              className="w-full pl-9 pr-9 py-2.5 text-sm bg-theme-secondary border border-theme rounded-theme-md text-theme-primary placeholder:text-theme-muted focus:outline-none focus:border-brand transition-colors"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-theme-muted hover:text-theme-secondary transition-colors"
+          <div className="flex flex-col gap-3">
+            <div className="relative group">
+              <KeyRound
+                size={14}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-muted group-hover:text-brand transition-colors"
+              />
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handlePasswordSubmit()}
+                placeholder="Пароль"
+                autoComplete="new-password"
+                autoFocus
+                className="w-full pl-9 pr-10 py-2 rounded-theme-md border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-theme-muted hover:text-brand transition-colors"
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+            {passwordError && <p className="text-sm text-danger">{passwordError}</p>}
+            <Button
+              onClick={handlePasswordSubmit}
+              disabled={!password || isSubmittingPassword}
+              className="mt-1 w-full"
             >
-              {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
-            </button>
+              {isSubmittingPassword ? 'Проверка...' : 'Открыть'}
+            </Button>
           </div>
-          {passwordError && <p className="text-sm text-danger">{passwordError}</p>}
-          <button
-            onClick={handlePasswordSubmit}
-            disabled={!password || isSubmittingPassword}
-            className="w-full py-2.5 bg-brand text-theme-on-brand hover:bg-brand-hover rounded-theme-md text-sm font-medium transition-colors disabled:opacity-50"
-          >
-            {isSubmittingPassword ? 'Проверка...' : 'Открыть'}
-          </button>
-          <div className="text-center">
+          <p className="mt-6 text-center text-sm text-theme-secondary">
             <Link
-              to="/"
-              className="text-sm text-theme-secondary hover:text-theme-primary transition-colors"
+              to={accessToken ? '/dashboard' : '/'}
+              className="text-brand hover:text-brand-hover font-medium"
             >
               ← SharedSpace
             </Link>
-          </div>
-        </div>
+          </p>
+        </Card>
       </div>
     );
   }
@@ -355,7 +358,7 @@ const SharedDirectoryPage: React.FC = () => {
       if (!canPreview || iframeError) {
         return (
           <div className="bg-theme-tertiary rounded-theme-lg py-16 flex flex-col items-center gap-4 text-theme-muted group">
-            <EyeOffIcon
+            <EyeOff
               size={64}
               className="text-theme-muted group-hover:text-brand transition-colors"
             />
@@ -497,6 +500,12 @@ const SharedDirectoryPage: React.FC = () => {
                   <span className="text-theme-secondary">Владелец</span>
                   <span className="text-theme-primary font-medium">{data.owner_username}</span>
                 </div>
+                <div className="flex justify-between">
+                  <span className="text-theme-secondary">Создан</span>
+                  <span className="text-theme-primary font-medium">
+                    {formatDate(previewFile.created_at)}
+                  </span>
+                </div>
               </div>
             </div>
             <div className="bg-theme-secondary border border-theme rounded-theme-lg p-5 shadow-theme-card">
@@ -523,7 +532,7 @@ const SharedDirectoryPage: React.FC = () => {
       {/* Breadcrumbs */}
       <div className="flex items-center gap-1 text-sm flex-wrap">
         <Link
-          to="/"
+          to={accessToken ? '/dashboard' : '/'}
           className="text-theme-secondary hover:text-theme-primary transition-colors shrink-0"
         >
           <Home size={14} />

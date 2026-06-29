@@ -2922,6 +2922,9 @@ const docTemplate = `{
                 "files_count": {
                     "type": "integer"
                 },
+                "has_share_links": {
+                    "type": "boolean"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -2956,6 +2959,9 @@ const docTemplate = `{
                 },
                 "filename": {
                     "type": "string"
+                },
+                "has_share_links": {
+                    "type": "boolean"
                 },
                 "id": {
                     "type": "string"
@@ -3230,6 +3236,9 @@ const docTemplate = `{
         "internal_sharelinks.DirectoryFileItem": {
             "type": "object",
             "properties": {
+                "created_at": {
+                    "type": "string"
+                },
                 "extension": {
                     "type": "string"
                 },

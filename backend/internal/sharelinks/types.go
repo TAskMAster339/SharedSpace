@@ -38,12 +38,13 @@ type FileContentResponse struct {
 }
 
 type DirectoryFileItem struct {
-	ID        string `json:"id"`
-	Filename  string `json:"filename"`
-	Extension string `json:"extension"`
-	MimeType  string `json:"mime_type"`
-	Size      int64  `json:"size"`
-	URL       string `json:"url"`
+	ID        string    `json:"id"`
+	Filename  string    `json:"filename"`
+	Extension string    `json:"extension"`
+	MimeType  string    `json:"mime_type"`
+	Size      int64     `json:"size"`
+	URL       string    `json:"url"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type DirectoryContentResponse struct {
@@ -97,6 +98,7 @@ type dirFileRecord struct {
 	MimeType  string
 	Size      int64
 	ObjectKey string
+	CreatedAt time.Time
 }
 
 type dirSubdirRecord struct {

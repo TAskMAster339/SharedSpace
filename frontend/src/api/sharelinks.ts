@@ -95,6 +95,7 @@ export interface DirectoryShareLinkFile {
   mime_type: string;
   size: number;
   url: string;
+  created_at: string;
 }
 
 export interface DirectoryShareLinkSubdir {

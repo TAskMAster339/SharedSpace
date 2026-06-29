@@ -164,7 +164,7 @@ func (r *Repository) GetDirectorySubdirs(ctx context.Context, db dbTX, dirID str
 
 func (r *Repository) GetDirectoryFiles(ctx context.Context, db dbTX, dirID string) ([]dirFileRecord, error) {
 	rows, err := db.Query(ctx, `
-		SELECT id, filename, extension, mime_type, size, object_key
+		SELECT id, filename, extension, mime_type, size, object_key, created_at
 		FROM files WHERE directory_id = $1 AND deleted_at IS NULL
 		ORDER BY filename ASC
 	`, dirID)
@@ -176,7 +176,7 @@ func (r *Repository) GetDirectoryFiles(ctx context.Context, db dbTX, dirID strin
 	var files []dirFileRecord
 	for rows.Next() {
 		var f dirFileRecord
-		if err := rows.Scan(&f.ID, &f.Filename, &f.Extension, &f.MimeType, &f.Size, &f.ObjectKey); err != nil {
+		if err := rows.Scan(&f.ID, &f.Filename, &f.Extension, &f.MimeType, &f.Size, &f.ObjectKey, &f.CreatedAt); err != nil {
 			return nil, err
 		}
 		files = append(files, f)

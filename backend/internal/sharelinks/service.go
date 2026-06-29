@@ -414,6 +414,7 @@ func (s *Service) ResolveDirectory(ctx context.Context, token, password string, 
 			MimeType:  f.MimeType,
 			Size:      f.Size,
 			URL:       url,
+			CreatedAt: f.CreatedAt,
 		})
 	}
 

@@ -36,6 +36,9 @@ interface ShareLinkModalProps {
   itemName: string;
   itemType: 'file' | 'directory';
   accessToken: string;
+  onLinksChanged?: (hasLinks: boolean) => void;
+  onLinkDeleted?: (info: { accessType: ShareLinkAccess; expiresAt: string | null }) => void;
+  refreshKey?: number;
 }
 
 const FILE_SHARE_BASE_URL =
@@ -90,6 +93,9 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
   itemName,
   itemType,
   accessToken,
+  onLinksChanged,
+  onLinkDeleted,
+  refreshKey,
 }) => {
   const [links, setLinks] = useState<ShareLink[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -135,7 +141,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
       setPassword('');
       setShowPassword(false);
     }
-  }, [isOpen, loadLinks]);
+  }, [isOpen, loadLinks, refreshKey]);
 
   const handleCreate = async () => {
     setIsCreating(true);
@@ -149,7 +155,11 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
       const newLink = isFile
         ? await createShareLink(accessToken, itemId, body)
         : await createDirectoryShareLink(accessToken, itemId, body);
+      const wasEmpty = links.length === 0;
       setLinks((prev) => [newLink, ...prev]);
+      if (wasEmpty) {
+        onLinksChanged?.(true);
+      }
       setShowCreateForm(false);
       setAccess('public');
       setExpiry('');
@@ -163,11 +173,16 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
     }
   };
 
-  const handleDelete = async (e: React.MouseEvent, linkId: string) => {
+  const handleDelete = async (e: React.MouseEvent, link: ShareLink) => {
     e.stopPropagation();
+    const wasLast = links.length === 1;
     try {
-      await deleteShareLink(accessToken, linkId);
-      setLinks((prev) => prev.filter((l) => l.id !== linkId));
+      await deleteShareLink(accessToken, link.id);
+      setLinks((prev) => prev.filter((l) => l.id !== link.id));
+      if (wasLast) {
+        onLinksChanged?.(false);
+      }
+      onLinkDeleted?.({ accessType: link.access_type, expiresAt: link.expires_at });
     } catch (err: any) {
       setError(err?.message || 'Не удалось удалить ссылку');
     }
@@ -414,7 +429,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
                   </button>
                 )}
                 <button
-                  onClick={(e) => handleDelete(e, link.id)}
+                  onClick={(e) => handleDelete(e, link)}
                   title="Удалить ссылку"
                   className="p-1.5 rounded-theme-sm hover:bg-danger-light text-theme-secondary hover:text-danger transition-colors"
                 >

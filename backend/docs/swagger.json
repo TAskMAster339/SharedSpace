@@ -2918,6 +2918,9 @@
                 "files_count": {
                     "type": "integer"
                 },
+                "has_share_links": {
+                    "type": "boolean"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -2952,6 +2955,9 @@
                 },
                 "filename": {
                     "type": "string"
+                },
+                "has_share_links": {
+                    "type": "boolean"
                 },
                 "id": {
                     "type": "string"
@@ -3226,6 +3232,9 @@
         "internal_sharelinks.DirectoryFileItem": {
             "type": "object",
             "properties": {
+                "created_at": {
+                    "type": "string"
+                },
                 "extension": {
                     "type": "string"
                 },

@@ -18,25 +18,27 @@ type UpdateDirectoryRequest struct {
 }
 
 type DirectoryResponse struct {
-	ID          string              `json:"id"`
-	Name        string              `json:"name"`
-	OwnerID     string              `json:"owner_id"`
-	ParentID    *string             `json:"parent_id"`
-	Type        string              `json:"type"`
-	FilesCount  int                 `json:"files_count"`
-	CreatedAt   time.Time           `json:"created_at"`
-	UpdatedAt   time.Time           `json:"updated_at"`
-	Permissions *access.Permissions `json:"permissions,omitempty"`
+	ID            string              `json:"id"`
+	Name          string              `json:"name"`
+	OwnerID       string              `json:"owner_id"`
+	ParentID      *string             `json:"parent_id"`
+	Type          string              `json:"type"`
+	FilesCount    int                 `json:"files_count"`
+	CreatedAt     time.Time           `json:"created_at"`
+	UpdatedAt     time.Time           `json:"updated_at"`
+	Permissions   *access.Permissions `json:"permissions,omitempty"`
+	HasShareLinks bool                `json:"has_share_links"`
 }
 
 type FileItem struct {
-	ID        string    `json:"id"`
-	Filename  string    `json:"filename"`
-	Extension string    `json:"extension"`
-	MimeType  string    `json:"mime_type"`
-	Size      int64     `json:"size"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID            string    `json:"id"`
+	Filename      string    `json:"filename"`
+	Extension     string    `json:"extension"`
+	MimeType      string    `json:"mime_type"`
+	Size          int64     `json:"size"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+	HasShareLinks bool      `json:"has_share_links"`
 }
 
 type DirectoryContentsResponse struct {

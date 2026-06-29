@@ -74,7 +74,7 @@ export const FileItem: React.FC<FileItemProps> = ({
           )}
           {hasShareLinks && (
             <span
-              className="absolute -top-1.5 -right-4 z-20 flex items-center justify-center rounded-full bg-theme-tertiary border border-theme p-0.5 shadow-theme-card"
+              className="absolute -top-1.5 -left-1.5 flex items-center justify-center rounded-full bg-theme-tertiary border border-theme p-0.5 shadow-theme-card"
               aria-label="Есть ссылки общего доступа"
               title="Есть ссылки общего доступа"
             >

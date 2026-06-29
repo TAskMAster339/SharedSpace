@@ -27,6 +27,7 @@ import {
   Directory,
 } from '../api/directories';
 import { uploadFilesWithProgress, softDeleteFile, restoreFile, moveFile } from '../api/files';
+import { createShareLink, createDirectoryShareLink } from '../api/sharelinks';
 import { formatFileSize, formatDate } from '../utils/format';
 import { useFavorites } from '../hooks/useFavorites';
 import { useToastStore } from '../hooks/useToast';
@@ -92,6 +93,13 @@ const DirectoryPage: React.FC = () => {
     itemName: string;
     itemType: 'file' | 'directory';
   } | null>(null);
+  const [deletedShareLinkToast, setDeletedShareLinkToast] = useState<{
+    itemId: string;
+    itemType: 'file' | 'directory';
+    accessType: string;
+    expiresAt: string | null;
+  } | null>(null);
+  const [shareLinkRefreshKey, setShareLinkRefreshKey] = useState(0);
 
   // Breadcrumbs
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([]);
@@ -576,6 +584,42 @@ const DirectoryPage: React.FC = () => {
     setFavoriteToast(null);
   }, [favoriteToast, toggleFavorite]);
 
+  const handleUndoShareLinkDelete = useCallback(async () => {
+    if (!deletedShareLinkToast || !accessToken) return;
+    const toast = deletedShareLinkToast;
+    setDeletedShareLinkToast(null);
+    try {
+      const body = {
+        access_type: toast.accessType,
+        expires_at: toast.expiresAt,
+      };
+      if (toast.itemType === 'file') {
+        await createShareLink(accessToken, toast.itemId, body);
+      } else {
+        await createDirectoryShareLink(accessToken, toast.itemId, body);
+      }
+      setDirectoryContents((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          files: prev.files.map((f) =>
+            f.id === toast.itemId && toast.itemType === 'file'
+              ? { ...f, has_share_links: true }
+              : f,
+          ),
+          subdirectories: prev.subdirectories.map((d) =>
+            d.id === toast.itemId && toast.itemType === 'directory'
+              ? { ...d, has_share_links: true }
+              : d,
+          ),
+        };
+      });
+      setShareLinkRefreshKey((k) => k + 1);
+    } catch (err) {
+      console.error('Failed to undo share link delete:', err);
+    }
+  }, [deletedShareLinkToast, accessToken]);
+
   const handleMoveFile = useCallback(
     (fileId: string) => {
       const file = directoryContents?.files.find((f) => f.id === fileId);
@@ -1048,6 +1092,32 @@ const DirectoryPage: React.FC = () => {
           itemName={shareModalState.itemName}
           itemType={shareModalState.itemType}
           accessToken={accessToken}
+          onLinksChanged={(hasLinks) => {
+            setDirectoryContents((prev) => {
+              if (!prev) return prev;
+              return {
+                ...prev,
+                files: prev.files.map((f) =>
+                  f.id === shareModalState.itemId && shareModalState.itemType === 'file'
+                    ? { ...f, has_share_links: hasLinks }
+                    : f,
+                ),
+                subdirectories: prev.subdirectories.map((d) =>
+                  d.id === shareModalState.itemId && shareModalState.itemType === 'directory'
+                    ? { ...d, has_share_links: hasLinks }
+                    : d,
+                ),
+              };
+            });
+          }}
+          onLinkDeleted={(info) => {
+            setDeletedShareLinkToast({
+              itemId: shareModalState.itemId,
+              itemType: shareModalState.itemType,
+              ...info,
+            });
+          }}
+          refreshKey={shareLinkRefreshKey}
         />
       )}
 
@@ -1061,7 +1131,7 @@ const DirectoryPage: React.FC = () => {
       />
 
       {/* Уведомления */}
-      {(deletedToast || favoriteToast || moveToast) && (
+      {(deletedToast || favoriteToast || moveToast || deletedShareLinkToast) && (
         <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
           {moveToast && (
             <Toast
@@ -1088,6 +1158,15 @@ const DirectoryPage: React.FC = () => {
               actionLabel="Отменить"
               onAction={handleUndoDelete}
               onClose={() => setDeletedToast(null)}
+            />
+          )}
+          {deletedShareLinkToast && (
+            <Toast
+              variant="undo"
+              message="Ссылка общего доступа удалена"
+              actionLabel="Отменить"
+              onAction={handleUndoShareLinkDelete}
+              onClose={() => setDeletedShareLinkToast(null)}
             />
           )}
         </div>
