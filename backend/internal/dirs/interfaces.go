@@ -9,35 +9,37 @@ import (
 )
 
 type ServiceInterface interface {
-	GetRootContents(context.Context, string) (DirectoryContentsResponse, error)
-	GetContents(context.Context, string, string) (DirectoryContentsResponse, error)
-	GetByID(context.Context, string, string) (DirectoryResponse, error)
-	Create(context.Context, string, CreateDirectoryRequest) (DirectoryResponse, error)
-	Update(context.Context, string, string, UpdateDirectoryRequest) (DirectoryResponse, error)
-	SoftDelete(context.Context, string, string) error
-	Restore(context.Context, string, string) error
-	PermanentDelete(context.Context, string, string) error
+	GetRootContents(ctx context.Context, userID string, params ContentsPaginationParams) (*DirectoryContentsResponse, error)
+	GetContents(ctx context.Context, userID, dirID string, params ContentsPaginationParams) (*DirectoryContentsResponse, error)
+	GetByID(ctx context.Context, userID, dirID string) (DirectoryResponse, error)
+	Create(ctx context.Context, userID string, req CreateDirectoryRequest) (DirectoryResponse, error)
+	Update(ctx context.Context, userID, dirID string, req UpdateDirectoryRequest) (DirectoryResponse, error)
+	SoftDelete(ctx context.Context, userID, dirID string) error
+	Restore(ctx context.Context, userID, dirID string) error
+	PermanentDelete(ctx context.Context, userID, dirID string) error
 }
 
 type RepositoryInterface interface {
-	FindByID(context.Context, dbTX, string) (directoryRecord, error)
-	FindRootByOwner(context.Context, dbTX, string) (directoryRecord, error)
-	FindSubdirectories(context.Context, dbTX, string) ([]directoryRecord, error)
-	FindFiles(context.Context, dbTX, string) ([]fileRecord, error)
-	FindByNameAndParent(context.Context, dbTX, string, string, string) (directoryRecord, error)
-	Create(context.Context, dbTX, string, string, string) (directoryRecord, error)
-	UpdateNameAndParent(context.Context, dbTX, string, *string, *string) (directoryRecord, error)
+	FindByID(ctx context.Context, db dbTX, id string) (directoryRecord, error)
+	FindRootByOwner(ctx context.Context, db dbTX, ownerID string) (directoryRecord, error)
+	FindSubdirectories(ctx context.Context, db dbTX, parentID string) ([]directoryRecord, error)
+	FindSubdirectoriesAfterCursor(ctx context.Context, db dbTX, parentID string, cursorName, cursorID string, limit int) ([]directoryRecord, bool, string, error)
+	FindFiles(ctx context.Context, db dbTX, directoryID string) ([]fileRecord, error)
+	FindFilesAfterCursor(ctx context.Context, db dbTX, directoryID string, cursorFilename, cursorID string, limit int) ([]fileRecord, bool, string, error)
+	FindByNameAndParent(ctx context.Context, db dbTX, name, parentID, ownerID string) (directoryRecord, error)
+	Create(ctx context.Context, db dbTX, name, ownerID, parentID string) (directoryRecord, error)
+	UpdateNameAndParent(ctx context.Context, db dbTX, id string, name *string, parentID *string) (directoryRecord, error)
 
-	FindByIDAnyState(context.Context, dbTX, string) (directoryRecord, error)
-	FindSubtreeIDs(context.Context, dbTX, string) ([]string, error)
-	FindFilesInDirs(context.Context, dbTX, []string) ([]fileRecord, error)
-	FindDeletedFilesInDirs(context.Context, dbTX, []string) ([]fileRecord, error)
-	SoftDeleteSubtree(context.Context, dbTX, []string, time.Time) error
-	SoftDeleteFilesInDirs(context.Context, dbTX, []string, time.Time) error
-	RestoreSubtree(context.Context, dbTX, []string) error
-	RestoreFilesInDirs(context.Context, dbTX, []string, time.Time) error
-	HardDeleteSubtree(context.Context, dbTX, []string) error
-	AddUserStorageUsed(context.Context, dbTX, string, int64) error
+	FindByIDAnyState(ctx context.Context, db dbTX, id string) (directoryRecord, error)
+	FindSubtreeIDs(ctx context.Context, db dbTX, rootID string) ([]string, error)
+	FindFilesInDirs(ctx context.Context, db dbTX, dirIDs []string) ([]fileRecord, error)
+	FindDeletedFilesInDirs(ctx context.Context, db dbTX, dirIDs []string) ([]fileRecord, error)
+	SoftDeleteSubtree(ctx context.Context, db dbTX, dirIDs []string, deletedAt time.Time) error
+	SoftDeleteFilesInDirs(ctx context.Context, db dbTX, dirIDs []string, deletedAt time.Time) error
+	RestoreSubtree(ctx context.Context, db dbTX, dirIDs []string) error
+	RestoreFilesInDirs(ctx context.Context, db dbTX, dirIDs []string, deletedAt time.Time) error
+	HardDeleteSubtree(ctx context.Context, db dbTX, dirIDs []string) error
+	AddUserStorageUsed(ctx context.Context, db dbTX, userID string, delta int64) error
 	GetSharedDirsStats(ctx context.Context, db dbTX, userID string) (count, quota int, err error)
 	IncrementSharedDirsCount(ctx context.Context, db dbTX, userID string) error
 	DecrementSharedDirsCount(ctx context.Context, db dbTX, userID string) error

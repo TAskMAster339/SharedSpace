@@ -8,13 +8,15 @@ import (
 )
 
 type ServiceInterface interface {
-	GetTrashList(ctx context.Context, userID string) (TrashListResponse, error)
+	GetTrashList(ctx context.Context, userID string, params TrashPaginationParams) (TrashListResponse, error)
 	ClearTrash(ctx context.Context, userID string, itemIDs []string) error
 }
 
 type RepositoryInterface interface {
 	FindRootDeletedDirectories(ctx context.Context, db dbTX, userID string) ([]deletedDirectoryRecord, error)
 	FindDeletedFiles(ctx context.Context, db dbTX, userID string) ([]deletedFileRecord, error)
+	FindDeletedDirectoriesPaginated(ctx context.Context, db dbTX, userID string, limit int, cursorName string, cursorID string) ([]deletedDirectoryRecord, bool, string, error)
+	FindDeletedFilesPaginated(ctx context.Context, db dbTX, userID string, limit int, cursorFilename string, cursorID string) ([]deletedFileRecord, bool, string, error)
 	FindDeletedSubtreeIDs(ctx context.Context, db dbTX, dirIDs []string) ([]string, error)
 	FindFilesInDeletedDirs(ctx context.Context, db dbTX, dirIDs []string) ([]fileForDeleteRecord, error)
 	FindDeletedFilesByIDs(ctx context.Context, db dbTX, fileIDs []string) ([]fileForDeleteRecord, error)

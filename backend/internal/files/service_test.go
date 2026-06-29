@@ -35,6 +35,11 @@ type mockRepo struct {
 	convErr     error
 	convList    []conversionRecord
 	convListErr error
+
+	findRecentByUserIDRes      []fileRecord
+	findRecentByUserIDErr      error
+	findRecentByUserIDAfterRes []fileRecord
+	findRecentByUserIDAfterErr error
 }
 
 func (m *mockRepo) FindDirectoryByID(_ context.Context, _ dbTX, _ string) (directoryRecord, error) {
@@ -73,7 +78,11 @@ func (m *mockRepo) AddUserStorageUsed(_ context.Context, _ dbTX, _ string, delta
 }
 
 func (m *mockRepo) FindRecentByUserID(_ context.Context, _ dbTX, _ string, _ int) ([]fileRecord, error) {
-	return nil, nil
+	return m.findRecentByUserIDRes, m.findRecentByUserIDErr
+}
+
+func (m *mockRepo) FindRecentByUserIDAfterCursor(_ context.Context, _ dbTX, _ string, _ time.Time, _ string, _ int) ([]fileRecord, error) {
+	return m.findRecentByUserIDAfterRes, m.findRecentByUserIDAfterErr
 }
 
 func (m *mockRepo) SaveConversion(_ context.Context, _ dbTX, _, _, _, _, _ string) (conversionRecord, error) {

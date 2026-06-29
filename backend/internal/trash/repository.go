@@ -2,6 +2,7 @@ package trash
 
 import (
 	"context"
+	"fmt"
 )
 
 type Repository struct{}
@@ -60,6 +61,104 @@ func (r *Repository) FindDeletedFiles(ctx context.Context, db dbTX, userID strin
 		files = append(files, f)
 	}
 	return files, rows.Err()
+}
+
+func (r *Repository) FindDeletedDirectoriesPaginated(ctx context.Context, db dbTX, userID string, limit int, cursorName string, cursorID string) ([]deletedDirectoryRecord, bool, string, error) {
+	query := `
+		SELECT id, name, owner_id, parent_id, type, deleted_at, created_at, updated_at
+		FROM directories
+		WHERE owner_id = $1 AND deleted_at IS NOT NULL`
+	args := []any{userID}
+
+	if cursorName != "" && cursorID != "" {
+		query += ` AND (name, id) > ($2, $3)`
+		args = append(args, cursorName, cursorID)
+	}
+
+	query += ` ORDER BY name ASC, id ASC`
+	paramIdx := len(args) + 1
+	query += fmt.Sprintf(` LIMIT $%d`, paramIdx)
+	args = append(args, limit+1)
+
+	rows, err := db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, false, "", err
+	}
+	defer rows.Close()
+
+	var dirs []deletedDirectoryRecord
+	for rows.Next() {
+		var d deletedDirectoryRecord
+		if err := rows.Scan(&d.ID, &d.Name, &d.OwnerID, &d.ParentID, &d.Type, &d.DeletedAt, &d.CreatedAt, &d.UpdatedAt); err != nil {
+			return nil, false, "", err
+		}
+		dirs = append(dirs, d)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, false, "", err
+	}
+
+	hasMore := len(dirs) > limit
+	if hasMore {
+		dirs = dirs[:limit]
+	}
+
+	nextCursor := ""
+	if hasMore && len(dirs) > 0 {
+		last := dirs[len(dirs)-1]
+		nextCursor = fmt.Sprintf("%s|%s", last.Name, last.ID)
+	}
+
+	return dirs, hasMore, nextCursor, nil
+}
+
+func (r *Repository) FindDeletedFilesPaginated(ctx context.Context, db dbTX, userID string, limit int, cursorFilename string, cursorID string) ([]deletedFileRecord, bool, string, error) {
+	query := `
+		SELECT id, filename, extension, mime_type, size, directory_id, object_key, owner_id, deleted_at, created_at, updated_at
+		FROM files
+		WHERE owner_id = $1 AND deleted_at IS NOT NULL`
+	args := []any{userID}
+
+	if cursorFilename != "" && cursorID != "" {
+		query += ` AND (filename, id) > ($2, $3)`
+		args = append(args, cursorFilename, cursorID)
+	}
+
+	query += ` ORDER BY filename ASC, id ASC`
+	paramIdx := len(args) + 1
+	query += fmt.Sprintf(` LIMIT $%d`, paramIdx)
+	args = append(args, limit+1)
+
+	rows, err := db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, false, "", err
+	}
+	defer rows.Close()
+
+	var files []deletedFileRecord
+	for rows.Next() {
+		var f deletedFileRecord
+		if err := rows.Scan(&f.ID, &f.Filename, &f.Extension, &f.MimeType, &f.Size, &f.DirectoryID, &f.ObjectKey, &f.OwnerID, &f.DeletedAt, &f.CreatedAt, &f.UpdatedAt); err != nil {
+			return nil, false, "", err
+		}
+		files = append(files, f)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, false, "", err
+	}
+
+	hasMore := len(files) > limit
+	if hasMore {
+		files = files[:limit]
+	}
+
+	nextCursor := ""
+	if hasMore && len(files) > 0 {
+		last := files[len(files)-1]
+		nextCursor = fmt.Sprintf("%s|%s", last.Filename, last.ID)
+	}
+
+	return files, hasMore, nextCursor, nil
 }
 
 func (r *Repository) FindDeletedSubtreeIDs(ctx context.Context, db dbTX, dirIDs []string) ([]string, error) {
