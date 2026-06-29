@@ -12,6 +12,7 @@ import { FileIcon } from '../components/ui/FileIcon';
 import { Button } from '../components/ui/Button';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { ConvertModal } from '../components/ui/ConvertModal';
+import { useFileConversion } from '../hooks/useFileConversion';
 import { ShareLinkModal } from '../components/ui/ShareLinkModal';
 import { resolveFileIconType, getFileTypeDisplay } from '../utils/fileType';
 import { formatFileSize, formatDate } from '../utils/format';
@@ -95,8 +96,8 @@ const FileViewPage: React.FC = () => {
   const accessToken = useAuthStore((state: AuthState) => state.accessToken);
   const user = useAuthStore((state: AuthState) => state.user);
   const { isFavorite, toggleFavorite } = useFavorites();
+  const { isConverting, convertAndDownload, convertAndSave } = useFileConversion();
   const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
-  const [isConverting, setIsConverting] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
@@ -287,7 +288,12 @@ const FileViewPage: React.FC = () => {
   // Обработчик перехода назад
   const handleGoBack = useCallback(() => {
     if (directory) {
-      navigate(`/directories/${directory.id}`);
+      navigate(`/directories/${directory.id}`, {
+        state: {
+          fromFile: true,
+          directoryId: directory.id,
+        },
+      });
     } else {
       navigate(-1);
     }
@@ -319,6 +325,22 @@ const FileViewPage: React.FC = () => {
     setIframeError(true);
     setCanPreview(false);
   }, []);
+
+  const handleConvertAndDownload = useCallback(
+    (format: string) => {
+      if (!file) return Promise.reject('No file');
+      return convertAndDownload(file.id, format, file.filename);
+    },
+    [convertAndDownload, file],
+  );
+
+  const handleConvertAndSave = useCallback(
+    (format: string) => {
+      if (!file) return Promise.reject('No file');
+      return convertAndSave(file.id, format, file.filename);
+    },
+    [convertAndSave, file],
+  );
 
   // Функция для рендера сообщения о недоступности просмотра
   const renderUnavailableMessage = (message?: string, subMessage?: string) => {
@@ -482,27 +504,6 @@ const FileViewPage: React.FC = () => {
         return renderUnavailableMessage();
     }
   };
-
-  // Функция для конвертации
-  const handleConvert = useCallback(
-    async (targetFormat: string) => {
-      if (!accessToken || !id) return;
-
-      setIsConverting(true);
-      try {
-        // Здесь будет ваш API-запрос на конвертацию
-        // const result = await convertFile(accessToken, id, targetFormat);
-        // После успешной конвертации можно показать уведомление и обновить данные
-        console.log(`Конвертация в ${targetFormat} выполнена`);
-        setIsConvertModalOpen(false);
-      } catch (err) {
-        console.error('Ошибка конвертации:', err);
-      } finally {
-        setIsConverting(false);
-      }
-    },
-    [accessToken, id],
-  );
 
   if (isLoading) {
     return (
@@ -668,7 +669,8 @@ const FileViewPage: React.FC = () => {
               fileName={file.filename}
               mimeType={file.mime_type}
               extension={file.extension}
-              onConvert={handleConvert}
+              onConvertAndDownload={handleConvertAndDownload}
+              onConvertAndSave={handleConvertAndSave}
               isConverting={isConverting}
             />
 

@@ -18,7 +18,6 @@ import InvitationsPage from './pages/InvitationsPage';
 import FavoritesPage from './pages/FavoritesPage';
 import TrashPage from './pages/TrashPage';
 import SharePage from './pages/SharePage';
-import ConvertPage from './pages/ConvertPage';
 import Error404Page from './pages/Error404Page';
 import './styles.css';
 
@@ -108,7 +107,6 @@ const App: React.FC = () => {
           <Route path="/shared/:id/settings" element={<SharedSettingsPage />} />
           <Route path="/invitations" element={<InvitationsPage />} />
           <Route path="/trash" element={<TrashPage />} />
-          <Route path="/files/:id/convert" element={<ConvertPage />} />
         </Route>
 
         {/* 404 без DropZone */}

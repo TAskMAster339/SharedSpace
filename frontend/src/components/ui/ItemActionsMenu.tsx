@@ -101,7 +101,7 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
       window.removeEventListener('scroll', close, true);
       window.removeEventListener('resize', close);
     };
-  }, [isOpen, isMobile]);
+  }, [isOpen, isMobile, onCloseMenu]);
 
   if (!onToggleFavorite && !onDelete && !onMove) return null;
 
