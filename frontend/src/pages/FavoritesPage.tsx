@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Star } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useDragDropStore } from '../store/dragDropStore';
@@ -13,6 +13,8 @@ import { Toast } from '../components/ui/Toast';
 import { formatFileSize, formatDate } from '../utils/format';
 import { resolveFileIconType } from '../utils/fileType';
 
+const PAGE_LIMIT = 20;
+
 const FavoritesPage: React.FC = () => {
   const accessToken = useAuthStore((state) => state.accessToken);
   const { toggleFavorite } = useFavorites();
@@ -23,39 +25,24 @@ const FavoritesPage: React.FC = () => {
   const [deletedToast, setDeletedToast] = useState<{ id: string; name: string } | null>(null);
   const [favoriteToast, setFavoriteToast] = useState<{ id: string; name: string } | null>(null);
 
-  useEffect(() => {
-    if (!accessToken) return;
-
-    let isMounted = true;
-    setIsLoading(true);
-    setError('');
-
-    getFavorites(accessToken)
-      .then((data) => {
-        if (isMounted) setFiles(data.favorites);
-      })
-      .catch((err) => {
-        if (!isMounted) return;
-        setError(err instanceof ApiError ? err.message : 'Не удалось загрузить избранное.');
-      })
-      .finally(() => {
-        if (isMounted) setIsLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [accessToken]);
+  // Pagination — автозагрузка при скролле
+  const [cursor, setCursor] = useState<string | undefined>();
+  const [hasMore, setHasMore] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   const loadFavorites = useCallback(async () => {
     if (!accessToken) return;
-
     setIsLoading(true);
     setError('');
+    setCursor(undefined);
+    setHasMore(false);
 
     try {
-      const data = await getFavorites(accessToken);
+      const data = await getFavorites(accessToken, { limit: PAGE_LIMIT });
       setFiles(data.favorites);
+      setCursor(data.next_cursor);
+      setHasMore(!!data.next_cursor);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Не удалось загрузить избранное.');
     } finally {
@@ -78,19 +65,43 @@ const FavoritesPage: React.FC = () => {
     };
   }, [accessToken, setOnUploadComplete, loadFavorites]);
 
+  // Автозагрузка при скролле
+  const checkAndLoad = useCallback(() => {
+    if (!accessToken || !hasMore || !cursor || isLoadingMore) return;
+    const el = sentinelRef.current;
+    if (el && el.getBoundingClientRect().top < window.innerHeight + 300) {
+      setIsLoadingMore(true);
+      getFavorites(accessToken, { limit: PAGE_LIMIT, cursor })
+        .then((data) => {
+          setFiles((prev) => [...prev, ...data.favorites]);
+          setCursor(data.next_cursor);
+          setHasMore(!!data.next_cursor);
+        })
+        .catch((err) => console.error('Failed to load more favorites:', err))
+        .finally(() => setIsLoadingMore(false));
+    }
+  }, [accessToken, cursor, hasMore, isLoadingMore]);
+
+  useEffect(() => {
+    checkAndLoad();
+    window.addEventListener('scroll', checkAndLoad, { passive: true });
+    window.addEventListener('resize', checkAndLoad, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', checkAndLoad);
+      window.removeEventListener('resize', checkAndLoad);
+    };
+  }, [checkAndLoad]);
+
   const handleToggleFavorite = async (fileId: string) => {
     if (!accessToken) return;
     const file = files.find((f) => f.id === fileId);
-    // Оптимистично удаляем файл из списка
     setFiles((prev) => prev.filter((f) => f.id !== fileId));
 
     try {
-      // Вызываем toggleFavorite из хука
       await toggleFavorite(fileId);
       setFavoriteToast({ id: fileId, name: file?.filename || 'Файл' });
     } catch {
-      // Если ошибка - возвращаем файл обратно в список
-      const data = await getFavorites(accessToken!);
+      const data = await getFavorites(accessToken, { limit: PAGE_LIMIT, cursor });
       setFiles(data.favorites);
     }
   };
@@ -98,9 +109,8 @@ const FavoritesPage: React.FC = () => {
   const handleUndoFavorite = async () => {
     if (!favoriteToast || !accessToken) return;
     try {
-      // Возвращаем файл в избранное
       await toggleFavorite(favoriteToast.id);
-      const data = await getFavorites(accessToken);
+      const data = await getFavorites(accessToken, { limit: PAGE_LIMIT, cursor });
       setFiles(data.favorites);
     } catch (err) {
       console.error('Failed to undo favorite:', err);
@@ -119,7 +129,7 @@ const FavoritesPage: React.FC = () => {
       setDeletedToast({ id: fileId, name: file?.filename || 'Файл' });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Не удалось удалить файл.');
-      const data = await getFavorites(accessToken);
+      const data = await getFavorites(accessToken, { limit: PAGE_LIMIT, cursor });
       setFiles(data.favorites);
     }
   };
@@ -129,7 +139,7 @@ const FavoritesPage: React.FC = () => {
 
     try {
       await restoreFile(accessToken, deletedToast.id);
-      const data = await getFavorites(accessToken);
+      const data = await getFavorites(accessToken, { limit: PAGE_LIMIT, cursor });
       setFiles(data.favorites);
     } catch (err) {
       console.error('Failed to restore file:', err);
@@ -173,6 +183,15 @@ const FavoritesPage: React.FC = () => {
                 onDelete={handleDeleteFile}
               />
             ))}
+            {hasMore && (
+              <div className="flex items-center justify-center py-2">
+                {isLoadingMore ? (
+                  <div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <div ref={sentinelRef} className="h-1" />
+                )}
+              </div>
+            )}
           </div>
         )}
       </Card>

@@ -24,6 +24,8 @@ import {
   restoreDirectory,
   DirectoryContents,
   Directory,
+  DirectoryPaginationParams,
+  File as DirectoryFile,
 } from '../api/directories';
 import { uploadFilesWithProgress, softDeleteFile, restoreFile, moveFile } from '../api/files';
 import { formatFileSize, formatDate } from '../utils/format';
@@ -86,6 +88,19 @@ const DirectoryPage: React.FC = () => {
     fromDirectoryId: string;
     directoryId: string;
   } | null>(null);
+
+  // Pagination
+  const PAGE_LIMIT = 20;
+  const [allSubdirectories, setAllSubdirectories] = useState<Directory[]>([]);
+  const [allFiles, setAllFiles] = useState<DirectoryFile[]>([]);
+  const [filesCursor, setFilesCursor] = useState<string | undefined>();
+  const [dirsCursor, setDirsCursor] = useState<string | undefined>();
+  const [hasMoreFiles, setHasMoreFiles] = useState(false);
+  const [hasMoreDirs, setHasMoreDirs] = useState(false);
+  const [isLoadingMoreDirs, setIsLoadingMoreDirs] = useState(false);
+  const [isLoadingMoreFiles, setIsLoadingMoreFiles] = useState(false);
+  const dirsSentinelRef = useRef<HTMLDivElement>(null);
+  const filesSentinelRef = useRef<HTMLDivElement>(null);
 
   // Breadcrumbs
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([]);
@@ -230,13 +245,24 @@ const DirectoryPage: React.FC = () => {
       setError(null);
 
       try {
+        const pagination: DirectoryPaginationParams = {
+          files_limit: PAGE_LIMIT,
+          dirs_limit: PAGE_LIMIT,
+        };
+
         const [info, contents] = await Promise.all([
           getDirectoryById(accessToken, dirId),
-          getDirectoryContents(accessToken, dirId),
+          getDirectoryContents(accessToken, dirId, pagination),
         ]);
 
         setDirectoryInfo(info);
         setDirectoryContents(contents);
+        setAllSubdirectories(contents.subdirectories);
+        setAllFiles(contents.files);
+        setFilesCursor(contents.next_files_cursor);
+        setDirsCursor(contents.next_dirs_cursor);
+        setHasMoreFiles(!!contents.next_files_cursor);
+        setHasMoreDirs(!!contents.next_dirs_cursor);
 
         // Определяем, является ли директория общей
         let shared = checkIsShared(dirId);
@@ -431,19 +457,14 @@ const DirectoryPage: React.FC = () => {
 
   // Фильтруем папки: в личном хранилище скрываем общие директории
   const filteredSubdirectories = useMemo(() => {
-    if (!directoryContents) return [];
-
     if (isPersonal) {
-      return directoryContents.subdirectories.filter((folder) => !checkIsShared(folder.id));
+      return allSubdirectories.filter((folder) => !checkIsShared(folder.id));
     }
+    return allSubdirectories;
+  }, [allSubdirectories, isPersonal, checkIsShared]);
 
-    return directoryContents.subdirectories;
-  }, [directoryContents, isPersonal, checkIsShared]);
-
-  const displayFiles = useMemo(() => {
-    if (!directoryContents) return [];
-
-    return directoryContents.files.map((f) => ({
+  const formattedFiles = useMemo(() => {
+    return allFiles.map((f) => ({
       id: f.id,
       name: f.filename,
       date: formatDate(f.created_at),
@@ -451,7 +472,7 @@ const DirectoryPage: React.FC = () => {
       type: resolveFileIconType(f.mime_type, f.extension),
       isFavorite: isFavorite(f.id),
     }));
-  }, [directoryContents, isFavorite]);
+  }, [allFiles, isFavorite]);
 
   // --- Обработчики ---
   const handleViewModeChange = useCallback((mode: ViewMode) => {
@@ -518,7 +539,7 @@ const DirectoryPage: React.FC = () => {
   const handleDeleteFile = useCallback(
     async (fileId: string) => {
       if (!accessToken || !actualId) return;
-      const file = directoryContents?.files.find((f) => f.id === fileId);
+      const file = allFiles.find((f) => f.id === fileId);
 
       try {
         await softDeleteFile(accessToken, fileId);
@@ -529,7 +550,7 @@ const DirectoryPage: React.FC = () => {
         setError('Не удалось удалить файл');
       }
     },
-    [accessToken, actualId, directoryContents, loadDirectory],
+    [accessToken, actualId, allFiles, loadDirectory],
   );
 
   const handleDeleteFolder = useCallback(
@@ -566,7 +587,7 @@ const DirectoryPage: React.FC = () => {
 
   const handleToggleFavorite = useCallback(
     async (fileId: string) => {
-      const file = directoryContents?.files.find((f) => f.id === fileId);
+      const file = allFiles.find((f) => f.id === fileId);
       try {
         const wasAdded = await toggleFavorite(fileId);
         setFavoriteToast({ id: fileId, name: file?.filename || 'Файл', wasAdded });
@@ -575,8 +596,49 @@ const DirectoryPage: React.FC = () => {
         setError('Не удалось обновить избранное');
       }
     },
-    [directoryContents, toggleFavorite],
+    [allFiles, toggleFavorite],
   );
+
+  // --- Автозагрузка при скролле ---
+  // Следим за скроллом и подгружаем, когда сентинель появляется в окне
+  const checkAndLoad = useCallback(() => {
+    if (!accessToken || !actualId) return;
+
+    // Папки
+    if (hasMoreDirs && !isLoadingMoreDirs && dirsCursor) {
+      const el = dirsSentinelRef.current;
+      if (el && el.getBoundingClientRect().top < window.innerHeight + 300) {
+        setIsLoadingMoreDirs(true);
+        getDirectoryContents(accessToken, actualId, { dirs_limit: PAGE_LIMIT, dirs_cursor: dirsCursor })
+          .then((c) => { setAllSubdirectories((p) => [...p, ...c.subdirectories]); setDirsCursor(c.next_dirs_cursor); setHasMoreDirs(!!c.next_dirs_cursor); })
+          .catch((e) => console.error('loadMoreDirs', e))
+          .finally(() => setIsLoadingMoreDirs(false));
+      }
+    }
+
+    // Файлы
+    if (hasMoreFiles && !isLoadingMoreFiles && filesCursor) {
+      const el = filesSentinelRef.current;
+      if (el && el.getBoundingClientRect().top < window.innerHeight + 300) {
+        setIsLoadingMoreFiles(true);
+        getDirectoryContents(accessToken, actualId, { files_limit: PAGE_LIMIT, files_cursor: filesCursor })
+          .then((c) => { setAllFiles((p) => [...p, ...c.files]); setFilesCursor(c.next_files_cursor); setHasMoreFiles(!!c.next_files_cursor); })
+          .catch((e) => console.error('loadMoreFiles', e))
+          .finally(() => setIsLoadingMoreFiles(false));
+      }
+    }
+  }, [accessToken, actualId, hasMoreDirs, isLoadingMoreDirs, dirsCursor, hasMoreFiles, isLoadingMoreFiles, filesCursor]);
+
+  // Проверяем при скролле, ресайзе и после каждого рендера
+  useEffect(() => {
+    checkAndLoad();
+    window.addEventListener('scroll', checkAndLoad, { passive: true });
+    window.addEventListener('resize', checkAndLoad, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', checkAndLoad);
+      window.removeEventListener('resize', checkAndLoad);
+    };
+  }, [checkAndLoad]);
 
   const handleUndoFavorite = useCallback(async () => {
     if (!favoriteToast) return;
@@ -590,14 +652,14 @@ const DirectoryPage: React.FC = () => {
 
   const handleMoveFile = useCallback(
     (fileId: string) => {
-      const file = directoryContents?.files.find((f) => f.id === fileId);
+      const file = allFiles.find((f) => f.id === fileId);
       if (file) {
         setMoveFileId(fileId);
         setMoveFileName(file.filename);
         setIsMoveModalOpen(true);
       }
     },
-    [directoryContents],
+    [allFiles],
   );
 
   const handleMoveComplete = useCallback(
@@ -743,8 +805,7 @@ const DirectoryPage: React.FC = () => {
     );
   }
 
-  const { files } = directoryContents;
-  const isEmpty = filteredSubdirectories.length === 0 && files.length === 0;
+  const isEmpty = filteredSubdirectories.length === 0 && allFiles.length === 0;
 
   return (
     <div className="space-y-6 pb-10">
@@ -902,18 +963,26 @@ const DirectoryPage: React.FC = () => {
                     ))}
                   </div>
                 )}
+                {hasMoreDirs && (
+                  <div className="mt-3 flex items-center justify-center gap-3">
+                    {isLoadingMoreDirs && (
+                      <div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+                    )}
+                    <div ref={dirsSentinelRef} className="h-2" />
+                  </div>
+                )}
               </div>
             </div>
           )}
 
           {/* Файлы */}
-          {files.length > 0 && (
+          {allFiles.length > 0 && (
             <div>
               <div className="bg-theme-secondary border border-theme rounded-theme-lg p-4 shadow-theme-card">
                 <h2 className="text-sm font-medium text-theme-secondary mb-3">Файлы</h2>
                 {viewMode === 'grid' ? (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                    {displayFiles.map((file) => (
+                    {formattedFiles.map((file) => (
                       <FileGridItem
                         key={file.id}
                         id={file.id}
@@ -930,7 +999,7 @@ const DirectoryPage: React.FC = () => {
                   </div>
                 ) : (
                   <div className="space-y-1">
-                    {displayFiles.map((file) => (
+                    {formattedFiles.map((file) => (
                       <FileItem
                         key={file.id}
                         id={file.id}
@@ -946,6 +1015,14 @@ const DirectoryPage: React.FC = () => {
                         onDragStart={handleFileDragStart}
                       />
                     ))}
+                  </div>
+                )}
+                {hasMoreFiles && (
+                  <div className="mt-3 flex items-center justify-center gap-3">
+                    {isLoadingMoreFiles && (
+                      <div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+                    )}
+                    <div ref={filesSentinelRef} className="h-2" />
                   </div>
                 )}
               </div>
