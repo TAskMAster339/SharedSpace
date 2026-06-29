@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Folder } from 'lucide-react';
+import { Folder, Share2 } from 'lucide-react';
 import { ItemActionsMenu } from './ItemActionsMenu';
 import { cn } from '../../utils/cn';
 
@@ -9,7 +9,9 @@ interface FolderItemProps {
   name: string;
   to: string;
   className?: string;
+  hasShareLinks?: boolean;
   onDelete?: (id: string) => void;
+  onShare?: (id: string) => void;
   onDrop?: (e: React.DragEvent, id: string) => void;
 }
 
@@ -18,7 +20,9 @@ export const FolderItem: React.FC<FolderItemProps> = ({
   name,
   to,
   className,
+  hasShareLinks = false,
   onDelete,
+  onShare,
   onDrop,
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
@@ -82,8 +86,22 @@ export const FolderItem: React.FC<FolderItemProps> = ({
       )}
     >
       <div className="flex items-center gap-3 min-w-0">
-        <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card shrink-0">
-          <Folder size={20} className="text-theme-muted group-hover:text-brand transition-colors" />
+        <div className="relative shrink-0">
+          <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card shrink-0">
+            <Folder
+              size={20}
+              className="text-theme-muted group-hover:text-brand transition-colors"
+            />
+          </div>
+          {hasShareLinks && (
+            <span
+              className="absolute -top-1.5 -right-4 z-20 flex items-center justify-center rounded-full bg-theme-tertiary border border-theme p-0.5 shadow-theme-card"
+              aria-label="Есть ссылки общего доступа"
+              title="Есть ссылки общего доступа"
+            >
+              <Share2 size={11} className="text-green-500" />
+            </span>
+          )}
         </div>
         <div className="min-w-0">
           <p className="text-sm text-theme-primary font-medium truncate">{name}</p>
@@ -91,6 +109,7 @@ export const FolderItem: React.FC<FolderItemProps> = ({
         </div>
       </div>
       <ItemActionsMenu
+        onShare={onShare ? () => onShare(id) : undefined}
         onDelete={onDelete ? () => onDelete(id) : undefined}
         className="shrink-0"
         openMenu={contextMenuOpen}

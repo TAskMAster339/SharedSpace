@@ -57,6 +57,34 @@ func (s *Service) Create(ctx context.Context, userID, fileID string, req CreateS
 		return ShareLinkResponse{}, apperror.Forbidden("доступ запрещён")
 	}
 
+	return s.createLink(ctx, userID, &fileID, nil, req)
+}
+
+func (s *Service) CreateForDirectory(ctx context.Context, userID, dirID string, req CreateShareLinkRequest) (ShareLinkResponse, error) {
+	if req.AccessType != "public" && req.AccessType != "authenticated" {
+		return ShareLinkResponse{}, apperror.Validation("access_type должен быть 'public' или 'authenticated'")
+	}
+
+	_, err := s.repo.GetDirectoryByID(ctx, s.db, dirID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ShareLinkResponse{}, apperror.NotFound("директория не найдена")
+		}
+		return ShareLinkResponse{}, apperror.WrapInternal("поиск директории", err)
+	}
+
+	ok, err := s.accessChecker.Can(ctx, userID, dirID, access.ActionView)
+	if err != nil {
+		return ShareLinkResponse{}, err
+	}
+	if !ok {
+		return ShareLinkResponse{}, apperror.Forbidden("доступ запрещён")
+	}
+
+	return s.createLink(ctx, userID, nil, &dirID, req)
+}
+
+func (s *Service) createLink(ctx context.Context, userID string, fileID, dirID *string, req CreateShareLinkRequest) (ShareLinkResponse, error) {
 	token, err := generateToken()
 	if err != nil {
 		return ShareLinkResponse{}, apperror.WrapInternal("генерация токена", err)
@@ -83,6 +111,7 @@ func (s *Service) Create(ctx context.Context, userID, fileID string, req CreateS
 
 	record := shareLinkRecord{
 		FileID:       fileID,
+		DirectoryID:  dirID,
 		Token:        token,
 		AccessType:   req.AccessType,
 		CreatedBy:    userID,
@@ -127,6 +156,35 @@ func (s *Service) ListByFile(ctx context.Context, userID, fileID string, limit i
 	return resp, nil
 }
 
+func (s *Service) ListByDirectory(ctx context.Context, userID, dirID string, limit int) ([]ShareLinkResponse, error) {
+	_, err := s.repo.GetDirectoryByID(ctx, s.db, dirID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, apperror.NotFound("директория не найдена")
+		}
+		return nil, apperror.WrapInternal("поиск директории", err)
+	}
+
+	ok, err := s.accessChecker.Can(ctx, userID, dirID, access.ActionView)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, apperror.Forbidden("доступ запрещён")
+	}
+
+	links, err := s.repo.FindByDirectoryID(ctx, s.db, dirID, limit)
+	if err != nil {
+		return nil, apperror.WrapInternal("получение списка ссылок", err)
+	}
+
+	resp := make([]ShareLinkResponse, 0, len(links))
+	for _, l := range links {
+		resp = append(resp, toResponse(l))
+	}
+	return resp, nil
+}
+
 func (s *Service) Update(ctx context.Context, userID, linkID string, req UpdateShareLinkRequest) (ShareLinkResponse, error) {
 	link, err := s.repo.FindByID(ctx, s.db, linkID)
 	if err != nil {
@@ -136,13 +194,18 @@ func (s *Service) Update(ctx context.Context, userID, linkID string, req UpdateS
 		return ShareLinkResponse{}, apperror.WrapInternal("поиск ссылки", err)
 	}
 
-	file, err := s.repo.GetFileByID(ctx, s.db, link.FileID)
-	if err != nil {
-		return ShareLinkResponse{}, apperror.WrapInternal("поиск файла", err)
-	}
-
 	if link.CreatedBy != userID {
-		ok, err := s.accessChecker.Can(ctx, userID, file.DirectoryID, access.ActionDelete)
+		var dirID string
+		if link.FileID != nil {
+			file, err := s.repo.GetFileByID(ctx, s.db, *link.FileID)
+			if err != nil {
+				return ShareLinkResponse{}, apperror.WrapInternal("поиск файла", err)
+			}
+			dirID = file.DirectoryID
+		} else if link.DirectoryID != nil {
+			dirID = *link.DirectoryID
+		}
+		ok, err := s.accessChecker.Can(ctx, userID, dirID, access.ActionDelete)
 		if err != nil {
 			return ShareLinkResponse{}, err
 		}
@@ -214,11 +277,17 @@ func (s *Service) Delete(ctx context.Context, userID, linkID string) error {
 	}
 
 	if link.CreatedBy != userID {
-		file, err := s.repo.GetFileByID(ctx, s.db, link.FileID)
-		if err != nil {
-			return apperror.WrapInternal("поиск файла", err)
+		var dirID string
+		if link.FileID != nil {
+			file, err := s.repo.GetFileByID(ctx, s.db, *link.FileID)
+			if err != nil {
+				return apperror.WrapInternal("поиск файла", err)
+			}
+			dirID = file.DirectoryID
+		} else if link.DirectoryID != nil {
+			dirID = *link.DirectoryID
 		}
-		ok, err := s.accessChecker.Can(ctx, userID, file.DirectoryID, access.ActionDelete)
+		ok, err := s.accessChecker.Can(ctx, userID, dirID, access.ActionDelete)
 		if err != nil {
 			return err
 		}
@@ -242,21 +311,15 @@ func (s *Service) Resolve(ctx context.Context, token, password string, authentic
 		return FileContentResponse{}, apperror.WrapInternal("поиск ссылки", err)
 	}
 
-	if link.AccessType == "authenticated" && !authenticated {
-		return FileContentResponse{}, apperror.Unauthorized("требуется авторизация")
+	if link.FileID == nil {
+		return FileContentResponse{}, apperror.NotFound("неверный тип ссылки")
 	}
 
-	if link.ExpiresAt != nil && link.ExpiresAt.Before(time.Now()) {
-		return FileContentResponse{}, apperror.NotFound("срок действия ссылки истёк")
+	if err := s.checkLinkAccess(link, password, authenticated); err != nil {
+		return FileContentResponse{}, err
 	}
 
-	if link.PasswordHash != nil && *link.PasswordHash != "" {
-		if err := bcrypt.CompareHashAndPassword([]byte(*link.PasswordHash), []byte(password)); err != nil {
-			return FileContentResponse{}, apperror.Forbidden("неверный пароль")
-		}
-	}
-
-	file, err := s.repo.GetFileByID(ctx, s.db, link.FileID)
+	file, err := s.repo.GetFileByID(ctx, s.db, *link.FileID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return FileContentResponse{}, apperror.NotFound("файл не найден")
@@ -286,6 +349,110 @@ func (s *Service) Resolve(ctx context.Context, token, password string, authentic
 	}, nil
 }
 
+func (s *Service) ResolveDirectory(ctx context.Context, token, password string, authenticated bool, subDirID string) (DirectoryContentResponse, error) {
+	link, err := s.repo.FindByToken(ctx, s.db, token)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return DirectoryContentResponse{}, apperror.NotFound("ссылка не найдена")
+		}
+		return DirectoryContentResponse{}, apperror.WrapInternal("поиск ссылки", err)
+	}
+
+	if link.DirectoryID == nil {
+		return DirectoryContentResponse{}, apperror.NotFound("неверный тип ссылки")
+	}
+
+	if err := s.checkLinkAccess(link, password, authenticated); err != nil {
+		return DirectoryContentResponse{}, err
+	}
+
+	targetDirID := *link.DirectoryID
+	if subDirID != "" {
+		isSub, err := s.repo.IsSubdirectory(ctx, s.db, *link.DirectoryID, subDirID)
+		if err != nil {
+			return DirectoryContentResponse{}, apperror.WrapInternal("проверка поддиректории", err)
+		}
+		if !isSub {
+			return DirectoryContentResponse{}, apperror.Forbidden("доступ к поддиректории запрещён")
+		}
+		targetDirID = subDirID
+	}
+
+	dir, err := s.repo.GetDirectoryByID(ctx, s.db, targetDirID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return DirectoryContentResponse{}, apperror.NotFound("директория не найдена")
+		}
+		return DirectoryContentResponse{}, apperror.WrapInternal("поиск директории", err)
+	}
+
+	username, err := s.repo.GetUsernameByID(ctx, s.db, dir.OwnerID)
+	if err != nil {
+		username = ""
+	}
+
+	subdirs, err := s.repo.GetDirectorySubdirs(ctx, s.db, targetDirID)
+	if err != nil {
+		return DirectoryContentResponse{}, apperror.WrapInternal("поиск поддиректорий", err)
+	}
+
+	files, err := s.repo.GetDirectoryFiles(ctx, s.db, targetDirID)
+	if err != nil {
+		return DirectoryContentResponse{}, apperror.WrapInternal("поиск файлов", err)
+	}
+
+	fileItems := make([]DirectoryFileItem, 0, len(files))
+	for _, f := range files {
+		url, err := s.storage.PresignedGetURL(ctx, f.ObjectKey, 24*time.Hour)
+		if err != nil {
+			continue
+		}
+		fileItems = append(fileItems, DirectoryFileItem{
+			ID:        f.ID,
+			Filename:  f.Filename,
+			Extension: f.Extension,
+			MimeType:  f.MimeType,
+			Size:      f.Size,
+			URL:       url,
+		})
+	}
+
+	subdirItems := make([]DirectorySubdir, 0, len(subdirs))
+	for _, sd := range subdirs {
+		subdirItems = append(subdirItems, DirectorySubdir{
+			ID:   sd.ID,
+			Name: sd.Name,
+		})
+	}
+
+	return DirectoryContentResponse{
+		ID:             dir.ID,
+		Name:           dir.Name,
+		Token:          link.Token,
+		Subdirectories: subdirItems,
+		Files:          fileItems,
+		OwnerUsername:  username,
+	}, nil
+}
+
+func (s *Service) checkLinkAccess(link shareLinkRecord, password string, authenticated bool) error {
+	if link.AccessType == "authenticated" && !authenticated {
+		return apperror.Unauthorized("требуется авторизация")
+	}
+
+	if link.ExpiresAt != nil && link.ExpiresAt.Before(time.Now()) {
+		return apperror.NotFound("срок действия ссылки истёк")
+	}
+
+	if link.PasswordHash != nil && *link.PasswordHash != "" {
+		if err := bcrypt.CompareHashAndPassword([]byte(*link.PasswordHash), []byte(password)); err != nil {
+			return apperror.Forbidden("неверный пароль")
+		}
+	}
+
+	return nil
+}
+
 func generateToken() (string, error) {
 	b := make([]byte, tokenBytes)
 	if _, err := rand.Read(b); err != nil {
@@ -304,6 +471,7 @@ func toResponse(l shareLinkRecord) ShareLinkResponse {
 	return ShareLinkResponse{
 		ID:          l.ID,
 		FileID:      l.FileID,
+		DirectoryID: l.DirectoryID,
 		Token:       l.Token,
 		AccessType:  l.AccessType,
 		CreatedBy:   l.CreatedBy,

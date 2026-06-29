@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Star } from 'lucide-react';
+import { Star, Share2 } from 'lucide-react';
 import { FileIcon } from './FileIcon';
 import { ItemActionsMenu } from './ItemActionsMenu';
 import { cn } from '../../utils/cn';
@@ -13,9 +13,11 @@ interface FileGridItemProps {
   to: string;
   className?: string;
   isFavorite?: boolean;
+  hasShareLinks?: boolean;
   onToggleFavorite?: (id: string) => void;
   onDelete?: (id: string) => void;
   onMove?: (id: string) => void;
+  onShare?: (id: string) => void;
   onDragStart?: (e: React.DragEvent, id: string, name: string) => void;
 }
 
@@ -26,9 +28,11 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
   to,
   className,
   isFavorite = false,
+  hasShareLinks = false,
   onToggleFavorite,
   onDelete,
   onMove,
+  onShare,
   onDragStart,
 }) => {
   const [contextMenuOpen, setContextMenuOpen] = useState(false);
@@ -60,6 +64,15 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
             <Star size={12} className="text-yellow-400" fill="currentColor" />
           </span>
         )}
+        {hasShareLinks && (
+          <span
+            className="absolute top-0 right-0 z-20 flex items-center justify-center rounded-full bg-theme-tertiary border border-theme p-0.5 shadow-theme-card"
+            aria-label="Есть ссылки общего доступа"
+            title="Есть ссылки общего доступа"
+          >
+            <Share2 size={12} className="text-green-500" />
+          </span>
+        )}
       </div>
       <p className="text-sm text-theme-primary font-medium text-center mt-2 truncate w-full max-w-[120px]">
         {name}
@@ -71,6 +84,7 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
           onToggleFavorite={onToggleFavorite ? () => onToggleFavorite(id) : undefined}
           onDelete={onDelete ? () => onDelete(id) : undefined}
           onMove={onMove ? () => onMove(id) : undefined}
+          onShare={onShare ? () => onShare(id) : undefined}
           iconSize={16}
           openMenu={contextMenuOpen}
           onCloseMenu={() => setContextMenuOpen(false)}

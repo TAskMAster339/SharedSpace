@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Star } from 'lucide-react';
+import { Star, Share2 } from 'lucide-react';
 import { FileIcon } from './FileIcon';
 import { ItemActionsMenu } from './ItemActionsMenu';
 import { cn } from '../../utils/cn';
@@ -15,9 +15,11 @@ interface FileItemProps {
   to: string;
   className?: string;
   isFavorite?: boolean;
+  hasShareLinks?: boolean;
   onToggleFavorite?: (id: string) => void;
   onDelete?: (id: string) => void;
   onMove?: (id: string) => void;
+  onShare?: (id: string) => void;
   onDragStart?: (e: React.DragEvent, id: string, name: string) => void;
 }
 
@@ -30,9 +32,11 @@ export const FileItem: React.FC<FileItemProps> = ({
   to,
   className,
   isFavorite = false,
+  hasShareLinks = false,
   onToggleFavorite,
   onDelete,
   onMove,
+  onShare,
   onDragStart,
 }) => {
   const [contextMenuOpen, setContextMenuOpen] = useState(false);
@@ -68,6 +72,15 @@ export const FileItem: React.FC<FileItemProps> = ({
               <Star size={11} className="text-yellow-400" fill="currentColor" />
             </span>
           )}
+          {hasShareLinks && (
+            <span
+              className="absolute -top-1.5 -right-4 z-20 flex items-center justify-center rounded-full bg-theme-tertiary border border-theme p-0.5 shadow-theme-card"
+              aria-label="Есть ссылки общего доступа"
+              title="Есть ссылки общего доступа"
+            >
+              <Share2 size={11} className="text-green-500" />
+            </span>
+          )}
         </div>
         <div className="min-w-0">
           <p className="text-sm text-theme-primary font-medium truncate">{name}</p>
@@ -81,6 +94,7 @@ export const FileItem: React.FC<FileItemProps> = ({
           onToggleFavorite={onToggleFavorite ? () => onToggleFavorite(id) : undefined}
           onDelete={onDelete ? () => onDelete(id) : undefined}
           onMove={onMove ? () => onMove(id) : undefined}
+          onShare={onShare ? () => onShare(id) : undefined}
           openMenu={contextMenuOpen}
           onCloseMenu={() => setContextMenuOpen(false)}
         />

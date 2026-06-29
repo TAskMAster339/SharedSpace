@@ -15,6 +15,7 @@ import { FileGridItem } from '../components/ui/FileGridItem';
 import { FolderItem } from '../components/ui/FolderItem';
 import { FileItem } from '../components/ui/FileItem';
 import { MoveFileModal } from '../components/ui/MoveFileModal';
+import { ShareLinkModal } from '../components/ui/ShareLinkModal';
 import {
   getDirectoryContents,
   getDirectoryById,
@@ -85,6 +86,11 @@ const DirectoryPage: React.FC = () => {
     fileName: string;
     fromDirectoryId: string;
     directoryId: string;
+  } | null>(null);
+  const [shareModalState, setShareModalState] = useState<{
+    itemId: string;
+    itemName: string;
+    itemType: 'file' | 'directory';
   } | null>(null);
 
   // Breadcrumbs
@@ -241,16 +247,6 @@ const DirectoryPage: React.FC = () => {
         // Определяем, является ли директория общей
         let shared = checkIsShared(dirId);
 
-        // Если директория принадлежит текущему пользователю, проверяем её тип
-        // и наличие permissions (признак того, что это общая директория)
-        if (info.owner_id === user?.id && info.type !== 'root') {
-          // Если у директории есть permissions и она не root, значит она общая
-          // (даже если checkIsShared ещё не вернул true из-за задержки)
-          if (info.permissions !== undefined) {
-            shared = true;
-          }
-        }
-
         setIsShared(shared);
 
         // Загружаем breadcrumbs
@@ -326,16 +322,7 @@ const DirectoryPage: React.FC = () => {
   useEffect(() => {
     if (!isLoadingShared && actualId && accessToken && directoryInfo) {
       const shared = checkIsShared(actualId);
-      // Если директория принадлежит текущему пользователю и имеет permissions,
-      // но checkIsShared вернул false (ещё не загрузилось), проверяем по permissions
       let effectiveShared = shared;
-      if (
-        directoryInfo.owner_id === user?.id &&
-        directoryInfo.type !== 'root' &&
-        directoryInfo.permissions !== undefined
-      ) {
-        effectiveShared = true;
-      }
 
       if (effectiveShared !== isShared) {
         setIsShared(effectiveShared);
@@ -450,6 +437,7 @@ const DirectoryPage: React.FC = () => {
       size: formatFileSize(f.size),
       type: resolveFileIconType(f.mime_type, f.extension),
       isFavorite: isFavorite(f.id),
+      has_share_links: f.has_share_links,
     }));
   }, [directoryContents, isFavorite]);
 
@@ -875,11 +863,21 @@ const DirectoryPage: React.FC = () => {
                         id={folder.id}
                         name={folder.name}
                         to={`/directories/${folder.id}`}
+                        hasShareLinks={folder.has_share_links}
                         onDelete={
                           (folder.permissions?.delete ?? perms?.delete) && !checkIsShared(folder.id)
                             ? handleDeleteFolder
                             : undefined
                         }
+                        onShare={(id) => {
+                          const f = filteredSubdirectories.find((d) => d.id === id);
+                          if (f)
+                            setShareModalState({
+                              itemId: f.id,
+                              itemName: f.name,
+                              itemType: 'directory',
+                            });
+                        }}
                         onDrop={handleFolderDrop}
                       />
                     ))}
@@ -892,11 +890,21 @@ const DirectoryPage: React.FC = () => {
                         id={folder.id}
                         name={folder.name}
                         to={`/directories/${folder.id}`}
+                        hasShareLinks={folder.has_share_links}
                         onDelete={
                           (folder.permissions?.delete ?? perms?.delete) && !checkIsShared(folder.id)
                             ? handleDeleteFolder
                             : undefined
                         }
+                        onShare={(id) => {
+                          const f = filteredSubdirectories.find((d) => d.id === id);
+                          if (f)
+                            setShareModalState({
+                              itemId: f.id,
+                              itemName: f.name,
+                              itemType: 'directory',
+                            });
+                        }}
                         onDrop={handleFolderDrop}
                       />
                     ))}
@@ -921,9 +929,19 @@ const DirectoryPage: React.FC = () => {
                         type={file.type}
                         to={`/files/${file.id}`}
                         isFavorite={file.isFavorite}
+                        hasShareLinks={file.has_share_links}
                         onToggleFavorite={handleToggleFavorite}
                         onDelete={perms?.delete ? handleDeleteFile : undefined}
                         onMove={handleMoveFile}
+                        onShare={(id) => {
+                          const f = displayFiles.find((d) => d.id === id);
+                          if (f)
+                            setShareModalState({
+                              itemId: f.id,
+                              itemName: f.name,
+                              itemType: 'file',
+                            });
+                        }}
                         onDragStart={handleFileDragStart}
                       />
                     ))}
@@ -940,9 +958,19 @@ const DirectoryPage: React.FC = () => {
                         type={file.type}
                         to={`/files/${file.id}`}
                         isFavorite={file.isFavorite}
+                        hasShareLinks={file.has_share_links}
                         onToggleFavorite={handleToggleFavorite}
                         onDelete={perms?.delete ? handleDeleteFile : undefined}
                         onMove={handleMoveFile}
+                        onShare={(id) => {
+                          const f = displayFiles.find((d) => d.id === id);
+                          if (f)
+                            setShareModalState({
+                              itemId: f.id,
+                              itemName: f.name,
+                              itemType: 'file',
+                            });
+                        }}
                         onDragStart={handleFileDragStart}
                       />
                     ))}
@@ -1011,6 +1039,17 @@ const DirectoryPage: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      {shareModalState && accessToken && (
+        <ShareLinkModal
+          isOpen={true}
+          onClose={() => setShareModalState(null)}
+          itemId={shareModalState.itemId}
+          itemName={shareModalState.itemName}
+          itemType={shareModalState.itemType}
+          accessToken={accessToken}
+        />
+      )}
 
       <MoveFileModal
         isOpen={isMoveModalOpen}

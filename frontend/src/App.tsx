@@ -18,6 +18,7 @@ import InvitationsPage from './pages/InvitationsPage';
 import FavoritesPage from './pages/FavoritesPage';
 import TrashPage from './pages/TrashPage';
 import SharePage from './pages/SharePage';
+import SharedDirectoryPage from './pages/SharedDirectoryPage';
 import Error404Page from './pages/Error404Page';
 import './styles.css';
 
@@ -50,6 +51,14 @@ const App: React.FC = () => {
           element={
             <Layout>
               <SharePage />
+            </Layout>
+          }
+        />
+        <Route
+          path="/share/dir/:token"
+          element={
+            <Layout>
+              <SharedDirectoryPage />
             </Layout>
           }
         />

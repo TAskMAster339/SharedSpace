@@ -16,7 +16,8 @@ type UpdateShareLinkRequest struct {
 
 type ShareLinkResponse struct {
 	ID          string    `json:"id"`
-	FileID      string    `json:"file_id"`
+	FileID      *string   `json:"file_id"`
+	DirectoryID *string   `json:"directory_id"`
 	Token       string    `json:"token"`
 	AccessType  string    `json:"access_type"`
 	CreatedBy   string    `json:"created_by"`
@@ -36,9 +37,33 @@ type FileContentResponse struct {
 	CreatedAt     time.Time `json:"created_at"`
 }
 
+type DirectoryFileItem struct {
+	ID        string `json:"id"`
+	Filename  string `json:"filename"`
+	Extension string `json:"extension"`
+	MimeType  string `json:"mime_type"`
+	Size      int64  `json:"size"`
+	URL       string `json:"url"`
+}
+
+type DirectoryContentResponse struct {
+	ID             string              `json:"id"`
+	Name           string              `json:"name"`
+	Token          string              `json:"token"`
+	Subdirectories []DirectorySubdir   `json:"subdirectories"`
+	Files          []DirectoryFileItem `json:"files"`
+	OwnerUsername  string              `json:"owner_username"`
+}
+
+type DirectorySubdir struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
 type shareLinkRecord struct {
 	ID           string
-	FileID       string
+	FileID       *string
+	DirectoryID  *string
 	Token        string
 	AccessType   string
 	CreatedBy    string
@@ -57,4 +82,24 @@ type fileRecord struct {
 	MimeType    string
 	Size        int64
 	CreatedAt   time.Time
+}
+
+type directoryRecord struct {
+	ID      string
+	Name    string
+	OwnerID string
+}
+
+type dirFileRecord struct {
+	ID        string
+	Filename  string
+	Extension string
+	MimeType  string
+	Size      int64
+	ObjectKey string
+}
+
+type dirSubdirRecord struct {
+	ID   string
+	Name string
 }
