@@ -72,6 +72,7 @@ const DirectoryPage: React.FC = () => {
   const { isFavorite, toggleFavorite } = useFavorites();
   const showToast = useToastStore((state) => state.showToast);
   const [isShared, setIsShared] = useState(false);
+  const [isDirectlyShared, setIsDirectlyShared] = useState(false);
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
   const [moveFileId, setMoveFileId] = useState<string>('');
   const [moveFileName, setMoveFileName] = useState<string>('');
@@ -258,15 +259,15 @@ const DirectoryPage: React.FC = () => {
 
         // Определяем, является ли директория общей
         const shared = checkIsShared(dirId);
+        setIsDirectlyShared(shared);
 
         // Загружаем breadcrumbs и определяем реальный статус
         // (папка может быть внутри общей директории, не являясь ей напрямую)
         try {
           const hasSharedAncestor = await loadBreadcrumbs(dirId, shared, info);
-          const effectiveShared = shared || hasSharedAncestor;
-          setIsShared(effectiveShared);
+          setIsShared(shared || hasSharedAncestor);
           if (!isLoadingShared) {
-            setCurrentSection(effectiveShared ? 'shared' : 'personal');
+            setCurrentSection(shared || hasSharedAncestor ? 'shared' : 'personal');
           }
         } catch (err) {
           setIsShared(shared);
@@ -371,12 +372,22 @@ const DirectoryPage: React.FC = () => {
   // перепроверяем статус и перезагружаем breadcrumbs
   useEffect(() => {
     if (!isLoadingShared && actualId && accessToken && directoryInfo) {
+      const shared = checkIsShared(actualId);
+      setIsDirectlyShared(shared);
       loadBreadcrumbs(actualId, false, directoryInfo).then((hasSharedAncestor) => {
-        setIsShared(hasSharedAncestor);
-        setCurrentSection(hasSharedAncestor ? 'shared' : 'personal');
+        setIsShared(shared || hasSharedAncestor);
+        setCurrentSection(shared || hasSharedAncestor ? 'shared' : 'personal');
       });
     }
-  }, [isLoadingShared, actualId, accessToken, directoryInfo, user?.id, loadBreadcrumbs]);
+  }, [
+    isLoadingShared,
+    actualId,
+    accessToken,
+    directoryInfo,
+    user?.id,
+    loadBreadcrumbs,
+    checkIsShared,
+  ]);
 
   // --- Эффект 4: Обновляем DnD target при изменении actualId ---
   useEffect(() => {
@@ -437,8 +448,8 @@ const DirectoryPage: React.FC = () => {
   const perms = useMemo(() => directoryInfo?.permissions, [directoryInfo]);
 
   const isSharedDirectory = useMemo(() => {
-    return isShared && !isPersonal;
-  }, [isShared, isPersonal]);
+    return isDirectlyShared && !isPersonal;
+  }, [isDirectlyShared, isPersonal]);
 
   // Сбрасываем при уходе со страницы
   useEffect(() => {
