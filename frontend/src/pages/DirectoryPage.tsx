@@ -49,7 +49,7 @@ const DirectoryPage: React.FC = () => {
 
   const accessToken = useAuthStore((s) => s.accessToken);
   const user = useAuthStore((s) => s.user);
-  const { personalStorageId, setCurrentSection } = useDirectoryStore();
+  const { personalStorageId, currentSection, setCurrentSection } = useDirectoryStore();
   const { isShared: checkIsShared, isLoading: isLoadingShared } = useSharedDirectories();
   const { setTargetDirectoryId, setOnUploadComplete } = useDragDropStore();
 
@@ -94,32 +94,25 @@ const DirectoryPage: React.FC = () => {
 
   // Breadcrumbs
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([]);
-  const [isLoadingBreadcrumbs, setIsLoadingBreadcrumbs] = useState(false);
   const location = useLocation();
 
   // Используем refs для предотвращения повторных вызовов
   const redirectDone = useRef(false);
-  const isLoadingBreadcrumbsRef = useRef(false);
   const isUndoingRef = useRef(false);
+  const breadcrumbLoadIdRef = useRef(0);
   const [actualId, setActualId] = useState<string | null>(null);
 
   // --- Функция загрузки breadcrumbs ---
+  // Возвращает true, если директория находится внутри общей директории
   // Принимает опциональный currentDir — если передан, пропускает первый запрос getDirectory
   const loadBreadcrumbs = useCallback(
-    async (directoryId: string, isSharedDir: boolean, currentDir?: Directory) => {
-      if (!accessToken) return;
+    async (directoryId: string, isSharedDir: boolean, currentDir?: Directory): Promise<boolean> => {
+      if (!accessToken) return false;
 
-      if (isLoadingBreadcrumbsRef.current) {
-        return;
-      }
-
-      isLoadingBreadcrumbsRef.current = true;
-      setIsLoadingBreadcrumbs(true);
-      setBreadcrumbs([]);
+      const crumbId = ++breadcrumbLoadIdRef.current;
+      const crumbs: BreadcrumbItem[] = [];
 
       try {
-        const crumbs: BreadcrumbItem[] = [];
-
         // Получаем текущую директорию
         const current = currentDir || (await getDirectory(accessToken, directoryId));
 
@@ -130,10 +123,18 @@ const DirectoryPage: React.FC = () => {
             name: 'Личное хранилище',
             isRoot: true,
           });
+          if (crumbId !== breadcrumbLoadIdRef.current) return false;
           setBreadcrumbs(crumbs);
-          setIsLoadingBreadcrumbs(false);
-          isLoadingBreadcrumbsRef.current = false;
-          return;
+          return false;
+        }
+
+        // Если список общих директорий ещё загружается — не строим путь,
+        // т.к. checkIsShared вернёт false для всех папок.
+        // Показываем только текущую папку; Effect 3 перестроит путь, когда загрузка завершится.
+        if (isLoadingShared) {
+          if (crumbId !== breadcrumbLoadIdRef.current) return false;
+          setBreadcrumbs([{ id: current.id, name: current.name }]);
+          return false;
         }
 
         // Проверяем, является ли текущая директория общей
@@ -147,10 +148,9 @@ const DirectoryPage: React.FC = () => {
             isRoot: false,
             isShared: true,
           });
+          if (crumbId !== breadcrumbLoadIdRef.current) return false;
           setBreadcrumbs(crumbs);
-          setIsLoadingBreadcrumbs(false);
-          isLoadingBreadcrumbsRef.current = false;
-          return;
+          return true;
         }
 
         // Для обычной папки: строим путь
@@ -202,11 +202,14 @@ const DirectoryPage: React.FC = () => {
           }
         }
 
+        if (crumbId !== breadcrumbLoadIdRef.current) return false;
         setBreadcrumbs(crumbs);
+        return crumbs.some((c) => c.isShared);
       } catch (err) {
         // Игнорируем ошибки при получении текущей директории
         // Fallback: показываем только текущую папку
         const fallbackName = currentDir?.name || directoryInfo?.name || 'Текущая папка';
+        if (crumbId !== breadcrumbLoadIdRef.current) return isSharedDir;
         setBreadcrumbs([
           {
             id: directoryId,
@@ -214,12 +217,10 @@ const DirectoryPage: React.FC = () => {
             isShared: isSharedDir,
           },
         ]);
-      } finally {
-        setIsLoadingBreadcrumbs(false);
-        isLoadingBreadcrumbsRef.current = false;
+        return isSharedDir;
       }
     },
-    [accessToken, directoryInfo, checkIsShared],
+    [accessToken, directoryInfo, checkIsShared, isLoadingShared],
   );
 
   // --- Функция загрузки содержимого ---
@@ -255,14 +256,22 @@ const DirectoryPage: React.FC = () => {
         setHasMoreDirs(!!contents.next_dirs_cursor);
 
         // Определяем, является ли директория общей
-        let shared = checkIsShared(dirId);
+        const shared = checkIsShared(dirId);
 
-        setIsShared(shared);
-
-        // Загружаем breadcrumbs
+        // Загружаем breadcrumbs и определяем реальный статус
+        // (папка может быть внутри общей директории, не являясь ей напрямую)
         try {
-          await loadBreadcrumbs(dirId, shared, info);
+          const hasSharedAncestor = await loadBreadcrumbs(dirId, shared, info);
+          const effectiveShared = shared || hasSharedAncestor;
+          setIsShared(effectiveShared);
+          if (!isLoadingShared) {
+            setCurrentSection(effectiveShared ? 'shared' : 'personal');
+          }
         } catch (err) {
+          setIsShared(shared);
+          if (!isLoadingShared) {
+            setCurrentSection(shared ? 'shared' : 'personal');
+          }
           // Игнорируем ошибки breadcrumbs - они не должны блокировать отображение страницы
           console.debug('Breadcrumbs loading failed, continuing with page render');
         }
@@ -279,17 +288,24 @@ const DirectoryPage: React.FC = () => {
         }
       }
     },
-    [accessToken, navigate, loadBreadcrumbs, checkIsShared, setTargetDirectoryId, user?.id],
+    [
+      accessToken,
+      navigate,
+      loadBreadcrumbs,
+      checkIsShared,
+      setTargetDirectoryId,
+      isLoadingShared,
+      user?.id,
+    ],
   );
 
   // --- Обработчик навигации по breadcrumbs ---
+  // Просто переходим на URL — Effect 2 подхватит и загрузит директорию
   const handleBreadcrumbClick = useCallback(
-    async (crumbId: string) => {
+    (crumbId: string) => {
       navigate(`/directories/${crumbId}`);
-      await loadDirectory(crumbId);
-      setActualId(crumbId);
     },
-    [navigate, loadDirectory],
+    [navigate],
   );
 
   // --- Эффект 1: Обработка 'personal' ID ---
@@ -321,36 +337,45 @@ const DirectoryPage: React.FC = () => {
 
   // --- Эффект 2: Обновление при изменении ID в URL ---
   useEffect(() => {
-    if (id && id !== 'personal' && id !== actualId && accessToken && !isLoadingShared) {
+    if (id && id !== 'personal' && id !== actualId && accessToken) {
+      const prevId = actualId;
       setActualId(id);
+
+      // Определяем раздел до начала загрузки, чтобы сайдбар не моргал
+      if (id === personalStorageId) {
+        setCurrentSection('personal');
+      } else if (prevId && currentSection) {
+        // Были в известном разделе — сохраняем его для новой директории
+        setCurrentSection(currentSection);
+      } else if (!isLoadingShared && checkIsShared(id)) {
+        // Известная общая директория верхнего уровня
+        setCurrentSection('shared');
+      }
+
       loadDirectory(id);
     }
-  }, [id, actualId, accessToken, loadDirectory, isLoadingShared]);
-
-  // Эффект 3: Перепроверяем статус общей директории
-  useEffect(() => {
-    if (!isLoadingShared && actualId && accessToken && directoryInfo) {
-      const shared = checkIsShared(actualId);
-      let effectiveShared = shared;
-
-      if (effectiveShared !== isShared) {
-        setIsShared(effectiveShared);
-        // Перезагружаем breadcrumbs с новым статусом
-        if (directoryInfo) {
-          loadBreadcrumbs(actualId, effectiveShared, directoryInfo);
-        }
-      }
-    }
   }, [
-    isLoadingShared,
+    id,
     actualId,
     accessToken,
+    loadDirectory,
+    personalStorageId,
+    currentSection,
+    isLoadingShared,
     checkIsShared,
-    isShared,
-    directoryInfo,
-    user?.id,
-    loadBreadcrumbs,
+    setCurrentSection,
   ]);
+
+  // Эффект 3: Когда список общих директорий загрузился,
+  // перепроверяем статус и перезагружаем breadcrumbs
+  useEffect(() => {
+    if (!isLoadingShared && actualId && accessToken && directoryInfo) {
+      loadBreadcrumbs(actualId, false, directoryInfo).then((hasSharedAncestor) => {
+        setIsShared(hasSharedAncestor);
+        setCurrentSection(hasSharedAncestor ? 'shared' : 'personal');
+      });
+    }
+  }, [isLoadingShared, actualId, accessToken, directoryInfo, user?.id, loadBreadcrumbs]);
 
   // --- Эффект 4: Обновляем DnD target при изменении actualId ---
   useEffect(() => {
@@ -414,13 +439,7 @@ const DirectoryPage: React.FC = () => {
     return isShared && !isPersonal;
   }, [isShared, isPersonal]);
 
-  // Сообщаем боковому меню, в каком разделе мы находимся (личное/общее),
-  // чтобы оно подсвечивало правильный пункт. Сбрасываем при уходе со страницы.
-  useEffect(() => {
-    if (!directoryInfo) return;
-    setCurrentSection(isShared ? 'shared' : 'personal');
-  }, [directoryInfo, isShared, setCurrentSection]);
-
+  // Сбрасываем при уходе со страницы
   useEffect(() => {
     return () => setCurrentSection(null);
   }, [setCurrentSection]);
@@ -715,7 +734,7 @@ const DirectoryPage: React.FC = () => {
 
   // --- Рендер breadcrumbs ---
   const renderBreadcrumbs = () => {
-    if (isLoadingBreadcrumbs || isLoadingShared) {
+    if (isLoadingShared) {
       return (
         <div className="flex items-center gap-2 text-sm text-theme-muted">
           <span>Загрузка...</span>
@@ -755,7 +774,8 @@ const DirectoryPage: React.FC = () => {
               ) : (
                 <button
                   onClick={() => handleBreadcrumbClick(crumb.id)}
-                  className="text-theme-secondary hover:text-brand transition-colors cursor-pointer"
+                  disabled={isLoading}
+                  className={`text-theme-secondary transition-colors ${isLoading ? 'cursor-not-allowed opacity-50' : 'hover:text-brand cursor-pointer'}`}
                 >
                   {crumb.isRoot ? (
                     <span className="flex items-center gap-1">

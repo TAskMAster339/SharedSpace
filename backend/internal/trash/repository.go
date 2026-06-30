@@ -65,9 +65,19 @@ func (r *Repository) FindDeletedFiles(ctx context.Context, db dbTX, userID strin
 
 func (r *Repository) FindDeletedDirectoriesPaginated(ctx context.Context, db dbTX, userID string, limit int, cursorName string, cursorID string) ([]deletedDirectoryRecord, bool, string, error) {
 	query := `
+		WITH deleted_dirs AS (
+			SELECT id, name, owner_id, parent_id, type, deleted_at, created_at, updated_at
+			FROM directories
+			WHERE owner_id = $1 AND deleted_at IS NOT NULL
+		),
+		root_deleted_dirs AS (
+			SELECT d.id, d.name, d.owner_id, d.parent_id, d.type, d.deleted_at, d.created_at, d.updated_at
+			FROM deleted_dirs d
+			LEFT JOIN deleted_dirs parent ON d.parent_id = parent.id
+			WHERE parent.id IS NULL OR parent.deleted_at IS NULL
+		)
 		SELECT id, name, owner_id, parent_id, type, deleted_at, created_at, updated_at
-		FROM directories
-		WHERE owner_id = $1 AND deleted_at IS NOT NULL`
+		FROM root_deleted_dirs`
 	args := []any{userID}
 
 	if cursorName != "" && cursorID != "" {
