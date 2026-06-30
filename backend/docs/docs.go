@@ -3656,6 +3656,9 @@ const docTemplate = `{
                 "create_folder": {
                     "type": "boolean"
                 },
+                "create_link": {
+                    "type": "boolean"
+                },
                 "delete": {
                     "type": "boolean"
                 },

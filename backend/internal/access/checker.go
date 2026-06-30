@@ -54,6 +54,7 @@ func (c *Checker) GetPermissions(ctx context.Context, userID, directoryID string
 			ChangeRole:   true,
 			RemoveMember: true,
 			DeleteDir:    true,
+			CreateLink:   true,
 		}, nil
 	}
 

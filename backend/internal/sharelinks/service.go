@@ -49,7 +49,7 @@ func (s *Service) Create(ctx context.Context, userID, fileID string, req CreateS
 		return ShareLinkResponse{}, apperror.WrapInternal("поиск файла", err)
 	}
 
-	ok, err := s.accessChecker.Can(ctx, userID, file.DirectoryID, access.ActionUpload)
+	ok, err := s.accessChecker.Can(ctx, userID, file.DirectoryID, access.ActionCreateLink)
 	if err != nil {
 		return ShareLinkResponse{}, err
 	}
@@ -73,7 +73,7 @@ func (s *Service) CreateForDirectory(ctx context.Context, userID, dirID string, 
 		return ShareLinkResponse{}, apperror.WrapInternal("поиск директории", err)
 	}
 
-	ok, err := s.accessChecker.Can(ctx, userID, dirID, access.ActionView)
+	ok, err := s.accessChecker.Can(ctx, userID, dirID, access.ActionCreateLink)
 	if err != nil {
 		return ShareLinkResponse{}, err
 	}
