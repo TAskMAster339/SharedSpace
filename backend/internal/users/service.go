@@ -48,6 +48,10 @@ func (s *Service) GetMe(ctx context.Context, userID string) (UserResponse, error
 		return UserResponse{}, apperror.Unauthorized("некорректный access токен")
 	}
 
+	if err := s.repo.RecalcSharedDirsCount(ctx, s.db, userID); err != nil {
+		return UserResponse{}, apperror.WrapInternal("ошибка обновления счётчика", err)
+	}
+
 	user, err := s.repo.FindUserByID(ctx, s.db, userID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -231,6 +235,8 @@ func toUserResponse(user record) UserResponse {
 		StorageUsed:     user.StorageUsed,
 		SharedDirsCount: user.SharedDirsCount,
 		SharedDirsQuota: user.SharedDirsQuota,
+		ShareLinksCount: user.ShareLinksCount,
+		ShareLinksQuota: user.ShareLinksQuota,
 		CreatedAt:       user.CreatedAt,
 	}
 }

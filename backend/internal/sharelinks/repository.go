@@ -118,6 +118,27 @@ func (r *Repository) Delete(ctx context.Context, db dbTX, id string) error {
 	return err
 }
 
+func (r *Repository) GetShareLinksStats(ctx context.Context, db dbTX, userID string) (count, quota int, err error) {
+	err = db.QueryRow(ctx, `
+		SELECT share_links_count, share_links_quota FROM users WHERE id = $1 FOR UPDATE
+	`, userID).Scan(&count, &quota)
+	return
+}
+
+func (r *Repository) IncrementShareLinksCount(ctx context.Context, db dbTX, userID string) error {
+	_, err := db.Exec(ctx, `
+		UPDATE users SET share_links_count = share_links_count + 1, updated_at = now() WHERE id = $1
+	`, userID)
+	return err
+}
+
+func (r *Repository) DecrementShareLinksCount(ctx context.Context, db dbTX, userID string) error {
+	_, err := db.Exec(ctx, `
+		UPDATE users SET share_links_count = GREATEST(share_links_count - 1, 0), updated_at = now() WHERE id = $1
+	`, userID)
+	return err
+}
+
 func (r *Repository) GetFileByID(ctx context.Context, db dbTX, fileID string) (fileRecord, error) {
 	var f fileRecord
 	err := db.QueryRow(ctx, `

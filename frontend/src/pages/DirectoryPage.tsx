@@ -46,6 +46,7 @@ const DirectoryPage: React.FC = () => {
 
   const accessToken = useAuthStore((s) => s.accessToken);
   const user = useAuthStore((s) => s.user);
+  const refreshUser = useAuthStore((s) => s.refreshUser);
   const { personalStorageId, setCurrentSection } = useDirectoryStore();
   const { isShared: checkIsShared, isLoading: isLoadingShared } = useSharedDirectories();
   const { setTargetDirectoryId, setOnUploadComplete } = useDragDropStore();
@@ -1089,6 +1090,7 @@ const DirectoryPage: React.FC = () => {
                 } else {
                   await createDirectoryShareLink(accessToken, itemId, body);
                 }
+                refreshUser();
                 setDirectoryContents((prev) => {
                   if (!prev) return prev;
                   return {

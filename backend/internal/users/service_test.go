@@ -149,6 +149,10 @@ func (m *mockRepo) DeleteUserAndRelatedData(_ context.Context, _ dbTX, userID st
 	return m.deleteUserAndRelatedErr
 }
 
+func (m *mockRepo) RecalcSharedDirsCount(_ context.Context, _ dbTX, _ string) error {
+	return nil
+}
+
 func newTestService(repo RepositoryInterface) (*Service, *mockTx) {
 	tx := &mockTx{}
 	service := &Service{

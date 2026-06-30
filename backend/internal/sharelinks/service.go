@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -119,9 +120,33 @@ func (s *Service) createLink(ctx context.Context, userID string, fileID, dirID *
 		PasswordHash: passwordHash,
 	}
 
-	saved, err := s.repo.Create(ctx, s.db, record)
+	tx, err := s.beginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return ShareLinkResponse{}, apperror.WrapInternal("начало транзакции", err)
+	}
+	defer tx.Rollback(ctx)
+
+	count, quota, err := s.repo.GetShareLinksStats(ctx, tx, userID)
+	if err != nil {
+		return ShareLinkResponse{}, apperror.WrapInternal("получение статистики ссылок", err)
+	}
+	if count >= quota {
+		return ShareLinkResponse{}, apperror.Validation(
+			fmt.Sprintf("достигнут лимит ссылок (%d из %d)", count, quota),
+		)
+	}
+
+	saved, err := s.repo.Create(ctx, tx, record)
 	if err != nil {
 		return ShareLinkResponse{}, apperror.WrapInternal("создание ссылки", err)
+	}
+
+	if err := s.repo.IncrementShareLinksCount(ctx, tx, userID); err != nil {
+		return ShareLinkResponse{}, apperror.WrapInternal("обновление счётчика ссылок", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return ShareLinkResponse{}, apperror.WrapInternal("сохранение ссылки", err)
 	}
 
 	return toResponse(saved), nil
@@ -296,7 +321,21 @@ func (s *Service) Delete(ctx context.Context, userID, linkID string) error {
 		}
 	}
 
-	if err := s.repo.Delete(ctx, s.db, linkID); err != nil {
+	tx, err := s.beginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return apperror.WrapInternal("начало транзакции", err)
+	}
+	defer tx.Rollback(ctx)
+
+	if err := s.repo.Delete(ctx, tx, linkID); err != nil {
+		return apperror.WrapInternal("удаление ссылки", err)
+	}
+
+	if err := s.repo.DecrementShareLinksCount(ctx, tx, link.CreatedBy); err != nil {
+		return apperror.WrapInternal("обновление счётчика ссылок", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
 		return apperror.WrapInternal("удаление ссылки", err)
 	}
 	return nil

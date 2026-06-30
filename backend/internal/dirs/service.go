@@ -141,6 +141,9 @@ func (s *Service) Create(ctx context.Context, userID string, req CreateDirectory
 	}
 
 	if req.Shared {
+		if err := s.repo.RecalcSharedDirsCount(ctx, tx, userID); err != nil {
+			return DirectoryResponse{}, apperror.WrapInternal("ошибка обновления счётчика", err)
+		}
 		count, quota, err := s.repo.GetSharedDirsStats(ctx, tx, userID)
 		if err != nil {
 			return DirectoryResponse{}, apperror.WrapInternal("ошибка получения статистики общих директорий", err)
@@ -381,6 +384,10 @@ func (s *Service) SoftDelete(ctx context.Context, userID, dirID string) error {
 		}
 	}
 
+	if err := s.repo.RecalcSharedDirsCount(ctx, tx, dir.OwnerID); err != nil {
+		return apperror.WrapInternal("обновление счётчика общих директорий", err)
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		return apperror.WrapInternal("сохранение", err)
 	}
@@ -446,6 +453,10 @@ func (s *Service) Restore(ctx context.Context, userID, dirID string) error {
 		if err := s.repo.IncrementFilesCount(ctx, tx, *dir.ParentID, len(restoredFiles)); err != nil {
 			return apperror.WrapInternal("обновление счётчика файлов", err)
 		}
+	}
+
+	if err := s.repo.RecalcSharedDirsCount(ctx, tx, dir.OwnerID); err != nil {
+		return apperror.WrapInternal("обновление счётчика общих директорий", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
