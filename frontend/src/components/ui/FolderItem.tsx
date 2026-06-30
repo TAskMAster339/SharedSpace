@@ -95,7 +95,7 @@ export const FolderItem: React.FC<FolderItemProps> = ({
           </div>
           {hasShareLinks && (
             <span
-              className="absolute -top-1.5 -left-1.5 flex items-center justify-center rounded-full bg-theme-tertiary border border-theme p-0.5 shadow-theme-card"
+              className="absolute -top-1.5 -right-1.5 flex items-center justify-center rounded-full bg-theme-tertiary border border-theme p-0.5 shadow-theme-card transition-all duration-500 ease-in-out"
               aria-label="Есть ссылки общего доступа"
               title="Есть ссылки общего доступа"
             >
