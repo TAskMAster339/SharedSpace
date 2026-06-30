@@ -14,36 +14,36 @@ import (
 )
 
 type mockRepo struct {
-	findByMemberResult               []sharedDirectoryRecord
-	findByMemberErr                  error
-	findByMemberWithStatsResult      []sharedDirectoryWithStatsRecord
-	findByMemberWithStatsErr         error
-	findMembersResult                []memberRecord
-	findMembersErr                   error
-	findByIDResult                   sharedDirectoryRecord
-	findByIDErr                      error
-	findUserByUsernameID             string
-	findUserByUsernameErr            error
-	isMemberResult                   bool
-	isMemberErr                      error
-	createInvitationResult           invitationRecord
-	createInvitationErr              error
-	findInvitationsResult            []invitationRecord
-	findInvitationsErr               error
-	findInvitationsPaginatedResult   []invitationRecord
-	findInvitationsPaginatedHasMore  bool
-	findInvitationsPaginatedCursor   string
-	findInvitationsPaginatedErr      error
-	findInvitationResult             invitationRecord
-	findInvitationErr                error
-	updateInvitationErr              error
-	addMemberErr                     error
-	findMemberResult                 memberRecord
-	findMemberErr                    error
-	updateMemberRoleErr              error
-	removeMemberErr                  error
-	getUserSharedDirsResult          []SharedDirectoryResponse
-	getUserSharedDirsErr             error
+	findByMemberResult              []sharedDirectoryRecord
+	findByMemberErr                 error
+	findByMemberWithStatsResult     []sharedDirectoryWithStatsRecord
+	findByMemberWithStatsErr        error
+	findMembersResult               []memberRecord
+	findMembersErr                  error
+	findByIDResult                  sharedDirectoryRecord
+	findByIDErr                     error
+	findUserByUsernameID            string
+	findUserByUsernameErr           error
+	isMemberResult                  bool
+	isMemberErr                     error
+	createInvitationResult          invitationRecord
+	createInvitationErr             error
+	findInvitationsResult           []invitationRecord
+	findInvitationsErr              error
+	findInvitationsPaginatedResult  []invitationRecord
+	findInvitationsPaginatedHasMore bool
+	findInvitationsPaginatedCursor  string
+	findInvitationsPaginatedErr     error
+	findInvitationResult            invitationRecord
+	findInvitationErr               error
+	updateInvitationErr             error
+	addMemberErr                    error
+	findMemberResult                memberRecord
+	findMemberErr                   error
+	updateMemberRoleErr             error
+	removeMemberErr                 error
+	getUserSharedDirsResult         []SharedDirectoryResponse
+	getUserSharedDirsErr            error
 }
 
 func (m *mockRepo) FindByMember(_ context.Context, _ dbTX, _ string, _ int) ([]sharedDirectoryRecord, error) {

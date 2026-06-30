@@ -609,8 +609,15 @@ const DirectoryPage: React.FC = () => {
       const el = dirsSentinelRef.current;
       if (el && el.getBoundingClientRect().top < window.innerHeight + 300) {
         setIsLoadingMoreDirs(true);
-        getDirectoryContents(accessToken, actualId, { dirs_limit: PAGE_LIMIT, dirs_cursor: dirsCursor })
-          .then((c) => { setAllSubdirectories((p) => [...p, ...c.subdirectories]); setDirsCursor(c.next_dirs_cursor); setHasMoreDirs(!!c.next_dirs_cursor); })
+        getDirectoryContents(accessToken, actualId, {
+          dirs_limit: PAGE_LIMIT,
+          dirs_cursor: dirsCursor,
+        })
+          .then((c) => {
+            setAllSubdirectories((p) => [...p, ...c.subdirectories]);
+            setDirsCursor(c.next_dirs_cursor);
+            setHasMoreDirs(!!c.next_dirs_cursor);
+          })
           .catch((e) => console.error('loadMoreDirs', e))
           .finally(() => setIsLoadingMoreDirs(false));
       }
@@ -621,13 +628,29 @@ const DirectoryPage: React.FC = () => {
       const el = filesSentinelRef.current;
       if (el && el.getBoundingClientRect().top < window.innerHeight + 300) {
         setIsLoadingMoreFiles(true);
-        getDirectoryContents(accessToken, actualId, { files_limit: PAGE_LIMIT, files_cursor: filesCursor })
-          .then((c) => { setAllFiles((p) => [...p, ...c.files]); setFilesCursor(c.next_files_cursor); setHasMoreFiles(!!c.next_files_cursor); })
+        getDirectoryContents(accessToken, actualId, {
+          files_limit: PAGE_LIMIT,
+          files_cursor: filesCursor,
+        })
+          .then((c) => {
+            setAllFiles((p) => [...p, ...c.files]);
+            setFilesCursor(c.next_files_cursor);
+            setHasMoreFiles(!!c.next_files_cursor);
+          })
           .catch((e) => console.error('loadMoreFiles', e))
           .finally(() => setIsLoadingMoreFiles(false));
       }
     }
-  }, [accessToken, actualId, hasMoreDirs, isLoadingMoreDirs, dirsCursor, hasMoreFiles, isLoadingMoreFiles, filesCursor]);
+  }, [
+    accessToken,
+    actualId,
+    hasMoreDirs,
+    isLoadingMoreDirs,
+    dirsCursor,
+    hasMoreFiles,
+    isLoadingMoreFiles,
+    filesCursor,
+  ]);
 
   // Проверяем при скролле, ресайзе и после каждого рендера
   useEffect(() => {

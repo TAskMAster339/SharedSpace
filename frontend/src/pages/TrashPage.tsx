@@ -30,32 +30,35 @@ const TrashPage: React.FC = () => {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
-  const loadTrash = useCallback(async (pagination?: TrashPaginationParams, append = false) => {
-    if (!accessToken) return;
+  const loadTrash = useCallback(
+    async (pagination?: TrashPaginationParams, append = false) => {
+      if (!accessToken) return;
 
-    if (!append) {
-      setIsLoading(true);
-      setError('');
-    }
-
-    try {
-      const data = await getTrashList(accessToken, pagination);
-      if (append) {
-        setItems((prev) => [...prev, ...data.items]);
-      } else {
-        setItems(data.items);
+      if (!append) {
+        setIsLoading(true);
+        setError('');
       }
-      setFilesCursor(data.next_files_cursor);
-      setDirsCursor(data.next_dirs_cursor);
-      setHasMoreFiles(!!data.next_files_cursor);
-      setHasMoreDirs(!!data.next_dirs_cursor);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Не удалось загрузить корзину.');
-    } finally {
-      setIsLoading(false);
-      setIsLoadingMore(false);
-    }
-  }, [accessToken]);
+
+      try {
+        const data = await getTrashList(accessToken, pagination);
+        if (append) {
+          setItems((prev) => [...prev, ...data.items]);
+        } else {
+          setItems(data.items);
+        }
+        setFilesCursor(data.next_files_cursor);
+        setDirsCursor(data.next_dirs_cursor);
+        setHasMoreFiles(!!data.next_files_cursor);
+        setHasMoreDirs(!!data.next_dirs_cursor);
+      } catch (err) {
+        setError(err instanceof ApiError ? err.message : 'Не удалось загрузить корзину.');
+      } finally {
+        setIsLoading(false);
+        setIsLoadingMore(false);
+      }
+    },
+    [accessToken],
+  );
 
   useEffect(() => {
     loadTrash({
@@ -79,7 +82,7 @@ const TrashPage: React.FC = () => {
           dirs_limit: PAGE_LIMIT,
           dirs_cursor: dirsCursor,
         },
-        true
+        true,
       );
     }
   }, [accessToken, filesCursor, dirsCursor, hasMoreFiles, hasMoreDirs, isLoadingMore, loadTrash]);
@@ -173,7 +176,9 @@ const TrashPage: React.FC = () => {
                           <Folder size={20} />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm text-theme-primary font-medium truncate">{item.name}</p>
+                          <p className="text-sm text-theme-primary font-medium truncate">
+                            {item.name}
+                          </p>
                           <p className="text-xs text-theme-muted">
                             Удалено {formatDate(item.deleted_at)} · {formatFileSize(item.size)}
                           </p>
@@ -223,7 +228,9 @@ const TrashPage: React.FC = () => {
                           <FileIconLucide size={20} />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm text-theme-primary font-medium truncate">{item.name}</p>
+                          <p className="text-sm text-theme-primary font-medium truncate">
+                            {item.name}
+                          </p>
                           <p className="text-xs text-theme-muted">
                             Удалено {formatDate(item.deleted_at)} · {formatFileSize(item.size)}
                           </p>

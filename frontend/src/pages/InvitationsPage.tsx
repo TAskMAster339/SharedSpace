@@ -53,7 +53,10 @@ const InvitationsPage: React.FC = () => {
       setIsLoadingMore(true);
       getMyInvitations(accessToken, { limit: PAGE_LIMIT, cursor })
         .then((data) => {
-          setInvitations((prev) => [...prev, ...data.items.filter((inv) => inv.status === 'pending')]);
+          setInvitations((prev) => [
+            ...prev,
+            ...data.items.filter((inv) => inv.status === 'pending'),
+          ]);
           setCursor(data.next_cursor);
           setHasMore(!!data.next_cursor);
         })

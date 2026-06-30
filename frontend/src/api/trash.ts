@@ -35,7 +35,10 @@ function buildTrashQuery(params?: TrashPaginationParams): string {
   return parts.length ? `?${parts.join('&')}` : '';
 }
 
-export function getTrashList(accessToken: string, pagination?: TrashPaginationParams): Promise<TrashListResponse> {
+export function getTrashList(
+  accessToken: string,
+  pagination?: TrashPaginationParams,
+): Promise<TrashListResponse> {
   const query = buildTrashQuery(pagination);
   return apiRequest<TrashListResponse>(`/trash${query}`, {
     method: 'GET',
