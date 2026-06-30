@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { useDirectoryStore } from './directoryStore';
+import { useFavoritesStore } from './favoritesStore';
 import {
   AuthUser,
   login as loginRequest,
@@ -54,6 +55,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     setCookie(REFRESH_COOKIE, result.tokens.refresh_token, result.tokens.refresh_expires_in);
     set({ user: result.user, accessToken: result.tokens.access_token, isAuthenticated: true });
     useDirectoryStore.getState().reset();
+    useFavoritesStore.getState().reset();
     await useDirectoryStore.getState().fetchPersonalStorageId(result.tokens.access_token);
   },
 
@@ -77,6 +79,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     removeCookie(REFRESH_COOKIE);
     set({ user: null, accessToken: null, isAuthenticated: false });
     useDirectoryStore.getState().reset();
+    useFavoritesStore.getState().reset();
   },
 
   hydrate: async () => {
@@ -95,6 +98,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       removeCookie(REFRESH_COOKIE);
       set({ user: null, accessToken: null, isAuthenticated: false });
       useDirectoryStore.getState().reset();
+      useFavoritesStore.getState().reset();
     } finally {
       set({ isHydrating: false });
     }

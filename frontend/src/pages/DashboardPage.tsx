@@ -42,37 +42,6 @@ const DashboardPage: React.FC = () => {
     wasAdded: boolean;
   } | null>(null);
 
-  useEffect(() => {
-    if (!accessToken) return;
-
-    let isMounted = true;
-    setIsLoading(true);
-    setError('');
-
-    Promise.all([
-      getRecentFiles(accessToken, RECENT_FILES_LIMIT),
-      getSharedWithMe(accessToken, SHARED_DIRECTORIES_LIMIT),
-      getFavorites(accessToken, FAVORITES_LIMIT),
-    ])
-      .then(([recent, shared, favoritesRes]) => {
-        if (!isMounted) return;
-        setRecentFiles(recent.files);
-        setSharedDirectories(shared);
-        setFavorites(favoritesRes.favorites);
-      })
-      .catch((err) => {
-        if (!isMounted) return;
-        setError(err instanceof ApiError ? err.message : 'Не удалось загрузить данные.');
-      })
-      .finally(() => {
-        if (isMounted) setIsLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [accessToken]);
-
   const loadDashboardData = useCallback(async () => {
     if (!accessToken) return;
 

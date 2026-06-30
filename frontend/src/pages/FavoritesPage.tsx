@@ -23,30 +23,6 @@ const FavoritesPage: React.FC = () => {
   const [deletedToast, setDeletedToast] = useState<{ id: string; name: string } | null>(null);
   const [favoriteToast, setFavoriteToast] = useState<{ id: string; name: string } | null>(null);
 
-  useEffect(() => {
-    if (!accessToken) return;
-
-    let isMounted = true;
-    setIsLoading(true);
-    setError('');
-
-    getFavorites(accessToken)
-      .then((data) => {
-        if (isMounted) setFiles(data.favorites);
-      })
-      .catch((err) => {
-        if (!isMounted) return;
-        setError(err instanceof ApiError ? err.message : 'Не удалось загрузить избранное.');
-      })
-      .finally(() => {
-        if (isMounted) setIsLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [accessToken]);
-
   const loadFavorites = useCallback(async () => {
     if (!accessToken) return;
 
