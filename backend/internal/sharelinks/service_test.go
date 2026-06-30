@@ -14,14 +14,19 @@ import (
 )
 
 type mockRepo struct {
-	createFn          func(shareLinkRecord) (shareLinkRecord, error)
-	findByIDFn        func(string) (shareLinkRecord, error)
-	findByTokenFn     func(string) (shareLinkRecord, error)
-	findByFileIDFn    func(string, int) ([]shareLinkRecord, error)
-	updateFn          func(string, shareLinkRecord) (shareLinkRecord, error)
-	deleteFn          func(string) error
-	getFileByIDFn     func(string) (fileRecord, error)
-	getUsernameByIDFn func(string) (string, error)
+	createFn           func(shareLinkRecord) (shareLinkRecord, error)
+	findByIDFn         func(string) (shareLinkRecord, error)
+	findByTokenFn      func(string) (shareLinkRecord, error)
+	findByFileIDFn     func(string, int) ([]shareLinkRecord, error)
+	findByDirIDFn      func(string, int) ([]shareLinkRecord, error)
+	updateFn           func(string, shareLinkRecord) (shareLinkRecord, error)
+	deleteFn           func(string) error
+	getFileByIDFn      func(string) (fileRecord, error)
+	getUsernameByIDFn  func(string) (string, error)
+	getDirectoryByIDFn func(string) (directoryRecord, error)
+	getDirSubdirsFn    func(string) ([]dirSubdirRecord, error)
+	getDirFilesFn      func(string) ([]dirFileRecord, error)
+	isSubdirectoryFn   func(string, string) (bool, error)
 }
 
 func (m *mockRepo) Create(_ context.Context, _ dbTX, link shareLinkRecord) (shareLinkRecord, error) {
@@ -35,6 +40,12 @@ func (m *mockRepo) FindByToken(_ context.Context, _ dbTX, token string) (shareLi
 }
 func (m *mockRepo) FindByFileID(_ context.Context, _ dbTX, fileID string, limit int) ([]shareLinkRecord, error) {
 	return m.findByFileIDFn(fileID, limit)
+}
+func (m *mockRepo) FindByDirectoryID(_ context.Context, _ dbTX, dirID string, limit int) ([]shareLinkRecord, error) {
+	if m.findByDirIDFn != nil {
+		return m.findByDirIDFn(dirID, limit)
+	}
+	return nil, nil
 }
 func (m *mockRepo) Update(_ context.Context, _ dbTX, id string, link shareLinkRecord) (shareLinkRecord, error) {
 	return m.updateFn(id, link)
@@ -50,6 +61,30 @@ func (m *mockRepo) GetUsernameByID(_ context.Context, _ dbTX, userID string) (st
 		return m.getUsernameByIDFn(userID)
 	}
 	return "testuser", nil
+}
+func (m *mockRepo) GetDirectoryByID(_ context.Context, _ dbTX, dirID string) (directoryRecord, error) {
+	if m.getDirectoryByIDFn != nil {
+		return m.getDirectoryByIDFn(dirID)
+	}
+	return directoryRecord{}, nil
+}
+func (m *mockRepo) GetDirectorySubdirs(_ context.Context, _ dbTX, dirID string) ([]dirSubdirRecord, error) {
+	if m.getDirSubdirsFn != nil {
+		return m.getDirSubdirsFn(dirID)
+	}
+	return nil, nil
+}
+func (m *mockRepo) GetDirectoryFiles(_ context.Context, _ dbTX, dirID string) ([]dirFileRecord, error) {
+	if m.getDirFilesFn != nil {
+		return m.getDirFilesFn(dirID)
+	}
+	return nil, nil
+}
+func (m *mockRepo) IsSubdirectory(_ context.Context, _ dbTX, parentID, childID string) (bool, error) {
+	if m.isSubdirectoryFn != nil {
+		return m.isSubdirectoryFn(parentID, childID)
+	}
+	return true, nil
 }
 
 type mockStorage struct {
@@ -116,8 +151,9 @@ func defaultFile() fileRecord {
 }
 
 func existingLink() shareLinkRecord {
+	fileID := "file-1"
 	return shareLinkRecord{
-		ID: "link-1", FileID: "file-1", Token: "tok-1",
+		ID: "link-1", FileID: &fileID, Token: "tok-1",
 		AccessType: "public", CreatedBy: "user-1",
 		ExpiresAt: nil, PasswordHash: nil,
 		CreatedAt: time.Unix(100, 0).UTC(),

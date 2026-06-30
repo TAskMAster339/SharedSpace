@@ -12,10 +12,13 @@ import (
 
 type ServiceInterface interface {
 	Create(ctx context.Context, userID, fileID string, req CreateShareLinkRequest) (ShareLinkResponse, error)
+	CreateForDirectory(ctx context.Context, userID, dirID string, req CreateShareLinkRequest) (ShareLinkResponse, error)
 	ListByFile(ctx context.Context, userID, fileID string, limit int) ([]ShareLinkResponse, error)
+	ListByDirectory(ctx context.Context, userID, dirID string, limit int) ([]ShareLinkResponse, error)
 	Update(ctx context.Context, userID, linkID string, req UpdateShareLinkRequest) (ShareLinkResponse, error)
 	Delete(ctx context.Context, userID, linkID string) error
 	Resolve(ctx context.Context, token, password string, authenticated bool) (FileContentResponse, error)
+	ResolveDirectory(ctx context.Context, token, password string, authenticated bool, subDirID string) (DirectoryContentResponse, error)
 }
 
 type RepositoryInterface interface {
@@ -23,10 +26,15 @@ type RepositoryInterface interface {
 	FindByID(ctx context.Context, db dbTX, id string) (shareLinkRecord, error)
 	FindByToken(ctx context.Context, db dbTX, token string) (shareLinkRecord, error)
 	FindByFileID(ctx context.Context, db dbTX, fileID string, limit int) ([]shareLinkRecord, error)
+	FindByDirectoryID(ctx context.Context, db dbTX, dirID string, limit int) ([]shareLinkRecord, error)
 	Update(ctx context.Context, db dbTX, id string, link shareLinkRecord) (shareLinkRecord, error)
 	Delete(ctx context.Context, db dbTX, id string) error
 	GetFileByID(ctx context.Context, db dbTX, fileID string) (fileRecord, error)
 	GetUsernameByID(ctx context.Context, db dbTX, userID string) (string, error)
+	GetDirectoryByID(ctx context.Context, db dbTX, dirID string) (directoryRecord, error)
+	GetDirectorySubdirs(ctx context.Context, db dbTX, dirID string) ([]dirSubdirRecord, error)
+	GetDirectoryFiles(ctx context.Context, db dbTX, dirID string) ([]dirFileRecord, error)
+	IsSubdirectory(ctx context.Context, db dbTX, parentID, childID string) (bool, error)
 }
 
 type StorageClient interface {

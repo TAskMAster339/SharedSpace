@@ -169,6 +169,10 @@ type mockRepo struct {
 	sharedDirsStatsErr error
 	incrementErr       error
 	decrementErr       error
+
+	shareLinksResult    map[string]bool
+	shareLinksDirResult map[string]bool
+	shareLinksErr       error
 }
 
 func (m *mockRepo) FindByID(_ context.Context, _ dbTX, _ string) (directoryRecord, error) {
@@ -312,6 +316,25 @@ func (m *mockAccessChecker) GetPermissions(ctx context.Context, userID, director
 
 func (m *mockRepo) IncrementFilesCount(_ context.Context, _ dbTX, _ string, _ int) error {
 	return nil
+}
+
+func (m *mockRepo) CheckShareLinks(_ context.Context, _ dbTX, fileIDs, dirIDs []string) (map[string]bool, map[string]bool, error) {
+	if m.shareLinksErr != nil {
+		return nil, nil, m.shareLinksErr
+	}
+	fileLinks := make(map[string]bool)
+	for _, id := range fileIDs {
+		if m.shareLinksResult != nil && m.shareLinksResult[id] {
+			fileLinks[id] = true
+		}
+	}
+	dirLinks := make(map[string]bool)
+	for _, id := range dirIDs {
+		if m.shareLinksDirResult != nil && m.shareLinksDirResult[id] {
+			dirLinks[id] = true
+		}
+	}
+	return fileLinks, dirLinks, nil
 }
 
 func newTestService(repo RepositoryInterface) (*Service, *mockTx) {

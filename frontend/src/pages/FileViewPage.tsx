@@ -678,8 +678,9 @@ const FileViewPage: React.FC = () => {
               <ShareLinkModal
                 isOpen={isShareModalOpen}
                 onClose={() => setIsShareModalOpen(false)}
-                fileId={file.id}
-                fileName={file.filename}
+                itemId={file.id}
+                itemName={file.filename}
+                itemType="file"
                 accessToken={accessToken}
               />
             )}

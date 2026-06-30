@@ -20,6 +20,7 @@ const (
 	ActionChangeRole   Action = "change_role"
 	ActionRemoveMember Action = "remove_member"
 	ActionDeleteDir    Action = "delete_directory"
+	ActionCreateLink   Action = "create_link"
 )
 
 type Permissions struct {
@@ -32,4 +33,5 @@ type Permissions struct {
 	ChangeRole   bool `json:"change_role"`
 	RemoveMember bool `json:"remove_member"`
 	DeleteDir    bool `json:"delete_directory"`
+	CreateLink   bool `json:"create_link"`
 }

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { MoreVertical, Star, Trash2, Move } from 'lucide-react';
+import { MoreVertical, Star, Trash2, Move, Share2 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
 interface ItemActionsMenuProps {
@@ -8,6 +8,7 @@ interface ItemActionsMenuProps {
   onToggleFavorite?: () => void;
   onDelete?: () => void;
   onMove?: () => void;
+  onShare?: () => void;
   className?: string;
   iconSize?: number;
   openMenu?: boolean;
@@ -15,7 +16,7 @@ interface ItemActionsMenuProps {
 }
 
 const MENU_WIDTH = 216;
-const MENU_HEIGHT_EST = 140;
+const MENU_HEIGHT_EST = 180;
 const GAP = 4;
 const EDGE = 8;
 
@@ -24,6 +25,7 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
   onToggleFavorite,
   onDelete,
   onMove,
+  onShare,
   className,
   iconSize = 18,
   openMenu,
@@ -103,7 +105,7 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
     };
   }, [isOpen, isMobile, onCloseMenu]);
 
-  if (!onToggleFavorite && !onDelete && !onMove) return null;
+  if (!onToggleFavorite && !onDelete && !onMove && !onShare) return null;
 
   const close = () => setIsOpen(false);
 
@@ -116,6 +118,17 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
 
   const menuItems = (
     <div>
+      {onShare && (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={(e) => handleSelect(e, onShare)}
+          className="group flex items-center gap-3 w-full px-4 py-3.5 text-base text-theme-secondary hover:bg-theme-hover transition-colors sm:px-3 sm:py-2 sm:text-sm"
+        >
+          <Share2 size={18} className="group-hover:text-green-500 transition-colors" />
+          Поделиться ссылкой
+        </button>
+      )}
       {onMove && (
         <button
           type="button"
@@ -123,7 +136,7 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
           onClick={(e) => handleSelect(e, onMove)}
           className="group flex items-center gap-3 w-full px-4 py-3.5 text-base text-theme-secondary hover:bg-theme-hover transition-colors sm:px-3 sm:py-2 sm:text-sm"
         >
-          <Move size={18} className="group-hover:text-green-500 transition-colors" />
+          <Move size={18} className="group-hover:text-brand transition-colors" />
           Переместить файл
         </button>
       )}

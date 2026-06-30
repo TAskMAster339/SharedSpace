@@ -16,10 +16,13 @@ import (
 
 type mockService struct {
 	createFn     func(string, string, CreateShareLinkRequest) (ShareLinkResponse, error)
+	createDirFn  func(string, string, CreateShareLinkRequest) (ShareLinkResponse, error)
 	listByFileFn func(string, string, int) ([]ShareLinkResponse, error)
+	listByDirFn  func(string, string, int) ([]ShareLinkResponse, error)
 	updateFn     func(string, string, UpdateShareLinkRequest) (ShareLinkResponse, error)
 	deleteFn     func(string, string) error
 	resolveFn    func(string, string, bool) (FileContentResponse, error)
+	resolveDirFn func(string, string, bool, string) (DirectoryContentResponse, error)
 }
 
 func (m *mockService) Create(_ context.Context, userID, fileID string, req CreateShareLinkRequest) (ShareLinkResponse, error) {
@@ -29,9 +32,23 @@ func (m *mockService) Create(_ context.Context, userID, fileID string, req Creat
 	return ShareLinkResponse{}, nil
 }
 
+func (m *mockService) CreateForDirectory(_ context.Context, userID, dirID string, req CreateShareLinkRequest) (ShareLinkResponse, error) {
+	if m.createDirFn != nil {
+		return m.createDirFn(userID, dirID, req)
+	}
+	return ShareLinkResponse{}, nil
+}
+
 func (m *mockService) ListByFile(_ context.Context, userID, fileID string, limit int) ([]ShareLinkResponse, error) {
 	if m.listByFileFn != nil {
 		return m.listByFileFn(userID, fileID, limit)
+	}
+	return nil, nil
+}
+
+func (m *mockService) ListByDirectory(_ context.Context, userID, dirID string, limit int) ([]ShareLinkResponse, error) {
+	if m.listByDirFn != nil {
+		return m.listByDirFn(userID, dirID, limit)
 	}
 	return nil, nil
 }
@@ -55,6 +72,13 @@ func (m *mockService) Resolve(_ context.Context, token, password string, authent
 		return m.resolveFn(token, password, authenticated)
 	}
 	return FileContentResponse{}, nil
+}
+
+func (m *mockService) ResolveDirectory(_ context.Context, token, password string, authenticated bool, subDirID string) (DirectoryContentResponse, error) {
+	if m.resolveDirFn != nil {
+		return m.resolveDirFn(token, password, authenticated, subDirID)
+	}
+	return DirectoryContentResponse{}, nil
 }
 
 type mockTokenParser struct {

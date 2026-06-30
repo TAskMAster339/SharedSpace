@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Folder } from 'lucide-react';
+import { Folder, Share2 } from 'lucide-react';
 import { ItemActionsMenu } from './ItemActionsMenu';
 import { cn } from '../../utils/cn';
 
@@ -9,7 +9,9 @@ interface FolderGridItemProps {
   name: string;
   to: string;
   className?: string;
+  hasShareLinks?: boolean;
   onDelete?: (id: string) => void;
+  onShare?: (id: string) => void;
   onDrop?: (e: React.DragEvent, id: string) => void;
 }
 
@@ -18,7 +20,9 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
   name,
   to,
   className,
+  hasShareLinks = false,
   onDelete,
+  onShare,
   onDrop,
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
@@ -81,14 +85,24 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
         className,
       )}
     >
-      <div className="w-16 h-16 flex items-center justify-center text-theme-muted group-hover:text-brand transition-colors">
+      <div className="relative w-16 h-16 flex items-center justify-center text-theme-muted group-hover:text-brand transition-colors">
         <Folder size={40} strokeWidth={1.5} />
+        {hasShareLinks && (
+          <span
+            className="absolute top-0 right-0 flex items-center justify-center rounded-full bg-theme-tertiary border border-theme p-0.5 shadow-theme-card transition-all duration-500 ease-in-out"
+            aria-label="Есть ссылки общего доступа"
+            title="Есть ссылки общего доступа"
+          >
+            <Share2 size={12} className="text-green-500" />
+          </span>
+        )}
       </div>
       <p className="text-sm text-theme-primary font-medium text-center mt-2 truncate w-full max-w-[120px]">
         {name}
       </p>
 
       <ItemActionsMenu
+        onShare={onShare ? () => onShare(id) : undefined}
         onDelete={onDelete ? () => onDelete(id) : undefined}
         className="absolute top-2 right-2"
         iconSize={16}

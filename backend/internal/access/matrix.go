@@ -34,5 +34,6 @@ func GetPermissions(role Role) Permissions {
 		ChangeRole:   Can(role, ActionChangeRole),
 		RemoveMember: Can(role, ActionRemoveMember),
 		DeleteDir:    Can(role, ActionDeleteDir),
+		CreateLink:   Can(role, ActionCreateLink),
 	}
 }
