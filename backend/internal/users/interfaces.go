@@ -31,6 +31,7 @@ type RepositoryInterface interface {
 	RevokeAllRefreshTokensExcept(context.Context, dbTX, string, string) error
 	SearchUsers(context.Context, dbTX, string, string, int) ([]record, error)
 	DeleteUserAndRelatedData(context.Context, dbTX, string) error
+	RecalcSharedDirsCount(context.Context, dbTX, string) error
 }
 
 type dbTX interface {
@@ -67,6 +68,8 @@ type record struct {
 	StorageUsed     int64
 	SharedDirsCount int
 	SharedDirsQuota int
+	ShareLinksCount int
+	ShareLinksQuota int
 	CreatedAt       time.Time
 }
 

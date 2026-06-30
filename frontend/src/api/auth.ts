@@ -8,6 +8,10 @@ export interface AuthUser {
   second_name?: string;
   storage_quota: number;
   storage_used: number;
+  shared_dirs_count: number;
+  shared_dirs_quota: number;
+  share_links_count: number;
+  share_links_quota: number;
   created_at: string;
 }
 

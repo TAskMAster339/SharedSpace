@@ -107,14 +107,18 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest) (RegisterRe
 
 	return RegisterResponse{
 		User: UserResponse{
-			ID:           user.ID,
-			Email:        user.Email,
-			Username:     user.Username,
-			FirstName:    user.FirstName,
-			SecondName:   user.SecondName,
-			StorageQuota: user.StorageQuota,
-			StorageUsed:  user.StorageUsed,
-			CreatedAt:    user.CreatedAt,
+			ID:              user.ID,
+			Email:           user.Email,
+			Username:        user.Username,
+			FirstName:       user.FirstName,
+			SecondName:      user.SecondName,
+			StorageQuota:    user.StorageQuota,
+			StorageUsed:     user.StorageUsed,
+			SharedDirsCount: user.SharedDirsCount,
+			SharedDirsQuota: user.SharedDirsQuota,
+			ShareLinksCount: user.ShareLinksCount,
+			ShareLinksQuota: user.ShareLinksQuota,
+			CreatedAt:       user.CreatedAt,
 		},
 		RootDirectoryID: rootDirectoryID,
 	}, nil
@@ -147,14 +151,18 @@ func (s *Service) Login(ctx context.Context, req LoginRequest, meta loginMeta) (
 
 	return LoginResponse{
 		User: UserResponse{
-			ID:           user.ID,
-			Email:        user.Email,
-			Username:     user.Username,
-			FirstName:    user.FirstName,
-			SecondName:   user.SecondName,
-			StorageQuota: user.StorageQuota,
-			StorageUsed:  user.StorageUsed,
-			CreatedAt:    user.CreatedAt,
+			ID:              user.ID,
+			Email:           user.Email,
+			Username:        user.Username,
+			FirstName:       user.FirstName,
+			SecondName:      user.SecondName,
+			StorageQuota:    user.StorageQuota,
+			StorageUsed:     user.StorageUsed,
+			SharedDirsCount: user.SharedDirsCount,
+			SharedDirsQuota: user.SharedDirsQuota,
+			ShareLinksCount: user.ShareLinksCount,
+			ShareLinksQuota: user.ShareLinksQuota,
+			CreatedAt:       user.CreatedAt,
 		},
 		Tokens: tokens,
 	}, nil

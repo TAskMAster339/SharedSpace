@@ -27,6 +27,9 @@ type mockRepo struct {
 	getDirSubdirsFn    func(string) ([]dirSubdirRecord, error)
 	getDirFilesFn      func(string) ([]dirFileRecord, error)
 	isSubdirectoryFn   func(string, string) (bool, error)
+	statsFn            func(string) (int, int, error)
+	incCountFn         func(string) error
+	decCountFn         func(string) error
 }
 
 func (m *mockRepo) Create(_ context.Context, _ dbTX, link shareLinkRecord) (shareLinkRecord, error) {
@@ -91,6 +94,24 @@ func (m *mockRepo) IsSubdirectory(_ context.Context, _ dbTX, parentID, childID s
 		return m.isSubdirectoryFn(parentID, childID)
 	}
 	return true, nil
+}
+func (m *mockRepo) GetShareLinksStats(_ context.Context, _ dbTX, userID string) (int, int, error) {
+	if m.statsFn != nil {
+		return m.statsFn(userID)
+	}
+	return 0, 100, nil
+}
+func (m *mockRepo) IncrementShareLinksCount(_ context.Context, _ dbTX, userID string) error {
+	if m.incCountFn != nil {
+		return m.incCountFn(userID)
+	}
+	return nil
+}
+func (m *mockRepo) DecrementShareLinksCount(_ context.Context, _ dbTX, userID string) error {
+	if m.decCountFn != nil {
+		return m.decCountFn(userID)
+	}
+	return nil
 }
 
 type mockStorage struct {
@@ -189,6 +210,29 @@ func TestServiceCreate_Success(t *testing.T) {
 	}
 	if resp.Token == "" {
 		t.Fatal("expected non-empty token")
+	}
+}
+
+func TestServiceCreate_LimitReached(t *testing.T) {
+	createCalled := false
+	svc := newTestService(&mockRepo{
+		getFileByIDFn: func(_ string) (fileRecord, error) { return defaultFile(), nil },
+		statsFn:       func(_ string) (int, int, error) { return 100, 100, nil },
+		createFn: func(link shareLinkRecord) (shareLinkRecord, error) {
+			createCalled = true
+			return link, nil
+		},
+	})
+
+	_, err := svc.Create(context.Background(), "user-1", "file-1", CreateShareLinkRequest{
+		AccessType: "public",
+	})
+	appErr, ok := apperror.From(err)
+	if !ok || appErr.Code() != apperror.CodeValidation {
+		t.Fatalf("expected validation, got %v", err)
+	}
+	if createCalled {
+		t.Fatal("expected Create not to be called when limit reached")
 	}
 }
 

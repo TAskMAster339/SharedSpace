@@ -2994,6 +2994,18 @@ const docTemplate = `{
                 "second_name": {
                     "type": "string"
                 },
+                "share_links_count": {
+                    "type": "integer"
+                },
+                "share_links_quota": {
+                    "type": "integer"
+                },
+                "shared_dirs_count": {
+                    "type": "integer"
+                },
+                "shared_dirs_quota": {
+                    "type": "integer"
+                },
                 "storage_quota": {
                     "type": "integer"
                 },
@@ -3796,6 +3808,12 @@ const docTemplate = `{
                 },
                 "second_name": {
                     "type": "string"
+                },
+                "share_links_count": {
+                    "type": "integer"
+                },
+                "share_links_quota": {
+                    "type": "integer"
                 },
                 "shared_dirs_count": {
                     "type": "integer"

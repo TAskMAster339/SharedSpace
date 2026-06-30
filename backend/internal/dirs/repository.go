@@ -322,9 +322,13 @@ func (r *Repository) IncrementSharedDirsCount(ctx context.Context, db dbTX, user
 	return err
 }
 
-func (r *Repository) DecrementSharedDirsCount(ctx context.Context, db dbTX, userID string) error {
+func (r *Repository) RecalcSharedDirsCount(ctx context.Context, db dbTX, userID string) error {
 	_, err := db.Exec(ctx, `
-		UPDATE users SET shared_dirs_count = GREATEST(shared_dirs_count - 1, 0), updated_at = now() WHERE id = $1
+		UPDATE users SET shared_dirs_count = (
+			SELECT COUNT(*) FROM shared_directories sd
+			JOIN directories d ON d.id = sd.directory_id
+			WHERE sd.owner_id = $1 AND d.deleted_at IS NULL
+		), updated_at = now() WHERE id = $1
 	`, userID)
 	return err
 }

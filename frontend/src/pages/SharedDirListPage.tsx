@@ -7,6 +7,7 @@ import { ApiError } from '../api/client';
 import { DirectoryCard } from '../components/ui/DirectoryCard';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Button } from '../components/ui/Button';
+import { QuotaIndicator } from '../components/ui/QuotaIndicator';
 
 interface DirectoryCardData extends SharedDirectoryWithStats {
   memberUsernames: string[];
@@ -24,6 +25,10 @@ function roleLabel(dir: SharedDirectoryWithStats, currentUserId: string | undefi
 const SharedDirListPage: React.FC = () => {
   const accessToken = useAuthStore((state) => state.accessToken);
   const userId = useAuthStore((state) => state.user?.id);
+  const sharedDirsUsed = useAuthStore((state) => state.user?.shared_dirs_count ?? 0);
+  const sharedDirsQuota = useAuthStore((state) => state.user?.shared_dirs_quota ?? 0);
+  const refreshUser = useAuthStore((state) => state.refreshUser);
+  const atDirsLimit = sharedDirsQuota > 0 && sharedDirsUsed >= sharedDirsQuota;
 
   const [directories, setDirectories] = useState<DirectoryCardData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -90,6 +95,7 @@ const SharedDirListPage: React.FC = () => {
       await createDirectory(accessToken, { name, parent_id: root.id, shared: true });
       setIsModalOpen(false);
       await loadDirectories(accessToken);
+      refreshUser();
     } catch (err) {
       setCreateError(
         err instanceof ApiError ? err.message : 'Не удалось создать директорию. Попробуйте позже.',
@@ -104,9 +110,22 @@ const SharedDirListPage: React.FC = () => {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-theme-primary mb-1">Общие директории</h1>
-          <p className="text-sm text-theme-muted">Сотрудничайте с командой в общих пространствах</p>
+          <p className="text-sm text-theme-muted mb-2">
+            Сотрудничайте с командой в общих пространствах
+          </p>
+          <QuotaIndicator
+            icon={Users}
+            label="Директории"
+            used={sharedDirsUsed}
+            total={sharedDirsQuota}
+          />
         </div>
-        <Button onClick={openModal} className="flex items-center gap-1.5 shrink-0">
+        <Button
+          onClick={openModal}
+          disabled={atDirsLimit}
+          title={atDirsLimit ? 'Достигнут лимит общих директорий' : undefined}
+          className="flex items-center gap-1.5 shrink-0"
+        >
           <Plus size={16} /> Создать
         </Button>
       </div>

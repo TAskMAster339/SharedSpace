@@ -49,6 +49,7 @@ const DirectoryPage: React.FC = () => {
 
   const accessToken = useAuthStore((s) => s.accessToken);
   const user = useAuthStore((s) => s.user);
+  const refreshUser = useAuthStore((s) => s.refreshUser);
   const { personalStorageId, currentSection, setCurrentSection } = useDirectoryStore();
   const { isShared: checkIsShared, isLoading: isLoadingShared } = useSharedDirectories();
   const { setTargetDirectoryId, setOnUploadComplete } = useDragDropStore();
@@ -1181,14 +1182,33 @@ const DirectoryPage: React.FC = () => {
                 } else {
                   await createDirectoryShareLink(accessToken, itemId, body);
                 }
+                refreshUser();
                 if (itemType === 'file') {
                   setAllFiles((prev) =>
                     prev.map((f) => (f.id === itemId ? { ...f, has_share_links: true } : f)),
                   );
+                  setDirectoryContents((prev) => {
+                    if (!prev) return prev;
+                    return {
+                      ...prev,
+                      files: prev.files.map((f) =>
+                        f.id === itemId ? { ...f, has_share_links: true } : f,
+                      ),
+                    };
+                  });
                 } else {
                   setAllSubdirectories((prev) =>
                     prev.map((d) => (d.id === itemId ? { ...d, has_share_links: true } : d)),
                   );
+                  setDirectoryContents((prev) => {
+                    if (!prev) return prev;
+                    return {
+                      ...prev,
+                      subdirectories: prev.subdirectories.map((d) =>
+                        d.id === itemId ? { ...d, has_share_links: true } : d,
+                      ),
+                    };
+                  });
                 }
                 setShareLinkRefreshKey((k) => k + 1);
               } catch (err) {

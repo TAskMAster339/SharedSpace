@@ -15,6 +15,7 @@ const PAGE_LIMIT = 20;
 
 const TrashPage: React.FC = () => {
   const accessToken = useAuthStore((state) => state.accessToken);
+  const refreshUser = useAuthStore((state) => state.refreshUser);
   const [items, setItems] = useState<TrashItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -94,6 +95,7 @@ const TrashPage: React.FC = () => {
     try {
       if (item.type === 'directory') {
         await restoreDirectory(accessToken, item.id);
+        refreshUser();
       } else {
         await restoreFile(accessToken, item.id);
       }

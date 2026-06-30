@@ -168,7 +168,6 @@ type mockRepo struct {
 	sharedDirsQuota    int
 	sharedDirsStatsErr error
 	incrementErr       error
-	decrementErr       error
 
 	findSubdirsAfterCursorRes  []directoryRecord
 	findSubdirsAfterCursorHas  bool
@@ -274,11 +273,8 @@ func (m *mockRepo) IncrementSharedDirsCount(_ context.Context, _ dbTX, _ string)
 	return m.incrementErr
 }
 
-func (m *mockRepo) DecrementSharedDirsCount(_ context.Context, _ dbTX, _ string) error {
-	if m.sharedDirsCount > 0 {
-		m.sharedDirsCount--
-	}
-	return m.decrementErr
+func (m *mockRepo) RecalcSharedDirsCount(_ context.Context, _ dbTX, _ string) error {
+	return nil
 }
 
 func (m *mockRepo) FindSubdirectoriesAfterCursor(_ context.Context, _ dbTX, _ string, _, _ string, _ int) ([]directoryRecord, bool, string, error) {

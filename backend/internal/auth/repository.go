@@ -47,9 +47,9 @@ func (r *Repository) CreateUser(ctx context.Context, db dbTX, input RegisterRequ
 	err := db.QueryRow(ctx, `
 		INSERT INTO users (username, first_name, second_name, email, password_hash, storage_quota, storage_used)
 		VALUES ($1, $2, $3, $4, $5, $6, 0)
-		RETURNING id, username, first_name, second_name, email, storage_quota, storage_used, created_at
+		RETURNING id, username, first_name, second_name, email, storage_quota, storage_used, shared_dirs_count, shared_dirs_quota, share_links_count, share_links_quota, created_at
 	`, input.Username, input.FirstName, input.SecondName, input.Email, passwordHash, storageQuota).Scan(
-		&user.ID, &user.Username, &user.FirstName, &user.SecondName, &user.Email, &user.StorageQuota, &user.StorageUsed, &user.CreatedAt,
+		&user.ID, &user.Username, &user.FirstName, &user.SecondName, &user.Email, &user.StorageQuota, &user.StorageUsed, &user.SharedDirsCount, &user.SharedDirsQuota, &user.ShareLinksCount, &user.ShareLinksQuota, &user.CreatedAt,
 	)
 	if err != nil {
 		return authUser{}, err
@@ -72,11 +72,11 @@ func (r *Repository) CreateRootDirectory(ctx context.Context, db dbTX, ownerID, 
 func (r *Repository) FindUserByIdentifier(ctx context.Context, db dbTX, identifier string) (authUser, error) {
 	var user authUser
 	err := db.QueryRow(ctx, `
-		SELECT id, username, first_name, second_name, email, password_hash, storage_quota, storage_used, created_at
+		SELECT id, username, first_name, second_name, email, password_hash, storage_quota, storage_used, shared_dirs_count, shared_dirs_quota, share_links_count, share_links_quota, created_at
 		FROM users
 		WHERE email = $1 OR username = $1
 		LIMIT 1
-	`, identifier).Scan(&user.ID, &user.Username, &user.FirstName, &user.SecondName, &user.Email, &user.PasswordHash, &user.StorageQuota, &user.StorageUsed, &user.CreatedAt)
+	`, identifier).Scan(&user.ID, &user.Username, &user.FirstName, &user.SecondName, &user.Email, &user.PasswordHash, &user.StorageQuota, &user.StorageUsed, &user.SharedDirsCount, &user.SharedDirsQuota, &user.ShareLinksCount, &user.ShareLinksQuota, &user.CreatedAt)
 	if err != nil {
 		return authUser{}, err
 	}
@@ -86,10 +86,10 @@ func (r *Repository) FindUserByIdentifier(ctx context.Context, db dbTX, identifi
 func (r *Repository) FindUserByID(ctx context.Context, db dbTX, userID string) (authUser, error) {
 	var user authUser
 	err := db.QueryRow(ctx, `
-		SELECT id, username, first_name, second_name, email, password_hash, storage_quota, storage_used, created_at
+		SELECT id, username, first_name, second_name, email, password_hash, storage_quota, storage_used, shared_dirs_count, shared_dirs_quota, share_links_count, share_links_quota, created_at
 		FROM users
 		WHERE id = $1
-	`, userID).Scan(&user.ID, &user.Username, &user.FirstName, &user.SecondName, &user.Email, &user.PasswordHash, &user.StorageQuota, &user.StorageUsed, &user.CreatedAt)
+	`, userID).Scan(&user.ID, &user.Username, &user.FirstName, &user.SecondName, &user.Email, &user.PasswordHash, &user.StorageQuota, &user.StorageUsed, &user.SharedDirsCount, &user.SharedDirsQuota, &user.ShareLinksCount, &user.ShareLinksQuota, &user.CreatedAt)
 	if err != nil {
 		return authUser{}, err
 	}

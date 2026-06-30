@@ -29,6 +29,9 @@ type RepositoryInterface interface {
 	FindByDirectoryID(ctx context.Context, db dbTX, dirID string, limit int) ([]shareLinkRecord, error)
 	Update(ctx context.Context, db dbTX, id string, link shareLinkRecord) (shareLinkRecord, error)
 	Delete(ctx context.Context, db dbTX, id string) error
+	GetShareLinksStats(ctx context.Context, db dbTX, userID string) (count, quota int, err error)
+	IncrementShareLinksCount(ctx context.Context, db dbTX, userID string) error
+	DecrementShareLinksCount(ctx context.Context, db dbTX, userID string) error
 	GetFileByID(ctx context.Context, db dbTX, fileID string) (fileRecord, error)
 	GetUsernameByID(ctx context.Context, db dbTX, userID string) (string, error)
 	GetDirectoryByID(ctx context.Context, db dbTX, dirID string) (directoryRecord, error)

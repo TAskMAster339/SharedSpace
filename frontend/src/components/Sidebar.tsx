@@ -1,7 +1,8 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Star, Trash2 } from 'lucide-react';
+import { Star, Trash2, Link2 } from 'lucide-react';
 import { StorageIndicator } from './ui/StorageIndicator';
+import { QuotaIndicator } from './ui/QuotaIndicator';
 import { cn } from '../utils/cn';
 import { useSidebarMenu, isSidebarItemActive } from '../hooks/useSidebarMenu';
 import { useDirectoryStore } from '../store/directoryStore';
@@ -10,7 +11,8 @@ export const Sidebar: React.FC = () => {
   const location = useLocation();
   const currentPath = location.pathname;
   const currentSection = useDirectoryStore((s) => s.currentSection);
-  const { menuItems, storageUsed, storageQuota, isLoading } = useSidebarMenu();
+  const { menuItems, storageUsed, storageQuota, shareLinksUsed, shareLinksQuota, isLoading } =
+    useSidebarMenu();
 
   if (isLoading) {
     return (
@@ -62,8 +64,17 @@ export const Sidebar: React.FC = () => {
         })}
       </div>
 
-      {/* Индикатор места внизу */}
-      <div className="mt-auto mb-6 pt-6 border-t border-theme">
+      {/* Индикаторы лимитов внизу */}
+      <div className="mt-auto mb-6 pt-6 border-t border-theme space-y-3">
+        <div className="group bg-theme-tertiary hover:bg-theme-hover rounded-theme-xl px-4 py-2.5 shadow-theme-card border border-theme/50 transition-colors cursor-default">
+          <QuotaIndicator
+            fullWidth
+            icon={Link2}
+            label="Ссылки"
+            used={shareLinksUsed}
+            total={shareLinksQuota}
+          />
+        </div>
         <div className="group bg-theme-tertiary hover:bg-theme-hover rounded-theme-xl p-4 shadow-theme-card border border-theme/50 transition-colors cursor-default">
           <StorageIndicator used={storageUsed} total={storageQuota} />
         </div>
