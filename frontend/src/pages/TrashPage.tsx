@@ -58,7 +58,10 @@ const TrashPage: React.FC = () => {
   }, [accessToken]);
 
   useEffect(() => {
-    loadTrash();
+    loadTrash({
+      files_limit: PAGE_LIMIT,
+      dirs_limit: PAGE_LIMIT,
+    });
   }, [loadTrash]);
 
   // Автозагрузка при скролле

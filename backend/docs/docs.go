@@ -1491,14 +1491,25 @@ const docTemplate = `{
                     "sharing"
                 ],
                 "summary": "Get my invitations",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Max invitations per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pagination cursor",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/internal_sharing.InvitationResponse"
-                            }
+                            "$ref": "#/definitions/internal_sharing.InvitationsListResponse"
                         }
                     },
                     "401": {
@@ -2289,6 +2300,32 @@ const docTemplate = `{
                     "trash"
                 ],
                 "summary": "Get trash list",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Max files per page",
+                        "name": "files_limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Files pagination cursor",
+                        "name": "files_cursor",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Max directories per page",
+                        "name": "dirs_limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Directories pagination cursor",
+                        "name": "dirs_cursor",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -3211,6 +3248,20 @@ const docTemplate = `{
                 "InvitationRevoked"
             ]
         },
+        "internal_sharing.InvitationsListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_sharing.InvitationResponse"
+                    }
+                },
+                "next_cursor": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_sharing.InviteRequest": {
             "type": "object",
             "properties": {
@@ -3370,6 +3421,12 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/internal_trash.TrashItem"
                     }
+                },
+                "next_dirs_cursor": {
+                    "type": "string"
+                },
+                "next_files_cursor": {
+                    "type": "string"
                 },
                 "total_size": {
                     "type": "integer"

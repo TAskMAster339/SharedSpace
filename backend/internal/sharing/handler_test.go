@@ -21,7 +21,7 @@ type mockService struct {
 	getSharedWithMeStatsFn func(string) ([]SharedDirectoryWithStatsResponse, error)
 	getMembersFn           func(string, string, int) ([]MemberResponse, error)
 	inviteFn               func(string, string, string) (*InvitationResponse, error)
-	getMyInvitationsFn     func(string) ([]InvitationResponse, error)
+	getMyInvitationsFn     func(string, int, string) (*InvitationsListResponse, error)
 	acceptInvitationFn     func(string, string) error
 	declineInvitationFn    func(string, string) error
 	removeInvitationFn     func(string, string) error
@@ -58,9 +58,9 @@ func (m *mockService) Invite(_ context.Context, userID, sharedDirID, username st
 	return nil, nil
 }
 
-func (m *mockService) GetMyInvitations(_ context.Context, userID string) ([]InvitationResponse, error) {
+func (m *mockService) GetMyInvitations(_ context.Context, userID string, limit int, cursor string) (*InvitationsListResponse, error) {
 	if m.getMyInvitationsFn != nil {
-		return m.getMyInvitationsFn(userID)
+		return m.getMyInvitationsFn(userID, limit, cursor)
 	}
 	return nil, nil
 }
@@ -212,11 +212,13 @@ func TestHandlerGetMyInvitations(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		svc := &mockService{
-			getMyInvitationsFn: func(userID string) ([]InvitationResponse, error) {
-				return []InvitationResponse{
-					{ID: "inv-1", SharedDirectoryID: "shared-1", DirectoryName: "photos",
-						InvitedByUserID: "user-2", InvitedByUsername: "ivan",
-						Role: RoleViewer, Status: InvitationPending, CreatedAt: now},
+			getMyInvitationsFn: func(userID string, limit int, cursor string) (*InvitationsListResponse, error) {
+				return &InvitationsListResponse{
+					Items: []InvitationResponse{
+						{ID: "inv-1", SharedDirectoryID: "shared-1", DirectoryName: "photos",
+							InvitedByUserID: "user-2", InvitedByUsername: "ivan",
+							Role: RoleViewer, Status: InvitationPending, CreatedAt: now},
+					},
 				}, nil
 			},
 		}
@@ -232,12 +234,12 @@ func TestHandlerGetMyInvitations(t *testing.T) {
 		if rec.Code != http.StatusOK {
 			t.Fatalf("unexpected status: %d", rec.Code)
 		}
-		var resp []InvitationResponse
+		var resp InvitationsListResponse
 		if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
 			t.Fatalf("decode response: %v", err)
 		}
-		if len(resp) != 1 || resp[0].ID != "inv-1" || resp[0].Role != RoleViewer {
-			t.Fatalf("unexpected response: %+v", resp)
+		if len(resp.Items) != 1 || resp.Items[0].ID != "inv-1" || resp.Items[0].Role != RoleViewer {
+			t.Fatalf("unexpected response: %+v", resp.Items)
 		}
 	})
 

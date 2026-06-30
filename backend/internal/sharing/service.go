@@ -3,6 +3,7 @@ package sharing
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -155,15 +156,50 @@ func (s *Service) Invite(ctx context.Context, userID, sharedDirID, username stri
 	}, nil
 }
 
-func (s *Service) GetMyInvitations(ctx context.Context, userID string) ([]InvitationResponse, error) {
-	records, err := s.repo.FindInvitationsByUser(ctx, s.db, userID)
+func (s *Service) GetMyInvitations(ctx context.Context, userID string, limit int, cursor string) (*InvitationsListResponse, error) {
+	if limit == 0 {
+		records, err := s.repo.FindInvitationsByUser(ctx, s.db, userID)
+		if err != nil {
+			return nil, apperror.WrapInternal("ошибка поиска приглашений", err)
+		}
+
+		items := make([]InvitationResponse, 0, len(records))
+		for _, r := range records {
+			items = append(items, InvitationResponse{
+				ID:                r.ID,
+				SharedDirectoryID: r.SharedDirectoryID,
+				DirectoryName:     r.DirectoryName,
+				InvitedByUserID:   r.InvitedByUserID,
+				InvitedByUsername: r.InvitedByUsername,
+				Role:              Role(r.Role),
+				Status:            InvitationStatus(r.Status),
+				CreatedAt:         r.CreatedAt,
+			})
+		}
+		return &InvitationsListResponse{Items: items}, nil
+	}
+
+	var records []invitationRecord
+	var hasMore bool
+	var nextCursor string
+	var err error
+
+	if cursor == "" {
+		records, hasMore, nextCursor, err = s.repo.FindInvitationsByUserPaginated(ctx, s.db, userID, limit, "", "")
+	} else {
+		parts := strings.SplitN(cursor, "|", 2)
+		if len(parts) != 2 {
+			return nil, apperror.Validation("некорректный курсор")
+		}
+		records, hasMore, nextCursor, err = s.repo.FindInvitationsByUserPaginated(ctx, s.db, userID, limit, parts[0], parts[1])
+	}
 	if err != nil {
 		return nil, apperror.WrapInternal("ошибка поиска приглашений", err)
 	}
 
-	resp := make([]InvitationResponse, 0, len(records))
+	items := make([]InvitationResponse, 0, len(records))
 	for _, r := range records {
-		resp = append(resp, InvitationResponse{
+		items = append(items, InvitationResponse{
 			ID:                r.ID,
 			SharedDirectoryID: r.SharedDirectoryID,
 			DirectoryName:     r.DirectoryName,
@@ -173,6 +209,11 @@ func (s *Service) GetMyInvitations(ctx context.Context, userID string) ([]Invita
 			Status:            InvitationStatus(r.Status),
 			CreatedAt:         r.CreatedAt,
 		})
+	}
+
+	resp := &InvitationsListResponse{Items: items}
+	if hasMore && nextCursor != "" {
+		resp.NextCursor = &nextCursor
 	}
 	return resp, nil
 }

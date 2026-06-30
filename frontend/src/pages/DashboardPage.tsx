@@ -52,7 +52,7 @@ const DashboardPage: React.FC = () => {
     Promise.all([
       getRecentFiles(accessToken, RECENT_FILES_LIMIT),
       getSharedWithMe(accessToken, SHARED_DIRECTORIES_LIMIT),
-      getFavorites(accessToken, FAVORITES_LIMIT),
+      getFavorites(accessToken, { limit: FAVORITES_LIMIT }),
     ])
       .then(([recent, shared, favoritesRes]) => {
         if (!isMounted) return;
@@ -83,7 +83,7 @@ const DashboardPage: React.FC = () => {
       const [recent, shared, favoritesRes] = await Promise.all([
         getRecentFiles(accessToken, RECENT_FILES_LIMIT),
         getSharedWithMe(accessToken, SHARED_DIRECTORIES_LIMIT),
-        getFavorites(accessToken, FAVORITES_LIMIT),
+        getFavorites(accessToken, { limit: FAVORITES_LIMIT }),
       ]);
       setRecentFiles(recent.files);
       setSharedDirectories(shared);
@@ -133,7 +133,7 @@ const DashboardPage: React.FC = () => {
       const [recent, shared, favoritesRes] = await Promise.all([
         getRecentFiles(accessToken, RECENT_FILES_LIMIT),
         getSharedWithMe(accessToken, SHARED_DIRECTORIES_LIMIT),
-        getFavorites(accessToken, FAVORITES_LIMIT),
+        getFavorites(accessToken, { limit: FAVORITES_LIMIT }),
       ]);
       setRecentFiles(recent.files);
       setSharedDirectories(shared);

@@ -65,6 +65,12 @@ type MembersListResponse struct {
 	NextCursor *string          `json:"next_cursor"`
 }
 
+// InvitationsListResponse wraps invitations with optional pagination cursor.
+type InvitationsListResponse struct {
+	Items      []InvitationResponse `json:"items"`
+	NextCursor *string              `json:"next_cursor"`
+}
+
 type InvitationResponse struct {
 	ID                string           `json:"id"`
 	SharedDirectoryID string           `json:"shared_directory_id"`
