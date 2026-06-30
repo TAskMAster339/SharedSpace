@@ -171,7 +171,7 @@ const SharedDirectoryPage: React.FC = () => {
       try {
         const result = await resolveDirectoryShareLink(
           token,
-          subDirId || undefined,
+          { subDirId: subDirId || undefined },
           accessToken,
           activePassword,
         );
@@ -184,15 +184,18 @@ const SharedDirectoryPage: React.FC = () => {
         setHasMoreFiles(!!result.next_files_cursor);
         setNeedsPassword(false);
 
-        // Update breadcrumbs with the current directory name from API response
+        // Rebuild breadcrumbs from current pathIds
         setBreadcrumbs((prev) => {
-          const updated = [...prev];
-          if (updated.length === 0) {
-            updated.push({ id: '', name: result.name });
-          } else {
-            updated[updated.length - 1] = { id: subDirId, name: result.name };
-          }
-          return updated;
+          const crumbs: Breadcrumb[] = [{ id: '', name: result.name }];
+          pathIds.forEach((id, index) => {
+            const isLast = index === pathIds.length - 1;
+            const prevCrumb = prev[index + 1];
+            crumbs.push({
+              id,
+              name: isLast ? result.name : prevCrumb?.id === id ? prevCrumb.name : '...',
+            });
+          });
+          return crumbs;
         });
       } catch (err: any) {
         if (err?.status === 404) {
