@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, AlertCircle, Download, Save } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { X, AlertCircle, Download, Save, ChevronDown } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { Button } from './Button';
 import { getFileTypeDisplay } from '../../utils/fileType';
@@ -30,6 +30,38 @@ export const ConvertModal: React.FC<ConvertModalProps> = ({
 }) => {
   const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
   const [actionType, setActionType] = useState<'download' | 'save'>('download');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const toggleDropdown = () => {
+    if (isDropdownOpen) {
+      setIsDropdownOpen(false);
+      return;
+    }
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setDropdownStyle({
+        position: 'fixed',
+        top: rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
+        zIndex: 9999,
+      });
+      setIsDropdownOpen(true);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -84,24 +116,56 @@ export const ConvertModal: React.FC<ConvertModalProps> = ({
           {isSupported ? (
             <>
               {/* Выбор формата */}
-              <div>
+              <div ref={containerRef}>
                 <p className="text-sm text-theme-secondary mb-2">Выберите формат:</p>
-                <div className="flex flex-wrap gap-2">
-                  {availableFormats.map((format) => (
-                    <button
-                      key={format}
-                      onClick={() => setSelectedFormat(format)}
-                      className={cn(
-                        'px-4 py-2 rounded-theme-md text-sm font-medium transition-colors border',
-                        selectedFormat === format
-                          ? 'bg-brand text-theme-on-brand border-brand hover:bg-brand-hover'
-                          : 'bg-theme-tertiary text-theme-secondary border-theme hover:bg-theme-hover',
-                      )}
-                    >
-                      {format.toUpperCase()}
-                    </button>
-                  ))}
-                </div>
+                <button
+                  ref={triggerRef}
+                  type="button"
+                  onClick={toggleDropdown}
+                  className={cn(
+                    'w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-theme-md text-sm border transition-colors',
+                    'focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand',
+                    isDropdownOpen
+                      ? 'border-brand bg-theme-tertiary'
+                      : 'border-theme bg-theme-tertiary hover:bg-theme-hover',
+                  )}
+                >
+                  <span className={!selectedFormat ? 'text-theme-muted' : 'text-theme-primary'}>
+                    {selectedFormat ? selectedFormat.toUpperCase() : '— выберите формат —'}
+                  </span>
+                  <ChevronDown
+                    size={16}
+                    className={cn(
+                      'text-theme-muted transition-transform',
+                      isDropdownOpen && 'rotate-180',
+                    )}
+                  />
+                </button>
+                {isDropdownOpen && dropdownStyle && (
+                  <div
+                    style={dropdownStyle}
+                    className="bg-theme-secondary border border-theme rounded-theme-md shadow-theme-dropdown overflow-hidden max-h-48 overflow-y-auto"
+                  >
+                    {availableFormats.map((format) => (
+                      <button
+                        key={format}
+                        type="button"
+                        onClick={() => {
+                          setSelectedFormat(format);
+                          setIsDropdownOpen(false);
+                        }}
+                        className={cn(
+                          'w-full text-left px-3 py-2 text-sm transition-colors',
+                          selectedFormat === format
+                            ? 'bg-brand text-theme-on-brand'
+                            : 'text-theme-secondary hover:bg-theme-hover hover:text-theme-primary',
+                        )}
+                      >
+                        {format.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Выбор действия */}
@@ -156,7 +220,7 @@ export const ConvertModal: React.FC<ConvertModalProps> = ({
                 пока недоступна
               </p>
               <p className="text-xs text-theme-muted mt-2">
-                Поддерживается: PNG → JPG, WEBP; JPG → WEBP
+                Доступные форматы: изображения (PNG, JPG, WEBP, GIF, BMP, TIFF), видео (MP4, WebM, AVI, MOV, MKV), аудио (MP3, WAV, FLAC, OGG, AAC)
               </p>
             </div>
           )}
