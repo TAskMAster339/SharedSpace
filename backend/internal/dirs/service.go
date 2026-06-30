@@ -175,7 +175,12 @@ func (s *Service) GetByID(ctx context.Context, userID, dirID string) (DirectoryR
 	if !ok {
 		return DirectoryResponse{}, apperror.Forbidden("доступ запрещён")
 	}
-	return s.toDirectoryResponse(ctx, userID, dir), nil
+	resp := s.toDirectoryResponse(ctx, userID, dir)
+	_, dirLinks, err := s.repo.CheckShareLinks(ctx, s.db, nil, []string{dirID})
+	if err == nil {
+		resp.HasShareLinks = dirLinks[dirID]
+	}
+	return resp, nil
 }
 
 func (s *Service) Create(ctx context.Context, userID string, req CreateDirectoryRequest) (DirectoryResponse, error) {
@@ -364,6 +369,25 @@ func (s *Service) loadContents(ctx context.Context, userID string, dir directory
 			CreatedAt: f.CreatedAt,
 			UpdatedAt: f.UpdatedAt,
 		})
+	}
+
+	dirIDs := make([]string, len(subdirs))
+	for i, sd := range subdirs {
+		dirIDs[i] = sd.ID
+	}
+	fileIDs := make([]string, len(files))
+	for i, f := range files {
+		fileIDs[i] = f.ID
+	}
+
+	fileLinks, dirLinks, err := s.repo.CheckShareLinks(ctx, s.db, fileIDs, dirIDs)
+	if err == nil {
+		for i := range subdirResponses {
+			subdirResponses[i].HasShareLinks = dirLinks[subdirResponses[i].ID]
+		}
+		for i := range fileItems {
+			fileItems[i].HasShareLinks = fileLinks[fileItems[i].ID]
+		}
 	}
 
 	return DirectoryContentsResponse{

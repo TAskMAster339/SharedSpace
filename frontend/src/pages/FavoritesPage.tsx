@@ -9,8 +9,8 @@ import { ApiError } from '../api/client';
 import { Card, CardHeader, CardTitle } from '../components/ui/Card';
 import { FileItem } from '../components/ui/FileItem';
 import { EmptyState } from '../components/ui/EmptyState';
-import { Toast } from '../components/ui/Toast';
 import { formatFileSize, formatDate } from '../utils/format';
+import { useToastStore } from '../hooks/useToast';
 import { resolveFileIconType } from '../utils/fileType';
 
 const PAGE_LIMIT = 20;
@@ -22,10 +22,9 @@ const FavoritesPage: React.FC = () => {
   const [files, setFiles] = useState<FavoriteFile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [deletedToast, setDeletedToast] = useState<{ id: string; name: string } | null>(null);
-  const [favoriteToast, setFavoriteToast] = useState<{ id: string; name: string } | null>(null);
+  const showToast = useToastStore((s) => s.showToast);
 
-  // Pagination — автозагрузка при скролле
+  // Pagination
   const [cursor, setCursor] = useState<string | undefined>();
   const [hasMore, setHasMore] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -95,54 +94,54 @@ const FavoritesPage: React.FC = () => {
   const handleToggleFavorite = async (fileId: string) => {
     if (!accessToken) return;
     const file = files.find((f) => f.id === fileId);
+    const name = file?.filename || 'Файл';
     setFiles((prev) => prev.filter((f) => f.id !== fileId));
 
     try {
       await toggleFavorite(fileId);
-      setFavoriteToast({ id: fileId, name: file?.filename || 'Файл' });
+      let undoing = false;
+      showToast(`«${name}» удалён из избранного`, 'favorite', 'Отменить', async () => {
+        if (undoing) return;
+        undoing = true;
+        try {
+          await toggleFavorite(fileId);
+          const data = await getFavorites(accessToken);
+          setFiles(data.favorites);
+        } catch (err) {
+          console.error('Failed to undo favorite:', err);
+        }
+      });
     } catch {
       const data = await getFavorites(accessToken, { limit: PAGE_LIMIT, cursor });
       setFiles(data.favorites);
     }
   };
 
-  const handleUndoFavorite = async () => {
-    if (!favoriteToast || !accessToken) return;
-    try {
-      await toggleFavorite(favoriteToast.id);
-      const data = await getFavorites(accessToken, { limit: PAGE_LIMIT, cursor });
-      setFiles(data.favorites);
-    } catch (err) {
-      console.error('Failed to undo favorite:', err);
-    }
-    setFavoriteToast(null);
-  };
-
   const handleDeleteFile = async (fileId: string) => {
     if (!accessToken) return;
     const file = files.find((f) => f.id === fileId);
+    const name = file?.filename || 'Файл';
 
     setFiles((prev) => prev.filter((f) => f.id !== fileId));
 
     try {
       await softDeleteFile(accessToken, fileId);
-      setDeletedToast({ id: fileId, name: file?.filename || 'Файл' });
+      let undoing = false;
+      showToast(`«${name}» перемещён в корзину`, 'undo', 'Отменить', async () => {
+        if (undoing) return;
+        undoing = true;
+        try {
+          await restoreFile(accessToken, fileId);
+          const data = await getFavorites(accessToken);
+          setFiles(data.favorites);
+        } catch (err) {
+          console.error('Failed to restore file:', err);
+        }
+      });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Не удалось удалить файл.');
       const data = await getFavorites(accessToken, { limit: PAGE_LIMIT, cursor });
       setFiles(data.favorites);
-    }
-  };
-
-  const handleUndoDelete = async () => {
-    if (!deletedToast || !accessToken) return;
-
-    try {
-      await restoreFile(accessToken, deletedToast.id);
-      const data = await getFavorites(accessToken, { limit: PAGE_LIMIT, cursor });
-      setFiles(data.favorites);
-    } catch (err) {
-      console.error('Failed to restore file:', err);
     }
   };
 
@@ -195,29 +194,6 @@ const FavoritesPage: React.FC = () => {
           </div>
         )}
       </Card>
-
-      {(deletedToast || favoriteToast) && (
-        <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
-          {favoriteToast && (
-            <Toast
-              variant="favorite"
-              message={`«${favoriteToast.name}» удалён из избранного`}
-              actionLabel="Отменить"
-              onAction={handleUndoFavorite}
-              onClose={() => setFavoriteToast(null)}
-            />
-          )}
-          {deletedToast && (
-            <Toast
-              variant="undo"
-              message={`«${deletedToast.name}» перемещён в корзину`}
-              actionLabel="Отменить"
-              onAction={handleUndoDelete}
-              onClose={() => setDeletedToast(null)}
-            />
-          )}
-        </div>
-      )}
     </div>
   );
 };

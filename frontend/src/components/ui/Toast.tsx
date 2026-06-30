@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { CheckCircle, XCircle, X, Trash2, RotateCcw, Star } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
@@ -23,15 +23,17 @@ export const Toast: React.FC<ToastProps> = ({
 }) => {
   const [isVisible, setIsVisible] = useState(true);
   const [progress, setProgress] = useState(100);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsVisible(false);
-      setTimeout(onClose, 300);
+      setTimeout(() => onCloseRef.current(), 300);
     }, duration);
 
     return () => clearTimeout(timer);
-  }, [duration, onClose]);
+  }, [duration]);
 
   useEffect(() => {
     const raf = requestAnimationFrame(() => setProgress(0));

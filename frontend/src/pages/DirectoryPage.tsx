@@ -6,7 +6,6 @@ import { useDirectoryStore } from '../store/directoryStore';
 import { useDragDropStore } from '../store/dragDropStore';
 import { useSharedDirectories } from '../hooks/useSharedDirectories';
 import { Modal } from '../components/ui/Modal';
-import { Toast } from '../components/ui/Toast';
 import { DropZone } from '../components/ui/DropZone';
 import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
 import { Button } from '../components/ui/Button';
@@ -15,6 +14,7 @@ import { FileGridItem } from '../components/ui/FileGridItem';
 import { FolderItem } from '../components/ui/FolderItem';
 import { FileItem } from '../components/ui/FileItem';
 import { MoveFileModal } from '../components/ui/MoveFileModal';
+import { ShareLinkModal } from '../components/ui/ShareLinkModal';
 import {
   getDirectoryContents,
   getDirectoryById,
@@ -28,6 +28,7 @@ import {
   File as DirectoryFile,
 } from '../api/directories';
 import { uploadFilesWithProgress, softDeleteFile, restoreFile, moveFile } from '../api/files';
+import { createShareLink, createDirectoryShareLink } from '../api/sharelinks';
 import { formatFileSize, formatDate } from '../utils/format';
 import { useFavorites } from '../hooks/useFavorites';
 import { useToastStore } from '../hooks/useToast';
@@ -72,22 +73,12 @@ const DirectoryPage: React.FC = () => {
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
   const [moveFileId, setMoveFileId] = useState<string>('');
   const [moveFileName, setMoveFileName] = useState<string>('');
-  const [deletedToast, setDeletedToast] = useState<{
-    id: string;
-    name: string;
-    kind: 'file' | 'directory';
+  const [shareModalState, setShareModalState] = useState<{
+    itemId: string;
+    itemName: string;
+    itemType: 'file' | 'directory';
   } | null>(null);
-  const [favoriteToast, setFavoriteToast] = useState<{
-    id: string;
-    name: string;
-    wasAdded: boolean;
-  } | null>(null);
-  const [moveToast, setMoveToast] = useState<{
-    fileId: string;
-    fileName: string;
-    fromDirectoryId: string;
-    directoryId: string;
-  } | null>(null);
+  const [shareLinkRefreshKey, setShareLinkRefreshKey] = useState(0);
 
   // Pagination
   const PAGE_LIMIT = 20;
@@ -267,16 +258,6 @@ const DirectoryPage: React.FC = () => {
         // Определяем, является ли директория общей
         let shared = checkIsShared(dirId);
 
-        // Если директория принадлежит текущему пользователю, проверяем её тип
-        // и наличие permissions (признак того, что это общая директория)
-        if (info.owner_id === user?.id && info.type !== 'root') {
-          // Если у директории есть permissions и она не root, значит она общая
-          // (даже если checkIsShared ещё не вернул true из-за задержки)
-          if (info.permissions !== undefined) {
-            shared = true;
-          }
-        }
-
         setIsShared(shared);
 
         // Загружаем breadcrumbs
@@ -331,8 +312,8 @@ const DirectoryPage: React.FC = () => {
       }
 
       if (targetId && targetId !== 'personal') {
-        await loadDirectory(targetId);
         setActualId(targetId);
+        await loadDirectory(targetId);
       }
     };
 
@@ -342,7 +323,6 @@ const DirectoryPage: React.FC = () => {
   // --- Эффект 2: Обновление при изменении ID в URL ---
   useEffect(() => {
     if (id && id !== 'personal' && id !== actualId && accessToken && !isLoadingShared) {
-      setMoveToast(null);
       setActualId(id);
       loadDirectory(id);
     }
@@ -352,16 +332,7 @@ const DirectoryPage: React.FC = () => {
   useEffect(() => {
     if (!isLoadingShared && actualId && accessToken && directoryInfo) {
       const shared = checkIsShared(actualId);
-      // Если директория принадлежит текущему пользователю и имеет permissions,
-      // но checkIsShared вернул false (ещё не загрузилось), проверяем по permissions
       let effectiveShared = shared;
-      if (
-        directoryInfo.owner_id === user?.id &&
-        directoryInfo.type !== 'root' &&
-        directoryInfo.permissions !== undefined
-      ) {
-        effectiveShared = true;
-      }
 
       if (effectiveShared !== isShared) {
         setIsShared(effectiveShared);
@@ -471,6 +442,7 @@ const DirectoryPage: React.FC = () => {
       size: formatFileSize(f.size),
       type: resolveFileIconType(f.mime_type, f.extension),
       isFavorite: isFavorite(f.id),
+      has_share_links: f.has_share_links,
     }));
   }, [allFiles, isFavorite]);
 
@@ -544,13 +516,24 @@ const DirectoryPage: React.FC = () => {
       try {
         await softDeleteFile(accessToken, fileId);
         await loadDirectory(actualId, true);
-        setDeletedToast({ id: fileId, name: file?.filename || 'Файл', kind: 'file' });
+        const name = file?.filename || 'Файл';
+        let undoing = false;
+        showToast(`«${name}» перемещён в корзину`, 'undo', 'Отменить', async () => {
+          if (undoing) return;
+          undoing = true;
+          try {
+            await restoreFile(accessToken, fileId);
+            if (actualId) await loadDirectory(actualId, true);
+          } catch (err) {
+            console.error('Failed to restore file:', err);
+          }
+        });
       } catch (err) {
         console.error('Failed to delete file:', err);
         setError('Не удалось удалить файл');
       }
     },
-    [accessToken, actualId, allFiles, loadDirectory],
+    [accessToken, actualId, allFiles, loadDirectory, showToast],
   );
 
   const handleDeleteFolder = useCallback(
@@ -561,50 +544,59 @@ const DirectoryPage: React.FC = () => {
       try {
         await softDeleteDirectory(accessToken, folderId);
         await loadDirectory(actualId, true);
-        setDeletedToast({ id: folderId, name: folder?.name || 'Папка', kind: 'directory' });
+        const name = folder?.name || 'Папка';
+        let undoing = false;
+        showToast(`«${name}» перемещена в корзину`, 'undo', 'Отменить', async () => {
+          if (undoing) return;
+          undoing = true;
+          try {
+            await restoreDirectory(accessToken, folderId);
+            if (actualId) await loadDirectory(actualId, true);
+          } catch (err) {
+            console.error('Failed to restore folder:', err);
+          }
+        });
       } catch (err) {
         console.error('Failed to delete folder:', err);
         setError('Не удалось удалить папку');
       }
     },
-    [accessToken, actualId, filteredSubdirectories, loadDirectory],
+    [accessToken, actualId, filteredSubdirectories, loadDirectory, showToast],
   );
-
-  const handleUndoDelete = useCallback(async () => {
-    if (!deletedToast || !accessToken) return;
-
-    try {
-      if (deletedToast.kind === 'file') {
-        await restoreFile(accessToken, deletedToast.id);
-      } else {
-        await restoreDirectory(accessToken, deletedToast.id);
-      }
-      if (actualId) await loadDirectory(actualId, true);
-    } catch (err) {
-      console.error('Failed to restore item:', err);
-    }
-  }, [deletedToast, accessToken, actualId, loadDirectory]);
 
   const handleToggleFavorite = useCallback(
     async (fileId: string) => {
       const file = allFiles.find((f) => f.id === fileId);
       try {
         const wasAdded = await toggleFavorite(fileId);
-        setFavoriteToast({ id: fileId, name: file?.filename || 'Файл', wasAdded });
+        const name = file?.filename || 'Файл';
+        let undoing = false;
+        showToast(
+          `«${name}» ${wasAdded ? 'добавлен в избранное' : 'удалён из избранного'}`,
+          'favorite',
+          'Отменить',
+          async () => {
+            if (undoing) return;
+            undoing = true;
+            try {
+              await toggleFavorite(fileId);
+            } catch (err) {
+              console.error('Failed to undo favorite:', err);
+            }
+          },
+        );
       } catch (err) {
         console.error('Failed to toggle favorite:', err);
         setError('Не удалось обновить избранное');
       }
     },
-    [allFiles, toggleFavorite],
+    [allFiles, toggleFavorite, showToast],
   );
 
   // --- Автозагрузка при скролле ---
-  // Следим за скроллом и подгружаем, когда сентинель появляется в окне
   const checkAndLoad = useCallback(() => {
     if (!accessToken || !actualId) return;
 
-    // Папки
     if (hasMoreDirs && !isLoadingMoreDirs && dirsCursor) {
       const el = dirsSentinelRef.current;
       if (el && el.getBoundingClientRect().top < window.innerHeight + 300) {
@@ -623,7 +615,6 @@ const DirectoryPage: React.FC = () => {
       }
     }
 
-    // Файлы
     if (hasMoreFiles && !isLoadingMoreFiles && filesCursor) {
       const el = filesSentinelRef.current;
       if (el && el.getBoundingClientRect().top < window.innerHeight + 300) {
@@ -652,7 +643,6 @@ const DirectoryPage: React.FC = () => {
     filesCursor,
   ]);
 
-  // Проверяем при скролле, ресайзе и после каждого рендера
   useEffect(() => {
     checkAndLoad();
     window.addEventListener('scroll', checkAndLoad, { passive: true });
@@ -662,17 +652,6 @@ const DirectoryPage: React.FC = () => {
       window.removeEventListener('resize', checkAndLoad);
     };
   }, [checkAndLoad]);
-
-  const handleUndoFavorite = useCallback(async () => {
-    if (!favoriteToast) return;
-    try {
-      await toggleFavorite(favoriteToast.id);
-    } catch (err) {
-      console.error('Failed to undo favorite:', err);
-    }
-    setFavoriteToast(null);
-  }, [favoriteToast, toggleFavorite]);
-
   const handleMoveFile = useCallback(
     (fileId: string) => {
       const file = allFiles.find((f) => f.id === fileId);
@@ -687,32 +666,29 @@ const DirectoryPage: React.FC = () => {
 
   const handleMoveComplete = useCallback(
     async (fileId: string, fileName: string, fromDirectoryId: string) => {
-      setMoveToast({ fileId, fileName, fromDirectoryId, directoryId: actualId || '' });
+      let undoing = false;
+      showToast(`Файл «${fileName}» перемещён`, 'move', 'Отменить', async () => {
+        if (undoing || isUndoingRef.current) return;
+        undoing = true;
+        isUndoingRef.current = true;
+        try {
+          await moveFile(accessToken, fileId, fromDirectoryId);
+          if (actualId) await loadDirectory(actualId, true);
+          showToast(`Файл «${fileName}» возвращён`, 'success');
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Не удалось отменить перемещение';
+          showToast(message, 'error');
+        } finally {
+          isUndoingRef.current = false;
+        }
+      });
 
       if (actualId) {
         await loadDirectory(actualId, true);
       }
     },
-    [actualId, loadDirectory],
+    [actualId, accessToken, loadDirectory, showToast],
   );
-
-  const handleUndoMove = useCallback(async () => {
-    if (!moveToast || !accessToken || isUndoingRef.current) return;
-    isUndoingRef.current = true;
-
-    try {
-      await moveFile(accessToken, moveToast.fileId, moveToast.fromDirectoryId);
-      if (moveToast.directoryId) await loadDirectory(moveToast.directoryId, true);
-      showToast(`Файл «${moveToast.fileName}» возвращён`, 'success');
-      setMoveToast(null);
-    } catch (err) {
-      console.error('Failed to undo move:', err);
-      const message = err instanceof Error ? err.message : 'Не удалось отменить перемещение';
-      showToast(message, 'error');
-    } finally {
-      isUndoingRef.current = false;
-    }
-  }, [moveToast, accessToken, loadDirectory, showToast]);
 
   const handleFileDragStart = useCallback(
     (e: React.DragEvent, fileId: string, fileName: string) => {
@@ -732,7 +708,22 @@ const DirectoryPage: React.FC = () => {
       try {
         await moveFile(accessToken, fileId, folderId);
         await loadDirectory(actualId, true);
-        setMoveToast({ fileId, fileName, fromDirectoryId: actualId, directoryId: actualId });
+        let undoing = false;
+        showToast(`Файл «${fileName}» перемещён`, 'move', 'Отменить', async () => {
+          if (undoing || isUndoingRef.current) return;
+          undoing = true;
+          isUndoingRef.current = true;
+          try {
+            await moveFile(accessToken, fileId, actualId);
+            await loadDirectory(actualId, true);
+            showToast(`Файл «${fileName}» возвращён`, 'success');
+          } catch (err) {
+            const message = err instanceof Error ? err.message : 'Не удалось отменить перемещение';
+            showToast(message, 'error');
+          } finally {
+            isUndoingRef.current = false;
+          }
+        });
       } catch (err) {
         console.error('Failed to move file via drag & drop:', err);
         const message = err instanceof Error ? err.message : 'Не удалось переместить файл';
@@ -959,11 +950,21 @@ const DirectoryPage: React.FC = () => {
                         id={folder.id}
                         name={folder.name}
                         to={`/directories/${folder.id}`}
+                        hasShareLinks={folder.has_share_links}
                         onDelete={
                           (folder.permissions?.delete ?? perms?.delete) && !checkIsShared(folder.id)
                             ? handleDeleteFolder
                             : undefined
                         }
+                        onShare={(id) => {
+                          const f = filteredSubdirectories.find((d) => d.id === id);
+                          if (f)
+                            setShareModalState({
+                              itemId: f.id,
+                              itemName: f.name,
+                              itemType: 'directory',
+                            });
+                        }}
                         onDrop={handleFolderDrop}
                       />
                     ))}
@@ -976,11 +977,21 @@ const DirectoryPage: React.FC = () => {
                         id={folder.id}
                         name={folder.name}
                         to={`/directories/${folder.id}`}
+                        hasShareLinks={folder.has_share_links}
                         onDelete={
                           (folder.permissions?.delete ?? perms?.delete) && !checkIsShared(folder.id)
                             ? handleDeleteFolder
                             : undefined
                         }
+                        onShare={(id) => {
+                          const f = filteredSubdirectories.find((d) => d.id === id);
+                          if (f)
+                            setShareModalState({
+                              itemId: f.id,
+                              itemName: f.name,
+                              itemType: 'directory',
+                            });
+                        }}
                         onDrop={handleFolderDrop}
                       />
                     ))}
@@ -1013,9 +1024,19 @@ const DirectoryPage: React.FC = () => {
                         type={file.type}
                         to={`/files/${file.id}`}
                         isFavorite={file.isFavorite}
+                        hasShareLinks={file.has_share_links}
                         onToggleFavorite={handleToggleFavorite}
                         onDelete={perms?.delete ? handleDeleteFile : undefined}
                         onMove={handleMoveFile}
+                        onShare={(id) => {
+                          const f = displayFiles.find((d) => d.id === id);
+                          if (f)
+                            setShareModalState({
+                              itemId: f.id,
+                              itemName: f.name,
+                              itemType: 'file',
+                            });
+                        }}
                         onDragStart={handleFileDragStart}
                       />
                     ))}
@@ -1032,9 +1053,19 @@ const DirectoryPage: React.FC = () => {
                         type={file.type}
                         to={`/files/${file.id}`}
                         isFavorite={file.isFavorite}
+                        hasShareLinks={file.has_share_links}
                         onToggleFavorite={handleToggleFavorite}
                         onDelete={perms?.delete ? handleDeleteFile : undefined}
                         onMove={handleMoveFile}
+                        onShare={(id) => {
+                          const f = displayFiles.find((d) => d.id === id);
+                          if (f)
+                            setShareModalState({
+                              itemId: f.id,
+                              itemName: f.name,
+                              itemType: 'file',
+                            });
+                        }}
                         onDragStart={handleFileDragStart}
                       />
                     ))}
@@ -1112,6 +1143,71 @@ const DirectoryPage: React.FC = () => {
         </div>
       </Modal>
 
+      {shareModalState && accessToken && (
+        <ShareLinkModal
+          isOpen={true}
+          onClose={() => setShareModalState(null)}
+          itemId={shareModalState.itemId}
+          itemName={shareModalState.itemName}
+          itemType={shareModalState.itemType}
+          accessToken={accessToken}
+          onLinksChanged={(hasLinks) => {
+            setDirectoryContents((prev) => {
+              if (!prev) return prev;
+              return {
+                ...prev,
+                files: prev.files.map((f) =>
+                  f.id === shareModalState.itemId && shareModalState.itemType === 'file'
+                    ? { ...f, has_share_links: hasLinks }
+                    : f,
+                ),
+                subdirectories: prev.subdirectories.map((d) =>
+                  d.id === shareModalState.itemId && shareModalState.itemType === 'directory'
+                    ? { ...d, has_share_links: hasLinks }
+                    : d,
+                ),
+              };
+            });
+          }}
+          onLinkDeleted={(info) => {
+            const itemId = shareModalState.itemId;
+            const itemType = shareModalState.itemType;
+            const { accessType, expiresAt } = info;
+            let undoing = false;
+            showToast('Ссылка общего доступа удалена', 'undo', 'Отменить', async () => {
+              if (undoing) return;
+              undoing = true;
+              try {
+                const body = { access_type: accessType, expires_at: expiresAt };
+                if (itemType === 'file') {
+                  await createShareLink(accessToken, itemId, body);
+                } else {
+                  await createDirectoryShareLink(accessToken, itemId, body);
+                }
+                setDirectoryContents((prev) => {
+                  if (!prev) return prev;
+                  return {
+                    ...prev,
+                    files: prev.files.map((f) =>
+                      f.id === itemId && itemType === 'file' ? { ...f, has_share_links: true } : f,
+                    ),
+                    subdirectories: prev.subdirectories.map((d) =>
+                      d.id === itemId && itemType === 'directory'
+                        ? { ...d, has_share_links: true }
+                        : d,
+                    ),
+                  };
+                });
+                setShareLinkRefreshKey((k) => k + 1);
+              } catch (err) {
+                console.error('Failed to undo share link delete:', err);
+              }
+            });
+          }}
+          refreshKey={shareLinkRefreshKey}
+        />
+      )}
+
       <MoveFileModal
         isOpen={isMoveModalOpen}
         onClose={() => setIsMoveModalOpen(false)}
@@ -1121,38 +1217,7 @@ const DirectoryPage: React.FC = () => {
         onMoveComplete={handleMoveComplete}
       />
 
-      {/* Уведомления */}
-      {(deletedToast || favoriteToast || moveToast) && (
-        <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
-          {moveToast && (
-            <Toast
-              variant="move"
-              message={`Файл «${moveToast.fileName}» перемещён`}
-              actionLabel="Отменить"
-              onAction={handleUndoMove}
-              onClose={() => setMoveToast(null)}
-            />
-          )}
-          {favoriteToast && (
-            <Toast
-              variant="favorite"
-              message={`«${favoriteToast.name}» ${favoriteToast.wasAdded ? 'добавлен в избранное' : 'удалён из избранного'}`}
-              actionLabel="Отменить"
-              onAction={handleUndoFavorite}
-              onClose={() => setFavoriteToast(null)}
-            />
-          )}
-          {deletedToast && (
-            <Toast
-              variant="undo"
-              message={`«${deletedToast.name}» перемещ${deletedToast.kind === 'directory' ? 'ена' : 'ён'} в корзину`}
-              actionLabel="Отменить"
-              onAction={handleUndoDelete}
-              onClose={() => setDeletedToast(null)}
-            />
-          )}
-        </div>
-      )}
+      {/* Уведомления — удалены, используется глобальный ToastContainer */}
     </div>
   );
 };

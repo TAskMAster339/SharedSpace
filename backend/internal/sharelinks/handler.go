@@ -3,6 +3,7 @@ package sharelinks
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -59,6 +60,44 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) error {
 	return writeJSON(w, http.StatusCreated, resp)
 }
 
+// CreateForDirectory creates a share link for a directory.
+// @Summary Create share link for directory
+// @Tags share-links
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "Directory ID"
+// @Param body body CreateShareLinkRequest true "Share link parameters"
+// @Success 201 {object} ShareLinkResponse
+// @Failure 400 {object} apperror.Response
+// @Failure 401 {object} apperror.Response
+// @Failure 403 {object} apperror.Response
+// @Failure 404 {object} apperror.Response
+// @Router /api/v1/directories/{id}/share-links [post]
+func (h *Handler) CreateForDirectory(w http.ResponseWriter, r *http.Request) error {
+	claims, err := h.extractClaims(r)
+	if err != nil {
+		return err
+	}
+
+	dirID := chi.URLParam(r, "id")
+	if dirID == "" {
+		return apperror.Validation("id директории обязателен")
+	}
+
+	var req CreateShareLinkRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return apperror.Validation("некорректный JSON")
+	}
+
+	resp, err := h.service.CreateForDirectory(r.Context(), claims.UserID, dirID, req)
+	if err != nil {
+		return err
+	}
+
+	return writeJSON(w, http.StatusCreated, resp)
+}
+
 // ListByFile returns all share links for a file.
 // @Summary List share links for file
 // @Tags share-links
@@ -92,6 +131,46 @@ func (h *Handler) ListByFile(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	resp, err := h.service.ListByFile(r.Context(), claims.UserID, fileID, limit)
+	if err != nil {
+		return err
+	}
+
+	return writeJSON(w, http.StatusOK, resp)
+}
+
+// ListByDirectory returns all share links for a directory.
+// @Summary List share links for directory
+// @Tags share-links
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Directory ID"
+// @Param limit query int false "Maximum number of links to return"
+// @Success 200 {array} ShareLinkResponse
+// @Failure 401 {object} apperror.Response
+// @Failure 403 {object} apperror.Response
+// @Failure 404 {object} apperror.Response
+// @Router /api/v1/directories/{id}/share-links [get]
+func (h *Handler) ListByDirectory(w http.ResponseWriter, r *http.Request) error {
+	claims, err := h.extractClaims(r)
+	if err != nil {
+		return err
+	}
+
+	dirID := chi.URLParam(r, "id")
+	if dirID == "" {
+		return apperror.Validation("id директории обязателен")
+	}
+
+	limit := 0
+	if l := r.URL.Query().Get("limit"); l != "" {
+		parsed, err := strconv.Atoi(l)
+		if err != nil || parsed < 0 {
+			return apperror.Validation("некорректный лимит")
+		}
+		limit = parsed
+	}
+
+	resp, err := h.service.ListByDirectory(r.Context(), claims.UserID, dirID, limit)
 	if err != nil {
 		return err
 	}
@@ -183,7 +262,7 @@ func (h *Handler) Resolve(w http.ResponseWriter, r *http.Request) error {
 		return apperror.Validation("token обязателен")
 	}
 
-	password := r.Header.Get("X-SharedLink-Password")
+	password, _ := url.QueryUnescape(r.Header.Get("X-SharedLink-Password"))
 
 	authenticated := false
 	rawJWT := bearerToken(r)
@@ -195,6 +274,45 @@ func (h *Handler) Resolve(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	resp, err := h.service.Resolve(r.Context(), token, password, authenticated)
+	if err != nil {
+		return err
+	}
+
+	return writeJSON(w, http.StatusOK, resp)
+}
+
+// ResolveDirectory opens a directory via a share link token.
+// @Summary Open directory by share link
+// @Tags share-links
+// @Produce json
+// @Param token path string true "Share link token"
+// @Param dir query string false "Subdirectory ID to navigate into"
+// @Param X-SharedLink-Password header string false "Password for protected links"
+// @Success 200 {object} DirectoryContentResponse
+// @Failure 400 {object} apperror.Response
+// @Failure 401 {object} apperror.Response
+// @Failure 403 {object} apperror.Response
+// @Failure 404 {object} apperror.Response
+// @Router /api/v1/sd/{token} [get]
+func (h *Handler) ResolveDirectory(w http.ResponseWriter, r *http.Request) error {
+	token := chi.URLParam(r, "token")
+	if token == "" {
+		return apperror.Validation("token обязателен")
+	}
+
+	subDirID := r.URL.Query().Get("dir")
+	password, _ := url.QueryUnescape(r.Header.Get("X-SharedLink-Password"))
+
+	authenticated := false
+	rawJWT := bearerToken(r)
+	if rawJWT != "" {
+		claims, err := h.tokenParser.ParseAccessToken(rawJWT)
+		if err == nil && claims != nil {
+			authenticated = true
+		}
+	}
+
+	resp, err := h.service.ResolveDirectory(r.Context(), token, password, authenticated, subDirID)
 	if err != nil {
 		return err
 	}

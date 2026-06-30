@@ -49,6 +49,7 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 
 		if shareLinksHandler != nil {
 			r.Get("/s/{token}", middleware.AppError(shareLinksHandler.Resolve))
+			r.Get("/sd/{token}", middleware.AppError(shareLinksHandler.ResolveDirectory))
 		}
 
 		r.Group(func(r chi.Router) {
@@ -98,6 +99,11 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 					r.Delete("/{id}", middleware.AppError(dirsHandler.SoftDelete))
 					r.Post("/{id}/restore", middleware.AppError(dirsHandler.Restore))
 					r.Delete("/{id}/permanent", middleware.AppError(dirsHandler.PermanentDelete))
+
+					if shareLinksHandler != nil {
+						r.Post("/{id}/share-links", middleware.AppError(shareLinksHandler.CreateForDirectory))
+						r.Get("/{id}/share-links", middleware.AppError(shareLinksHandler.ListByDirectory))
+					}
 				})
 			}
 

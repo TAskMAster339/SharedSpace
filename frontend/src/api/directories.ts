@@ -20,6 +20,7 @@ export interface Directory {
   type: 'root' | 'regular';
   created_at: string;
   updated_at: string;
+  has_share_links?: boolean;
   permissions?: Permissions;
 }
 
@@ -29,6 +30,7 @@ export interface File {
   extension: string;
   mime_type: string;
   size: number;
+  has_share_links?: boolean;
   created_at: string;
   updated_at: string;
 }

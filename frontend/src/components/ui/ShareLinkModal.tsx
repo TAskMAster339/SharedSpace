@@ -12,6 +12,7 @@ import {
   KeyRound,
   Eye,
   EyeOff,
+  Folder,
 } from 'lucide-react';
 import { Modal } from './Modal';
 import { Button } from './Button';
@@ -23,21 +24,30 @@ import {
   createShareLink,
   listShareLinks,
   deleteShareLink,
+  createDirectoryShareLink,
+  listDirectoryShareLinks,
 } from '../../api/sharelinks';
 import { cn } from '../../utils/cn';
 
 interface ShareLinkModalProps {
   isOpen: boolean;
   onClose: () => void;
-  fileId: string;
-  fileName: string;
+  itemId: string;
+  itemName: string;
+  itemType: 'file' | 'directory';
   accessToken: string;
+  onLinksChanged?: (hasLinks: boolean) => void;
+  onLinkDeleted?: (info: { accessType: ShareLinkAccess; expiresAt: string | null }) => void;
+  refreshKey?: number;
 }
 
-const SHARE_BASE_URL =
+const FILE_SHARE_BASE_URL =
+  typeof window !== 'undefined' ? `${window.location.origin}/share` : 'http://localhost:3000/share';
+
+const DIR_SHARE_BASE_URL =
   typeof window !== 'undefined'
-    ? `${window.location.origin}/share`
-    : process.env.REACT_APP_SHARE_BASE_URL || 'http://localhost:3000/share';
+    ? `${window.location.origin}/share/dir`
+    : 'http://localhost:3000/share/dir';
 
 const EXPIRY_OPTIONS = [
   { label: 'Не истекает', value: '' },
@@ -79,42 +89,48 @@ function isExpired(dateStr: string | null): boolean {
 export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
   isOpen,
   onClose,
-  fileId,
-  fileName,
+  itemId,
+  itemName,
+  itemType,
   accessToken,
+  onLinksChanged,
+  onLinkDeleted,
+  refreshKey,
 }) => {
   const [links, setLinks] = useState<ShareLink[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Форма создания
   const [access, setAccess] = useState<ShareLinkAccess>('public');
   const [expiry, setExpiry] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  // Copied state per link id
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  // Редактирование ссылки
   const [editingLink, setEditingLink] = useState<ShareLink | null>(null);
 
   const showToast = useToastStore((s) => s.showToast);
+
+  const isFile = itemType === 'file';
+  const shareBaseUrl = isFile ? FILE_SHARE_BASE_URL : DIR_SHARE_BASE_URL;
 
   const loadLinks = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await listShareLinks(accessToken, fileId);
+      const data = isFile
+        ? await listShareLinks(accessToken, itemId)
+        : await listDirectoryShareLinks(accessToken, itemId);
       setLinks(data ?? []);
     } catch (err: any) {
       setError(err?.message || 'Не удалось загрузить ссылки');
     } finally {
       setIsLoading(false);
     }
-  }, [accessToken, fileId]);
+  }, [accessToken, itemId, isFile]);
 
   useEffect(() => {
     if (isOpen) {
@@ -125,24 +141,29 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
       setPassword('');
       setShowPassword(false);
     }
-  }, [isOpen, loadLinks]);
+  }, [isOpen, loadLinks, refreshKey]);
 
   const handleCreate = async () => {
     setIsCreating(true);
     setError(null);
     try {
-      const newLink = await createShareLink(accessToken, fileId, {
+      const body = {
         access_type: access,
         expires_at: expiryToDate(expiry),
         password: password || undefined,
-      });
+      };
+      const newLink = isFile
+        ? await createShareLink(accessToken, itemId, body)
+        : await createDirectoryShareLink(accessToken, itemId, body);
+      const wasEmpty = links.length === 0;
       setLinks((prev) => [newLink, ...prev]);
-      setShowCreateForm(false);
-      setAccess('public');
-      setExpiry('');
-      setPassword('');
-      setShowPassword(false);
-      showToast('Ссылка общего доступа создана');
+      if (wasEmpty) {
+        onLinksChanged?.(true);
+      }
+      const url = `${shareBaseUrl}/${newLink.token}`;
+      await navigator.clipboard.writeText(url);
+      showToast('Ссылка создана и скопирована');
+      onClose();
     } catch (err: any) {
       setError(err?.message || 'Не удалось создать ссылку');
     } finally {
@@ -150,11 +171,16 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
     }
   };
 
-  const handleDelete = async (e: React.MouseEvent, linkId: string) => {
+  const handleDelete = async (e: React.MouseEvent, link: ShareLink) => {
     e.stopPropagation();
+    const wasLast = links.length === 1;
     try {
-      await deleteShareLink(accessToken, linkId);
-      setLinks((prev) => prev.filter((l) => l.id !== linkId));
+      await deleteShareLink(accessToken, link.id);
+      setLinks((prev) => prev.filter((l) => l.id !== link.id));
+      if (wasLast) {
+        onLinksChanged?.(false);
+      }
+      onLinkDeleted?.({ accessType: link.access_type, expiresAt: link.expires_at });
     } catch (err: any) {
       setError(err?.message || 'Не удалось удалить ссылку');
     }
@@ -162,7 +188,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
 
   const handleCopy = async (e: React.MouseEvent, link: ShareLink) => {
     e.stopPropagation();
-    const url = `${SHARE_BASE_URL}/${link.token}`;
+    const url = `${shareBaseUrl}/${link.token}`;
     try {
       await navigator.clipboard.writeText(url);
       setCopiedId(link.id);
@@ -182,13 +208,16 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Ссылки общего доступа" maxWidth="lg">
-      {/* Заголовок с именем файла */}
       <div className="flex items-center gap-2 mb-5 p-3 bg-theme-tertiary rounded-theme-md border border-theme">
-        <Link2 size={16} className="text-theme-muted shrink-0" />
-        <span className="text-sm text-theme-primary font-medium truncate">{fileName}</span>
+        {isFile ? (
+          <Link2 size={16} className="text-theme-muted shrink-0" />
+        ) : (
+          <Folder size={16} className="text-theme-muted shrink-0" />
+        )}
+        <span className="text-sm text-theme-primary font-medium truncate">{itemName}</span>
+        <span className="text-xs text-theme-muted shrink-0">{isFile ? 'Файл' : 'Папка'}</span>
       </div>
 
-      {/* Кнопка создать */}
       {!showCreateForm && (
         <button
           onClick={() => setShowCreateForm(true)}
@@ -199,12 +228,10 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
         </button>
       )}
 
-      {/* Форма создания */}
       {showCreateForm && (
         <div className="mb-5 p-4 bg-theme-tertiary border border-theme rounded-theme-md space-y-4">
           <p className="text-sm font-medium text-theme-primary">Новая ссылка</p>
 
-          {/* Тип доступа */}
           <div className="space-y-1">
             <label className="text-xs text-theme-secondary font-medium">Тип доступа</label>
             <div className="flex gap-2">
@@ -235,12 +262,11 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
             </div>
             <p className="text-xs text-theme-muted mt-1">
               {access === 'public'
-                ? 'Файл доступен всем без авторизации'
+                ? 'Доступно всем без авторизации'
                 : 'Доступ только авторизованным пользователям'}
             </p>
           </div>
 
-          {/* Срок действия */}
           <div className="space-y-1">
             <label className="text-xs text-theme-secondary font-medium">Срок действия</label>
             <div className="flex flex-wrap gap-2">
@@ -261,7 +287,6 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
             </div>
           </div>
 
-          {/* Пароль */}
           <div className="space-y-1">
             <label className="text-xs text-theme-secondary font-medium">
               Пароль (необязательно)
@@ -289,7 +314,6 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
             </div>
           </div>
 
-          {/* Кнопки */}
           <div className="flex gap-2 pt-1">
             <Button
               variant="secondary"
@@ -312,7 +336,6 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
         </div>
       )}
 
-      {/* Ошибка */}
       {error && (
         <div className="flex items-center gap-2 mb-4 p-3 bg-danger-light border border-danger/20 rounded-theme-md text-sm text-danger">
           <AlertCircle size={14} className="shrink-0" />
@@ -320,7 +343,6 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
         </div>
       )}
 
-      {/* Список ссылок */}
       <div className="space-y-3">
         {isLoading && (
           <div className="flex justify-center py-6">
@@ -336,7 +358,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
 
         {links.map((link) => {
           const expired = isExpired(link.expires_at);
-          const url = `${SHARE_BASE_URL}/${link.token}`;
+          const url = `${shareBaseUrl}/${link.token}`;
           const isCopied = copiedId === link.id;
 
           return (
@@ -350,7 +372,6 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
                   : 'border-theme bg-theme-secondary hover:border-brand/30 hover:bg-brand-light',
               )}
             >
-              {/* Иконка типа */}
               <div
                 className={cn(
                   'shrink-0 mt-0.5 p-1.5 rounded-theme-sm',
@@ -364,7 +385,6 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
                 )}
               </div>
 
-              {/* Инфо */}
               <div className="flex-1 min-w-0 space-y-1">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-medium text-theme-primary">
@@ -389,7 +409,6 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
                 </div>
               </div>
 
-              {/* Действия */}
               <div className="flex items-center gap-1 shrink-0">
                 {!expired && (
                   <button
@@ -408,7 +427,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
                   </button>
                 )}
                 <button
-                  onClick={(e) => handleDelete(e, link.id)}
+                  onClick={(e) => handleDelete(e, link)}
                   title="Удалить ссылку"
                   className="p-1.5 rounded-theme-sm hover:bg-danger-light text-theme-secondary hover:text-danger transition-colors"
                 >
