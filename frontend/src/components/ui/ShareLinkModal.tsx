@@ -160,12 +160,10 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
       if (wasEmpty) {
         onLinksChanged?.(true);
       }
-      setShowCreateForm(false);
-      setAccess('public');
-      setExpiry('');
-      setPassword('');
-      setShowPassword(false);
-      showToast('Ссылка общего доступа создана');
+      const url = `${shareBaseUrl}/${newLink.token}`;
+      await navigator.clipboard.writeText(url);
+      showToast('Ссылка создана и скопирована');
+      onClose();
     } catch (err: any) {
       setError(err?.message || 'Не удалось создать ссылку');
     } finally {
