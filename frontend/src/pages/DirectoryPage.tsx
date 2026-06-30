@@ -305,8 +305,8 @@ const DirectoryPage: React.FC = () => {
       }
 
       if (targetId && targetId !== 'personal') {
-        await loadDirectory(targetId);
         setActualId(targetId);
+        await loadDirectory(targetId);
       }
     };
 
