@@ -7,6 +7,8 @@ export interface ToastItem {
   id: string;
   message: string;
   variant: ToastVariant;
+  actionLabel?: string;
+  onAction?: () => void;
 }
 
 interface ToastContainerProps {
@@ -26,6 +28,8 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onRemove
           variant={toast.variant}
           onClose={() => onRemove(toast.id)}
           duration={5000}
+          actionLabel={toast.actionLabel}
+          onAction={toast.onAction}
         />
       ))}
     </div>

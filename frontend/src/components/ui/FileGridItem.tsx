@@ -58,9 +58,7 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
         <span
           className={`absolute top-0 flex items-center justify-center rounded-full bg-theme-tertiary border border-theme p-0.5 shadow-theme-card transition-all duration-500 ease-in-out ${
             hasShareLinks ? 'opacity-100' : 'opacity-0 pointer-events-none'
-          } ${
-            isFavorite && hasShareLinks ? 'left-0' : 'left-[44px]'
-          }`}
+          } ${isFavorite && hasShareLinks ? 'left-0' : 'left-[44px]'}`}
           aria-label="Есть ссылки общего доступа"
           title="Есть ссылки общего доступа"
         >

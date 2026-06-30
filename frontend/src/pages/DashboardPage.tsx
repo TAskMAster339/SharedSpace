@@ -14,8 +14,8 @@ import { Card, CardHeader, CardTitle } from '../components/ui/Card';
 import { FileItem } from '../components/ui/FileItem';
 import { DirectoryItem } from '../components/ui/DirectoryItem';
 import { EmptyState } from '../components/ui/EmptyState';
-import { Toast } from '../components/ui/Toast';
 import { Link as UILink } from '../components/ui/Link';
+import { useToastStore } from '../hooks/useToast';
 import { formatFileSize, formatDate } from '../utils/format';
 import { resolveFileIconType } from '../utils/fileType';
 
@@ -36,11 +36,7 @@ const DashboardPage: React.FC = () => {
   const [favorites, setFavorites] = useState<FavoriteFile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [favoriteToast, setFavoriteToast] = useState<{
-    id: string;
-    name: string;
-    wasAdded: boolean;
-  } | null>(null);
+  const showToast = useToastStore((s) => s.showToast);
 
   useEffect(() => {
     if (!accessToken) return;
@@ -167,22 +163,26 @@ const DashboardPage: React.FC = () => {
 
     try {
       await toggleFavorite(fileId);
-      setFavoriteToast({ id: fileId, name, wasAdded: !wasFavorite });
+      let undoing = false;
+      showToast(
+        `«${name}» ${!wasFavorite ? 'добавлен в избранное' : 'удалён из избранного'}`,
+        'favorite',
+        'Отменить',
+        async () => {
+          if (undoing) return;
+          undoing = true;
+          try {
+            await toggleFavorite(fileId);
+            await refreshDashboard();
+          } catch (err) {
+            console.error('Failed to undo favorite:', err);
+          }
+        },
+      );
     } catch (err) {
       console.error('Failed to toggle favorite:', err);
       await refreshDashboard();
     }
-  };
-
-  const handleUndoFavorite = async () => {
-    if (!favoriteToast) return;
-    try {
-      await toggleFavorite(favoriteToast.id);
-      await refreshDashboard();
-    } catch (err) {
-      console.error('Failed to undo favorite:', err);
-    }
-    setFavoriteToast(null);
   };
 
   const favoritesFullWidth = recentFiles.length > 0 && favorites.length > 0;
@@ -306,18 +306,6 @@ const DashboardPage: React.FC = () => {
           </Card>
         </div>
       </div>
-
-      {favoriteToast && (
-        <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
-          <Toast
-            variant="favorite"
-            message={`«${favoriteToast.name}» ${favoriteToast.wasAdded ? 'добавлен в избранное' : 'удалён из избранного'}`}
-            actionLabel="Отменить"
-            onAction={handleUndoFavorite}
-            onClose={() => setFavoriteToast(null)}
-          />
-        </div>
-      )}
     </div>
   );
 };

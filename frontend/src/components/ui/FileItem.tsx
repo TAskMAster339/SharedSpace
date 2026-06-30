@@ -66,9 +66,7 @@ export const FileItem: React.FC<FileItemProps> = ({
           <span
             className={`absolute -top-1.5 flex items-center justify-center rounded-full bg-theme-tertiary border border-theme p-0.5 shadow-theme-card transition-all duration-500 ease-in-out ${
               hasShareLinks ? 'opacity-100' : 'opacity-0 pointer-events-none'
-            } ${
-              isFavorite && hasShareLinks ? '-left-1.5' : 'left-[25px]'
-            }`}
+            } ${isFavorite && hasShareLinks ? '-left-1.5' : 'left-[25px]'}`}
             aria-label="Есть ссылки общего доступа"
             title="Есть ссылки общего доступа"
           >
