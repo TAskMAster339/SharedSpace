@@ -287,6 +287,10 @@ func (h *Handler) Resolve(w http.ResponseWriter, r *http.Request) error {
 // @Produce json
 // @Param token path string true "Share link token"
 // @Param dir query string false "Subdirectory ID to navigate into"
+// @Param dirs_limit query int false "Limit for subdirectories"
+// @Param dirs_cursor query string false "Cursor for subdirectories pagination"
+// @Param files_limit query int false "Limit for files"
+// @Param files_cursor query string false "Cursor for files pagination"
 // @Param X-SharedLink-Password header string false "Password for protected links"
 // @Success 200 {object} DirectoryContentResponse
 // @Failure 400 {object} apperror.Response
@@ -300,7 +304,16 @@ func (h *Handler) ResolveDirectory(w http.ResponseWriter, r *http.Request) error
 		return apperror.Validation("token обязателен")
 	}
 
-	subDirID := r.URL.Query().Get("dir")
+	q := r.URL.Query()
+
+	params := ResolveDirectoryParams{
+		SubDirID:    q.Get("dir"),
+		DirsLimit:   parseIntParam(q.Get("dirs_limit"), 20),
+		DirsCursor:  q.Get("dirs_cursor"),
+		FilesLimit:  parseIntParam(q.Get("files_limit"), 20),
+		FilesCursor: q.Get("files_cursor"),
+	}
+
 	password, _ := url.QueryUnescape(r.Header.Get("X-SharedLink-Password"))
 
 	authenticated := false
@@ -312,7 +325,7 @@ func (h *Handler) ResolveDirectory(w http.ResponseWriter, r *http.Request) error
 		}
 	}
 
-	resp, err := h.service.ResolveDirectory(r.Context(), token, password, authenticated, subDirID)
+	resp, err := h.service.ResolveDirectory(r.Context(), token, password, authenticated, params)
 	if err != nil {
 		return err
 	}
@@ -341,6 +354,17 @@ func bearerToken(r *http.Request) string {
 	}
 	token := strings.TrimSpace(strings.TrimPrefix(header, "Bearer "))
 	return token
+}
+
+func parseIntParam(s string, defaultVal int) int {
+	if s == "" {
+		return defaultVal
+	}
+	n, err := strconv.Atoi(s)
+	if err != nil || n < 1 {
+		return defaultVal
+	}
+	return n
 }
 
 func writeJSON(w http.ResponseWriter, status int, payload any) error {

@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/authStore';
 import { useDirectoryStore } from '../store/directoryStore';
 import { useDragDropStore } from '../store/dragDropStore';
 import { useSharedDirectories } from '../hooks/useSharedDirectories';
+import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 import { Modal } from '../components/ui/Modal';
 import { DropZone } from '../components/ui/DropZone';
 import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
@@ -24,6 +25,8 @@ import {
   restoreDirectory,
   DirectoryContents,
   Directory,
+  DirectoryPaginationParams,
+  File as DirectoryFile,
 } from '../api/directories';
 import { uploadFilesWithProgress, softDeleteFile, restoreFile, moveFile } from '../api/files';
 import { createShareLink, createDirectoryShareLink } from '../api/sharelinks';
@@ -46,7 +49,7 @@ const DirectoryPage: React.FC = () => {
 
   const accessToken = useAuthStore((s) => s.accessToken);
   const user = useAuthStore((s) => s.user);
-  const { personalStorageId, setCurrentSection } = useDirectoryStore();
+  const { personalStorageId, currentSection, setCurrentSection } = useDirectoryStore();
   const { isShared: checkIsShared, isLoading: isLoadingShared } = useSharedDirectories();
   const { setTargetDirectoryId, setOnUploadComplete } = useDragDropStore();
 
@@ -78,34 +81,38 @@ const DirectoryPage: React.FC = () => {
   } | null>(null);
   const [shareLinkRefreshKey, setShareLinkRefreshKey] = useState(0);
 
+  // Pagination
+  const PAGE_LIMIT = 20;
+  const [allSubdirectories, setAllSubdirectories] = useState<Directory[]>([]);
+  const [allFiles, setAllFiles] = useState<DirectoryFile[]>([]);
+  const [filesCursor, setFilesCursor] = useState<string | undefined>();
+  const [dirsCursor, setDirsCursor] = useState<string | undefined>();
+  const [hasMoreFiles, setHasMoreFiles] = useState(false);
+  const [hasMoreDirs, setHasMoreDirs] = useState(false);
+  const [isLoadingMoreDirs, setIsLoadingMoreDirs] = useState(false);
+  const [isLoadingMoreFiles, setIsLoadingMoreFiles] = useState(false);
+
   // Breadcrumbs
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([]);
-  const [isLoadingBreadcrumbs, setIsLoadingBreadcrumbs] = useState(false);
   const location = useLocation();
 
   // Используем refs для предотвращения повторных вызовов
   const redirectDone = useRef(false);
-  const isLoadingBreadcrumbsRef = useRef(false);
   const isUndoingRef = useRef(false);
+  const breadcrumbLoadIdRef = useRef(0);
   const [actualId, setActualId] = useState<string | null>(null);
 
   // --- Функция загрузки breadcrumbs ---
+  // Возвращает true, если директория находится внутри общей директории
   // Принимает опциональный currentDir — если передан, пропускает первый запрос getDirectory
   const loadBreadcrumbs = useCallback(
-    async (directoryId: string, isSharedDir: boolean, currentDir?: Directory) => {
-      if (!accessToken) return;
+    async (directoryId: string, isSharedDir: boolean, currentDir?: Directory): Promise<boolean> => {
+      if (!accessToken) return false;
 
-      if (isLoadingBreadcrumbsRef.current) {
-        return;
-      }
-
-      isLoadingBreadcrumbsRef.current = true;
-      setIsLoadingBreadcrumbs(true);
-      setBreadcrumbs([]);
+      const crumbId = ++breadcrumbLoadIdRef.current;
+      const crumbs: BreadcrumbItem[] = [];
 
       try {
-        const crumbs: BreadcrumbItem[] = [];
-
         // Получаем текущую директорию
         const current = currentDir || (await getDirectory(accessToken, directoryId));
 
@@ -116,10 +123,18 @@ const DirectoryPage: React.FC = () => {
             name: 'Личное хранилище',
             isRoot: true,
           });
+          if (crumbId !== breadcrumbLoadIdRef.current) return false;
           setBreadcrumbs(crumbs);
-          setIsLoadingBreadcrumbs(false);
-          isLoadingBreadcrumbsRef.current = false;
-          return;
+          return false;
+        }
+
+        // Если список общих директорий ещё загружается — не строим путь,
+        // т.к. checkIsShared вернёт false для всех папок.
+        // Показываем только текущую папку; Effect 3 перестроит путь, когда загрузка завершится.
+        if (isLoadingShared) {
+          if (crumbId !== breadcrumbLoadIdRef.current) return false;
+          setBreadcrumbs([{ id: current.id, name: current.name }]);
+          return false;
         }
 
         // Проверяем, является ли текущая директория общей
@@ -133,10 +148,9 @@ const DirectoryPage: React.FC = () => {
             isRoot: false,
             isShared: true,
           });
+          if (crumbId !== breadcrumbLoadIdRef.current) return false;
           setBreadcrumbs(crumbs);
-          setIsLoadingBreadcrumbs(false);
-          isLoadingBreadcrumbsRef.current = false;
-          return;
+          return true;
         }
 
         // Для обычной папки: строим путь
@@ -188,11 +202,14 @@ const DirectoryPage: React.FC = () => {
           }
         }
 
+        if (crumbId !== breadcrumbLoadIdRef.current) return false;
         setBreadcrumbs(crumbs);
+        return crumbs.some((c) => c.isShared);
       } catch (err) {
         // Игнорируем ошибки при получении текущей директории
         // Fallback: показываем только текущую папку
         const fallbackName = currentDir?.name || directoryInfo?.name || 'Текущая папка';
+        if (crumbId !== breadcrumbLoadIdRef.current) return isSharedDir;
         setBreadcrumbs([
           {
             id: directoryId,
@@ -200,12 +217,10 @@ const DirectoryPage: React.FC = () => {
             isShared: isSharedDir,
           },
         ]);
-      } finally {
-        setIsLoadingBreadcrumbs(false);
-        isLoadingBreadcrumbsRef.current = false;
+        return isSharedDir;
       }
     },
-    [accessToken, directoryInfo, checkIsShared],
+    [accessToken, directoryInfo, checkIsShared, isLoadingShared],
   );
 
   // --- Функция загрузки содержимого ---
@@ -221,23 +236,42 @@ const DirectoryPage: React.FC = () => {
       setError(null);
 
       try {
+        const pagination: DirectoryPaginationParams = {
+          files_limit: PAGE_LIMIT,
+          dirs_limit: PAGE_LIMIT,
+        };
+
         const [info, contents] = await Promise.all([
           getDirectoryById(accessToken, dirId),
-          getDirectoryContents(accessToken, dirId),
+          getDirectoryContents(accessToken, dirId, pagination),
         ]);
 
         setDirectoryInfo(info);
         setDirectoryContents(contents);
+        setAllSubdirectories(contents.subdirectories);
+        setAllFiles(contents.files);
+        setFilesCursor(contents.next_files_cursor);
+        setDirsCursor(contents.next_dirs_cursor);
+        setHasMoreFiles(!!contents.next_files_cursor);
+        setHasMoreDirs(!!contents.next_dirs_cursor);
 
         // Определяем, является ли директория общей
-        let shared = checkIsShared(dirId);
+        const shared = checkIsShared(dirId);
 
-        setIsShared(shared);
-
-        // Загружаем breadcrumbs
+        // Загружаем breadcrumbs и определяем реальный статус
+        // (папка может быть внутри общей директории, не являясь ей напрямую)
         try {
-          await loadBreadcrumbs(dirId, shared, info);
+          const hasSharedAncestor = await loadBreadcrumbs(dirId, shared, info);
+          const effectiveShared = shared || hasSharedAncestor;
+          setIsShared(effectiveShared);
+          if (!isLoadingShared) {
+            setCurrentSection(effectiveShared ? 'shared' : 'personal');
+          }
         } catch (err) {
+          setIsShared(shared);
+          if (!isLoadingShared) {
+            setCurrentSection(shared ? 'shared' : 'personal');
+          }
           // Игнорируем ошибки breadcrumbs - они не должны блокировать отображение страницы
           console.debug('Breadcrumbs loading failed, continuing with page render');
         }
@@ -254,17 +288,24 @@ const DirectoryPage: React.FC = () => {
         }
       }
     },
-    [accessToken, navigate, loadBreadcrumbs, checkIsShared, setTargetDirectoryId, user?.id],
+    [
+      accessToken,
+      navigate,
+      loadBreadcrumbs,
+      checkIsShared,
+      setTargetDirectoryId,
+      isLoadingShared,
+      user?.id,
+    ],
   );
 
   // --- Обработчик навигации по breadcrumbs ---
+  // Просто переходим на URL — Effect 2 подхватит и загрузит директорию
   const handleBreadcrumbClick = useCallback(
-    async (crumbId: string) => {
+    (crumbId: string) => {
       navigate(`/directories/${crumbId}`);
-      await loadDirectory(crumbId);
-      setActualId(crumbId);
     },
-    [navigate, loadDirectory],
+    [navigate],
   );
 
   // --- Эффект 1: Обработка 'personal' ID ---
@@ -296,36 +337,45 @@ const DirectoryPage: React.FC = () => {
 
   // --- Эффект 2: Обновление при изменении ID в URL ---
   useEffect(() => {
-    if (id && id !== 'personal' && id !== actualId && accessToken && !isLoadingShared) {
+    if (id && id !== 'personal' && id !== actualId && accessToken) {
+      const prevId = actualId;
       setActualId(id);
+
+      // Определяем раздел до начала загрузки, чтобы сайдбар не моргал
+      if (id === personalStorageId) {
+        setCurrentSection('personal');
+      } else if (prevId && currentSection) {
+        // Были в известном разделе — сохраняем его для новой директории
+        setCurrentSection(currentSection);
+      } else if (!isLoadingShared && checkIsShared(id)) {
+        // Известная общая директория верхнего уровня
+        setCurrentSection('shared');
+      }
+
       loadDirectory(id);
     }
-  }, [id, actualId, accessToken, loadDirectory, isLoadingShared]);
-
-  // Эффект 3: Перепроверяем статус общей директории
-  useEffect(() => {
-    if (!isLoadingShared && actualId && accessToken && directoryInfo) {
-      const shared = checkIsShared(actualId);
-      let effectiveShared = shared;
-
-      if (effectiveShared !== isShared) {
-        setIsShared(effectiveShared);
-        // Перезагружаем breadcrumbs с новым статусом
-        if (directoryInfo) {
-          loadBreadcrumbs(actualId, effectiveShared, directoryInfo);
-        }
-      }
-    }
   }, [
-    isLoadingShared,
+    id,
     actualId,
     accessToken,
+    loadDirectory,
+    personalStorageId,
+    currentSection,
+    isLoadingShared,
     checkIsShared,
-    isShared,
-    directoryInfo,
-    user?.id,
-    loadBreadcrumbs,
+    setCurrentSection,
   ]);
+
+  // Эффект 3: Когда список общих директорий загрузился,
+  // перепроверяем статус и перезагружаем breadcrumbs
+  useEffect(() => {
+    if (!isLoadingShared && actualId && accessToken && directoryInfo) {
+      loadBreadcrumbs(actualId, false, directoryInfo).then((hasSharedAncestor) => {
+        setIsShared(hasSharedAncestor);
+        setCurrentSection(hasSharedAncestor ? 'shared' : 'personal');
+      });
+    }
+  }, [isLoadingShared, actualId, accessToken, directoryInfo, user?.id, loadBreadcrumbs]);
 
   // --- Эффект 4: Обновляем DnD target при изменении actualId ---
   useEffect(() => {
@@ -389,32 +439,21 @@ const DirectoryPage: React.FC = () => {
     return isShared && !isPersonal;
   }, [isShared, isPersonal]);
 
-  // Сообщаем боковому меню, в каком разделе мы находимся (личное/общее),
-  // чтобы оно подсвечивало правильный пункт. Сбрасываем при уходе со страницы.
-  useEffect(() => {
-    if (!directoryInfo) return;
-    setCurrentSection(isShared ? 'shared' : 'personal');
-  }, [directoryInfo, isShared, setCurrentSection]);
-
+  // Сбрасываем при уходе со страницы
   useEffect(() => {
     return () => setCurrentSection(null);
   }, [setCurrentSection]);
 
   // Фильтруем папки: в личном хранилище скрываем общие директории
   const filteredSubdirectories = useMemo(() => {
-    if (!directoryContents) return [];
-
     if (isPersonal) {
-      return directoryContents.subdirectories.filter((folder) => !checkIsShared(folder.id));
+      return allSubdirectories.filter((folder) => !checkIsShared(folder.id));
     }
+    return allSubdirectories;
+  }, [allSubdirectories, isPersonal, checkIsShared]);
 
-    return directoryContents.subdirectories;
-  }, [directoryContents, isPersonal, checkIsShared]);
-
-  const displayFiles = useMemo(() => {
-    if (!directoryContents) return [];
-
-    return directoryContents.files.map((f) => ({
+  const formattedFiles = useMemo(() => {
+    return allFiles.map((f) => ({
       id: f.id,
       name: f.filename,
       date: formatDate(f.created_at),
@@ -423,7 +462,7 @@ const DirectoryPage: React.FC = () => {
       isFavorite: isFavorite(f.id),
       has_share_links: f.has_share_links,
     }));
-  }, [directoryContents, isFavorite]);
+  }, [allFiles, isFavorite]);
 
   // --- Обработчики ---
   const handleViewModeChange = useCallback((mode: ViewMode) => {
@@ -490,7 +529,7 @@ const DirectoryPage: React.FC = () => {
   const handleDeleteFile = useCallback(
     async (fileId: string) => {
       if (!accessToken || !actualId) return;
-      const file = directoryContents?.files.find((f) => f.id === fileId);
+      const file = allFiles.find((f) => f.id === fileId);
 
       try {
         await softDeleteFile(accessToken, fileId);
@@ -512,7 +551,7 @@ const DirectoryPage: React.FC = () => {
         setError('Не удалось удалить файл');
       }
     },
-    [accessToken, actualId, directoryContents, loadDirectory, showToast],
+    [accessToken, actualId, allFiles, loadDirectory, showToast],
   );
 
   const handleDeleteFolder = useCallback(
@@ -545,7 +584,7 @@ const DirectoryPage: React.FC = () => {
 
   const handleToggleFavorite = useCallback(
     async (fileId: string) => {
-      const file = directoryContents?.files.find((f) => f.id === fileId);
+      const file = allFiles.find((f) => f.id === fileId);
       try {
         const wasAdded = await toggleFavorite(fileId);
         const name = file?.filename || 'Файл';
@@ -569,19 +608,59 @@ const DirectoryPage: React.FC = () => {
         setError('Не удалось обновить избранное');
       }
     },
-    [directoryContents, toggleFavorite, showToast],
+    [allFiles, toggleFavorite, showToast],
   );
 
+  const loadMoreDirs = useCallback(() => {
+    if (!accessToken || !actualId || !dirsCursor || isLoadingMoreDirs) return;
+    setIsLoadingMoreDirs(true);
+    getDirectoryContents(accessToken, actualId, {
+      dirs_limit: PAGE_LIMIT,
+      dirs_cursor: dirsCursor,
+    })
+      .then((c) => {
+        setAllSubdirectories((p) => [...p, ...c.subdirectories]);
+        setDirsCursor(c.next_dirs_cursor);
+        setHasMoreDirs(!!c.next_dirs_cursor);
+      })
+      .catch((e) => console.error('loadMoreDirs', e))
+      .finally(() => setIsLoadingMoreDirs(false));
+  }, [accessToken, actualId, dirsCursor, isLoadingMoreDirs]);
+
+  const loadMoreFiles = useCallback(() => {
+    if (!accessToken || !actualId || !filesCursor || isLoadingMoreFiles) return;
+    setIsLoadingMoreFiles(true);
+    getDirectoryContents(accessToken, actualId, {
+      files_limit: PAGE_LIMIT,
+      files_cursor: filesCursor,
+    })
+      .then((c) => {
+        setAllFiles((p) => [...p, ...c.files]);
+        setFilesCursor(c.next_files_cursor);
+        setHasMoreFiles(!!c.next_files_cursor);
+      })
+      .catch((e) => console.error('loadMoreFiles', e))
+      .finally(() => setIsLoadingMoreFiles(false));
+  }, [accessToken, actualId, filesCursor, isLoadingMoreFiles]);
+
+  const { sentinelRef: dirsSentinelRef } = useInfiniteScroll(
+    loadMoreDirs,
+    hasMoreDirs && !isLoadingMoreDirs && !!dirsCursor,
+  );
+  const { sentinelRef: filesSentinelRef } = useInfiniteScroll(
+    loadMoreFiles,
+    hasMoreFiles && !isLoadingMoreFiles && !!filesCursor,
+  );
   const handleMoveFile = useCallback(
     (fileId: string) => {
-      const file = directoryContents?.files.find((f) => f.id === fileId);
+      const file = allFiles.find((f) => f.id === fileId);
       if (file) {
         setMoveFileId(fileId);
         setMoveFileName(file.filename);
         setIsMoveModalOpen(true);
       }
     },
-    [directoryContents],
+    [allFiles],
   );
 
   const handleMoveComplete = useCallback(
@@ -655,7 +734,7 @@ const DirectoryPage: React.FC = () => {
 
   // --- Рендер breadcrumbs ---
   const renderBreadcrumbs = () => {
-    if (isLoadingBreadcrumbs || isLoadingShared) {
+    if (isLoadingShared) {
       return (
         <div className="flex items-center gap-2 text-sm text-theme-muted">
           <span>Загрузка...</span>
@@ -695,7 +774,8 @@ const DirectoryPage: React.FC = () => {
               ) : (
                 <button
                   onClick={() => handleBreadcrumbClick(crumb.id)}
-                  className="text-theme-secondary hover:text-brand transition-colors cursor-pointer"
+                  disabled={isLoading}
+                  className={`text-theme-secondary transition-colors ${isLoading ? 'cursor-not-allowed opacity-50' : 'hover:text-brand cursor-pointer'}`}
                 >
                   {crumb.isRoot ? (
                     <span className="flex items-center gap-1">
@@ -739,8 +819,7 @@ const DirectoryPage: React.FC = () => {
     );
   }
 
-  const { files } = directoryContents;
-  const isEmpty = filteredSubdirectories.length === 0 && files.length === 0;
+  const isEmpty = filteredSubdirectories.length === 0 && allFiles.length === 0;
 
   return (
     <div className="space-y-6 pb-10">
@@ -918,18 +997,26 @@ const DirectoryPage: React.FC = () => {
                     ))}
                   </div>
                 )}
+                {hasMoreDirs && (
+                  <div className="mt-3 flex items-center justify-center gap-3">
+                    {isLoadingMoreDirs && (
+                      <div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+                    )}
+                    <div ref={dirsSentinelRef} className="h-2" />
+                  </div>
+                )}
               </div>
             </div>
           )}
 
           {/* Файлы */}
-          {files.length > 0 && (
+          {allFiles.length > 0 && (
             <div>
               <div className="bg-theme-secondary border border-theme rounded-theme-lg p-4 shadow-theme-card">
                 <h2 className="text-sm font-medium text-theme-secondary mb-3">Файлы</h2>
                 {viewMode === 'grid' ? (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                    {displayFiles.map((file) => (
+                    {formattedFiles.map((file) => (
                       <FileGridItem
                         key={file.id}
                         id={file.id}
@@ -942,7 +1029,7 @@ const DirectoryPage: React.FC = () => {
                         onDelete={perms?.delete ? handleDeleteFile : undefined}
                         onMove={handleMoveFile}
                         onShare={(id) => {
-                          const f = displayFiles.find((d) => d.id === id);
+                          const f = formattedFiles.find((d) => d.id === id);
                           if (f)
                             setShareModalState({
                               itemId: f.id,
@@ -956,7 +1043,7 @@ const DirectoryPage: React.FC = () => {
                   </div>
                 ) : (
                   <div className="space-y-1">
-                    {displayFiles.map((file) => (
+                    {formattedFiles.map((file) => (
                       <FileItem
                         key={file.id}
                         id={file.id}
@@ -971,7 +1058,7 @@ const DirectoryPage: React.FC = () => {
                         onDelete={perms?.delete ? handleDeleteFile : undefined}
                         onMove={handleMoveFile}
                         onShare={(id) => {
-                          const f = displayFiles.find((d) => d.id === id);
+                          const f = formattedFiles.find((d) => d.id === id);
                           if (f)
                             setShareModalState({
                               itemId: f.id,
@@ -982,6 +1069,14 @@ const DirectoryPage: React.FC = () => {
                         onDragStart={handleFileDragStart}
                       />
                     ))}
+                  </div>
+                )}
+                {hasMoreFiles && (
+                  <div className="mt-3 flex items-center justify-center gap-3">
+                    {isLoadingMoreFiles && (
+                      <div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+                    )}
+                    <div ref={filesSentinelRef} className="h-2" />
                   </div>
                 )}
               </div>
@@ -1057,22 +1152,19 @@ const DirectoryPage: React.FC = () => {
           itemType={shareModalState.itemType}
           accessToken={accessToken}
           onLinksChanged={(hasLinks) => {
-            setDirectoryContents((prev) => {
-              if (!prev) return prev;
-              return {
-                ...prev,
-                files: prev.files.map((f) =>
-                  f.id === shareModalState.itemId && shareModalState.itemType === 'file'
-                    ? { ...f, has_share_links: hasLinks }
-                    : f,
+            if (shareModalState.itemType === 'file') {
+              setAllFiles((prev) =>
+                prev.map((f) =>
+                  f.id === shareModalState.itemId ? { ...f, has_share_links: hasLinks } : f,
                 ),
-                subdirectories: prev.subdirectories.map((d) =>
-                  d.id === shareModalState.itemId && shareModalState.itemType === 'directory'
-                    ? { ...d, has_share_links: hasLinks }
-                    : d,
+              );
+            } else {
+              setAllSubdirectories((prev) =>
+                prev.map((d) =>
+                  d.id === shareModalState.itemId ? { ...d, has_share_links: hasLinks } : d,
                 ),
-              };
-            });
+              );
+            }
           }}
           onLinkDeleted={(info) => {
             const itemId = shareModalState.itemId;
@@ -1089,20 +1181,15 @@ const DirectoryPage: React.FC = () => {
                 } else {
                   await createDirectoryShareLink(accessToken, itemId, body);
                 }
-                setDirectoryContents((prev) => {
-                  if (!prev) return prev;
-                  return {
-                    ...prev,
-                    files: prev.files.map((f) =>
-                      f.id === itemId && itemType === 'file' ? { ...f, has_share_links: true } : f,
-                    ),
-                    subdirectories: prev.subdirectories.map((d) =>
-                      d.id === itemId && itemType === 'directory'
-                        ? { ...d, has_share_links: true }
-                        : d,
-                    ),
-                  };
-                });
+                if (itemType === 'file') {
+                  setAllFiles((prev) =>
+                    prev.map((f) => (f.id === itemId ? { ...f, has_share_links: true } : f)),
+                  );
+                } else {
+                  setAllSubdirectories((prev) =>
+                    prev.map((d) => (d.id === itemId ? { ...d, has_share_links: true } : d)),
+                  );
+                }
                 setShareLinkRefreshKey((k) => k + 1);
               } catch (err) {
                 console.error('Failed to undo share link delete:', err);

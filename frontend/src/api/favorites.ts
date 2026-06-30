@@ -15,10 +15,27 @@ export interface FavoriteFile {
 
 interface FavoritesListResponse {
   favorites: FavoriteFile[];
+  next_cursor?: string;
 }
 
-export function getFavorites(accessToken: string, limit?: number): Promise<FavoritesListResponse> {
-  const query = limit ? `?limit=${limit}` : '';
+export interface FavoritesPaginationParams {
+  limit?: number;
+  cursor?: string;
+}
+
+function buildFavoritesQuery(params?: FavoritesPaginationParams): string {
+  if (!params) return '';
+  const parts: string[] = [];
+  if (params.limit !== undefined) parts.push(`limit=${params.limit}`);
+  if (params.cursor) parts.push(`cursor=${encodeURIComponent(params.cursor)}`);
+  return parts.length ? `?${parts.join('&')}` : '';
+}
+
+export function getFavorites(
+  accessToken: string,
+  pagination?: FavoritesPaginationParams,
+): Promise<FavoritesListResponse> {
+  const query = buildFavoritesQuery(pagination);
   return apiRequest<FavoritesListResponse>(`/files/favorites${query}`, {
     method: 'GET',
     token: accessToken,

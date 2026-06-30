@@ -74,11 +74,17 @@ func (m *mockRepo) GetDirectorySubdirs(_ context.Context, _ dbTX, dirID string) 
 	}
 	return nil, nil
 }
+func (m *mockRepo) GetDirectorySubdirsAfterCursor(_ context.Context, _ dbTX, dirID string, cursorName string, cursorID string, limit int) ([]dirSubdirRecord, bool, string, error) {
+	return nil, false, "", nil
+}
 func (m *mockRepo) GetDirectoryFiles(_ context.Context, _ dbTX, dirID string) ([]dirFileRecord, error) {
 	if m.getDirFilesFn != nil {
 		return m.getDirFilesFn(dirID)
 	}
 	return nil, nil
+}
+func (m *mockRepo) GetDirectoryFilesAfterCursor(_ context.Context, _ dbTX, dirID string, cursorFilename string, cursorID string, limit int) ([]dirFileRecord, bool, string, error) {
+	return nil, false, "", nil
 }
 func (m *mockRepo) IsSubdirectory(_ context.Context, _ dbTX, parentID, childID string) (bool, error) {
 	if m.isSubdirectoryFn != nil {

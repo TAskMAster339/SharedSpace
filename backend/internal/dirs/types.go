@@ -42,10 +42,12 @@ type FileItem struct {
 }
 
 type DirectoryContentsResponse struct {
-	ID             string              `json:"id"`
-	Name           string              `json:"name"`
-	Subdirectories []DirectoryResponse `json:"subdirectories"`
-	Files          []FileItem          `json:"files"`
+	ID              string              `json:"id"`
+	Name            string              `json:"name"`
+	Subdirectories  []DirectoryResponse `json:"subdirectories"`
+	Files           []FileItem          `json:"files"`
+	NextFilesCursor *string             `json:"next_files_cursor,omitempty"`
+	NextDirsCursor  *string             `json:"next_dirs_cursor,omitempty"`
 }
 
 type directoryRecord struct {

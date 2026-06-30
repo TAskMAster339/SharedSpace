@@ -3,6 +3,7 @@ package trash
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -33,7 +34,128 @@ func NewService(pool *pgxpool.Pool, repo RepositoryInterface, storage StorageCli
 	}
 }
 
-func (s *Service) GetTrashList(ctx context.Context, userID string) (TrashListResponse, error) {
+func (s *Service) GetTrashList(ctx context.Context, userID string, params TrashPaginationParams) (TrashListResponse, error) {
+	dirsLimit := params.DirsLimit
+	filesLimit := params.FilesLimit
+
+	if dirsLimit == 0 && filesLimit == 0 {
+		return s.getAllTrash(ctx, userID)
+	}
+
+	if dirsLimit == 0 {
+		dirsLimit = 20
+	}
+	if filesLimit == 0 {
+		filesLimit = 20
+	}
+
+	var dirs []deletedDirectoryRecord
+	var nextDirsCursor string
+	var dirsHasMore bool
+	var err error
+
+	if params.DirsCursor != "" {
+		cursorParts := strings.SplitN(params.DirsCursor, "|", 2)
+		if len(cursorParts) != 2 {
+			return TrashListResponse{}, apperror.Validation("некорректный курсор для директорий")
+		}
+		dirs, dirsHasMore, nextDirsCursor, err = s.repo.FindDeletedDirectoriesPaginated(ctx, s.db, userID, dirsLimit, cursorParts[0], cursorParts[1])
+	} else {
+		dirs, dirsHasMore, nextDirsCursor, err = s.repo.FindDeletedDirectoriesPaginated(ctx, s.db, userID, dirsLimit, "", "")
+	}
+	if err != nil {
+		return TrashListResponse{}, apperror.WrapInternal("ошибка получения удалённых директорий", err)
+	}
+
+	var files []deletedFileRecord
+	var nextFilesCursor string
+	var filesHasMore bool
+
+	if params.FilesCursor != "" {
+		cursorParts := strings.SplitN(params.FilesCursor, "|", 2)
+		if len(cursorParts) != 2 {
+			return TrashListResponse{}, apperror.Validation("некорректный курсор для файлов")
+		}
+		files, filesHasMore, nextFilesCursor, err = s.repo.FindDeletedFilesPaginated(ctx, s.db, userID, filesLimit, cursorParts[0], cursorParts[1])
+	} else {
+		files, filesHasMore, nextFilesCursor, err = s.repo.FindDeletedFilesPaginated(ctx, s.db, userID, filesLimit, "", "")
+	}
+	if err != nil {
+		return TrashListResponse{}, apperror.WrapInternal("ошибка получения удалённых файлов", err)
+	}
+
+	allDeletedDirIDs := make(map[string]bool)
+	for _, d := range dirs {
+		allDeletedDirIDs[d.ID] = true
+	}
+
+	items := make([]TrashItem, 0, len(dirs)+len(files))
+	var totalSize int64
+
+	for _, d := range dirs {
+		subtreeIDs, err := s.repo.FindDeletedSubtreeIDs(ctx, s.db, []string{d.ID})
+		if err != nil {
+			return TrashListResponse{}, apperror.WrapInternal("ошибка получения поддерева", err)
+		}
+
+		for _, id := range subtreeIDs {
+			allDeletedDirIDs[id] = true
+		}
+
+		subtreeFiles, err := s.repo.FindFilesInDeletedDirs(ctx, s.db, subtreeIDs)
+		if err != nil {
+			return TrashListResponse{}, apperror.WrapInternal("ошибка получения файлов в поддереве", err)
+		}
+
+		var dirSize int64
+		for _, f := range subtreeFiles {
+			dirSize += f.Size
+		}
+
+		items = append(items, TrashItem{
+			ID:        d.ID,
+			Name:      d.Name,
+			Type:      "directory",
+			OwnerID:   d.OwnerID,
+			ParentID:  d.ParentID,
+			Size:      dirSize,
+			DeletedAt: *d.DeletedAt,
+		})
+		totalSize += dirSize
+	}
+
+	for _, f := range files {
+		if !allDeletedDirIDs[f.DirectoryID] {
+			items = append(items, TrashItem{
+				ID:        f.ID,
+				Name:      f.Filename,
+				Type:      "file",
+				OwnerID:   f.OwnerID,
+				ParentID:  &f.DirectoryID,
+				Size:      f.Size,
+				DeletedAt: *f.DeletedAt,
+			})
+			totalSize += f.Size
+		}
+	}
+
+	resp := TrashListResponse{
+		Items:     items,
+		TotalSize: totalSize,
+		Count:     len(items),
+	}
+
+	if dirsHasMore && nextDirsCursor != "" {
+		resp.NextDirsCursor = &nextDirsCursor
+	}
+	if filesHasMore && nextFilesCursor != "" {
+		resp.NextFilesCursor = &nextFilesCursor
+	}
+
+	return resp, nil
+}
+
+func (s *Service) getAllTrash(ctx context.Context, userID string) (TrashListResponse, error) {
 	dirs, err := s.repo.FindRootDeletedDirectories(ctx, s.db, userID)
 	if err != nil {
 		return TrashListResponse{}, apperror.WrapInternal("ошибка получения удалённых директорий", err)

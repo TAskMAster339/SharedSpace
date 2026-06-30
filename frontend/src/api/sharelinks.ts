@@ -110,6 +110,16 @@ export interface DirectoryShareLinkResolveResult {
   subdirectories: DirectoryShareLinkSubdir[];
   files: DirectoryShareLinkFile[];
   owner_username: string;
+  next_dirs_cursor?: string;
+  next_files_cursor?: string;
+}
+
+export interface ResolveDirectoryShareLinkParams {
+  subDirId?: string;
+  dirsLimit?: number;
+  dirsCursor?: string;
+  filesLimit?: number;
+  filesCursor?: string;
 }
 
 export function createDirectoryShareLink(
@@ -133,14 +143,19 @@ export function listDirectoryShareLinks(accessToken: string, dirId: string): Pro
 
 export function resolveDirectoryShareLink(
   token: string,
-  subDirId?: string,
+  params?: ResolveDirectoryShareLinkParams,
   accessToken?: string | null,
   password?: string,
 ): Promise<DirectoryShareLinkResolveResult> {
+  const search = new URLSearchParams();
+  if (params?.subDirId) search.set('dir', params.subDirId);
+  if (params?.dirsLimit) search.set('dirs_limit', String(params.dirsLimit));
+  if (params?.dirsCursor) search.set('dirs_cursor', params.dirsCursor);
+  if (params?.filesLimit) search.set('files_limit', String(params.filesLimit));
+  if (params?.filesCursor) search.set('files_cursor', params.filesCursor);
+  const qs = search.toString();
   let path = `/sd/${token}`;
-  if (subDirId) {
-    path += `?dir=${encodeURIComponent(subDirId)}`;
-  }
+  if (qs) path += `?${qs}`;
   return apiRequest<DirectoryShareLinkResolveResult>(path, {
     method: 'GET',
     ...(accessToken ? { token: accessToken } : {}),

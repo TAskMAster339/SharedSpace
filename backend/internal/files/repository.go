@@ -72,7 +72,7 @@ func (r *Repository) FindRecentByUserID(ctx context.Context, db dbTX, userID str
 		SELECT id, directory_id, owner_id, filename, extension, mime_type, size, object_key, created_at, updated_at
 		FROM files
 		WHERE owner_id = $1 AND deleted_at IS NULL
-		ORDER BY updated_at DESC`
+		ORDER BY updated_at DESC, id DESC`
 	args := []any{userID}
 
 	if limit > 0 {
@@ -81,6 +81,35 @@ func (r *Repository) FindRecentByUserID(ctx context.Context, db dbTX, userID str
 	}
 
 	rows, err := db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var records []fileRecord
+	for rows.Next() {
+		var f fileRecord
+		if err := rows.Scan(
+			&f.ID, &f.DirectoryID, &f.OwnerID,
+			&f.Filename, &f.Extension, &f.MimeType,
+			&f.Size, &f.ObjectKey, &f.CreatedAt, &f.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		records = append(records, f)
+	}
+	return records, rows.Err()
+}
+
+func (r *Repository) FindRecentByUserIDAfterCursor(ctx context.Context, db dbTX, userID string, cursorTime time.Time, cursorID string, limit int) ([]fileRecord, error) {
+	rows, err := db.Query(ctx, `
+		SELECT id, directory_id, owner_id, filename, extension, mime_type, size, object_key, created_at, updated_at
+		FROM files
+		WHERE owner_id = $1 AND deleted_at IS NULL
+		  AND (updated_at, id) < ($2, $3)
+		ORDER BY updated_at DESC, id DESC
+		LIMIT $4
+	`, userID, cursorTime, cursorID, limit+1)
 	if err != nil {
 		return nil, err
 	}

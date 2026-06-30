@@ -16,7 +16,8 @@ type FavoriteFileResponse struct {
 }
 
 type FavoritesListResponse struct {
-	Favorites []FavoriteFileResponse `json:"favorites"`
+	Favorites  []FavoriteFileResponse `json:"favorites"`
+	NextCursor *string                `json:"next_cursor,omitempty"`
 }
 
 type favoriteFileRecord struct {

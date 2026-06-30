@@ -274,6 +274,32 @@ const docTemplate = `{
                     "directories"
                 ],
                 "summary": "Get root directory contents",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Max files per page",
+                        "name": "files_limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Files pagination cursor",
+                        "name": "files_cursor",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Max subdirectories per page",
+                        "name": "dirs_limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Dirs pagination cursor",
+                        "name": "dirs_cursor",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -490,6 +516,30 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Max files per page",
+                        "name": "files_limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Files pagination cursor",
+                        "name": "files_cursor",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Max subdirectories per page",
+                        "name": "dirs_limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Dirs pagination cursor",
+                        "name": "dirs_cursor",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -851,8 +901,14 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "Maximum number of favorites to return",
+                        "description": "Page size",
                         "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pagination cursor from previous response",
+                        "name": "cursor",
                         "in": "query"
                     }
                 ],
@@ -889,8 +945,14 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "Maximum number of files to return",
+                        "description": "Page size",
                         "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pagination cursor from previous response",
+                        "name": "cursor",
                         "in": "query"
                     }
                 ],
@@ -899,6 +961,12 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/internal_files.RecentFilesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
                         }
                     },
                     "401": {
@@ -1550,14 +1618,25 @@ const docTemplate = `{
                     "sharing"
                 ],
                 "summary": "Get my invitations",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Max invitations per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pagination cursor",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/internal_sharing.InvitationResponse"
-                            }
+                            "$ref": "#/definitions/internal_sharing.InvitationsListResponse"
                         }
                     },
                     "401": {
@@ -1840,6 +1919,30 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Subdirectory ID to navigate into",
                         "name": "dir",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit for subdirectories",
+                        "name": "dirs_limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Cursor for subdirectories pagination",
+                        "name": "dirs_cursor",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit for files",
+                        "name": "files_limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Cursor for files pagination",
+                        "name": "files_cursor",
                         "in": "query"
                     },
                     {
@@ -2412,6 +2515,32 @@ const docTemplate = `{
                     "trash"
                 ],
                 "summary": "Get trash list",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Max files per page",
+                        "name": "files_limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Files pagination cursor",
+                        "name": "files_cursor",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Max directories per page",
+                        "name": "dirs_limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Directories pagination cursor",
+                        "name": "dirs_cursor",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -2905,6 +3034,12 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "next_dirs_cursor": {
+                    "type": "string"
+                },
+                "next_files_cursor": {
+                    "type": "string"
+                },
                 "subdirectories": {
                     "type": "array",
                     "items": {
@@ -3031,6 +3166,9 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/internal_favorites.FavoriteFileResponse"
                     }
+                },
+                "next_cursor": {
+                    "type": "string"
                 }
             }
         },
@@ -3130,6 +3268,9 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/internal_files.FileMetadataResponse"
                     }
+                },
+                "next_cursor": {
+                    "type": "string"
                 }
             }
         },
@@ -3217,6 +3358,12 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                },
+                "next_dirs_cursor": {
+                    "type": "string"
+                },
+                "next_files_cursor": {
                     "type": "string"
                 },
                 "owner_username": {
@@ -3397,6 +3544,20 @@ const docTemplate = `{
                 "InvitationRevoked"
             ]
         },
+        "internal_sharing.InvitationsListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_sharing.InvitationResponse"
+                    }
+                },
+                "next_cursor": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_sharing.InviteRequest": {
             "type": "object",
             "properties": {
@@ -3556,6 +3717,12 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/internal_trash.TrashItem"
                     }
+                },
+                "next_dirs_cursor": {
+                    "type": "string"
+                },
+                "next_files_cursor": {
+                    "type": "string"
                 },
                 "total_size": {
                     "type": "integer"

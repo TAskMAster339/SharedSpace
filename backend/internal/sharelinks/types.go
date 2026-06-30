@@ -48,12 +48,22 @@ type DirectoryFileItem struct {
 }
 
 type DirectoryContentResponse struct {
-	ID             string              `json:"id"`
-	Name           string              `json:"name"`
-	Token          string              `json:"token"`
-	Subdirectories []DirectorySubdir   `json:"subdirectories"`
-	Files          []DirectoryFileItem `json:"files"`
-	OwnerUsername  string              `json:"owner_username"`
+	ID              string              `json:"id"`
+	Name            string              `json:"name"`
+	Token           string              `json:"token"`
+	Subdirectories  []DirectorySubdir   `json:"subdirectories"`
+	Files           []DirectoryFileItem `json:"files"`
+	OwnerUsername   string              `json:"owner_username"`
+	NextDirsCursor  string              `json:"next_dirs_cursor,omitempty"`
+	NextFilesCursor string              `json:"next_files_cursor,omitempty"`
+}
+
+type ResolveDirectoryParams struct {
+	SubDirID    string
+	DirsLimit   int
+	DirsCursor  string
+	FilesLimit  int
+	FilesCursor string
 }
 
 type DirectorySubdir struct {
