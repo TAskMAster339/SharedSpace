@@ -17,7 +17,7 @@ import (
 type mockService struct {
 	addFn    func(string, string) error
 	removeFn func(string, string) error
-	listFn   func(string, int) (FavoritesListResponse, error)
+	listFn   func(string, int, string) (FavoritesListResponse, error)
 }
 
 func (m *mockService) Add(_ context.Context, userID, fileID string) error {
@@ -34,9 +34,9 @@ func (m *mockService) Remove(_ context.Context, userID, fileID string) error {
 	return nil
 }
 
-func (m *mockService) List(_ context.Context, userID string, limit int) (FavoritesListResponse, error) {
+func (m *mockService) List(_ context.Context, userID string, limit int, cursor string) (FavoritesListResponse, error) {
 	if m.listFn != nil {
-		return m.listFn(userID, limit)
+		return m.listFn(userID, limit, cursor)
 	}
 	return FavoritesListResponse{}, nil
 }
@@ -223,7 +223,7 @@ func TestHandlerList(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		svc := &mockService{
-			listFn: func(userID string, limit int) (FavoritesListResponse, error) {
+			listFn: func(userID string, limit int, cursor string) (FavoritesListResponse, error) {
 				return FavoritesListResponse{
 					Favorites: []FavoriteFileResponse{
 						{ID: "f-1", Filename: "doc.txt", Extension: "txt", MimeType: "text/plain", Size: 100, DirectoryID: "d-1", OwnerID: "user-1", CreatedAt: now, UpdatedAt: now, FavoritedAt: now},
@@ -255,7 +255,7 @@ func TestHandlerList(t *testing.T) {
 
 	t.Run("empty result", func(t *testing.T) {
 		svc := &mockService{
-			listFn: func(_ string, _ int) (FavoritesListResponse, error) {
+			listFn: func(_ string, _ int, _ string) (FavoritesListResponse, error) {
 				return FavoritesListResponse{Favorites: []FavoriteFileResponse{}}, nil
 			},
 		}

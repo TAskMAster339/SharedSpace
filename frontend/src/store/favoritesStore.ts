@@ -1,11 +1,12 @@
 import { create } from 'zustand';
-import { getFavorites, addFavorite, removeFavorite } from '../api/favorites';
+import { getFavorites, addFavorite, removeFavorite, FavoriteFile } from '../api/favorites';
 
 interface FavoritesState {
   favoriteIds: Set<string>;
+  favorites: FavoriteFile[];
   isLoading: boolean;
   loadedToken: string | null;
-  loadFavorites: (accessToken: string) => Promise<void>;
+  loadFavorites: (accessToken: string, force?: boolean) => Promise<void>;
   toggleFavorite: (accessToken: string, fileId: string) => Promise<boolean>;
   reset: () => void;
 }
@@ -14,13 +15,14 @@ let inFlight: Promise<void> | null = null;
 
 export const useFavoritesStore = create<FavoritesState>((set, get) => ({
   favoriteIds: new Set(),
+  favorites: [],
   isLoading: false,
   loadedToken: null,
 
-  loadFavorites: async (accessToken) => {
+  loadFavorites: async (accessToken, force) => {
     if (!accessToken) return;
 
-    if (get().loadedToken === accessToken && !get().isLoading) return;
+    if (!force && get().loadedToken === accessToken && !get().isLoading) return;
 
     if (inFlight) return inFlight;
 
@@ -30,6 +32,7 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
       .then((data) => {
         set({
           favoriteIds: new Set(data.favorites.map((f) => f.id)),
+          favorites: data.favorites,
           loadedToken: accessToken,
         });
       })
@@ -73,6 +76,6 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
 
   reset: () => {
     inFlight = null;
-    set({ favoriteIds: new Set(), isLoading: false, loadedToken: null });
+    set({ favoriteIds: new Set(), favorites: [], isLoading: false, loadedToken: null });
   },
 }));

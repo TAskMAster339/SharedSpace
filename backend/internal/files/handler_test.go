@@ -51,7 +51,7 @@ func (m *mockService) PermanentDelete(_ context.Context, userID, fileID string) 
 	return nil
 }
 
-func (m *mockService) GetRecent(_ context.Context, userID string, limit int) (RecentFilesResponse, error) {
+func (m *mockService) GetRecent(_ context.Context, userID string, limit int, cursor string) (RecentFilesResponse, error) {
 	return RecentFilesResponse{}, nil
 }
 

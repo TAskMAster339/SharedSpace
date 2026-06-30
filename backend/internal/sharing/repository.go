@@ -2,6 +2,8 @@ package sharing
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -178,6 +180,60 @@ func (r *Repository) CreateInvitation(ctx context.Context, db dbTX, sharedDirID,
 		return invitationRecord{}, err
 	}
 	return rec, nil
+}
+
+func (r *Repository) FindInvitationsByUserPaginated(ctx context.Context, db dbTX, userID string, limit int, cursorTime string, cursorID string) ([]invitationRecord, bool, string, error) {
+	query := `
+		SELECT di.id, di.shared_directory_id, d.name, di.invited_user_id, di.invited_by, u.username, di.role, di.status, di.created_at
+		FROM directory_invitations di
+		JOIN shared_directories sd ON sd.id = di.shared_directory_id
+		JOIN directories d ON d.id = sd.directory_id
+		JOIN users u ON u.id = di.invited_by
+		WHERE di.invited_user_id = $1`
+	args := []any{userID}
+
+	if cursorTime != "" && cursorID != "" {
+		query += ` AND (di.created_at, di.id) < ($2, $3)`
+		args = append(args, cursorTime, cursorID)
+	}
+
+	query += ` ORDER BY di.created_at DESC, di.id DESC`
+	paramIdx := len(args) + 1
+	query += fmt.Sprintf(` LIMIT $%d`, paramIdx)
+	args = append(args, limit+1)
+
+	rows, err := db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, false, "", err
+	}
+	defer rows.Close()
+
+	var records []invitationRecord
+	for rows.Next() {
+		var rec invitationRecord
+		if err := rows.Scan(&rec.ID, &rec.SharedDirectoryID, &rec.DirectoryName,
+			&rec.InvitedUserID, &rec.InvitedByUserID, &rec.InvitedByUsername,
+			&rec.Role, &rec.Status, &rec.CreatedAt); err != nil {
+			return nil, false, "", err
+		}
+		records = append(records, rec)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, false, "", err
+	}
+
+	hasMore := len(records) > limit
+	if hasMore {
+		records = records[:limit]
+	}
+
+	nextCursor := ""
+	if hasMore && len(records) > 0 {
+		last := records[len(records)-1]
+		nextCursor = last.CreatedAt.UTC().Format(time.RFC3339Nano) + "|" + last.ID
+	}
+
+	return records, hasMore, nextCursor, nil
 }
 
 func (r *Repository) FindInvitationsByUser(ctx context.Context, db dbTX, userID string, statuses ...string) ([]invitationRecord, error) {

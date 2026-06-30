@@ -2,6 +2,7 @@ package dirs
 
 import (
 	"context"
+	"fmt"
 	"time"
 )
 
@@ -37,7 +38,7 @@ func (r *Repository) FindSubdirectories(ctx context.Context, db dbTX, parentID s
 		SELECT id, name, owner_id, parent_id, type, files_count, created_at, updated_at
 		FROM directories
 		WHERE parent_id = $1 AND deleted_at IS NULL
-		ORDER BY name ASC
+		ORDER BY name ASC, id ASC
 	`, parentID)
 	if err != nil {
 		return nil, err
@@ -55,12 +56,61 @@ func (r *Repository) FindSubdirectories(ctx context.Context, db dbTX, parentID s
 	return dirs, rows.Err()
 }
 
+func (r *Repository) FindSubdirectoriesAfterCursor(ctx context.Context, db dbTX, parentID string, cursorName string, cursorID string, limit int) ([]directoryRecord, bool, string, error) {
+	query := `
+		SELECT id, name, owner_id, parent_id, type, files_count, created_at, updated_at
+		FROM directories
+		WHERE parent_id = $1 AND deleted_at IS NULL`
+	args := []any{parentID}
+
+	if cursorName != "" && cursorID != "" {
+		query += ` AND (name, id) > ($2, $3)`
+		args = append(args, cursorName, cursorID)
+	}
+
+	query += ` ORDER BY name ASC, id ASC`
+	paramIdx := len(args) + 1
+	query += fmt.Sprintf(` LIMIT $%d`, paramIdx)
+	args = append(args, limit+1)
+
+	rows, err := db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, false, "", err
+	}
+	defer rows.Close()
+
+	var dirs []directoryRecord
+	for rows.Next() {
+		var d directoryRecord
+		if err := rows.Scan(&d.ID, &d.Name, &d.OwnerID, &d.ParentID, &d.Type, &d.FilesCount, &d.CreatedAt, &d.UpdatedAt); err != nil {
+			return nil, false, "", err
+		}
+		dirs = append(dirs, d)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, false, "", err
+	}
+
+	hasMore := len(dirs) > limit
+	if hasMore {
+		dirs = dirs[:limit]
+	}
+
+	nextCursor := ""
+	if hasMore && len(dirs) > 0 {
+		last := dirs[len(dirs)-1]
+		nextCursor = fmt.Sprintf("%s|%s", last.Name, last.ID)
+	}
+
+	return dirs, hasMore, nextCursor, nil
+}
+
 func (r *Repository) FindFiles(ctx context.Context, db dbTX, directoryID string) ([]fileRecord, error) {
 	rows, err := db.Query(ctx, `
 		SELECT id, filename, extension, mime_type, size, created_at, updated_at
 		FROM files
 		WHERE directory_id = $1 AND deleted_at IS NULL
-		ORDER BY filename ASC
+		ORDER BY filename ASC, id ASC
 	`, directoryID)
 	if err != nil {
 		return nil, err
@@ -76,6 +126,55 @@ func (r *Repository) FindFiles(ctx context.Context, db dbTX, directoryID string)
 		files = append(files, f)
 	}
 	return files, rows.Err()
+}
+
+func (r *Repository) FindFilesAfterCursor(ctx context.Context, db dbTX, directoryID string, cursorFilename string, cursorID string, limit int) ([]fileRecord, bool, string, error) {
+	query := `
+		SELECT id, filename, extension, mime_type, size, created_at, updated_at
+		FROM files
+		WHERE directory_id = $1 AND deleted_at IS NULL`
+	args := []any{directoryID}
+
+	if cursorFilename != "" && cursorID != "" {
+		query += ` AND (filename, id) > ($2, $3)`
+		args = append(args, cursorFilename, cursorID)
+	}
+
+	query += ` ORDER BY filename ASC, id ASC`
+	paramIdx := len(args) + 1
+	query += fmt.Sprintf(` LIMIT $%d`, paramIdx)
+	args = append(args, limit+1)
+
+	rows, err := db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, false, "", err
+	}
+	defer rows.Close()
+
+	var files []fileRecord
+	for rows.Next() {
+		var f fileRecord
+		if err := rows.Scan(&f.ID, &f.Filename, &f.Extension, &f.MimeType, &f.Size, &f.CreatedAt, &f.UpdatedAt); err != nil {
+			return nil, false, "", err
+		}
+		files = append(files, f)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, false, "", err
+	}
+
+	hasMore := len(files) > limit
+	if hasMore {
+		files = files[:limit]
+	}
+
+	nextCursor := ""
+	if hasMore && len(files) > 0 {
+		last := files[len(files)-1]
+		nextCursor = fmt.Sprintf("%s|%s", last.Filename, last.ID)
+	}
+
+	return files, hasMore, nextCursor, nil
 }
 
 func (r *Repository) FindByNameAndParent(ctx context.Context, db dbTX, name, parentID, ownerID string) (directoryRecord, error) {

@@ -169,11 +169,14 @@ func (h *Handler) Invite(w http.ResponseWriter, r *http.Request) error {
 }
 
 // GetMyInvitations returns all pending invitations for the authenticated user.
+// Supports optional cursor-based pagination via ?limit=N&cursor=<token>.
 // @Summary Get my invitations
 // @Tags sharing
 // @Security BearerAuth
 // @Produce json
-// @Success 200 {array} InvitationResponse
+// @Param limit query int false "Max invitations per page"
+// @Param cursor query string false "Pagination cursor"
+// @Success 200 {object} InvitationsListResponse
 // @Failure 401 {object} apperror.Response
 // @Router /api/v1/invitations [get]
 func (h *Handler) GetMyInvitations(w http.ResponseWriter, r *http.Request) error {
@@ -182,13 +185,23 @@ func (h *Handler) GetMyInvitations(w http.ResponseWriter, r *http.Request) error
 		return apperror.Unauthorized("unauthorized")
 	}
 
-	resp, err := h.service.GetMyInvitations(r.Context(), claims.UserID)
+	limit := 0
+	if l := r.URL.Query().Get("limit"); l != "" {
+		parsed, err := strconv.Atoi(l)
+		if err != nil || parsed < 0 {
+			return apperror.Validation("некорректный limit")
+		}
+		limit = parsed
+	}
+	cursor := r.URL.Query().Get("cursor")
+
+	resp, err := h.service.GetMyInvitations(r.Context(), claims.UserID, limit, cursor)
 	if err != nil {
 		return err
 	}
 
 	if resp == nil {
-		resp = []InvitationResponse{}
+		resp = &InvitationsListResponse{Items: []InvitationResponse{}}
 	}
 
 	return writeJSON(w, http.StatusOK, resp)

@@ -14,32 +14,36 @@ import (
 )
 
 type mockRepo struct {
-	findByMemberResult          []sharedDirectoryRecord
-	findByMemberErr             error
-	findByMemberWithStatsResult []sharedDirectoryWithStatsRecord
-	findByMemberWithStatsErr    error
-	findMembersResult           []memberRecord
-	findMembersErr              error
-	findByIDResult              sharedDirectoryRecord
-	findByIDErr                 error
-	findUserByUsernameID        string
-	findUserByUsernameErr       error
-	isMemberResult              bool
-	isMemberErr                 error
-	createInvitationResult      invitationRecord
-	createInvitationErr         error
-	findInvitationsResult       []invitationRecord
-	findInvitationsErr          error
-	findInvitationResult        invitationRecord
-	findInvitationErr           error
-	updateInvitationErr         error
-	addMemberErr                error
-	findMemberResult            memberRecord
-	findMemberErr               error
-	updateMemberRoleErr         error
-	removeMemberErr             error
-	getUserSharedDirsResult     []SharedDirectoryResponse
-	getUserSharedDirsErr        error
+	findByMemberResult              []sharedDirectoryRecord
+	findByMemberErr                 error
+	findByMemberWithStatsResult     []sharedDirectoryWithStatsRecord
+	findByMemberWithStatsErr        error
+	findMembersResult               []memberRecord
+	findMembersErr                  error
+	findByIDResult                  sharedDirectoryRecord
+	findByIDErr                     error
+	findUserByUsernameID            string
+	findUserByUsernameErr           error
+	isMemberResult                  bool
+	isMemberErr                     error
+	createInvitationResult          invitationRecord
+	createInvitationErr             error
+	findInvitationsResult           []invitationRecord
+	findInvitationsErr              error
+	findInvitationsPaginatedResult  []invitationRecord
+	findInvitationsPaginatedHasMore bool
+	findInvitationsPaginatedCursor  string
+	findInvitationsPaginatedErr     error
+	findInvitationResult            invitationRecord
+	findInvitationErr               error
+	updateInvitationErr             error
+	addMemberErr                    error
+	findMemberResult                memberRecord
+	findMemberErr                   error
+	updateMemberRoleErr             error
+	removeMemberErr                 error
+	getUserSharedDirsResult         []SharedDirectoryResponse
+	getUserSharedDirsErr            error
 }
 
 func (m *mockRepo) FindByMember(_ context.Context, _ dbTX, _ string, _ int) ([]sharedDirectoryRecord, error) {
@@ -79,6 +83,10 @@ func (m *mockRepo) CreateInvitation(_ context.Context, _ dbTX, _, _, _, _ string
 
 func (m *mockRepo) FindInvitationsByUser(_ context.Context, _ dbTX, _ string, _ ...string) ([]invitationRecord, error) {
 	return m.findInvitationsResult, m.findInvitationsErr
+}
+
+func (m *mockRepo) FindInvitationsByUserPaginated(_ context.Context, _ dbTX, _ string, _ int, _, _ string) ([]invitationRecord, bool, string, error) {
+	return m.findInvitationsPaginatedResult, m.findInvitationsPaginatedHasMore, m.findInvitationsPaginatedCursor, m.findInvitationsPaginatedErr
 }
 
 func (m *mockRepo) FindInvitationByID(_ context.Context, _ dbTX, _ string) (invitationRecord, error) {
@@ -379,22 +387,51 @@ func TestServiceInvite(t *testing.T) {
 func TestServiceGetMyInvitations(t *testing.T) {
 	now := time.Now()
 
-	t.Run("success", func(t *testing.T) {
+	t.Run("success all", func(t *testing.T) {
 		repo := &mockRepo{
 			findInvitationsResult: []invitationRecord{
 				{ID: "inv-1", SharedDirectoryID: "s-1", DirectoryName: "photos",
 					InvitedUserID: "user-1", InvitedByUserID: "user-2",
 					InvitedByUsername: "ivan", Role: "viewer", Status: "pending", CreatedAt: now},
+				{ID: "inv-2", SharedDirectoryID: "s-2", DirectoryName: "docs",
+					InvitedUserID: "user-1", InvitedByUserID: "user-3",
+					InvitedByUsername: "petr", Role: "editor", Status: "pending", CreatedAt: now.Add(time.Hour)},
 			},
 		}
 		svc := newTestService(repo)
 
-		resp, err := svc.GetMyInvitations(context.Background(), "user-1")
+		resp, err := svc.GetMyInvitations(context.Background(), "user-1", 0, "")
 		if err != nil {
 			t.Fatalf("GetMyInvitations returned error: %v", err)
 		}
-		if len(resp) != 1 || resp[0].ID != "inv-1" || resp[0].Role != RoleViewer {
-			t.Fatalf("unexpected response: %+v", resp)
+		if len(resp.Items) != 2 {
+			t.Fatalf("expected 2 items, got %d", len(resp.Items))
+		}
+		if resp.Items[0].ID != "inv-1" || resp.Items[0].Role != RoleViewer {
+			t.Fatalf("unexpected response: %+v", resp.Items[0])
+		}
+	})
+
+	t.Run("success paginated", func(t *testing.T) {
+		repo := &mockRepo{
+			findInvitationsPaginatedResult: []invitationRecord{
+				{ID: "inv-1", SharedDirectoryID: "s-1", DirectoryName: "photos",
+					InvitedUserID: "user-1", InvitedByUserID: "user-2",
+					InvitedByUsername: "ivan", Role: "viewer", Status: "pending", CreatedAt: now},
+			},
+			findInvitationsPaginatedHasMore: false,
+		}
+		svc := newTestService(repo)
+
+		resp, err := svc.GetMyInvitations(context.Background(), "user-1", 10, "")
+		if err != nil {
+			t.Fatalf("GetMyInvitations returned error: %v", err)
+		}
+		if len(resp.Items) != 1 || resp.Items[0].ID != "inv-1" {
+			t.Fatalf("unexpected response: %+v", resp.Items)
+		}
+		if resp.NextCursor != nil {
+			t.Fatal("expected no next_cursor")
 		}
 	})
 
@@ -402,12 +439,12 @@ func TestServiceGetMyInvitations(t *testing.T) {
 		repo := &mockRepo{findInvitationsResult: []invitationRecord{}}
 		svc := newTestService(repo)
 
-		resp, err := svc.GetMyInvitations(context.Background(), "user-1")
+		resp, err := svc.GetMyInvitations(context.Background(), "user-1", 0, "")
 		if err != nil {
 			t.Fatalf("GetMyInvitations returned error: %v", err)
 		}
-		if len(resp) != 0 {
-			t.Fatalf("expected empty, got %d", len(resp))
+		if len(resp.Items) != 0 {
+			t.Fatalf("expected empty, got %d", len(resp.Items))
 		}
 	})
 
@@ -415,7 +452,7 @@ func TestServiceGetMyInvitations(t *testing.T) {
 		repo := &mockRepo{findInvitationsErr: errors.New("db error")}
 		svc := newTestService(repo)
 
-		_, err := svc.GetMyInvitations(context.Background(), "user-1")
+		_, err := svc.GetMyInvitations(context.Background(), "user-1", 0, "")
 		if err == nil {
 			t.Fatal("expected error")
 		}

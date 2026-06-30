@@ -1,11 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Mail } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 import { getMyInvitations, acceptInvitation, declineInvitation, Invitation } from '../api/sharing';
 import { ApiError } from '../api/client';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Button } from '../components/ui/Button';
 import { Avatar } from '../components/ui/Avatar';
+
+const PAGE_LIMIT = 20;
 
 const InvitationsPage: React.FC = () => {
   const accessToken = useAuthStore((state) => state.accessToken);
@@ -15,29 +18,50 @@ const InvitationsPage: React.FC = () => {
   const [error, setError] = useState('');
   const [pendingActionId, setPendingActionId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!accessToken) return;
+  const [cursor, setCursor] = useState<string | undefined>();
+  const [hasMore, setHasMore] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-    let isMounted = true;
+  const loadInvitations = useCallback(async () => {
+    if (!accessToken) return;
     setIsLoading(true);
     setError('');
+    setCursor(undefined);
+    setHasMore(false);
 
-    getMyInvitations(accessToken)
-      .then((data) => {
-        if (isMounted) setInvitations(data.filter((inv) => inv.status === 'pending'));
-      })
-      .catch((err) => {
-        if (!isMounted) return;
-        setError(err instanceof ApiError ? err.message : 'Не удалось загрузить приглашения.');
-      })
-      .finally(() => {
-        if (isMounted) setIsLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
+    try {
+      const data = await getMyInvitations(accessToken, { limit: PAGE_LIMIT });
+      setInvitations(data.items.filter((inv) => inv.status === 'pending'));
+      setCursor(data.next_cursor);
+      setHasMore(!!data.next_cursor);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Не удалось загрузить приглашения.');
+    } finally {
+      setIsLoading(false);
+    }
   }, [accessToken]);
+
+  useEffect(() => {
+    loadInvitations();
+  }, [loadInvitations]);
+
+  const loadMore = useCallback(() => {
+    if (!accessToken || !cursor || isLoadingMore) return;
+    setIsLoadingMore(true);
+    getMyInvitations(accessToken, { limit: PAGE_LIMIT, cursor })
+      .then((data) => {
+        setInvitations((prev) => [
+          ...prev,
+          ...data.items.filter((inv) => inv.status === 'pending'),
+        ]);
+        setCursor(data.next_cursor);
+        setHasMore(!!data.next_cursor);
+      })
+      .catch((err) => console.error('Failed to load more invitations:', err))
+      .finally(() => setIsLoadingMore(false));
+  }, [accessToken, cursor, isLoadingMore]);
+
+  const { sentinelRef } = useInfiniteScroll(loadMore, hasMore && !isLoadingMore);
 
   const handleAccept = async (id: string) => {
     if (!accessToken) return;
@@ -123,6 +147,15 @@ const InvitationsPage: React.FC = () => {
               </div>
             </div>
           ))}
+          {hasMore && (
+            <div className="flex items-center justify-center py-2">
+              {isLoadingMore ? (
+                <div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <div ref={sentinelRef} className="h-2" />
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

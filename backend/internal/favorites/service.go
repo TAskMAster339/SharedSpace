@@ -3,6 +3,8 @@ package favorites
 import (
 	"context"
 	"errors"
+	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -68,10 +70,42 @@ func (s *Service) Remove(ctx context.Context, userID, fileID string) error {
 	return nil
 }
 
-func (s *Service) List(ctx context.Context, userID string, limit int) (FavoritesListResponse, error) {
-	records, err := s.repo.FindAllByUserID(ctx, s.db, userID, limit)
+func (s *Service) List(ctx context.Context, userID string, limit int, cursor string) (FavoritesListResponse, error) {
+	if limit == 0 {
+		records, err := s.repo.FindAllByUserID(ctx, s.db, userID, 0)
+		if err != nil {
+			return FavoritesListResponse{}, apperror.WrapInternal("получение списка избранного", err)
+		}
+		favorites := make([]FavoriteFileResponse, 0, len(records))
+		for _, rec := range records {
+			favorites = append(favorites, toFavoriteResponse(rec))
+		}
+		return FavoritesListResponse{Favorites: favorites}, nil
+	}
+
+	var records []favoriteFileRecord
+	var err error
+
+	if cursor == "" {
+		records, err = s.repo.FindAllByUserID(ctx, s.db, userID, limit+1)
+	} else {
+		parts := strings.SplitN(cursor, "|", 2)
+		if len(parts) != 2 {
+			return FavoritesListResponse{}, apperror.Validation("некорректный курсор")
+		}
+		cursorTime, err := time.Parse(time.RFC3339Nano, parts[0])
+		if err != nil {
+			return FavoritesListResponse{}, apperror.Validation("некорректный курсор")
+		}
+		records, err = s.repo.FindAllByUserIDAfterCursor(ctx, s.db, userID, cursorTime, parts[1], limit)
+	}
 	if err != nil {
 		return FavoritesListResponse{}, apperror.WrapInternal("получение списка избранного", err)
+	}
+
+	hasMore := len(records) > limit
+	if hasMore {
+		records = records[:limit]
 	}
 
 	favorites := make([]FavoriteFileResponse, 0, len(records))
@@ -79,7 +113,15 @@ func (s *Service) List(ctx context.Context, userID string, limit int) (Favorites
 		favorites = append(favorites, toFavoriteResponse(rec))
 	}
 
-	return FavoritesListResponse{Favorites: favorites}, nil
+	resp := FavoritesListResponse{Favorites: favorites}
+
+	if hasMore && len(records) > 0 {
+		last := records[len(records)-1]
+		nextCursor := last.FavoritedAt.UTC().Format(time.RFC3339Nano) + "|" + last.ID
+		resp.NextCursor = &nextCursor
+	}
+
+	return resp, nil
 }
 
 func toFavoriteResponse(f favoriteFileRecord) FavoriteFileResponse {

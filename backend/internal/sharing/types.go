@@ -33,6 +33,12 @@ type SharedDirectoryResponse struct {
 	UpdatedAt         time.Time `json:"updated_at"`
 }
 
+// SharedDirectoriesListResponse wraps shared dirs with optional pagination cursor.
+type SharedDirectoriesListResponse struct {
+	Items      []SharedDirectoryResponse `json:"items"`
+	NextCursor *string                   `json:"next_cursor"`
+}
+
 type SharedDirectoryWithStatsResponse struct {
 	ID          string    `json:"id"`
 	DirectoryID string    `json:"directory_id"`
@@ -51,6 +57,18 @@ type MemberResponse struct {
 	Username string    `json:"username"`
 	Role     Role      `json:"role"`
 	JoinedAt time.Time `json:"joined_at"`
+}
+
+// MembersListResponse wraps members with optional pagination cursor.
+type MembersListResponse struct {
+	Members    []MemberResponse `json:"members"`
+	NextCursor *string          `json:"next_cursor"`
+}
+
+// InvitationsListResponse wraps invitations with optional pagination cursor.
+type InvitationsListResponse struct {
+	Items      []InvitationResponse `json:"items"`
+	NextCursor *string              `json:"next_cursor"`
 }
 
 type InvitationResponse struct {
