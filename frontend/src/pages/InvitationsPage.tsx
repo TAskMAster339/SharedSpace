@@ -1,6 +1,7 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Mail } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 import { getMyInvitations, acceptInvitation, declineInvitation, Invitation } from '../api/sharing';
 import { ApiError } from '../api/client';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -17,11 +18,9 @@ const InvitationsPage: React.FC = () => {
   const [error, setError] = useState('');
   const [pendingActionId, setPendingActionId] = useState<string | null>(null);
 
-  // Pagination
   const [cursor, setCursor] = useState<string | undefined>();
   const [hasMore, setHasMore] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const sentinelRef = useRef<HTMLDivElement>(null);
 
   const loadInvitations = useCallback(async () => {
     if (!accessToken) return;
@@ -46,34 +45,23 @@ const InvitationsPage: React.FC = () => {
     loadInvitations();
   }, [loadInvitations]);
 
-  const checkAndLoad = useCallback(() => {
-    if (!accessToken || !hasMore || !cursor || isLoadingMore) return;
-    const el = sentinelRef.current;
-    if (el && el.getBoundingClientRect().top < window.innerHeight + 300) {
-      setIsLoadingMore(true);
-      getMyInvitations(accessToken, { limit: PAGE_LIMIT, cursor })
-        .then((data) => {
-          setInvitations((prev) => [
-            ...prev,
-            ...data.items.filter((inv) => inv.status === 'pending'),
-          ]);
-          setCursor(data.next_cursor);
-          setHasMore(!!data.next_cursor);
-        })
-        .catch((err) => console.error('Failed to load more invitations:', err))
-        .finally(() => setIsLoadingMore(false));
-    }
-  }, [accessToken, cursor, hasMore, isLoadingMore]);
+  const loadMore = useCallback(() => {
+    if (!accessToken || !cursor || isLoadingMore) return;
+    setIsLoadingMore(true);
+    getMyInvitations(accessToken, { limit: PAGE_LIMIT, cursor })
+      .then((data) => {
+        setInvitations((prev) => [
+          ...prev,
+          ...data.items.filter((inv) => inv.status === 'pending'),
+        ]);
+        setCursor(data.next_cursor);
+        setHasMore(!!data.next_cursor);
+      })
+      .catch((err) => console.error('Failed to load more invitations:', err))
+      .finally(() => setIsLoadingMore(false));
+  }, [accessToken, cursor, isLoadingMore]);
 
-  useEffect(() => {
-    checkAndLoad();
-    window.addEventListener('scroll', checkAndLoad, { passive: true });
-    window.addEventListener('resize', checkAndLoad, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', checkAndLoad);
-      window.removeEventListener('resize', checkAndLoad);
-    };
-  }, [checkAndLoad]);
+  const { sentinelRef } = useInfiniteScroll(loadMore, hasMore && !isLoadingMore);
 
   const handleAccept = async (id: string) => {
     if (!accessToken) return;

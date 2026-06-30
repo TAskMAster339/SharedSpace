@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/authStore';
 import { useDirectoryStore } from '../store/directoryStore';
 import { useDragDropStore } from '../store/dragDropStore';
 import { useSharedDirectories } from '../hooks/useSharedDirectories';
+import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 import { Modal } from '../components/ui/Modal';
 import { DropZone } from '../components/ui/DropZone';
 import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
@@ -90,8 +91,6 @@ const DirectoryPage: React.FC = () => {
   const [hasMoreDirs, setHasMoreDirs] = useState(false);
   const [isLoadingMoreDirs, setIsLoadingMoreDirs] = useState(false);
   const [isLoadingMoreFiles, setIsLoadingMoreFiles] = useState(false);
-  const dirsSentinelRef = useRef<HTMLDivElement>(null);
-  const filesSentinelRef = useRef<HTMLDivElement>(null);
 
   // Breadcrumbs
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([]);
@@ -593,65 +592,46 @@ const DirectoryPage: React.FC = () => {
     [allFiles, toggleFavorite, showToast],
   );
 
-  // --- Автозагрузка при скролле ---
-  const checkAndLoad = useCallback(() => {
-    if (!accessToken || !actualId) return;
+  const loadMoreDirs = useCallback(() => {
+    if (!accessToken || !actualId || !dirsCursor || isLoadingMoreDirs) return;
+    setIsLoadingMoreDirs(true);
+    getDirectoryContents(accessToken, actualId, {
+      dirs_limit: PAGE_LIMIT,
+      dirs_cursor: dirsCursor,
+    })
+      .then((c) => {
+        setAllSubdirectories((p) => [...p, ...c.subdirectories]);
+        setDirsCursor(c.next_dirs_cursor);
+        setHasMoreDirs(!!c.next_dirs_cursor);
+      })
+      .catch((e) => console.error('loadMoreDirs', e))
+      .finally(() => setIsLoadingMoreDirs(false));
+  }, [accessToken, actualId, dirsCursor, isLoadingMoreDirs]);
 
-    if (hasMoreDirs && !isLoadingMoreDirs && dirsCursor) {
-      const el = dirsSentinelRef.current;
-      if (el && el.getBoundingClientRect().top < window.innerHeight + 300) {
-        setIsLoadingMoreDirs(true);
-        getDirectoryContents(accessToken, actualId, {
-          dirs_limit: PAGE_LIMIT,
-          dirs_cursor: dirsCursor,
-        })
-          .then((c) => {
-            setAllSubdirectories((p) => [...p, ...c.subdirectories]);
-            setDirsCursor(c.next_dirs_cursor);
-            setHasMoreDirs(!!c.next_dirs_cursor);
-          })
-          .catch((e) => console.error('loadMoreDirs', e))
-          .finally(() => setIsLoadingMoreDirs(false));
-      }
-    }
+  const loadMoreFiles = useCallback(() => {
+    if (!accessToken || !actualId || !filesCursor || isLoadingMoreFiles) return;
+    setIsLoadingMoreFiles(true);
+    getDirectoryContents(accessToken, actualId, {
+      files_limit: PAGE_LIMIT,
+      files_cursor: filesCursor,
+    })
+      .then((c) => {
+        setAllFiles((p) => [...p, ...c.files]);
+        setFilesCursor(c.next_files_cursor);
+        setHasMoreFiles(!!c.next_files_cursor);
+      })
+      .catch((e) => console.error('loadMoreFiles', e))
+      .finally(() => setIsLoadingMoreFiles(false));
+  }, [accessToken, actualId, filesCursor, isLoadingMoreFiles]);
 
-    if (hasMoreFiles && !isLoadingMoreFiles && filesCursor) {
-      const el = filesSentinelRef.current;
-      if (el && el.getBoundingClientRect().top < window.innerHeight + 300) {
-        setIsLoadingMoreFiles(true);
-        getDirectoryContents(accessToken, actualId, {
-          files_limit: PAGE_LIMIT,
-          files_cursor: filesCursor,
-        })
-          .then((c) => {
-            setAllFiles((p) => [...p, ...c.files]);
-            setFilesCursor(c.next_files_cursor);
-            setHasMoreFiles(!!c.next_files_cursor);
-          })
-          .catch((e) => console.error('loadMoreFiles', e))
-          .finally(() => setIsLoadingMoreFiles(false));
-      }
-    }
-  }, [
-    accessToken,
-    actualId,
-    hasMoreDirs,
-    isLoadingMoreDirs,
-    dirsCursor,
-    hasMoreFiles,
-    isLoadingMoreFiles,
-    filesCursor,
-  ]);
-
-  useEffect(() => {
-    checkAndLoad();
-    window.addEventListener('scroll', checkAndLoad, { passive: true });
-    window.addEventListener('resize', checkAndLoad, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', checkAndLoad);
-      window.removeEventListener('resize', checkAndLoad);
-    };
-  }, [checkAndLoad]);
+  const { sentinelRef: dirsSentinelRef } = useInfiniteScroll(
+    loadMoreDirs,
+    hasMoreDirs && !isLoadingMoreDirs && !!dirsCursor,
+  );
+  const { sentinelRef: filesSentinelRef } = useInfiniteScroll(
+    loadMoreFiles,
+    hasMoreFiles && !isLoadingMoreFiles && !!filesCursor,
+  );
   const handleMoveFile = useCallback(
     (fileId: string) => {
       const file = allFiles.find((f) => f.id === fileId);
@@ -1029,7 +1009,7 @@ const DirectoryPage: React.FC = () => {
                         onDelete={perms?.delete ? handleDeleteFile : undefined}
                         onMove={handleMoveFile}
                         onShare={(id) => {
-                          const f = displayFiles.find((d) => d.id === id);
+                          const f = formattedFiles.find((d) => d.id === id);
                           if (f)
                             setShareModalState({
                               itemId: f.id,
@@ -1058,7 +1038,7 @@ const DirectoryPage: React.FC = () => {
                         onDelete={perms?.delete ? handleDeleteFile : undefined}
                         onMove={handleMoveFile}
                         onShare={(id) => {
-                          const f = displayFiles.find((d) => d.id === id);
+                          const f = formattedFiles.find((d) => d.id === id);
                           if (f)
                             setShareModalState({
                               itemId: f.id,
@@ -1152,22 +1132,19 @@ const DirectoryPage: React.FC = () => {
           itemType={shareModalState.itemType}
           accessToken={accessToken}
           onLinksChanged={(hasLinks) => {
-            setDirectoryContents((prev) => {
-              if (!prev) return prev;
-              return {
-                ...prev,
-                files: prev.files.map((f) =>
-                  f.id === shareModalState.itemId && shareModalState.itemType === 'file'
-                    ? { ...f, has_share_links: hasLinks }
-                    : f,
+            if (shareModalState.itemType === 'file') {
+              setAllFiles((prev) =>
+                prev.map((f) =>
+                  f.id === shareModalState.itemId ? { ...f, has_share_links: hasLinks } : f,
                 ),
-                subdirectories: prev.subdirectories.map((d) =>
-                  d.id === shareModalState.itemId && shareModalState.itemType === 'directory'
-                    ? { ...d, has_share_links: hasLinks }
-                    : d,
+              );
+            } else {
+              setAllSubdirectories((prev) =>
+                prev.map((d) =>
+                  d.id === shareModalState.itemId ? { ...d, has_share_links: hasLinks } : d,
                 ),
-              };
-            });
+              );
+            }
           }}
           onLinkDeleted={(info) => {
             const itemId = shareModalState.itemId;
@@ -1184,20 +1161,15 @@ const DirectoryPage: React.FC = () => {
                 } else {
                   await createDirectoryShareLink(accessToken, itemId, body);
                 }
-                setDirectoryContents((prev) => {
-                  if (!prev) return prev;
-                  return {
-                    ...prev,
-                    files: prev.files.map((f) =>
-                      f.id === itemId && itemType === 'file' ? { ...f, has_share_links: true } : f,
-                    ),
-                    subdirectories: prev.subdirectories.map((d) =>
-                      d.id === itemId && itemType === 'directory'
-                        ? { ...d, has_share_links: true }
-                        : d,
-                    ),
-                  };
-                });
+                if (itemType === 'file') {
+                  setAllFiles((prev) =>
+                    prev.map((f) => (f.id === itemId ? { ...f, has_share_links: true } : f)),
+                  );
+                } else {
+                  setAllSubdirectories((prev) =>
+                    prev.map((d) => (d.id === itemId ? { ...d, has_share_links: true } : d)),
+                  );
+                }
                 setShareLinkRefreshKey((k) => k + 1);
               } catch (err) {
                 console.error('Failed to undo share link delete:', err);

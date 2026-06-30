@@ -18,7 +18,7 @@ type ServiceInterface interface {
 	Update(ctx context.Context, userID, linkID string, req UpdateShareLinkRequest) (ShareLinkResponse, error)
 	Delete(ctx context.Context, userID, linkID string) error
 	Resolve(ctx context.Context, token, password string, authenticated bool) (FileContentResponse, error)
-	ResolveDirectory(ctx context.Context, token, password string, authenticated bool, subDirID string) (DirectoryContentResponse, error)
+	ResolveDirectory(ctx context.Context, token, password string, authenticated bool, params ResolveDirectoryParams) (DirectoryContentResponse, error)
 }
 
 type RepositoryInterface interface {
@@ -33,7 +33,9 @@ type RepositoryInterface interface {
 	GetUsernameByID(ctx context.Context, db dbTX, userID string) (string, error)
 	GetDirectoryByID(ctx context.Context, db dbTX, dirID string) (directoryRecord, error)
 	GetDirectorySubdirs(ctx context.Context, db dbTX, dirID string) ([]dirSubdirRecord, error)
+	GetDirectorySubdirsAfterCursor(ctx context.Context, db dbTX, dirID string, cursorName string, cursorID string, limit int) ([]dirSubdirRecord, bool, string, error)
 	GetDirectoryFiles(ctx context.Context, db dbTX, dirID string) ([]dirFileRecord, error)
+	GetDirectoryFilesAfterCursor(ctx context.Context, db dbTX, dirID string, cursorFilename string, cursorID string, limit int) ([]dirFileRecord, bool, string, error)
 	IsSubdirectory(ctx context.Context, db dbTX, parentID, childID string) (bool, error)
 }
 

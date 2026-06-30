@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Trash2, Folder, File as FileIconLucide, RotateCcw } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 import { getTrashList, TrashItem, TrashPaginationParams } from '../api/trash';
 import { restoreFile, permanentDeleteFile } from '../api/files';
 import { restoreDirectory, permanentDeleteDirectory } from '../api/directories';
@@ -22,13 +23,11 @@ const TrashPage: React.FC = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
 
-  // Pagination — автозагрузка при скролле
   const [filesCursor, setFilesCursor] = useState<string | undefined>();
   const [dirsCursor, setDirsCursor] = useState<string | undefined>();
   const [hasMoreFiles, setHasMoreFiles] = useState(false);
   const [hasMoreDirs, setHasMoreDirs] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const sentinelRef = useRef<HTMLDivElement>(null);
 
   const loadTrash = useCallback(
     async (pagination?: TrashPaginationParams, append = false) => {
@@ -67,35 +66,26 @@ const TrashPage: React.FC = () => {
     });
   }, [loadTrash]);
 
-  // Автозагрузка при скролле
-  const checkAndLoad = useCallback(() => {
+  const loadMore = useCallback(() => {
     if (!accessToken || isLoadingMore) return;
     if (!hasMoreFiles && !hasMoreDirs) return;
 
-    const el = sentinelRef.current;
-    if (el && el.getBoundingClientRect().top < window.innerHeight + 300) {
-      setIsLoadingMore(true);
-      loadTrash(
-        {
-          files_limit: PAGE_LIMIT,
-          files_cursor: filesCursor,
-          dirs_limit: PAGE_LIMIT,
-          dirs_cursor: dirsCursor,
-        },
-        true,
-      );
-    }
+    setIsLoadingMore(true);
+    loadTrash(
+      {
+        files_limit: PAGE_LIMIT,
+        files_cursor: filesCursor,
+        dirs_limit: PAGE_LIMIT,
+        dirs_cursor: dirsCursor,
+      },
+      true,
+    );
   }, [accessToken, filesCursor, dirsCursor, hasMoreFiles, hasMoreDirs, isLoadingMore, loadTrash]);
 
-  useEffect(() => {
-    checkAndLoad();
-    window.addEventListener('scroll', checkAndLoad, { passive: true });
-    window.addEventListener('resize', checkAndLoad, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', checkAndLoad);
-      window.removeEventListener('resize', checkAndLoad);
-    };
-  }, [checkAndLoad]);
+  const { sentinelRef } = useInfiniteScroll(
+    loadMore,
+    (hasMoreFiles || hasMoreDirs) && !isLoadingMore,
+  );
 
   const handleRestore = async (item: TrashItem) => {
     if (!accessToken) return;

@@ -1922,6 +1922,30 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "integer",
+                        "description": "Limit for subdirectories",
+                        "name": "dirs_limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Cursor for subdirectories pagination",
+                        "name": "dirs_cursor",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit for files",
+                        "name": "files_limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Cursor for files pagination",
+                        "name": "files_cursor",
+                        "in": "query"
+                    },
+                    {
                         "type": "string",
                         "description": "Password for protected links",
                         "name": "X-SharedLink-Password",
@@ -3334,6 +3358,12 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                },
+                "next_dirs_cursor": {
+                    "type": "string"
+                },
+                "next_files_cursor": {
                     "type": "string"
                 },
                 "owner_username": {

@@ -143,6 +143,25 @@ func (s *Service) loadContentsPaginated(ctx context.Context, userID string, dir 
 		})
 	}
 
+	dirIDs := make([]string, len(subdirs))
+	for i, sd := range subdirs {
+		dirIDs[i] = sd.ID
+	}
+	fileIDs := make([]string, len(files))
+	for i, f := range files {
+		fileIDs[i] = f.ID
+	}
+
+	fileLinks, dirLinks, err := s.repo.CheckShareLinks(ctx, s.db, fileIDs, dirIDs)
+	if err == nil {
+		for i := range subdirResponses {
+			subdirResponses[i].HasShareLinks = dirLinks[subdirResponses[i].ID]
+		}
+		for i := range fileItems {
+			fileItems[i].HasShareLinks = fileLinks[fileItems[i].ID]
+		}
+	}
+
 	resp := &DirectoryContentsResponse{
 		ID:             dir.ID,
 		Name:           dir.Name,

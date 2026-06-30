@@ -8,7 +8,6 @@ import { useDragDropStore } from '../store/dragDropStore';
 import { useFavorites } from '../hooks/useFavorites';
 import { getRecentFiles, FileMetadata } from '../api/files';
 import { getSharedWithMe, SharedDirectory } from '../api/sharing';
-import { getFavorites, FavoriteFile } from '../api/favorites';
 import { ApiError } from '../api/client';
 import { Card, CardHeader, CardTitle } from '../components/ui/Card';
 import { FileItem } from '../components/ui/FileItem';
@@ -28,12 +27,11 @@ const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const accessToken = useAuthStore((state) => state.accessToken);
   const { personalStorageId, isLoading: isStorageLoading } = useDirectoryStore();
-  const { isFavorite, toggleFavorite } = useFavorites();
+  const { isFavorite, toggleFavorite, favorites: storeFavorites, loadFavorites } = useFavorites();
   const { setOnUploadComplete } = useDragDropStore();
 
   const [recentFiles, setRecentFiles] = useState<FileMetadata[]>([]);
   const [sharedDirectories, setSharedDirectories] = useState<SharedDirectory[]>([]);
-  const [favorites, setFavorites] = useState<FavoriteFile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const showToast = useToastStore((s) => s.showToast);
@@ -45,26 +43,24 @@ const DashboardPage: React.FC = () => {
     setError('');
 
     try {
-      const [recent, shared, favoritesRes] = await Promise.all([
+      const [recent, shared] = await Promise.all([
         getRecentFiles(accessToken, RECENT_FILES_LIMIT),
         getSharedWithMe(accessToken, SHARED_DIRECTORIES_LIMIT),
-        getFavorites(accessToken, { limit: FAVORITES_LIMIT }),
+        loadFavorites(accessToken),
       ]);
       setRecentFiles(recent.files);
       setSharedDirectories(shared);
-      setFavorites(favoritesRes.favorites);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Не удалось загрузить данные.');
     } finally {
       setIsLoading(false);
     }
-  }, [accessToken]);
+  }, [accessToken, loadFavorites]);
 
   useEffect(() => {
     loadDashboardData();
   }, [accessToken, loadDashboardData]);
 
-  // Регистрируем callback для обновления после загрузки через DnD
   useEffect(() => {
     setOnUploadComplete(() => {
       loadDashboardData();
@@ -91,47 +87,30 @@ const DashboardPage: React.FC = () => {
     navigate(`/directories/${personalStorageId}`);
   };
 
-  // Тихое обновление данных (без экрана загрузки) — для отмены действий
-  const refreshDashboard = async () => {
+  const refreshDashboard = async (forceFavorites = false) => {
     if (!accessToken) return;
     try {
-      const [recent, shared, favoritesRes] = await Promise.all([
+      const [recent, shared] = await Promise.all([
         getRecentFiles(accessToken, RECENT_FILES_LIMIT),
         getSharedWithMe(accessToken, SHARED_DIRECTORIES_LIMIT),
-        getFavorites(accessToken, { limit: FAVORITES_LIMIT }),
+        loadFavorites(accessToken, forceFavorites),
       ]);
       setRecentFiles(recent.files);
       setSharedDirectories(shared);
-      setFavorites(favoritesRes.favorites);
     } catch {
-      // игнорируем — состояние подтянется при следующей загрузке
+      // игнорируем
     }
   };
 
   const handleToggleFavorite = async (fileId: string) => {
     const wasFavorite = isFavorite(fileId);
     const sourceFile =
-      recentFiles.find((f) => f.id === fileId) || favorites.find((f) => f.id === fileId);
+      recentFiles.find((f) => f.id === fileId) || storeFavorites.find((f) => f.id === fileId);
     const name = sourceFile?.filename || 'Файл';
-
-    // Оптимистичное обновление превью избранного на дашборде
-    if (wasFavorite) {
-      setFavorites((prev) => prev.filter((f) => f.id !== fileId));
-    } else {
-      const recentFile = recentFiles.find((f) => f.id === fileId);
-      if (recentFile) {
-        setFavorites((prev) => {
-          if (prev.some((f) => f.id === fileId)) return prev;
-          return [{ ...recentFile, favorited_at: new Date().toISOString() }, ...prev].slice(
-            0,
-            FAVORITES_LIMIT,
-          );
-        });
-      }
-    }
 
     try {
       await toggleFavorite(fileId);
+      await refreshDashboard(true);
       let undoing = false;
       showToast(
         `«${name}» ${!wasFavorite ? 'добавлен в избранное' : 'удалён из избранного'}`,
@@ -142,7 +121,7 @@ const DashboardPage: React.FC = () => {
           undoing = true;
           try {
             await toggleFavorite(fileId);
-            await refreshDashboard();
+            await refreshDashboard(true);
           } catch (err) {
             console.error('Failed to undo favorite:', err);
           }
@@ -150,11 +129,12 @@ const DashboardPage: React.FC = () => {
       );
     } catch (err) {
       console.error('Failed to toggle favorite:', err);
-      await refreshDashboard();
+      await refreshDashboard(true);
     }
   };
 
-  const favoritesFullWidth = recentFiles.length > 0 && favorites.length > 0;
+  const displayFavorites = storeFavorites.slice(0, FAVORITES_LIMIT);
+  const favoritesFullWidth = recentFiles.length > 0 && displayFavorites.length > 0;
 
   return (
     <div className="space-y-8 pb-10">
@@ -241,13 +221,13 @@ const DashboardPage: React.FC = () => {
               <CardTitle>Избранное</CardTitle>
               <UILink to="/favorites">Смотреть все</UILink>
             </CardHeader>
-            {favorites.length > 0 ? (
+            {displayFavorites.length > 0 ? (
               <div
                 className={
                   favoritesFullWidth ? 'grid grid-cols-1 sm:grid-cols-3 gap-4' : 'space-y-4'
                 }
               >
-                {favorites.map((fav) => (
+                {displayFavorites.map((fav) => (
                   <FileItem
                     key={fav.id}
                     id={fav.id}

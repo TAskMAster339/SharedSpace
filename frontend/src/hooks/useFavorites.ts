@@ -1,16 +1,15 @@
-import { useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useFavoritesStore } from '../store/favoritesStore';
 
 export const useFavorites = () => {
   const accessToken = useAuthStore((state) => state.accessToken);
   const favoriteIds = useFavoritesStore((state) => state.favoriteIds);
+  const favorites = useFavoritesStore((state) => state.favorites);
+  const isLoading = useFavoritesStore((state) => state.isLoading);
+  const loadedToken = useFavoritesStore((state) => state.loadedToken);
   const loadFavorites = useFavoritesStore((state) => state.loadFavorites);
   const toggle = useFavoritesStore((state) => state.toggleFavorite);
-
-  useEffect(() => {
-    if (accessToken) loadFavorites(accessToken);
-  }, [accessToken, loadFavorites]);
 
   const isFavorite = useCallback((fileId: string) => favoriteIds.has(fileId), [favoriteIds]);
 
@@ -19,5 +18,5 @@ export const useFavorites = () => {
     [accessToken, toggle],
   );
 
-  return { isFavorite, toggleFavorite };
+  return { isFavorite, toggleFavorite, favorites, loadFavorites, isLoading, loadedToken };
 };

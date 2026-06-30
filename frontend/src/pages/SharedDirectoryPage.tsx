@@ -17,8 +17,10 @@ import {
   resolveDirectoryShareLink,
   DirectoryShareLinkResolveResult,
   DirectoryShareLinkFile,
+  DirectoryShareLinkSubdir,
 } from '../api/sharelinks';
 import { useAuthStore } from '../store/authStore';
+import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 import { FileIcon } from '../components/ui/FileIcon';
 import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
 import { Card } from '../components/ui/Card';
@@ -132,6 +134,15 @@ const SharedDirectoryPage: React.FC = () => {
   const [iframeError, setIframeError] = useState(false);
   const [breadcrumbs, setBreadcrumbs] = useState<Breadcrumb[]>([]);
 
+  const [allSubdirs, setAllSubdirs] = useState<DirectoryShareLinkSubdir[]>([]);
+  const [allFiles, setAllFiles] = useState<DirectoryShareLinkFile[]>([]);
+  const [dirsCursor, setDirsCursor] = useState<string | undefined>();
+  const [filesCursor, setFilesCursor] = useState<string | undefined>();
+  const [hasMoreDirs, setHasMoreDirs] = useState(false);
+  const [hasMoreFiles, setHasMoreFiles] = useState(false);
+  const [isLoadingMoreDirs, setIsLoadingMoreDirs] = useState(false);
+  const [isLoadingMoreFiles, setIsLoadingMoreFiles] = useState(false);
+
   const [needsPassword, setNeedsPassword] = useState(false);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -165,6 +176,12 @@ const SharedDirectoryPage: React.FC = () => {
           activePassword,
         );
         setData(result);
+        setAllSubdirs(result.subdirectories);
+        setAllFiles(result.files);
+        setDirsCursor(result.next_dirs_cursor);
+        setFilesCursor(result.next_files_cursor);
+        setHasMoreDirs(!!result.next_dirs_cursor);
+        setHasMoreFiles(!!result.next_files_cursor);
         setNeedsPassword(false);
 
         // Update breadcrumbs with the current directory name from API response
@@ -199,6 +216,42 @@ const SharedDirectoryPage: React.FC = () => {
     [token, subDirId, accessToken, savedPassword],
   );
 
+  const loadMoreDirs = useCallback(() => {
+    if (!token || !dirsCursor || isLoadingMoreDirs) return;
+    setIsLoadingMoreDirs(true);
+    resolveDirectoryShareLink(
+      token,
+      { subDirId: subDirId || undefined, dirsCursor, dirsLimit: 20 },
+      accessToken,
+      savedPassword,
+    )
+      .then((result) => {
+        setAllSubdirs((prev) => [...prev, ...result.subdirectories]);
+        setDirsCursor(result.next_dirs_cursor);
+        setHasMoreDirs(!!result.next_dirs_cursor);
+      })
+      .catch((err) => console.error('loadMoreDirs error', err))
+      .finally(() => setIsLoadingMoreDirs(false));
+  }, [token, subDirId, accessToken, savedPassword, dirsCursor, isLoadingMoreDirs]);
+
+  const loadMoreFiles = useCallback(() => {
+    if (!token || !filesCursor || isLoadingMoreFiles) return;
+    setIsLoadingMoreFiles(true);
+    resolveDirectoryShareLink(
+      token,
+      { subDirId: subDirId || undefined, filesCursor, filesLimit: 20 },
+      accessToken,
+      savedPassword,
+    )
+      .then((result) => {
+        setAllFiles((prev) => [...prev, ...result.files]);
+        setFilesCursor(result.next_files_cursor);
+        setHasMoreFiles(!!result.next_files_cursor);
+      })
+      .catch((err) => console.error('loadMoreFiles error', err))
+      .finally(() => setIsLoadingMoreFiles(false));
+  }, [token, subDirId, accessToken, savedPassword, filesCursor, isLoadingMoreFiles]);
+
   useEffect(() => {
     setNeedsPassword(false);
     setPassword('');
@@ -229,6 +282,15 @@ const SharedDirectoryPage: React.FC = () => {
     document.addEventListener('mousedown', close);
     return () => document.removeEventListener('mousedown', close);
   }, [contextMenuItem]);
+
+  const { sentinelRef: dirsSentinelRef } = useInfiniteScroll(
+    loadMoreDirs,
+    hasMoreDirs && !isLoadingMoreDirs,
+  );
+  const { sentinelRef: filesSentinelRef } = useInfiniteScroll(
+    loadMoreFiles,
+    hasMoreFiles && !isLoadingMoreFiles,
+  );
 
   const handleCopyLink = useCallback(
     (id: string, type: 'file' | 'dir') => {
@@ -331,7 +393,7 @@ const SharedDirectoryPage: React.FC = () => {
   }, []);
 
   const previewFile =
-    previewFileId && data ? data.files.find((f) => f.id === previewFileId) || null : null;
+    previewFileId && data ? allFiles.find((f) => f.id === previewFileId) || null : null;
 
   if (needsPassword && !data) {
     return (
@@ -639,14 +701,14 @@ const SharedDirectoryPage: React.FC = () => {
           })}
         </div>
         <div className="ml-auto flex items-center gap-2">
-          {(data.subdirectories.length > 0 || data.files.length > 0) && (
+          {(allSubdirs.length > 0 || allFiles.length > 0) && (
             <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} />
           )}
         </div>
       </nav>
 
       {/* Empty state */}
-      {data.subdirectories.length === 0 && data.files.length === 0 && (
+      {allSubdirs.length === 0 && allFiles.length === 0 && (
         <div className="text-center py-16 text-theme-muted">
           <Folder size={48} className="mx-auto mb-3 opacity-40" />
           <p className="text-sm">Директория пуста</p>
@@ -654,151 +716,173 @@ const SharedDirectoryPage: React.FC = () => {
       )}
 
       {/* Subdirectories */}
-      {data.subdirectories.length > 0 && (
-        <div className="bg-theme-secondary border border-theme rounded-theme-lg p-4 shadow-theme-card">
-          <h2 className="text-sm font-medium text-theme-secondary mb-3">Папки</h2>
+      {allSubdirs.length > 0 && (
+        <>
+          <div className="bg-theme-secondary border border-theme rounded-theme-lg p-4 shadow-theme-card">
+            <h2 className="text-sm font-medium text-theme-secondary mb-3">Папки</h2>
 
-          {/* Grid view */}
-          <div className={viewMode === 'grid' ? '' : 'hidden'}>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-              {data.subdirectories.map((subdir) => (
-                <div
-                  key={subdir.id}
-                  onClick={() => handleNavigate(subdir.id)}
-                  onContextMenu={(e) => handleContextMenu(e, subdir.id, 'dir')}
-                  className="group relative flex flex-col items-center p-3 rounded-theme-md transition-colors cursor-pointer bg-theme-tertiary hover:bg-theme-hover border border-theme"
-                >
-                  <div className="w-16 h-16 flex items-center justify-center text-theme-muted group-hover:text-brand transition-colors">
-                    <Folder size={40} strokeWidth={1.5} />
-                  </div>
-                  <p className="text-sm text-theme-primary font-medium text-center mt-2 truncate w-full max-w-[120px]">
-                    {subdir.name}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={(e) => handleThreeDotsClick(e, subdir.id, 'dir')}
-                    className="absolute top-2 right-2 p-1.5 rounded-theme-sm text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors"
-                  >
-                    <MoreVertical size={16} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* List view */}
-          <div className={viewMode === 'list' ? '' : 'hidden'}>
-            <div className="space-y-1">
-              {data.subdirectories.map((subdir) => (
-                <div
-                  key={subdir.id}
-                  onClick={() => handleNavigate(subdir.id)}
-                  onContextMenu={(e) => handleContextMenu(e, subdir.id, 'dir')}
-                  className="group flex items-center gap-3 w-full p-3 rounded-theme-md transition-colors cursor-pointer bg-theme-tertiary hover:bg-theme-hover border border-theme text-left"
-                >
-                  <div className="p-2 bg-theme-secondary rounded-theme-sm shrink-0">
-                    <Folder
-                      size={20}
-                      className="text-theme-muted group-hover:text-brand transition-colors"
-                    />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm text-theme-primary font-medium truncate">{subdir.name}</p>
-                    <p className="text-xs text-theme-muted">Папка</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={(e) => handleThreeDotsClick(e, subdir.id, 'dir')}
-                    className="p-1.5 rounded-theme-sm text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors shrink-0"
-                  >
-                    <MoreVertical size={18} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Files */}
-      {data.files.length > 0 && (
-        <div className="bg-theme-secondary border border-theme rounded-theme-lg p-4 shadow-theme-card">
-          <h2 className="text-sm font-medium text-theme-secondary mb-3">Файлы</h2>
-
-          {/* Grid view */}
-          <div className={viewMode === 'grid' ? '' : 'hidden'}>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-              {data.files.map((file) => {
-                const iconType = resolveFileIconType(file.mime_type, file.extension);
-                return (
+            {/* Grid view */}
+            <div className={viewMode === 'grid' ? '' : 'hidden'}>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                {allSubdirs.map((subdir) => (
                   <div
-                    key={file.id}
-                    onClick={() => handleFileClick(file)}
-                    onContextMenu={(e) => handleContextMenu(e, file.id, 'file')}
+                    key={subdir.id}
+                    onClick={() => handleNavigate(subdir.id)}
+                    onContextMenu={(e) => handleContextMenu(e, subdir.id, 'dir')}
                     className="group relative flex flex-col items-center p-3 rounded-theme-md transition-colors cursor-pointer bg-theme-tertiary hover:bg-theme-hover border border-theme"
                   >
-                    <div className="w-16 h-16 flex items-center justify-center transition-colors">
-                      <FileIcon
-                        type={iconType}
-                        size={40}
-                        className="group-hover:text-brand transition-colors"
-                      />
+                    <div className="w-16 h-16 flex items-center justify-center text-theme-muted group-hover:text-brand transition-colors">
+                      <Folder size={40} strokeWidth={1.5} />
                     </div>
                     <p className="text-sm text-theme-primary font-medium text-center mt-2 truncate w-full max-w-[120px]">
-                      {file.filename}
+                      {subdir.name}
                     </p>
-                    <p className="text-xs text-theme-muted mt-0.5">{formatFileSize(file.size)}</p>
                     <button
                       type="button"
-                      onClick={(e) => handleThreeDotsClick(e, file.id, 'file')}
+                      onClick={(e) => handleThreeDotsClick(e, subdir.id, 'dir')}
                       className="absolute top-2 right-2 p-1.5 rounded-theme-sm text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors"
                     >
                       <MoreVertical size={16} />
                     </button>
                   </div>
-                );
-              })}
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* List view */}
-          <div className={viewMode === 'list' ? '' : 'hidden'}>
-            <div className="space-y-1">
-              {data.files.map((file) => {
-                const iconType = resolveFileIconType(file.mime_type, file.extension);
-                return (
+            {/* List view */}
+            <div className={viewMode === 'list' ? '' : 'hidden'}>
+              <div className="space-y-1">
+                {allSubdirs.map((subdir) => (
                   <div
-                    key={file.id}
-                    onClick={() => handleFileClick(file)}
-                    onContextMenu={(e) => handleContextMenu(e, file.id, 'file')}
+                    key={subdir.id}
+                    onClick={() => handleNavigate(subdir.id)}
+                    onContextMenu={(e) => handleContextMenu(e, subdir.id, 'dir')}
                     className="group flex items-center gap-3 w-full p-3 rounded-theme-md transition-colors cursor-pointer bg-theme-tertiary hover:bg-theme-hover border border-theme text-left"
                   >
                     <div className="p-2 bg-theme-secondary rounded-theme-sm shrink-0">
-                      <FileIcon
-                        type={iconType}
+                      <Folder
                         size={20}
                         className="text-theme-muted group-hover:text-brand transition-colors"
                       />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm text-theme-primary font-medium truncate">
-                        {file.filename}
+                        {subdir.name}
                       </p>
-                      <p className="text-xs text-theme-muted">{formatFileSize(file.size)}</p>
+                      <p className="text-xs text-theme-muted">Папка</p>
                     </div>
                     <button
                       type="button"
-                      onClick={(e) => handleThreeDotsClick(e, file.id, 'file')}
+                      onClick={(e) => handleThreeDotsClick(e, subdir.id, 'dir')}
                       className="p-1.5 rounded-theme-sm text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors shrink-0"
                     >
                       <MoreVertical size={18} />
                     </button>
                   </div>
-                );
-              })}
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+          {hasMoreDirs && (
+            <div className="mt-3 flex items-center justify-center gap-3">
+              {isLoadingMoreDirs && (
+                <div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+              )}
+              <div ref={dirsSentinelRef} className="h-2" />
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Files */}
+      {allFiles.length > 0 && (
+        <>
+          <div className="bg-theme-secondary border border-theme rounded-theme-lg p-4 shadow-theme-card">
+            <h2 className="text-sm font-medium text-theme-secondary mb-3">Файлы</h2>
+
+            {/* Grid view */}
+            <div className={viewMode === 'grid' ? '' : 'hidden'}>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                {allFiles.map((file) => {
+                  const iconType = resolveFileIconType(file.mime_type, file.extension);
+                  return (
+                    <div
+                      key={file.id}
+                      onClick={() => handleFileClick(file)}
+                      onContextMenu={(e) => handleContextMenu(e, file.id, 'file')}
+                      className="group relative flex flex-col items-center p-3 rounded-theme-md transition-colors cursor-pointer bg-theme-tertiary hover:bg-theme-hover border border-theme"
+                    >
+                      <div className="w-16 h-16 flex items-center justify-center transition-colors">
+                        <FileIcon
+                          type={iconType}
+                          size={40}
+                          className="group-hover:text-brand transition-colors"
+                        />
+                      </div>
+                      <p className="text-sm text-theme-primary font-medium text-center mt-2 truncate w-full max-w-[120px]">
+                        {file.filename}
+                      </p>
+                      <p className="text-xs text-theme-muted mt-0.5">{formatFileSize(file.size)}</p>
+                      <button
+                        type="button"
+                        onClick={(e) => handleThreeDotsClick(e, file.id, 'file')}
+                        className="absolute top-2 right-2 p-1.5 rounded-theme-sm text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors"
+                      >
+                        <MoreVertical size={16} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* List view */}
+            <div className={viewMode === 'list' ? '' : 'hidden'}>
+              <div className="space-y-1">
+                {allFiles.map((file) => {
+                  const iconType = resolveFileIconType(file.mime_type, file.extension);
+                  return (
+                    <div
+                      key={file.id}
+                      onClick={() => handleFileClick(file)}
+                      onContextMenu={(e) => handleContextMenu(e, file.id, 'file')}
+                      className="group flex items-center gap-3 w-full p-3 rounded-theme-md transition-colors cursor-pointer bg-theme-tertiary hover:bg-theme-hover border border-theme text-left"
+                    >
+                      <div className="p-2 bg-theme-secondary rounded-theme-sm shrink-0">
+                        <FileIcon
+                          type={iconType}
+                          size={20}
+                          className="text-theme-muted group-hover:text-brand transition-colors"
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm text-theme-primary font-medium truncate">
+                          {file.filename}
+                        </p>
+                        <p className="text-xs text-theme-muted">{formatFileSize(file.size)}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => handleThreeDotsClick(e, file.id, 'file')}
+                        className="p-1.5 rounded-theme-sm text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors shrink-0"
+                      >
+                        <MoreVertical size={18} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+          {hasMoreFiles && (
+            <div className="mt-3 flex items-center justify-center gap-3">
+              {isLoadingMoreFiles && (
+                <div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+              )}
+              <div ref={filesSentinelRef} className="h-2" />
+            </div>
+          )}
+        </>
       )}
 
       {contextMenuItem &&
