@@ -148,6 +148,7 @@ const SharedDirectoryPage: React.FC = () => {
   } | null>(null);
   const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
   const showToast = useToastStore((state) => state.showToast);
 
   const fetchData = useCallback(
@@ -208,6 +209,14 @@ const SharedDirectoryPage: React.FC = () => {
     }
     fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 639px)');
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
 
   useEffect(() => {
     if (!contextMenuItem) return;
@@ -795,25 +804,53 @@ const SharedDirectoryPage: React.FC = () => {
       {contextMenuItem &&
         contextMenuPos &&
         createPortal(
-          <div
-            ref={contextMenuRef}
-            style={{
-              position: 'fixed',
-              top: contextMenuPos.y,
-              left: contextMenuPos.x,
-              zIndex: 9999,
-            }}
-            className="w-48 rounded-theme-md border border-theme bg-theme-secondary shadow-theme-dropdown overflow-hidden"
-          >
-            <button
-              type="button"
-              onClick={() => handleCopyLink(contextMenuItem.id, contextMenuItem.type)}
-              className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-theme-secondary hover:bg-theme-hover transition-colors group"
+          isMobile ? (
+            <>
+              <div
+                className="fixed inset-0 z-[60] bg-black/40"
+                onClick={() => {
+                  setContextMenuItem(null);
+                  setContextMenuPos(null);
+                }}
+              />
+              <div
+                ref={contextMenuRef}
+                className="fixed inset-x-0 bottom-0 z-[61] w-full rounded-t-theme-xl border-t border-theme bg-theme-secondary shadow-theme-dropdown overflow-hidden pb-[env(safe-area-inset-bottom)]"
+              >
+                <div className="flex justify-center py-2">
+                  <span className="h-1 w-10 rounded-full bg-theme-muted/40" />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleCopyLink(contextMenuItem.id, contextMenuItem.type)}
+                  className="group flex items-center gap-3 w-full px-4 py-3.5 text-base text-theme-secondary hover:bg-theme-hover transition-colors"
+                >
+                  <LinkIcon size={18} className="group-hover:text-green-500 transition-colors" />
+                  Копировать ссылку
+                </button>
+              </div>
+            </>
+          ) : (
+            <div
+              ref={contextMenuRef}
+              style={{
+                position: 'fixed',
+                top: contextMenuPos.y,
+                left: contextMenuPos.x,
+                zIndex: 9999,
+              }}
+              className="w-48 rounded-theme-md border border-theme bg-theme-secondary shadow-theme-dropdown overflow-hidden"
             >
-              <LinkIcon size={16} className="group-hover:text-green-500 transition-colors" />
-              Копировать ссылку
-            </button>
-          </div>,
+              <button
+                type="button"
+                onClick={() => handleCopyLink(contextMenuItem.id, contextMenuItem.type)}
+                className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-theme-secondary hover:bg-theme-hover transition-colors group"
+              >
+                <LinkIcon size={16} className="group-hover:text-green-500 transition-colors" />
+                Копировать ссылку
+              </button>
+            </div>
+          ),
           document.body,
         )}
     </div>
