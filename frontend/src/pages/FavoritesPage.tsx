@@ -27,7 +27,8 @@ const FavoritesPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const showToast = useToastStore((s) => s.showToast);
-  const { isConverting, convertAndDownload, convertAndSave } = useFileConversion();
+  const { isConverting, conversionProgress, convertAndDownload, convertAndSave } =
+    useFileConversion();
 
   const [convertFileData, setConvertFileData] = useState<{
     id: string;
@@ -277,6 +278,7 @@ const FavoritesPage: React.FC = () => {
           onConvertAndDownload={handleConvertAndDownload}
           onConvertAndSave={handleConvertAndSave}
           isConverting={isConverting}
+          conversionProgress={conversionProgress}
         />
       )}
 

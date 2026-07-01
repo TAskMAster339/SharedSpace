@@ -79,7 +79,8 @@ const DirectoryPage: React.FC = () => {
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const { isFavorite, toggleFavorite } = useFavorites();
   const showToast = useToastStore((state) => state.showToast);
-  const { isConverting, convertAndDownload, convertAndSave } = useFileConversion();
+  const { isConverting, conversionProgress, convertAndDownload, convertAndSave } =
+    useFileConversion();
   const [isShared, setIsShared] = useState(false);
   const [isDirectlyShared, setIsDirectlyShared] = useState(false);
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
@@ -1211,6 +1212,7 @@ const DirectoryPage: React.FC = () => {
           onConvertAndDownload={handleConvertAndDownload}
           onConvertAndSave={handleConvertAndSave}
           isConverting={isConverting}
+          conversionProgress={conversionProgress}
         />
       )}
 
