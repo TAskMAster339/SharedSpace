@@ -366,13 +366,11 @@ func writeOGHTML(w http.ResponseWriter, title, description, image, url string) {
 <meta name="twitter:title" content="%s — SharedSpace"/>
 <meta name="twitter:description" content="%s"/>
 <meta name="twitter:image" content="%s"/>
-<meta http-equiv="refresh" content="0;url=%s"/>
 <link rel="canonical" href="%s"/>
 </head>
 <body>
-<script>window.location.replace("%s");</script>
 </body>
-</html>`, title, title, description, image, url, title, description, image, url, url, url)
+</html>`, title, title, description, image, url, title, description, image, url)
 }
 
 // ServeOG returns an HTML page with OG meta tags for a shared file link.
