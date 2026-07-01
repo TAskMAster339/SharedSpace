@@ -21,7 +21,7 @@ function simulateProgress(callback: (pct: number) => void): () => void {
     const elapsed = Date.now() - startTime;
     const pct = Math.min(SIM_MAX, Math.round(SIM_MAX * (1 - Math.exp(-elapsed / 6000))));
     callback(pct);
-  }, 200);
+  }, 500);
   return () => clearInterval(id);
 }
 

@@ -38,7 +38,8 @@ const DashboardPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const showToast = useToastStore((s) => s.showToast);
-  const { isConverting, convertAndDownload, convertAndSave } = useFileConversion();
+  const { isConverting, conversionProgress, convertAndDownload, convertAndSave } =
+    useFileConversion();
 
   const [convertFileData, setConvertFileData] = useState<{
     id: string;
@@ -126,6 +127,21 @@ const DashboardPage: React.FC = () => {
     [recentFiles, storeFavorites],
   );
 
+  const refreshDashboard = async (forceFavorites = false) => {
+    if (!accessToken) return;
+    try {
+      const [recent, shared] = await Promise.all([
+        getRecentFiles(accessToken, RECENT_FILES_LIMIT),
+        getSharedWithMe(accessToken, SHARED_DIRECTORIES_LIMIT),
+        loadFavorites(accessToken, forceFavorites),
+      ]);
+      setRecentFiles(recent.files);
+      setSharedDirectories(shared);
+    } catch {
+      // игнорируем
+    }
+  };
+
   const handleConvertAndDownload = useCallback(
     (format: string) => {
       if (!convertFileData) return Promise.reject('No file');
@@ -162,21 +178,6 @@ const DashboardPage: React.FC = () => {
 
   const handleUploadClick = () => {
     navigate(`/directories/${personalStorageId}`);
-  };
-
-  const refreshDashboard = async (forceFavorites = false) => {
-    if (!accessToken) return;
-    try {
-      const [recent, shared] = await Promise.all([
-        getRecentFiles(accessToken, RECENT_FILES_LIMIT),
-        getSharedWithMe(accessToken, SHARED_DIRECTORIES_LIMIT),
-        loadFavorites(accessToken, forceFavorites),
-      ]);
-      setRecentFiles(recent.files);
-      setSharedDirectories(shared);
-    } catch {
-      // игнорируем
-    }
   };
 
   const handleToggleFavorite = async (fileId: string) => {
@@ -353,6 +354,7 @@ const DashboardPage: React.FC = () => {
           onConvertAndDownload={handleConvertAndDownload}
           onConvertAndSave={handleConvertAndSave}
           isConverting={isConverting}
+          conversionProgress={conversionProgress}
         />
       )}
 

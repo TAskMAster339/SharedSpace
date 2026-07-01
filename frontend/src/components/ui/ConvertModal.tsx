@@ -129,7 +129,7 @@ export const ConvertModal: React.FC<ConvertModalProps> = ({
           <p className="text-theme-primary font-medium text-lg">Конвертация...</p>
           <div className="mt-1 w-full h-2 bg-theme-border rounded-full overflow-hidden relative">
             <div
-              className="h-full bg-brand rounded-full transition-all duration-300 ease-out"
+              className="h-full bg-brand rounded-full transition-all duration-150 ease-linear"
               style={{ width: `${conversionProgress}%` }}
             />
           </div>
