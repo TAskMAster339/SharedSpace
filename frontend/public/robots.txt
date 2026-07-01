@@ -18,4 +18,4 @@ Allow: /
 Allow: /share/
 
 # 4. Указываем путь к карте сайта
-Sitemap: {{BASE_URL}}/
+Sitemap: https://team5.st.ifbest.org/
