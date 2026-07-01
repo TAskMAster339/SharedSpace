@@ -159,7 +159,7 @@ const SharedDirListPage: React.FC = () => {
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={closeModal} />
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={closeModal} />
           <div className="relative bg-theme-secondary rounded-theme-xl max-w-md w-full p-6 shadow-theme-dropdown border border-theme">
             <h3 className="text-lg font-semibold text-theme-primary mb-4">
               Новая общая директория

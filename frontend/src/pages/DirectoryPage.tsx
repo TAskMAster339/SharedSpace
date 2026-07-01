@@ -564,11 +564,19 @@ const DirectoryPage: React.FC = () => {
   );
 
   const handleConvertAndSave = useCallback(
-    (format: string) => {
-      if (!convertFileData) return Promise.reject('No file');
-      return convertAndSave(convertFileData.id, format, convertFileData.filename);
+    async (format: string) => {
+      if (!convertFileData) return null;
+      const resultFileId = await convertAndSave(
+        convertFileData.id,
+        format,
+        convertFileData.filename,
+      );
+      if (actualId) {
+        await loadDirectory(actualId, true);
+      }
+      return resultFileId;
     },
-    [convertFileData, convertAndSave],
+    [convertFileData, convertAndSave, actualId, loadDirectory],
   );
 
   const loadMoreDirs = useCallback(() => {

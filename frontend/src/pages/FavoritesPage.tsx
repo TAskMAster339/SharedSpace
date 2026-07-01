@@ -196,11 +196,17 @@ const FavoritesPage: React.FC = () => {
   );
 
   const handleConvertAndSave = useCallback(
-    (format: string) => {
-      if (!convertFileData) return Promise.reject('No file');
-      return convertAndSave(convertFileData.id, format, convertFileData.filename);
+    async (format: string) => {
+      if (!convertFileData) return null;
+      const resultFileId = await convertAndSave(
+        convertFileData.id,
+        format,
+        convertFileData.filename,
+      );
+      loadFavorites();
+      return resultFileId;
     },
-    [convertFileData, convertAndSave],
+    [convertFileData, convertAndSave, loadFavorites],
   );
 
   return (
