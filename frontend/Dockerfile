@@ -14,5 +14,8 @@ FROM nginx:alpine
 ARG BASE_URL
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/build /usr/share/nginx/html
+
+RUN sed -i "s|{{BASE_URL}}|${BASE_URL}|g" /usr/share/nginx/html/index.html
+
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
