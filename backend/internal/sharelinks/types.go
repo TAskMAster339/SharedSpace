@@ -115,3 +115,9 @@ type dirSubdirRecord struct {
 	ID   string
 	Name string
 }
+
+type sitemapEntry struct {
+	Token       string
+	IsDirectory bool
+	CreatedAt   time.Time
+}

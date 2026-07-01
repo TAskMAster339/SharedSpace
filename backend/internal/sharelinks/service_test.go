@@ -113,6 +113,9 @@ func (m *mockRepo) DecrementShareLinksCount(_ context.Context, _ dbTX, userID st
 	}
 	return nil
 }
+func (m *mockRepo) ListPublicShareLinks(_ context.Context, _ dbTX) ([]sitemapEntry, error) {
+	return nil, nil
+}
 
 type mockStorage struct {
 	presignedURL string

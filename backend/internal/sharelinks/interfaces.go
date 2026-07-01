@@ -19,6 +19,7 @@ type ServiceInterface interface {
 	Delete(ctx context.Context, userID, linkID string) error
 	Resolve(ctx context.Context, token, password string, authenticated bool) (FileContentResponse, error)
 	ResolveDirectory(ctx context.Context, token, password string, authenticated bool, params ResolveDirectoryParams) (DirectoryContentResponse, error)
+	ListPublicShareLinks(ctx context.Context) ([]sitemapEntry, error)
 }
 
 type RepositoryInterface interface {
@@ -40,6 +41,7 @@ type RepositoryInterface interface {
 	GetDirectoryFiles(ctx context.Context, db dbTX, dirID string) ([]dirFileRecord, error)
 	GetDirectoryFilesAfterCursor(ctx context.Context, db dbTX, dirID string, cursorFilename string, cursorID string, limit int) ([]dirFileRecord, bool, string, error)
 	IsSubdirectory(ctx context.Context, db dbTX, parentID, childID string) (bool, error)
+	ListPublicShareLinks(ctx context.Context, db dbTX) ([]sitemapEntry, error)
 }
 
 type StorageClient interface {

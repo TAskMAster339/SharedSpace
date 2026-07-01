@@ -20,6 +20,7 @@ import {
   DirectoryShareLinkSubdir,
 } from '../api/sharelinks';
 import { useAuthStore } from '../store/authStore';
+import SEOHead from '../components/SEOHead';
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 import { FileIcon } from '../components/ui/FileIcon';
 import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
@@ -434,6 +435,10 @@ const SharedDirectoryPage: React.FC = () => {
   if (needsPassword && !data) {
     return (
       <div className="flex items-center justify-center min-h-[80vh] px-4">
+        <SEOHead
+          title="Директория защищена паролем"
+          description="Для доступа к директории требуется пароль."
+        />
         <Card className="w-full max-w-md">
           <div className="text-center space-y-1 mb-6">
             <div className="w-12 h-12 mx-auto flex items-center justify-center bg-brand/10 rounded-full mb-3">
@@ -493,6 +498,7 @@ const SharedDirectoryPage: React.FC = () => {
   if (isLoading || isNavigating) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-theme-primary">
+        <SEOHead title="Загрузка..." description="Загрузка содержимого директории..." />
         <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -501,6 +507,7 @@ const SharedDirectoryPage: React.FC = () => {
   if (error || !data) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-theme-primary px-4">
+        <SEOHead title="Директория недоступна" description={error || 'Директория не найдена'} />
         <div className="text-center space-y-4 max-w-sm">
           <div className="w-16 h-16 mx-auto flex items-center justify-center bg-danger-light rounded-full">
             <FileIcon type="unknown" size={28} />
@@ -622,6 +629,12 @@ const SharedDirectoryPage: React.FC = () => {
 
     return (
       <div className="space-y-6 pb-10">
+        <SEOHead
+          title={previewFile.filename}
+          description={`Файл · ${formatFileSize(previewFile.size)} · Общая папка ${data.name}`}
+          ogImage={previewFile.mime_type.startsWith('image/') ? previewFile.url : undefined}
+          canonical={`https://team5.st.ifbest.org/share/dir/${token}?file=${previewFileId}`}
+        />
         <div>
           <button
             onClick={handleGoBack}
@@ -698,8 +711,15 @@ const SharedDirectoryPage: React.FC = () => {
   // Directory listing mode
   const crumbs = breadcrumbs.length > 0 ? breadcrumbs : data ? [{ id: '', name: data.name }] : [];
 
+  const fileCount = allFiles.length + allSubdirs.length;
+
   return (
     <div className="space-y-6 pb-10">
+      <SEOHead
+        title={data.name + ' — общая папка'}
+        description={`Общая папка · ${fileCount} элементов · Владелец: ${data.owner_username}`}
+        canonical={`https://team5.st.ifbest.org/share/dir/${token}`}
+      />
       {/* Title */}
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold text-theme-primary">{data.name}</h1>

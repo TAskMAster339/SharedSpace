@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
+import SEOHead from '../components/SEOHead';
 import { useAuth } from '../hooks/useAuth';
 import { ApiError } from '../api/client';
 import { Button } from '../components/ui/Button';
@@ -86,6 +87,10 @@ const RegisterPage: React.FC = () => {
 
   return (
     <div className="flex items-center justify-center min-h-[80vh] px-4">
+      <SEOHead
+        title="Регистрация"
+        description="Зарегистрируйтесь в SharedSpace и получите бесплатное облачное хранилище для файлов и совместной работы."
+      />
       <Card className="w-full max-w-md">
         <h2 className="text-xl font-semibold text-theme-primary mb-4 text-center">Регистрация</h2>
         <form onSubmit={handleSubmit} className="flex flex-col gap-3" noValidate>

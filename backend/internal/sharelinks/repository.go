@@ -302,6 +302,32 @@ func (r *Repository) GetDirectoryFilesAfterCursor(ctx context.Context, db dbTX, 
 	return files, hasMore, nextCursor, nil
 }
 
+func (r *Repository) ListPublicShareLinks(ctx context.Context, db dbTX) ([]sitemapEntry, error) {
+	rows, err := db.Query(ctx, `
+		SELECT token,
+		       CASE WHEN directory_id IS NOT NULL THEN true ELSE false END AS is_directory,
+		       created_at
+		FROM share_links
+		WHERE access_type = 'public'
+		  AND (expires_at IS NULL OR expires_at > NOW())
+		ORDER BY created_at DESC
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries []sitemapEntry
+	for rows.Next() {
+		var e sitemapEntry
+		if err := rows.Scan(&e.Token, &e.IsDirectory, &e.CreatedAt); err != nil {
+			return nil, err
+		}
+		entries = append(entries, e)
+	}
+	return entries, rows.Err()
+}
+
 func (r *Repository) IsSubdirectory(ctx context.Context, db dbTX, parentID, childID string) (bool, error) {
 	var count int
 	err := db.QueryRow(ctx, `

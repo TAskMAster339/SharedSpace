@@ -1887,6 +1887,74 @@
                 }
             }
         },
+        "/api/v1/og/share/dir/{token}": {
+            "get": {
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "share-links"
+                ],
+                "summary": "OG meta tags for shared directory",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Share link token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "HTML page with OG meta tags",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/og/share/{token}": {
+            "get": {
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "share-links"
+                ],
+                "summary": "OG meta tags for shared file",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Share link token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "HTML page with OG meta tags",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/s/{token}": {
             "get": {
                 "produces": [
@@ -2543,6 +2611,25 @@
                         "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/sitemap.xml": {
+            "get": {
+                "produces": [
+                    "text/xml"
+                ],
+                "tags": [
+                    "share-links"
+                ],
+                "summary": "Sitemap XML",
+                "responses": {
+                    "200": {
+                        "description": "Sitemap XML",
+                        "schema": {
+                            "type": "string"
                         }
                     }
                 }
