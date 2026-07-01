@@ -401,8 +401,8 @@ func TestServiceConvertAndSave_Success(t *testing.T) {
 }
 
 func TestServiceConvert_UnsupportedPair(t *testing.T) {
-	repo := &mockRepo{file: fileRecord{DirectoryID: "d-1", Filename: "a.jpg", Extension: "jpg", ObjectKey: "o"}}
-	storage := &mockStorage{getData: makeJPG(t)}
+	repo := &mockRepo{file: fileRecord{DirectoryID: "d-1", Filename: "a.gif", Extension: "gif", ObjectKey: "o"}}
+	storage := &mockStorage{getData: makeGIF(t)}
 	svc := newTestService(repo, storage)
 
 	_, _, err := svc.ConvertAndDownload(context.Background(), "user-1", "f-1", "png")

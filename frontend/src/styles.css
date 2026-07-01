@@ -356,6 +356,33 @@
   animation: ss-bounce-up 1s ease-in-out;
 }
 
+/* Индетерминированная анимация для прогресс-бара (ожидание сервера) */
+@keyframes ss-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+.animate-indeterminate {
+  animation: ss-indeterminate 1.5s ease-in-out infinite;
+  width: 40%;
+}
+
+@keyframes ss-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.animate-loader-pulse {
+  animation: ss-pulse 1.5s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-orbit,
   .animate-orbit-reverse {
