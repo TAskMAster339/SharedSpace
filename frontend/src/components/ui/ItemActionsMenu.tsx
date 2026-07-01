@@ -112,7 +112,10 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
   if (!onToggleFavorite && !onDelete && !onMove && !onShare && !onDownload && !onConvert)
     return null;
 
-  const close = () => setIsOpen(false);
+  const close = () => {
+    setIsOpen(false);
+    onCloseMenu?.();
+  };
 
   const handleSelect = (e: React.MouseEvent, action: () => void) => {
     e.preventDefault();
@@ -131,7 +134,7 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
           className="group flex items-center gap-3 w-full px-4 py-3.5 text-base text-theme-secondary hover:bg-theme-hover transition-colors sm:px-3 sm:py-2 sm:text-sm"
         >
           <Download size={18} className="group-hover:text-brand transition-colors" />
-          Скачать
+          Скачать файл
         </button>
       )}
       {onConvert && (
@@ -141,7 +144,7 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
           onClick={(e) => handleSelect(e, onConvert)}
           className="group flex items-center gap-3 w-full px-4 py-3.5 text-base text-theme-secondary hover:bg-theme-hover transition-colors sm:px-3 sm:py-2 sm:text-sm"
         >
-          <Image size={18} className="group-hover:text-brand transition-colors" />
+          <Image size={18} className="group-hover:text-purple-500 transition-colors" />
           Конвертировать
         </button>
       )}

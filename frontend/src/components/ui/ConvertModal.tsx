@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, AlertCircle, Download, Save } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { Button } from './Button';
@@ -30,6 +30,13 @@ export const ConvertModal: React.FC<ConvertModalProps> = ({
 }) => {
   const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
   const [actionType, setActionType] = useState<'download' | 'save'>('download');
+
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedFormat(null);
+      setActionType('download');
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

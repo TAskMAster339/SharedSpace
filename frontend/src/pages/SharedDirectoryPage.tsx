@@ -940,6 +940,24 @@ const SharedDirectoryPage: React.FC = () => {
                 <div className="flex justify-center py-2">
                   <span className="h-1 w-10 rounded-full bg-theme-muted/40" />
                 </div>
+                {contextMenuItem.type === 'file' && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const file = allFiles.find((f) => f.id === contextMenuItem.id);
+                        if (file) handleDownload(file.url, file.filename);
+                        setContextMenuItem(null);
+                        setContextMenuPos(null);
+                      }}
+                      className="group flex items-center gap-3 w-full px-4 py-3.5 text-base text-theme-secondary hover:bg-theme-hover transition-colors"
+                    >
+                      <Download size={18} className="group-hover:text-brand transition-colors" />
+                      Скачать файл
+                    </button>
+                    <div className="border-t border-theme my-1" />
+                  </>
+                )}
                 <button
                   type="button"
                   onClick={() => handleCopyLink(contextMenuItem.id, contextMenuItem.type)}
@@ -961,6 +979,24 @@ const SharedDirectoryPage: React.FC = () => {
               }}
               className="w-48 rounded-theme-md border border-theme bg-theme-secondary shadow-theme-dropdown overflow-hidden"
             >
+              {contextMenuItem.type === 'file' && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const file = allFiles.find((f) => f.id === contextMenuItem.id);
+                      if (file) handleDownload(file.url, file.filename);
+                      setContextMenuItem(null);
+                      setContextMenuPos(null);
+                    }}
+                    className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-theme-secondary hover:bg-theme-hover transition-colors group"
+                  >
+                    <Download size={16} className="group-hover:text-brand transition-colors" />
+                    Скачать файл
+                  </button>
+                  <div className="border-t border-theme my-1" />
+                </>
+              )}
               <button
                 type="button"
                 onClick={() => handleCopyLink(contextMenuItem.id, contextMenuItem.type)}

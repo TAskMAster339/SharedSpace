@@ -6,14 +6,17 @@ import { useAuthStore } from '../store/authStore';
 import { useDirectoryStore } from '../store/directoryStore';
 import { useDragDropStore } from '../store/dragDropStore';
 import { useFavorites } from '../hooks/useFavorites';
-import { getRecentFiles, FileMetadata } from '../api/files';
+import { getRecentFiles, FileMetadata, getFileContentUrl } from '../api/files';
 import { getSharedWithMe, SharedDirectory } from '../api/sharing';
 import { ApiError } from '../api/client';
 import { Card, CardHeader, CardTitle } from '../components/ui/Card';
 import { FileItem } from '../components/ui/FileItem';
 import { DirectoryItem } from '../components/ui/DirectoryItem';
+import { ConvertModal } from '../components/ui/ConvertModal';
+import { ShareLinkModal } from '../components/ui/ShareLinkModal';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Link as UILink } from '../components/ui/Link';
+import { useFileConversion } from '../hooks/useFileConversion';
 import { useToastStore } from '../hooks/useToast';
 import { formatFileSize, formatDate } from '../utils/format';
 import { resolveFileIconType } from '../utils/fileType';
@@ -35,6 +38,18 @@ const DashboardPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const showToast = useToastStore((s) => s.showToast);
+  const { isConverting, convertAndDownload, convertAndSave } = useFileConversion();
+
+  const [convertFileData, setConvertFileData] = useState<{
+    id: string;
+    filename: string;
+    mimeType: string;
+    extension: string;
+  } | null>(null);
+  const [shareModalState, setShareModalState] = useState<{
+    itemId: string;
+    itemName: string;
+  } | null>(null);
 
   const loadDashboardData = useCallback(async () => {
     if (!accessToken) return;
@@ -70,6 +85,62 @@ const DashboardPage: React.FC = () => {
       setOnUploadComplete(null);
     };
   }, [accessToken, setOnUploadComplete, loadDashboardData]);
+
+  const handleDownload = useCallback(
+    async (fileId: string) => {
+      if (!accessToken) return;
+      const file =
+        recentFiles.find((f) => f.id === fileId) || storeFavorites.find((f) => f.id === fileId);
+      if (!file) return;
+      try {
+        const { url } = await getFileContentUrl(accessToken, fileId);
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = file.filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(link.href), 100);
+      } catch (err) {
+        console.error('Ошибка скачивания:', err);
+        showToast('Не удалось скачать файл', 'error');
+      }
+    },
+    [accessToken, recentFiles, storeFavorites, showToast],
+  );
+
+  const handleConvert = useCallback(
+    (fileId: string) => {
+      const file =
+        recentFiles.find((f) => f.id === fileId) || storeFavorites.find((f) => f.id === fileId);
+      if (!file) return;
+      setConvertFileData({
+        id: file.id,
+        filename: file.filename,
+        mimeType: file.mime_type,
+        extension: file.extension,
+      });
+    },
+    [recentFiles, storeFavorites],
+  );
+
+  const handleConvertAndDownload = useCallback(
+    (format: string) => {
+      if (!convertFileData) return Promise.reject('No file');
+      return convertAndDownload(convertFileData.id, format, convertFileData.filename);
+    },
+    [convertFileData, convertAndDownload],
+  );
+
+  const handleConvertAndSave = useCallback(
+    (format: string) => {
+      if (!convertFileData) return Promise.reject('No file');
+      return convertAndSave(convertFileData.id, format, convertFileData.filename);
+    },
+    [convertFileData, convertAndSave],
+  );
 
   if (isStorageLoading || isLoading) {
     return (
@@ -178,6 +249,8 @@ const DashboardPage: React.FC = () => {
                   to={`/files/${file.id}`}
                   isFavorite={isFavorite(file.id)}
                   onToggleFavorite={handleToggleFavorite}
+                  onDownload={handleDownload}
+                  onConvert={handleConvert}
                 />
               ))}
             </div>
@@ -238,6 +311,12 @@ const DashboardPage: React.FC = () => {
                     to={`/files/${fav.id}`}
                     isFavorite={isFavorite(fav.id)}
                     onToggleFavorite={handleToggleFavorite}
+                    onDownload={handleDownload}
+                    onConvert={handleConvert}
+                    onShare={(id) => {
+                      const f = storeFavorites.find((d) => d.id === id);
+                      if (f) setShareModalState({ itemId: f.id, itemName: f.filename });
+                    }}
                   />
                 ))}
               </div>
@@ -255,6 +334,32 @@ const DashboardPage: React.FC = () => {
           </Card>
         </div>
       </div>
+
+      {convertFileData && (
+        <ConvertModal
+          key={convertFileData.id}
+          isOpen={true}
+          onClose={() => setConvertFileData(null)}
+          fileId={convertFileData.id}
+          fileName={convertFileData.filename}
+          mimeType={convertFileData.mimeType}
+          extension={convertFileData.extension}
+          onConvertAndDownload={handleConvertAndDownload}
+          onConvertAndSave={handleConvertAndSave}
+          isConverting={isConverting}
+        />
+      )}
+
+      {shareModalState && accessToken && (
+        <ShareLinkModal
+          isOpen={true}
+          onClose={() => setShareModalState(null)}
+          itemId={shareModalState.itemId}
+          itemName={shareModalState.itemName}
+          itemType="file"
+          accessToken={accessToken}
+        />
+      )}
     </div>
   );
 };
