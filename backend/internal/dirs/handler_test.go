@@ -18,6 +18,7 @@ type mockService struct {
 	getRootContentsFn func(string, ContentsPaginationParams) (*DirectoryContentsResponse, error)
 	getContentsFn     func(string, string, ContentsPaginationParams) (*DirectoryContentsResponse, error)
 	getByIDFn         func(string, string) (DirectoryResponse, error)
+	getPathFn         func(string, string) (DirectoryPathResponse, error)
 	createFn          func(string, CreateDirectoryRequest) (DirectoryResponse, error)
 	updateFn          func(string, string, UpdateDirectoryRequest) (DirectoryResponse, error)
 	softDeleteFn      func(string, string) error
@@ -94,6 +95,13 @@ func (m *mockService) Restore(_ context.Context, userID, dirID string) error {
 		return m.restoreFn(userID, dirID)
 	}
 	return nil
+}
+
+func (m *mockService) GetPath(_ context.Context, userID, dirID string) (DirectoryPathResponse, error) {
+	if m.getPathFn != nil {
+		return m.getPathFn(userID, dirID)
+	}
+	return DirectoryPathResponse{}, nil
 }
 
 func (m *mockService) PermanentDelete(_ context.Context, userID, dirID string) error {

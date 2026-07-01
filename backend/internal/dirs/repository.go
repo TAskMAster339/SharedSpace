@@ -376,6 +376,49 @@ func (r *Repository) CheckShareLinks(ctx context.Context, db dbTX, fileIDs, dirI
 	return fileLinks, dirLinks, rows.Err()
 }
 
+type ancestorPathRecord struct {
+	ID       string
+	Name     string
+	Type     string
+	IsShared bool
+}
+
+func (r *Repository) FindAncestorsPath(ctx context.Context, db dbTX, directoryID string) ([]ancestorPathRecord, error) {
+	rows, err := db.Query(ctx, `
+		WITH RECURSIVE dir_path AS (
+			SELECT d.id, d.name, d.parent_id, d.type,
+			       COALESCE(sd.id IS NOT NULL, false) AS is_shared,
+			       0 AS level
+			FROM directories d
+			LEFT JOIN shared_directories sd ON sd.directory_id = d.id
+			WHERE d.id = $1 AND d.deleted_at IS NULL
+			UNION ALL
+			SELECT d.id, d.name, d.parent_id, d.type,
+			       COALESCE(sd.id IS NOT NULL, false) AS is_shared,
+			       dp.level + 1
+			FROM directories d
+			INNER JOIN dir_path dp ON dp.parent_id = d.id
+			LEFT JOIN shared_directories sd ON sd.directory_id = d.id
+			WHERE d.deleted_at IS NULL
+		)
+		SELECT id, name, type, is_shared FROM dir_path ORDER BY level DESC
+	`, directoryID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var path []ancestorPathRecord
+	for rows.Next() {
+		var p ancestorPathRecord
+		if err := rows.Scan(&p.ID, &p.Name, &p.Type, &p.IsShared); err != nil {
+			return nil, err
+		}
+		path = append(path, p)
+	}
+	return path, rows.Err()
+}
+
 func (r *Repository) IncrementFilesCount(ctx context.Context, db dbTX, directoryID string, delta int) error {
 	_, err := db.Exec(ctx, `
 		WITH RECURSIVE ancestors AS (

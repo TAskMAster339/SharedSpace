@@ -22,6 +22,18 @@ export interface Directory {
   updated_at: string;
   has_share_links?: boolean;
   permissions?: Permissions;
+  shared_directory_id?: string | null;
+}
+
+export interface BreadcrumbItem {
+  id: string;
+  name: string;
+  type: 'root' | 'regular';
+  is_shared: boolean;
+}
+
+export interface DirectoryPathResponse {
+  path: BreadcrumbItem[];
 }
 
 export interface File {
@@ -85,6 +97,16 @@ export function getDirectoryContents(
 ): Promise<DirectoryContents> {
   const query = buildPaginationQuery(pagination);
   return apiRequest<DirectoryContents>(`/directories/${directoryId}/contents${query}`, {
+    method: 'GET',
+    token,
+  });
+}
+
+export function getDirectoryPath(
+  token: string,
+  directoryId: string,
+): Promise<DirectoryPathResponse> {
+  return apiRequest<DirectoryPathResponse>(`/directories/${directoryId}/path`, {
     method: 'GET',
     token,
   });

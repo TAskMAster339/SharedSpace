@@ -70,3 +70,29 @@ func (c *Checker) GetPermissions(ctx context.Context, userID, directoryID string
 	perms := GetPermissions(role)
 	return &perms, nil
 }
+
+func (c *Checker) GetSharedDirectoryID(ctx context.Context, userID, directoryID string) (*string, error) {
+	ownerID, sharedDirID, err := c.repo.GetDirectoryInfo(ctx, c.db, directoryID)
+	if err != nil {
+		return nil, err
+	}
+
+	if userID == ownerID {
+		return sharedDirID, nil
+	}
+
+	if sharedDirID == nil {
+		return nil, nil
+	}
+
+	role, err := c.repo.GetUserRole(ctx, c.db, userID, *sharedDirID)
+	if err != nil {
+		return nil, err
+	}
+
+	if role == "" {
+		return nil, nil
+	}
+
+	return sharedDirID, nil
+}

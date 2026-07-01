@@ -420,18 +420,63 @@ func (s *Service) loadContents(ctx context.Context, userID string, dir directory
 	}, nil
 }
 
+func (s *Service) GetPath(ctx context.Context, userID, dirID string) (DirectoryPathResponse, error) {
+	_, err := s.repo.FindByID(ctx, s.db, dirID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return DirectoryPathResponse{}, apperror.NotFound("директория не найдена")
+		}
+		return DirectoryPathResponse{}, apperror.WrapInternal("ошибка поиска директории", err)
+	}
+	ok, err := s.accessChecker.Can(ctx, userID, dirID, access.ActionView)
+	if err != nil {
+		return DirectoryPathResponse{}, err
+	}
+	if !ok {
+		return DirectoryPathResponse{}, apperror.Forbidden("доступ запрещён")
+	}
+
+	ancestors, err := s.repo.FindAncestorsPath(ctx, s.db, dirID)
+	if err != nil {
+		return DirectoryPathResponse{}, apperror.WrapInternal("ошибка построения пути", err)
+	}
+
+	// Find the breadcrumb root: either the topmost shared ancestor or the root dir
+	startIdx := 0
+	for i, a := range ancestors {
+		if a.IsShared {
+			startIdx = i
+			break
+		}
+	}
+
+	path := make([]BreadcrumbItem, 0, len(ancestors)-startIdx)
+	for _, a := range ancestors[startIdx:] {
+		path = append(path, BreadcrumbItem{
+			ID:       a.ID,
+			Name:     a.Name,
+			Type:     a.Type,
+			IsShared: a.IsShared,
+		})
+	}
+
+	return DirectoryPathResponse{Path: path}, nil
+}
+
 func (s *Service) toDirectoryResponse(ctx context.Context, userID string, d directoryRecord) DirectoryResponse {
 	perms, _ := s.accessChecker.GetPermissions(ctx, userID, d.ID)
+	sharedDirID, _ := s.accessChecker.GetSharedDirectoryID(ctx, userID, d.ID)
 	return DirectoryResponse{
-		ID:          d.ID,
-		Name:        d.Name,
-		OwnerID:     d.OwnerID,
-		ParentID:    d.ParentID,
-		Type:        d.Type,
-		FilesCount:  d.FilesCount,
-		CreatedAt:   d.CreatedAt,
-		UpdatedAt:   d.UpdatedAt,
-		Permissions: perms,
+		ID:                d.ID,
+		Name:              d.Name,
+		OwnerID:           d.OwnerID,
+		ParentID:          d.ParentID,
+		Type:              d.Type,
+		FilesCount:        d.FilesCount,
+		CreatedAt:         d.CreatedAt,
+		UpdatedAt:         d.UpdatedAt,
+		Permissions:       perms,
+		SharedDirectoryID: sharedDirID,
 	}
 }
 

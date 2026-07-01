@@ -9,6 +9,7 @@ import { useSharedDirectories } from '../../hooks/useSharedDirectories';
 import {
   getDirectoryContents,
   getDirectoryById,
+  getDirectoryPath,
   createDirectory,
   DirectoryContents,
   Directory,
@@ -98,61 +99,14 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
         setDirectoryInfo(info);
         setContents(data);
 
-        // Определяем, является ли директория общей
-        const isRoot = info.type === 'root';
-
-        // Строим breadcrumbs
-        const crumbs: BreadcrumbItem[] = [];
-
-        if (isRoot) {
-          crumbs.push({
-            id: info.id,
-            name: 'Личное хранилище',
-            isRoot: true,
-          });
-        } else {
-          // Строим полный путь
-          const path: BreadcrumbItem[] = [];
-          let currentId = dirId;
-          let currentInfo = info;
-
-          while (currentId) {
-            const currentIsShared = checkIsShared(currentId);
-            const currentIsRoot = currentInfo.type === 'root';
-
-            if (currentIsRoot) {
-              path.unshift({
-                id: currentInfo.id,
-                name: 'Личное хранилище',
-                isRoot: true,
-              });
-              break;
-            } else if (currentIsShared) {
-              path.unshift({
-                id: currentInfo.id,
-                name: currentInfo.name,
-                isShared: true,
-              });
-              // Для общей директории останавливаемся, не поднимаемся выше
-              break;
-            } else {
-              path.unshift({
-                id: currentInfo.id,
-                name: currentInfo.name,
-              });
-
-              // Поднимаемся к родителю
-              if (currentInfo.parent_id) {
-                currentId = currentInfo.parent_id;
-                currentInfo = await getDirectoryById(accessToken, currentId);
-              } else {
-                break;
-              }
-            }
-          }
-
-          crumbs.push(...path);
-        }
+        // Строим breadcrumbs через бэкенд
+        const { path: apiPath } = await getDirectoryPath(accessToken, dirId);
+        const crumbs: BreadcrumbItem[] = apiPath.map((item) => ({
+          id: item.id,
+          name: item.type === 'root' ? 'Личное хранилище' : item.name,
+          isRoot: item.type === 'root',
+          isShared: item.is_shared,
+        }));
 
         setBreadcrumbs(crumbs);
       } catch (err) {
@@ -162,7 +116,7 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
         setIsLoading(false);
       }
     },
-    [accessToken, checkIsShared, showToast],
+    [accessToken, showToast],
   );
 
   // Инициализация - открываем директорию, где находится файл

@@ -206,6 +206,10 @@ func (m *mockRepo) FindByNameAndParent(_ context.Context, _ dbTX, _, _, _ string
 	return m.findByNameResult, m.findByNameErr
 }
 
+func (m *mockRepo) FindAncestorsPath(_ context.Context, _ dbTX, _ string) ([]ancestorPathRecord, error) {
+	return nil, nil
+}
+
 func (m *mockRepo) Create(_ context.Context, _ dbTX, name, ownerID, parentID string) (directoryRecord, error) {
 	m.createName = name
 	m.createOwnerID = ownerID
@@ -324,6 +328,10 @@ func (m *mockAccessChecker) GetPermissions(ctx context.Context, userID, director
 		return m.getPermissionsFn(ctx, userID, directoryID)
 	}
 	return &access.Permissions{}, nil
+}
+
+func (m *mockAccessChecker) GetSharedDirectoryID(_ context.Context, _, _ string) (*string, error) {
+	return nil, nil
 }
 
 func (m *mockRepo) IncrementFilesCount(_ context.Context, _ dbTX, _ string, _ int) error {
