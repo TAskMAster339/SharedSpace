@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, AlertCircle, Download, Save } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { Button } from './Button';
@@ -31,6 +31,13 @@ export const ConvertModal: React.FC<ConvertModalProps> = ({
   const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
   const [actionType, setActionType] = useState<'download' | 'save'>('download');
 
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedFormat(null);
+      setActionType('download');
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const availableFormats = getAvailableConvertFormats(mimeType, extension);
@@ -57,7 +64,7 @@ export const ConvertModal: React.FC<ConvertModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-theme-secondary rounded-theme-xl max-w-md w-full shadow-theme-dropdown border border-theme max-h-[90vh] flex flex-col">
         {/* Шапка */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-theme shrink-0">

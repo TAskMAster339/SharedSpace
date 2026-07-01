@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { MoreVertical, Star, Trash2, Move, Share2 } from 'lucide-react';
+import { MoreVertical, Star, Trash2, Move, Share2, Download, Image } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
 interface ItemActionsMenuProps {
@@ -9,6 +9,8 @@ interface ItemActionsMenuProps {
   onDelete?: () => void;
   onMove?: () => void;
   onShare?: () => void;
+  onDownload?: () => void;
+  onConvert?: () => void;
   className?: string;
   iconSize?: number;
   openMenu?: boolean;
@@ -26,6 +28,8 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
   onDelete,
   onMove,
   onShare,
+  onDownload,
+  onConvert,
   className,
   iconSize = 18,
   openMenu,
@@ -105,9 +109,13 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
     };
   }, [isOpen, isMobile, onCloseMenu]);
 
-  if (!onToggleFavorite && !onDelete && !onMove && !onShare) return null;
+  if (!onToggleFavorite && !onDelete && !onMove && !onShare && !onDownload && !onConvert)
+    return null;
 
-  const close = () => setIsOpen(false);
+  const close = () => {
+    setIsOpen(false);
+    onCloseMenu?.();
+  };
 
   const handleSelect = (e: React.MouseEvent, action: () => void) => {
     e.preventDefault();
@@ -118,6 +126,31 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
 
   const menuItems = (
     <div>
+      {onDownload && (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={(e) => handleSelect(e, onDownload)}
+          className="group flex items-center gap-3 w-full px-4 py-3.5 text-base text-theme-secondary hover:bg-theme-hover transition-colors sm:px-3 sm:py-2 sm:text-sm"
+        >
+          <Download size={18} className="group-hover:text-brand transition-colors" />
+          Скачать файл
+        </button>
+      )}
+      {onConvert && (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={(e) => handleSelect(e, onConvert)}
+          className="group flex items-center gap-3 w-full px-4 py-3.5 text-base text-theme-secondary hover:bg-theme-hover transition-colors sm:px-3 sm:py-2 sm:text-sm"
+        >
+          <Image size={18} className="group-hover:text-purple-500 transition-colors" />
+          Конвертировать
+        </button>
+      )}
+      {(onDownload || onConvert) && (onShare || onMove || onToggleFavorite || onDelete) && (
+        <div className="border-t border-theme my-1" />
+      )}
       {onShare && (
         <button
           type="button"
