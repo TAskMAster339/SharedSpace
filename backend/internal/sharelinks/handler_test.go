@@ -81,6 +81,10 @@ func (m *mockService) ResolveDirectory(_ context.Context, token, password string
 	return DirectoryContentResponse{}, nil
 }
 
+func (m *mockService) ListPublicShareLinks(_ context.Context) ([]sitemapEntry, error) {
+	return nil, nil
+}
+
 type mockTokenParser struct {
 	parseFn func(string) (*auth.Claims, error)
 }

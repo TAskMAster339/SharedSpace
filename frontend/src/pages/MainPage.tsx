@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Folder, Users, Link2, Eye, RefreshCw } from 'lucide-react';
+import SEOHead from '../components/SEOHead';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { cn } from '../utils/cn';
@@ -72,6 +73,10 @@ const MainPage: React.FC = () => {
 
   return (
     <div>
+      <SEOHead
+        title="Облачное хранилище"
+        description="SharedSpace — бесплатное облачное хранилище для команд и личных файлов. Конвертация, просмотр PDF/фото/видео в браузере, общие папки."
+      />
       {/* Hero — на всю ширину экрана, заподлицо с шапкой, на полный экран */}
       <section className="relative left-1/2 right-1/2 -mx-[50vw] -mt-4 sm:-mt-6 w-screen min-h-[calc(100vh-4vh)] flex items-center overflow-hidden bg-brand-gradient">
         <div className="absolute inset-0 bg-starfield opacity-60" />

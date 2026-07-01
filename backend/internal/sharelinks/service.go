@@ -543,6 +543,10 @@ func (s *Service) ResolveDirectory(ctx context.Context, token, password string, 
 	}, nil
 }
 
+func (s *Service) ListPublicShareLinks(ctx context.Context) ([]sitemapEntry, error) {
+	return s.repo.ListPublicShareLinks(ctx, s.db)
+}
+
 func (s *Service) checkLinkAccess(link shareLinkRecord, password string, authenticated bool) error {
 	if link.AccessType == "authenticated" && !authenticated {
 		return apperror.Unauthorized("требуется авторизация")

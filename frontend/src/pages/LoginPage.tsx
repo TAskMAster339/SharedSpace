@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
+import SEOHead from '../components/SEOHead';
 import { useAuth } from '../hooks/useAuth';
 import { ApiError } from '../api/client';
 import { Button } from '../components/ui/Button';
@@ -59,6 +60,10 @@ const LoginPage: React.FC = () => {
 
   return (
     <div className="flex items-center justify-center min-h-[80vh] px-4">
+      <SEOHead
+        title="Вход"
+        description="Войдите в SharedSpace, чтобы получить доступ к вашим файлам и общим папкам."
+      />
       <Card className="w-full max-w-md">
         <h2 className="text-xl font-semibold text-theme-primary mb-4 text-center">Авторизация</h2>
         <form onSubmit={handleSubmit} className="flex flex-col gap-3" noValidate>

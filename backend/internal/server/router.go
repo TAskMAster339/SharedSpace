@@ -50,6 +50,9 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 		if shareLinksHandler != nil {
 			r.Get("/s/{token}", middleware.AppError(shareLinksHandler.Resolve))
 			r.Get("/sd/{token}", middleware.AppError(shareLinksHandler.ResolveDirectory))
+			r.Get("/og/share/{token}", middleware.AppError(shareLinksHandler.ServeOG))
+			r.Get("/og/share/dir/{token}", middleware.AppError(shareLinksHandler.ServeDirectoryOG))
+			r.Get("/sitemap.xml", middleware.AppError(shareLinksHandler.ServeSitemap))
 		}
 
 		r.Group(func(r chi.Router) {
