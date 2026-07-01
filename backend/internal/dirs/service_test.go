@@ -168,11 +168,18 @@ type mockRepo struct {
 	sharedDirsQuota    int
 	sharedDirsStatsErr error
 	incrementErr       error
-	decrementErr       error
 
-	shareLinksResult    map[string]bool
-	shareLinksDirResult map[string]bool
-	shareLinksErr       error
+	findSubdirsAfterCursorRes  []directoryRecord
+	findSubdirsAfterCursorHas  bool
+	findSubdirsAfterCursorNext string
+	findSubdirsAfterCursorErr  error
+	findFilesAfterCursorRes    []fileRecord
+	findFilesAfterCursorHas    bool
+	findFilesAfterCursorNext   string
+	findFilesAfterCursorErr    error
+	shareLinksResult           map[string]bool
+	shareLinksDirResult        map[string]bool
+	shareLinksErr              error
 }
 
 func (m *mockRepo) FindByID(_ context.Context, _ dbTX, _ string) (directoryRecord, error) {
@@ -197,6 +204,10 @@ func (m *mockRepo) FindFiles(_ context.Context, _ dbTX, _ string) ([]fileRecord,
 
 func (m *mockRepo) FindByNameAndParent(_ context.Context, _ dbTX, _, _, _ string) (directoryRecord, error) {
 	return m.findByNameResult, m.findByNameErr
+}
+
+func (m *mockRepo) FindAncestorsPath(_ context.Context, _ dbTX, _ string) ([]ancestorPathRecord, error) {
+	return nil, nil
 }
 
 func (m *mockRepo) Create(_ context.Context, _ dbTX, name, ownerID, parentID string) (directoryRecord, error) {
@@ -266,11 +277,16 @@ func (m *mockRepo) IncrementSharedDirsCount(_ context.Context, _ dbTX, _ string)
 	return m.incrementErr
 }
 
-func (m *mockRepo) DecrementSharedDirsCount(_ context.Context, _ dbTX, _ string) error {
-	if m.sharedDirsCount > 0 {
-		m.sharedDirsCount--
-	}
-	return m.decrementErr
+func (m *mockRepo) RecalcSharedDirsCount(_ context.Context, _ dbTX, _ string) error {
+	return nil
+}
+
+func (m *mockRepo) FindSubdirectoriesAfterCursor(_ context.Context, _ dbTX, _ string, _, _ string, _ int) ([]directoryRecord, bool, string, error) {
+	return m.findSubdirsAfterCursorRes, m.findSubdirsAfterCursorHas, m.findSubdirsAfterCursorNext, m.findSubdirsAfterCursorErr
+}
+
+func (m *mockRepo) FindFilesAfterCursor(_ context.Context, _ dbTX, _ string, _, _ string, _ int) ([]fileRecord, bool, string, error) {
+	return m.findFilesAfterCursorRes, m.findFilesAfterCursorHas, m.findFilesAfterCursorNext, m.findFilesAfterCursorErr
 }
 
 type mockStorage struct {
@@ -312,6 +328,10 @@ func (m *mockAccessChecker) GetPermissions(ctx context.Context, userID, director
 		return m.getPermissionsFn(ctx, userID, directoryID)
 	}
 	return &access.Permissions{}, nil
+}
+
+func (m *mockAccessChecker) GetSharedDirectoryID(_ context.Context, _, _ string) (*string, error) {
+	return nil, nil
 }
 
 func (m *mockRepo) IncrementFilesCount(_ context.Context, _ dbTX, _ string, _ int) error {
@@ -364,7 +384,7 @@ func TestServiceGetRootContents(t *testing.T) {
 		}
 		service, _ := newTestService(repo)
 
-		resp, err := service.GetRootContents(context.Background(), "user-1")
+		resp, err := service.GetRootContents(context.Background(), "user-1", ContentsPaginationParams{})
 		if err != nil {
 			t.Fatalf("GetRootContents returned error: %v", err)
 		}
@@ -383,7 +403,7 @@ func TestServiceGetRootContents(t *testing.T) {
 		repo := &mockRepo{findRootErr: pgx.ErrNoRows}
 		service, _ := newTestService(repo)
 
-		_, err := service.GetRootContents(context.Background(), "user-1")
+		_, err := service.GetRootContents(context.Background(), "user-1", ContentsPaginationParams{})
 		if err == nil {
 			t.Fatal("expected error")
 		}
@@ -405,7 +425,7 @@ func TestServiceGetContents(t *testing.T) {
 		}
 		service, _ := newTestService(repo)
 
-		resp, err := service.GetContents(context.Background(), "user-1", "dir-1")
+		resp, err := service.GetContents(context.Background(), "user-1", "dir-1", ContentsPaginationParams{})
 		if err != nil {
 			t.Fatalf("GetContents returned error: %v", err)
 		}
@@ -421,7 +441,7 @@ func TestServiceGetContents(t *testing.T) {
 		repo := &mockRepo{findByIDErr: pgx.ErrNoRows}
 		service, _ := newTestService(repo)
 
-		_, err := service.GetContents(context.Background(), "user-1", "missing")
+		_, err := service.GetContents(context.Background(), "user-1", "missing", ContentsPaginationParams{})
 		if err == nil {
 			t.Fatal("expected error")
 		}
@@ -439,7 +459,7 @@ func TestServiceGetContents(t *testing.T) {
 		service, _ := newTestService(repo)
 		service.accessChecker = &mockAccessChecker{canFn: func(_ context.Context, _, _ string, _ access.Action) (bool, error) { return false, nil }}
 
-		_, err := service.GetContents(context.Background(), "user-1", "dir-1")
+		_, err := service.GetContents(context.Background(), "user-1", "dir-1", ContentsPaginationParams{})
 		if err == nil {
 			t.Fatal("expected error")
 		}

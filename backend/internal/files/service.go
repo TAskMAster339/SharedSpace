@@ -177,17 +177,58 @@ func (s *Service) GetContentURL(ctx context.Context, userID, fileID string) (Fil
 	return FileContentResponse{URL: url}, nil
 }
 
-func (s *Service) GetRecent(ctx context.Context, userID string, limit int) (RecentFilesResponse, error) {
-	records, err := s.repo.FindRecentByUserID(ctx, s.db, userID, limit)
+func (s *Service) GetRecent(ctx context.Context, userID string, limit int, cursor string) (RecentFilesResponse, error) {
+	if limit == 0 {
+		records, err := s.repo.FindRecentByUserID(ctx, s.db, userID, 0)
+		if err != nil {
+			return RecentFilesResponse{}, apperror.WrapInternal("получение списка недавних файлов", err)
+		}
+		files := make([]FileMetadataResponse, 0, len(records))
+		for _, rec := range records {
+			files = append(files, toMetadataResponse(rec))
+		}
+		return RecentFilesResponse{Files: files}, nil
+	}
+
+	var records []fileRecord
+	var err error
+
+	if cursor == "" {
+		records, err = s.repo.FindRecentByUserID(ctx, s.db, userID, limit+1)
+	} else {
+		parts := strings.SplitN(cursor, "|", 2)
+		if len(parts) != 2 {
+			return RecentFilesResponse{}, apperror.Validation("некорректный курсор")
+		}
+		cursorTime, err := time.Parse(time.RFC3339Nano, parts[0])
+		if err != nil {
+			return RecentFilesResponse{}, apperror.Validation("некорректный курсор")
+		}
+		records, err = s.repo.FindRecentByUserIDAfterCursor(ctx, s.db, userID, cursorTime, parts[1], limit)
+	}
 	if err != nil {
 		return RecentFilesResponse{}, apperror.WrapInternal("получение списка недавних файлов", err)
+	}
+
+	hasMore := len(records) > limit
+	if hasMore {
+		records = records[:limit]
 	}
 
 	files := make([]FileMetadataResponse, 0, len(records))
 	for _, rec := range records {
 		files = append(files, toMetadataResponse(rec))
 	}
-	return RecentFilesResponse{Files: files}, nil
+
+	resp := RecentFilesResponse{Files: files}
+
+	if hasMore && len(records) > 0 {
+		last := records[len(records)-1]
+		nextCursor := last.UpdatedAt.UTC().Format(time.RFC3339Nano) + "|" + last.ID
+		resp.NextCursor = &nextCursor
+	}
+
+	return resp, nil
 }
 
 func (s *Service) Update(ctx context.Context, userID, fileID string, req UpdateFileRequest) (FileMetadataResponse, error) {

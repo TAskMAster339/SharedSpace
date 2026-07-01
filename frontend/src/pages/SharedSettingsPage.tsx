@@ -35,6 +35,7 @@ const SharedSettingsPage: React.FC = () => {
   const navigate = useNavigate();
   const accessToken = useAuthStore((s) => s.accessToken);
   const currentUser = useAuthStore((s) => s.user);
+  const refreshUser = useAuthStore((s) => s.refreshUser);
   const showToast = useToastStore((s) => s.showToast);
 
   const [sharedDirId, setSharedDirId] = useState<string | null>(null);
@@ -152,6 +153,7 @@ const SharedSettingsPage: React.FC = () => {
     setDeleteError('');
     try {
       await softDeleteDirectory(accessToken, directoryId);
+      refreshUser();
       showToast(`«${dirName}» перемещена в корзину`, 'success');
       navigate('/directories');
     } catch (err) {

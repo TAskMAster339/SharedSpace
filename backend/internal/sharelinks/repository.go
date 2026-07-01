@@ -2,6 +2,7 @@ package sharelinks
 
 import (
 	"context"
+	"fmt"
 )
 
 type Repository struct{}
@@ -118,6 +119,27 @@ func (r *Repository) Delete(ctx context.Context, db dbTX, id string) error {
 	return err
 }
 
+func (r *Repository) GetShareLinksStats(ctx context.Context, db dbTX, userID string) (count, quota int, err error) {
+	err = db.QueryRow(ctx, `
+		SELECT share_links_count, share_links_quota FROM users WHERE id = $1 FOR UPDATE
+	`, userID).Scan(&count, &quota)
+	return
+}
+
+func (r *Repository) IncrementShareLinksCount(ctx context.Context, db dbTX, userID string) error {
+	_, err := db.Exec(ctx, `
+		UPDATE users SET share_links_count = share_links_count + 1, updated_at = now() WHERE id = $1
+	`, userID)
+	return err
+}
+
+func (r *Repository) DecrementShareLinksCount(ctx context.Context, db dbTX, userID string) error {
+	_, err := db.Exec(ctx, `
+		UPDATE users SET share_links_count = GREATEST(share_links_count - 1, 0), updated_at = now() WHERE id = $1
+	`, userID)
+	return err
+}
+
 func (r *Repository) GetFileByID(ctx context.Context, db dbTX, fileID string) (fileRecord, error) {
 	var f fileRecord
 	err := db.QueryRow(ctx, `
@@ -162,6 +184,54 @@ func (r *Repository) GetDirectorySubdirs(ctx context.Context, db dbTX, dirID str
 	return subdirs, rows.Err()
 }
 
+func (r *Repository) GetDirectorySubdirsAfterCursor(ctx context.Context, db dbTX, dirID string, cursorName string, cursorID string, limit int) ([]dirSubdirRecord, bool, string, error) {
+	query := `
+		SELECT id, name FROM directories
+		WHERE parent_id = $1 AND deleted_at IS NULL AND type = 'regular'`
+	args := []any{dirID}
+
+	if cursorName != "" && cursorID != "" {
+		query += ` AND (name, id) > ($2, $3)`
+		args = append(args, cursorName, cursorID)
+	}
+
+	query += ` ORDER BY name ASC, id ASC`
+	paramIdx := len(args) + 1
+	query += fmt.Sprintf(` LIMIT $%d`, paramIdx)
+	args = append(args, limit+1)
+
+	rows, err := db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, false, "", err
+	}
+	defer rows.Close()
+
+	var subdirs []dirSubdirRecord
+	for rows.Next() {
+		var sd dirSubdirRecord
+		if err := rows.Scan(&sd.ID, &sd.Name); err != nil {
+			return nil, false, "", err
+		}
+		subdirs = append(subdirs, sd)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, false, "", err
+	}
+
+	hasMore := len(subdirs) > limit
+	if hasMore {
+		subdirs = subdirs[:limit]
+	}
+
+	nextCursor := ""
+	if hasMore && len(subdirs) > 0 {
+		last := subdirs[len(subdirs)-1]
+		nextCursor = fmt.Sprintf("%s|%s", last.Name, last.ID)
+	}
+
+	return subdirs, hasMore, nextCursor, nil
+}
+
 func (r *Repository) GetDirectoryFiles(ctx context.Context, db dbTX, dirID string) ([]dirFileRecord, error) {
 	rows, err := db.Query(ctx, `
 		SELECT id, filename, extension, mime_type, size, object_key, created_at
@@ -182,6 +252,80 @@ func (r *Repository) GetDirectoryFiles(ctx context.Context, db dbTX, dirID strin
 		files = append(files, f)
 	}
 	return files, rows.Err()
+}
+
+func (r *Repository) GetDirectoryFilesAfterCursor(ctx context.Context, db dbTX, dirID string, cursorFilename string, cursorID string, limit int) ([]dirFileRecord, bool, string, error) {
+	query := `
+		SELECT id, filename, extension, mime_type, size, object_key, created_at
+		FROM files WHERE directory_id = $1 AND deleted_at IS NULL`
+	args := []any{dirID}
+
+	if cursorFilename != "" && cursorID != "" {
+		query += ` AND (filename, id) > ($2, $3)`
+		args = append(args, cursorFilename, cursorID)
+	}
+
+	query += ` ORDER BY filename ASC, id ASC`
+	paramIdx := len(args) + 1
+	query += fmt.Sprintf(` LIMIT $%d`, paramIdx)
+	args = append(args, limit+1)
+
+	rows, err := db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, false, "", err
+	}
+	defer rows.Close()
+
+	var files []dirFileRecord
+	for rows.Next() {
+		var f dirFileRecord
+		if err := rows.Scan(&f.ID, &f.Filename, &f.Extension, &f.MimeType, &f.Size, &f.ObjectKey, &f.CreatedAt); err != nil {
+			return nil, false, "", err
+		}
+		files = append(files, f)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, false, "", err
+	}
+
+	hasMore := len(files) > limit
+	if hasMore {
+		files = files[:limit]
+	}
+
+	nextCursor := ""
+	if hasMore && len(files) > 0 {
+		last := files[len(files)-1]
+		nextCursor = fmt.Sprintf("%s|%s", last.Filename, last.ID)
+	}
+
+	return files, hasMore, nextCursor, nil
+}
+
+func (r *Repository) ListPublicShareLinks(ctx context.Context, db dbTX) ([]sitemapEntry, error) {
+	rows, err := db.Query(ctx, `
+		SELECT token,
+		       CASE WHEN directory_id IS NOT NULL THEN true ELSE false END AS is_directory,
+		       created_at
+		FROM share_links
+		WHERE access_type = 'public'
+		  AND (expires_at IS NULL OR expires_at > NOW())
+		ORDER BY created_at DESC
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries []sitemapEntry
+	for rows.Next() {
+		var e sitemapEntry
+		if err := rows.Scan(&e.Token, &e.IsDirectory, &e.CreatedAt); err != nil {
+			return nil, err
+		}
+		entries = append(entries, e)
+	}
+	return entries, rows.Err()
 }
 
 func (r *Repository) IsSubdirectory(ctx context.Context, db dbTX, parentID, childID string) (bool, error) {

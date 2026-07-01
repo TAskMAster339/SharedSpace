@@ -1,6 +1,8 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { Link2 } from 'lucide-react';
 import { StorageIndicator } from './ui/StorageIndicator';
+import { QuotaIndicator } from './ui/QuotaIndicator';
 import { cn } from '../utils/cn';
 import { useSidebarMenu, isSidebarItemActive } from '../hooks/useSidebarMenu';
 import { useDirectoryStore } from '../store/directoryStore';
@@ -13,7 +15,8 @@ export const MobileNavMenu: React.FC<MobileNavMenuProps> = ({ onNavigate }) => {
   const location = useLocation();
   const currentPath = location.pathname;
   const currentSection = useDirectoryStore((s) => s.currentSection);
-  const { menuItems, storageUsed, storageQuota, isLoading } = useSidebarMenu();
+  const { menuItems, storageUsed, storageQuota, shareLinksUsed, shareLinksQuota, isLoading } =
+    useSidebarMenu();
 
   return (
     <div className="absolute left-3 top-16 w-64 max-w-[80vw] bg-theme-secondary rounded-theme-xl shadow-theme-dropdown border border-theme py-2 z-40 md:hidden">
@@ -46,7 +49,16 @@ export const MobileNavMenu: React.FC<MobileNavMenuProps> = ({ onNavigate }) => {
             );
           })}
 
-          <div className="mt-2 pt-3 px-1 border-t border-theme">
+          <div className="mt-2 pt-3 px-1 border-t border-theme space-y-3">
+            <div className="group bg-theme-tertiary hover:bg-theme-hover rounded-theme-xl px-4 py-2.5 shadow-theme-card border border-theme/50 transition-colors">
+              <QuotaIndicator
+                fullWidth
+                icon={Link2}
+                label="Ссылки"
+                used={shareLinksUsed}
+                total={shareLinksQuota}
+              />
+            </div>
             <div className="group bg-theme-tertiary hover:bg-theme-hover rounded-theme-xl p-4 shadow-theme-card border border-theme/50 transition-colors">
               <StorageIndicator used={storageUsed} total={storageQuota} />
             </div>

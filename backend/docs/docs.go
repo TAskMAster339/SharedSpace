@@ -274,6 +274,32 @@ const docTemplate = `{
                     "directories"
                 ],
                 "summary": "Get root directory contents",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Max files per page",
+                        "name": "files_limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Files pagination cursor",
+                        "name": "files_cursor",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Max subdirectories per page",
+                        "name": "dirs_limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Dirs pagination cursor",
+                        "name": "dirs_cursor",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -490,6 +516,30 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Max files per page",
+                        "name": "files_limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Files pagination cursor",
+                        "name": "files_cursor",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Max subdirectories per page",
+                        "name": "dirs_limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Dirs pagination cursor",
+                        "name": "dirs_cursor",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -497,6 +547,57 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/internal_dirs.DirectoryContentsResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/directories/{id}/path": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "directories"
+                ],
+                "summary": "Get directory breadcrumb path",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Directory ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_dirs.DirectoryPathResponse"
                         }
                     },
                     "401": {
@@ -851,8 +952,14 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "Maximum number of favorites to return",
+                        "description": "Page size",
                         "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pagination cursor from previous response",
+                        "name": "cursor",
                         "in": "query"
                     }
                 ],
@@ -889,8 +996,14 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "Maximum number of files to return",
+                        "description": "Page size",
                         "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pagination cursor from previous response",
+                        "name": "cursor",
                         "in": "query"
                     }
                 ],
@@ -899,6 +1012,12 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/internal_files.RecentFilesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
                         }
                     },
                     "401": {
@@ -1550,14 +1669,25 @@ const docTemplate = `{
                     "sharing"
                 ],
                 "summary": "Get my invitations",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Max invitations per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pagination cursor",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/internal_sharing.InvitationResponse"
-                            }
+                            "$ref": "#/definitions/internal_sharing.InvitationsListResponse"
                         }
                     },
                     "401": {
@@ -1761,6 +1891,74 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/og/share/dir/{token}": {
+            "get": {
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "share-links"
+                ],
+                "summary": "OG meta tags for shared directory",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Share link token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "HTML page with OG meta tags",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/og/share/{token}": {
+            "get": {
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "share-links"
+                ],
+                "summary": "OG meta tags for shared file",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Share link token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "HTML page with OG meta tags",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/s/{token}": {
             "get": {
                 "produces": [
@@ -1840,6 +2038,30 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Subdirectory ID to navigate into",
                         "name": "dir",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit for subdirectories",
+                        "name": "dirs_limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Cursor for subdirectories pagination",
+                        "name": "dirs_cursor",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit for files",
+                        "name": "files_limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Cursor for files pagination",
+                        "name": "files_cursor",
                         "in": "query"
                     },
                     {
@@ -2398,6 +2620,25 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/sitemap.xml": {
+            "get": {
+                "produces": [
+                    "text/xml"
+                ],
+                "tags": [
+                    "share-links"
+                ],
+                "summary": "Sitemap XML",
+                "responses": {
+                    "200": {
+                        "description": "Sitemap XML",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/trash": {
             "get": {
                 "security": [
@@ -2412,6 +2653,32 @@ const docTemplate = `{
                     "trash"
                 ],
                 "summary": "Get trash list",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Max files per page",
+                        "name": "files_limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Files pagination cursor",
+                        "name": "files_cursor",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Max directories per page",
+                        "name": "dirs_limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Directories pagination cursor",
+                        "name": "dirs_cursor",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -2865,6 +3132,18 @@ const docTemplate = `{
                 "second_name": {
                     "type": "string"
                 },
+                "share_links_count": {
+                    "type": "integer"
+                },
+                "share_links_quota": {
+                    "type": "integer"
+                },
+                "shared_dirs_count": {
+                    "type": "integer"
+                },
+                "shared_dirs_quota": {
+                    "type": "integer"
+                },
                 "storage_quota": {
                     "type": "integer"
                 },
@@ -2872,6 +3151,23 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_dirs.BreadcrumbItem": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "is_shared": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "type": {
                     "type": "string"
                 }
             }
@@ -2905,10 +3201,27 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "next_dirs_cursor": {
+                    "type": "string"
+                },
+                "next_files_cursor": {
+                    "type": "string"
+                },
                 "subdirectories": {
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/internal_dirs.DirectoryResponse"
+                    }
+                }
+            }
+        },
+        "internal_dirs.DirectoryPathResponse": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_dirs.BreadcrumbItem"
                     }
                 }
             }
@@ -2939,6 +3252,9 @@ const docTemplate = `{
                 },
                 "permissions": {
                     "$ref": "#/definitions/sharedspace_internal_access.Permissions"
+                },
+                "shared_directory_id": {
+                    "type": "string"
                 },
                 "type": {
                     "type": "string"
@@ -3031,6 +3347,9 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/internal_favorites.FavoriteFileResponse"
                     }
+                },
+                "next_cursor": {
+                    "type": "string"
                 }
             }
         },
@@ -3130,6 +3449,9 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/internal_files.FileMetadataResponse"
                     }
+                },
+                "next_cursor": {
+                    "type": "string"
                 }
             }
         },
@@ -3217,6 +3539,12 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                },
+                "next_dirs_cursor": {
+                    "type": "string"
+                },
+                "next_files_cursor": {
                     "type": "string"
                 },
                 "owner_username": {
@@ -3397,6 +3725,20 @@ const docTemplate = `{
                 "InvitationRevoked"
             ]
         },
+        "internal_sharing.InvitationsListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_sharing.InvitationResponse"
+                    }
+                },
+                "next_cursor": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_sharing.InviteRequest": {
             "type": "object",
             "properties": {
@@ -3557,6 +3899,12 @@ const docTemplate = `{
                         "$ref": "#/definitions/internal_trash.TrashItem"
                     }
                 },
+                "next_dirs_cursor": {
+                    "type": "string"
+                },
+                "next_files_cursor": {
+                    "type": "string"
+                },
                 "total_size": {
                     "type": "integer"
                 }
@@ -3629,6 +3977,12 @@ const docTemplate = `{
                 },
                 "second_name": {
                     "type": "string"
+                },
+                "share_links_count": {
+                    "type": "integer"
+                },
+                "share_links_quota": {
+                    "type": "integer"
                 },
                 "shared_dirs_count": {
                     "type": "integer"

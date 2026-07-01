@@ -34,6 +34,7 @@ export interface AuthState {
   }) => Promise<void>;
   logout: () => Promise<void>;
   hydrate: () => Promise<void>;
+  refreshUser: () => Promise<void>;
   updateProfile: (data: {
     email?: string;
     username?: string;
@@ -80,6 +81,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ user: null, accessToken: null, isAuthenticated: false });
     useDirectoryStore.getState().reset();
     useFavoritesStore.getState().reset();
+  },
+
+  refreshUser: async () => {
+    const { accessToken } = get();
+    if (!accessToken) return;
+    try {
+      const user = await getMe(accessToken);
+      set({ user });
+    } catch {
+      return;
+    }
   },
 
   hydrate: async () => {

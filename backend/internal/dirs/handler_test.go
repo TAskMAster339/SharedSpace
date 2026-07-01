@@ -15,9 +15,10 @@ import (
 )
 
 type mockService struct {
-	getRootContentsFn func(string) (DirectoryContentsResponse, error)
-	getContentsFn     func(string, string) (DirectoryContentsResponse, error)
+	getRootContentsFn func(string, ContentsPaginationParams) (*DirectoryContentsResponse, error)
+	getContentsFn     func(string, string, ContentsPaginationParams) (*DirectoryContentsResponse, error)
 	getByIDFn         func(string, string) (DirectoryResponse, error)
+	getPathFn         func(string, string) (DirectoryPathResponse, error)
 	createFn          func(string, CreateDirectoryRequest) (DirectoryResponse, error)
 	updateFn          func(string, string, UpdateDirectoryRequest) (DirectoryResponse, error)
 	softDeleteFn      func(string, string) error
@@ -37,20 +38,20 @@ type mockService struct {
 	permanentDeleteDirID string
 }
 
-func (m *mockService) GetRootContents(_ context.Context, userID string) (DirectoryContentsResponse, error) {
+func (m *mockService) GetRootContents(_ context.Context, userID string, params ContentsPaginationParams) (*DirectoryContentsResponse, error) {
 	m.getRootUserID = userID
 	if m.getRootContentsFn != nil {
-		return m.getRootContentsFn(userID)
+		return m.getRootContentsFn(userID, params)
 	}
-	return DirectoryContentsResponse{}, nil
+	return &DirectoryContentsResponse{}, nil
 }
 
-func (m *mockService) GetContents(_ context.Context, userID, dirID string) (DirectoryContentsResponse, error) {
+func (m *mockService) GetContents(_ context.Context, userID, dirID string, params ContentsPaginationParams) (*DirectoryContentsResponse, error) {
 	m.getContentsID = dirID
 	if m.getContentsFn != nil {
-		return m.getContentsFn(userID, dirID)
+		return m.getContentsFn(userID, dirID, params)
 	}
-	return DirectoryContentsResponse{}, nil
+	return &DirectoryContentsResponse{}, nil
 }
 
 func (m *mockService) GetByID(_ context.Context, userID, dirID string) (DirectoryResponse, error) {
@@ -96,6 +97,13 @@ func (m *mockService) Restore(_ context.Context, userID, dirID string) error {
 	return nil
 }
 
+func (m *mockService) GetPath(_ context.Context, userID, dirID string) (DirectoryPathResponse, error) {
+	if m.getPathFn != nil {
+		return m.getPathFn(userID, dirID)
+	}
+	return DirectoryPathResponse{}, nil
+}
+
 func (m *mockService) PermanentDelete(_ context.Context, userID, dirID string) error {
 	m.permanentDeleteDirID = dirID
 	if m.permanentDeleteFn != nil {
@@ -122,8 +130,8 @@ func withChiParams(ctx context.Context, params map[string]string) context.Contex
 func TestHandlerGetRootContents(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		svc := &mockService{
-			getRootContentsFn: func(userID string) (DirectoryContentsResponse, error) {
-				return DirectoryContentsResponse{ID: "root-1", Name: "ivan"}, nil
+			getRootContentsFn: func(userID string, params ContentsPaginationParams) (*DirectoryContentsResponse, error) {
+				return &DirectoryContentsResponse{ID: "root-1", Name: "ivan"}, nil
 			},
 		}
 		handler := NewHandler(svc)
@@ -167,8 +175,8 @@ func TestHandlerGetRootContents(t *testing.T) {
 func TestHandlerGetContents(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		svc := &mockService{
-			getContentsFn: func(userID, dirID string) (DirectoryContentsResponse, error) {
-				return DirectoryContentsResponse{ID: dirID, Name: "photos"}, nil
+			getContentsFn: func(userID, dirID string, params ContentsPaginationParams) (*DirectoryContentsResponse, error) {
+				return &DirectoryContentsResponse{ID: dirID, Name: "photos"}, nil
 			},
 		}
 		handler := NewHandler(svc)

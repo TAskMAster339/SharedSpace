@@ -42,33 +42,141 @@ func NewService(pool *pgxpool.Pool, repo RepositoryInterface, sharingRepo Sharin
 	}
 }
 
-func (s *Service) GetRootContents(ctx context.Context, userID string) (DirectoryContentsResponse, error) {
+func (s *Service) GetRootContents(ctx context.Context, userID string, params ContentsPaginationParams) (*DirectoryContentsResponse, error) {
 	root, err := s.repo.FindRootByOwner(ctx, s.db, userID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return DirectoryContentsResponse{}, apperror.NotFound("корневая директория не найдена")
+			return nil, apperror.NotFound("корневая директория не найдена")
 		}
-		return DirectoryContentsResponse{}, apperror.WrapInternal("ошибка поиска корневой директории", err)
+		return nil, apperror.WrapInternal("ошибка поиска корневой директории", err)
 	}
-	return s.loadContents(ctx, userID, root)
+	return s.loadContentsPaginated(ctx, userID, root, params)
 }
 
-func (s *Service) GetContents(ctx context.Context, userID, dirID string) (DirectoryContentsResponse, error) {
+func (s *Service) GetContents(ctx context.Context, userID, dirID string, params ContentsPaginationParams) (*DirectoryContentsResponse, error) {
 	dir, err := s.repo.FindByID(ctx, s.db, dirID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return DirectoryContentsResponse{}, apperror.NotFound("директория не найдена")
+			return nil, apperror.NotFound("директория не найдена")
 		}
-		return DirectoryContentsResponse{}, apperror.WrapInternal("ошибка поиска директории", err)
+		return nil, apperror.WrapInternal("ошибка поиска директории", err)
 	}
 	ok, err := s.accessChecker.Can(ctx, userID, dirID, access.ActionView)
 	if err != nil {
-		return DirectoryContentsResponse{}, err
+		return nil, err
 	}
 	if !ok {
-		return DirectoryContentsResponse{}, apperror.Forbidden("доступ запрещён")
+		return nil, apperror.Forbidden("доступ запрещён")
 	}
-	return s.loadContents(ctx, userID, dir)
+	return s.loadContentsPaginated(ctx, userID, dir, params)
+}
+
+func (s *Service) loadContentsPaginated(ctx context.Context, userID string, dir directoryRecord, params ContentsPaginationParams) (*DirectoryContentsResponse, error) {
+	dirsLimit := params.DirsLimit
+	filesLimit := params.FilesLimit
+
+	if dirsLimit == 0 && filesLimit == 0 {
+		resp, err := s.loadContents(ctx, userID, dir)
+		if err != nil {
+			return nil, err
+		}
+		return &resp, nil
+	}
+
+	if dirsLimit == 0 {
+		dirsLimit = 20
+	}
+	if filesLimit == 0 {
+		filesLimit = 20
+	}
+
+	var subdirs []directoryRecord
+	var nextDirsCursor string
+	var dirsHasMore bool
+	var err error
+
+	if params.DirsCursor != "" {
+		cursorParts := strings.SplitN(params.DirsCursor, "|", 2)
+		if len(cursorParts) != 2 {
+			return nil, apperror.Validation("некорректный курсор для директорий")
+		}
+		subdirs, dirsHasMore, nextDirsCursor, err = s.repo.FindSubdirectoriesAfterCursor(ctx, s.db, dir.ID, cursorParts[0], cursorParts[1], dirsLimit)
+	} else {
+		subdirs, dirsHasMore, nextDirsCursor, err = s.repo.FindSubdirectoriesAfterCursor(ctx, s.db, dir.ID, "", "", dirsLimit)
+	}
+	if err != nil {
+		return nil, apperror.WrapInternal("ошибка поиска поддиректорий", err)
+	}
+
+	var files []fileRecord
+	var nextFilesCursor string
+	var filesHasMore bool
+
+	if params.FilesCursor != "" {
+		cursorParts := strings.SplitN(params.FilesCursor, "|", 2)
+		if len(cursorParts) != 2 {
+			return nil, apperror.Validation("некорректный курсор для файлов")
+		}
+		files, filesHasMore, nextFilesCursor, err = s.repo.FindFilesAfterCursor(ctx, s.db, dir.ID, cursorParts[0], cursorParts[1], filesLimit)
+	} else {
+		files, filesHasMore, nextFilesCursor, err = s.repo.FindFilesAfterCursor(ctx, s.db, dir.ID, "", "", filesLimit)
+	}
+	if err != nil {
+		return nil, apperror.WrapInternal("ошибка поиска файлов", err)
+	}
+
+	subdirResponses := make([]DirectoryResponse, 0, len(subdirs))
+	for _, sd := range subdirs {
+		subdirResponses = append(subdirResponses, s.toDirectoryResponse(ctx, userID, sd))
+	}
+
+	fileItems := make([]FileItem, 0, len(files))
+	for _, f := range files {
+		fileItems = append(fileItems, FileItem{
+			ID:        f.ID,
+			Filename:  f.Filename,
+			Extension: f.Extension,
+			MimeType:  f.MimeType,
+			Size:      f.Size,
+			CreatedAt: f.CreatedAt,
+			UpdatedAt: f.UpdatedAt,
+		})
+	}
+
+	dirIDs := make([]string, len(subdirs))
+	for i, sd := range subdirs {
+		dirIDs[i] = sd.ID
+	}
+	fileIDs := make([]string, len(files))
+	for i, f := range files {
+		fileIDs[i] = f.ID
+	}
+
+	fileLinks, dirLinks, err := s.repo.CheckShareLinks(ctx, s.db, fileIDs, dirIDs)
+	if err == nil {
+		for i := range subdirResponses {
+			subdirResponses[i].HasShareLinks = dirLinks[subdirResponses[i].ID]
+		}
+		for i := range fileItems {
+			fileItems[i].HasShareLinks = fileLinks[fileItems[i].ID]
+		}
+	}
+
+	resp := &DirectoryContentsResponse{
+		ID:             dir.ID,
+		Name:           dir.Name,
+		Subdirectories: subdirResponses,
+		Files:          fileItems,
+	}
+
+	if dirsHasMore && nextDirsCursor != "" {
+		resp.NextDirsCursor = &nextDirsCursor
+	}
+	if filesHasMore && nextFilesCursor != "" {
+		resp.NextFilesCursor = &nextFilesCursor
+	}
+
+	return resp, nil
 }
 
 func (s *Service) GetByID(ctx context.Context, userID, dirID string) (DirectoryResponse, error) {
@@ -141,6 +249,9 @@ func (s *Service) Create(ctx context.Context, userID string, req CreateDirectory
 	}
 
 	if req.Shared {
+		if err := s.repo.RecalcSharedDirsCount(ctx, tx, userID); err != nil {
+			return DirectoryResponse{}, apperror.WrapInternal("ошибка обновления счётчика", err)
+		}
 		count, quota, err := s.repo.GetSharedDirsStats(ctx, tx, userID)
 		if err != nil {
 			return DirectoryResponse{}, apperror.WrapInternal("ошибка получения статистики общих директорий", err)
@@ -309,18 +420,63 @@ func (s *Service) loadContents(ctx context.Context, userID string, dir directory
 	}, nil
 }
 
+func (s *Service) GetPath(ctx context.Context, userID, dirID string) (DirectoryPathResponse, error) {
+	_, err := s.repo.FindByID(ctx, s.db, dirID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return DirectoryPathResponse{}, apperror.NotFound("директория не найдена")
+		}
+		return DirectoryPathResponse{}, apperror.WrapInternal("ошибка поиска директории", err)
+	}
+	ok, err := s.accessChecker.Can(ctx, userID, dirID, access.ActionView)
+	if err != nil {
+		return DirectoryPathResponse{}, err
+	}
+	if !ok {
+		return DirectoryPathResponse{}, apperror.Forbidden("доступ запрещён")
+	}
+
+	ancestors, err := s.repo.FindAncestorsPath(ctx, s.db, dirID)
+	if err != nil {
+		return DirectoryPathResponse{}, apperror.WrapInternal("ошибка построения пути", err)
+	}
+
+	// Find the breadcrumb root: either the topmost shared ancestor or the root dir
+	startIdx := 0
+	for i, a := range ancestors {
+		if a.IsShared {
+			startIdx = i
+			break
+		}
+	}
+
+	path := make([]BreadcrumbItem, 0, len(ancestors)-startIdx)
+	for _, a := range ancestors[startIdx:] {
+		path = append(path, BreadcrumbItem{
+			ID:       a.ID,
+			Name:     a.Name,
+			Type:     a.Type,
+			IsShared: a.IsShared,
+		})
+	}
+
+	return DirectoryPathResponse{Path: path}, nil
+}
+
 func (s *Service) toDirectoryResponse(ctx context.Context, userID string, d directoryRecord) DirectoryResponse {
 	perms, _ := s.accessChecker.GetPermissions(ctx, userID, d.ID)
+	sharedDirID, _ := s.accessChecker.GetSharedDirectoryID(ctx, userID, d.ID)
 	return DirectoryResponse{
-		ID:          d.ID,
-		Name:        d.Name,
-		OwnerID:     d.OwnerID,
-		ParentID:    d.ParentID,
-		Type:        d.Type,
-		FilesCount:  d.FilesCount,
-		CreatedAt:   d.CreatedAt,
-		UpdatedAt:   d.UpdatedAt,
-		Permissions: perms,
+		ID:                d.ID,
+		Name:              d.Name,
+		OwnerID:           d.OwnerID,
+		ParentID:          d.ParentID,
+		Type:              d.Type,
+		FilesCount:        d.FilesCount,
+		CreatedAt:         d.CreatedAt,
+		UpdatedAt:         d.UpdatedAt,
+		Permissions:       perms,
+		SharedDirectoryID: sharedDirID,
 	}
 }
 
@@ -379,6 +535,10 @@ func (s *Service) SoftDelete(ctx context.Context, userID, dirID string) error {
 		if err := s.repo.IncrementFilesCount(ctx, tx, *dir.ParentID, -len(aliveFiles)); err != nil {
 			return apperror.WrapInternal("обновление счётчика файлов", err)
 		}
+	}
+
+	if err := s.repo.RecalcSharedDirsCount(ctx, tx, dir.OwnerID); err != nil {
+		return apperror.WrapInternal("обновление счётчика общих директорий", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -446,6 +606,10 @@ func (s *Service) Restore(ctx context.Context, userID, dirID string) error {
 		if err := s.repo.IncrementFilesCount(ctx, tx, *dir.ParentID, len(restoredFiles)); err != nil {
 			return apperror.WrapInternal("обновление счётчика файлов", err)
 		}
+	}
+
+	if err := s.repo.RecalcSharedDirsCount(ctx, tx, dir.OwnerID); err != nil {
+		return apperror.WrapInternal("обновление счётчика общих директорий", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {

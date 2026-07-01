@@ -5,6 +5,8 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -119,9 +121,33 @@ func (s *Service) createLink(ctx context.Context, userID string, fileID, dirID *
 		PasswordHash: passwordHash,
 	}
 
-	saved, err := s.repo.Create(ctx, s.db, record)
+	tx, err := s.beginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return ShareLinkResponse{}, apperror.WrapInternal("начало транзакции", err)
+	}
+	defer tx.Rollback(ctx)
+
+	count, quota, err := s.repo.GetShareLinksStats(ctx, tx, userID)
+	if err != nil {
+		return ShareLinkResponse{}, apperror.WrapInternal("получение статистики ссылок", err)
+	}
+	if count >= quota {
+		return ShareLinkResponse{}, apperror.Validation(
+			fmt.Sprintf("достигнут лимит ссылок (%d из %d)", count, quota),
+		)
+	}
+
+	saved, err := s.repo.Create(ctx, tx, record)
 	if err != nil {
 		return ShareLinkResponse{}, apperror.WrapInternal("создание ссылки", err)
+	}
+
+	if err := s.repo.IncrementShareLinksCount(ctx, tx, userID); err != nil {
+		return ShareLinkResponse{}, apperror.WrapInternal("обновление счётчика ссылок", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return ShareLinkResponse{}, apperror.WrapInternal("сохранение ссылки", err)
 	}
 
 	return toResponse(saved), nil
@@ -296,7 +322,21 @@ func (s *Service) Delete(ctx context.Context, userID, linkID string) error {
 		}
 	}
 
-	if err := s.repo.Delete(ctx, s.db, linkID); err != nil {
+	tx, err := s.beginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return apperror.WrapInternal("начало транзакции", err)
+	}
+	defer tx.Rollback(ctx)
+
+	if err := s.repo.Delete(ctx, tx, linkID); err != nil {
+		return apperror.WrapInternal("удаление ссылки", err)
+	}
+
+	if err := s.repo.DecrementShareLinksCount(ctx, tx, link.CreatedBy); err != nil {
+		return apperror.WrapInternal("обновление счётчика ссылок", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
 		return apperror.WrapInternal("удаление ссылки", err)
 	}
 	return nil
@@ -349,7 +389,7 @@ func (s *Service) Resolve(ctx context.Context, token, password string, authentic
 	}, nil
 }
 
-func (s *Service) ResolveDirectory(ctx context.Context, token, password string, authenticated bool, subDirID string) (DirectoryContentResponse, error) {
+func (s *Service) ResolveDirectory(ctx context.Context, token, password string, authenticated bool, params ResolveDirectoryParams) (DirectoryContentResponse, error) {
 	link, err := s.repo.FindByToken(ctx, s.db, token)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -367,15 +407,15 @@ func (s *Service) ResolveDirectory(ctx context.Context, token, password string, 
 	}
 
 	targetDirID := *link.DirectoryID
-	if subDirID != "" {
-		isSub, err := s.repo.IsSubdirectory(ctx, s.db, *link.DirectoryID, subDirID)
+	if params.SubDirID != "" {
+		isSub, err := s.repo.IsSubdirectory(ctx, s.db, *link.DirectoryID, params.SubDirID)
 		if err != nil {
 			return DirectoryContentResponse{}, apperror.WrapInternal("проверка поддиректории", err)
 		}
 		if !isSub {
 			return DirectoryContentResponse{}, apperror.Forbidden("доступ к поддиректории запрещён")
 		}
-		targetDirID = subDirID
+		targetDirID = params.SubDirID
 	}
 
 	dir, err := s.repo.GetDirectoryByID(ctx, s.db, targetDirID)
@@ -391,49 +431,120 @@ func (s *Service) ResolveDirectory(ctx context.Context, token, password string, 
 		username = ""
 	}
 
-	subdirs, err := s.repo.GetDirectorySubdirs(ctx, s.db, targetDirID)
-	if err != nil {
-		return DirectoryContentResponse{}, apperror.WrapInternal("поиск поддиректорий", err)
+	dirsLimit := params.DirsLimit
+	filesLimit := params.FilesLimit
+
+	if dirsLimit == 0 && filesLimit == 0 {
+		dirsLimit = 100
+		filesLimit = 100
+	}
+	if dirsLimit == 0 {
+		dirsLimit = 100
+	}
+	if filesLimit == 0 {
+		filesLimit = 100
 	}
 
-	files, err := s.repo.GetDirectoryFiles(ctx, s.db, targetDirID)
-	if err != nil {
-		return DirectoryContentResponse{}, apperror.WrapInternal("поиск файлов", err)
-	}
+	var subdirItems []DirectorySubdir
+	var nextDirsCursor string
 
-	fileItems := make([]DirectoryFileItem, 0, len(files))
-	for _, f := range files {
-		url, err := s.storage.PresignedGetURL(ctx, f.ObjectKey, 24*time.Hour)
-		if err != nil {
-			continue
+	if params.DirsCursor != "" {
+		cursorParts := strings.SplitN(params.DirsCursor, "|", 2)
+		if len(cursorParts) != 2 {
+			return DirectoryContentResponse{}, apperror.Validation("некорректный курсор для директорий")
 		}
-		fileItems = append(fileItems, DirectoryFileItem{
-			ID:        f.ID,
-			Filename:  f.Filename,
-			Extension: f.Extension,
-			MimeType:  f.MimeType,
-			Size:      f.Size,
-			URL:       url,
-			CreatedAt: f.CreatedAt,
-		})
+		var subdirs []dirSubdirRecord
+		var dirsHasMore bool
+		subdirs, dirsHasMore, nextDirsCursor, err = s.repo.GetDirectorySubdirsAfterCursor(ctx, s.db, targetDirID, cursorParts[0], cursorParts[1], dirsLimit)
+		if err != nil {
+			return DirectoryContentResponse{}, apperror.WrapInternal("поиск поддиректорий", err)
+		}
+		_ = dirsHasMore
+		subdirItems = make([]DirectorySubdir, 0, len(subdirs))
+		for _, sd := range subdirs {
+			subdirItems = append(subdirItems, DirectorySubdir{ID: sd.ID, Name: sd.Name})
+		}
+	} else {
+		var subdirs []dirSubdirRecord
+		var dirsHasMore bool
+		var dirsNextCursor string
+		subdirs, dirsHasMore, dirsNextCursor, err = s.repo.GetDirectorySubdirsAfterCursor(ctx, s.db, targetDirID, "", "", dirsLimit)
+		if err != nil {
+			return DirectoryContentResponse{}, apperror.WrapInternal("поиск поддиректорий", err)
+		}
+		subdirItems = make([]DirectorySubdir, 0, len(subdirs))
+		for _, sd := range subdirs {
+			subdirItems = append(subdirItems, DirectorySubdir{ID: sd.ID, Name: sd.Name})
+		}
+		if dirsHasMore {
+			nextDirsCursor = dirsNextCursor
+		}
 	}
 
-	subdirItems := make([]DirectorySubdir, 0, len(subdirs))
-	for _, sd := range subdirs {
-		subdirItems = append(subdirItems, DirectorySubdir{
-			ID:   sd.ID,
-			Name: sd.Name,
-		})
+	var fileItems []DirectoryFileItem
+	var nextFilesCursor string
+
+	if params.FilesCursor != "" {
+		cursorParts := strings.SplitN(params.FilesCursor, "|", 2)
+		if len(cursorParts) != 2 {
+			return DirectoryContentResponse{}, apperror.Validation("некорректный курсор для файлов")
+		}
+		var files []dirFileRecord
+		var filesHasMore bool
+		files, filesHasMore, nextFilesCursor, err = s.repo.GetDirectoryFilesAfterCursor(ctx, s.db, targetDirID, cursorParts[0], cursorParts[1], filesLimit)
+		if err != nil {
+			return DirectoryContentResponse{}, apperror.WrapInternal("поиск файлов", err)
+		}
+		_ = filesHasMore
+		fileItems = make([]DirectoryFileItem, 0, len(files))
+		for _, f := range files {
+			url, urlErr := s.storage.PresignedGetURL(ctx, f.ObjectKey, 24*time.Hour)
+			if urlErr != nil {
+				continue
+			}
+			fileItems = append(fileItems, DirectoryFileItem{
+				ID: f.ID, Filename: f.Filename, Extension: f.Extension,
+				MimeType: f.MimeType, Size: f.Size, URL: url, CreatedAt: f.CreatedAt,
+			})
+		}
+	} else {
+		var files []dirFileRecord
+		var filesHasMore bool
+		var filesNextCursor string
+		files, filesHasMore, filesNextCursor, err = s.repo.GetDirectoryFilesAfterCursor(ctx, s.db, targetDirID, "", "", filesLimit)
+		if err != nil {
+			return DirectoryContentResponse{}, apperror.WrapInternal("поиск файлов", err)
+		}
+		fileItems = make([]DirectoryFileItem, 0, len(files))
+		for _, f := range files {
+			url, urlErr := s.storage.PresignedGetURL(ctx, f.ObjectKey, 24*time.Hour)
+			if urlErr != nil {
+				continue
+			}
+			fileItems = append(fileItems, DirectoryFileItem{
+				ID: f.ID, Filename: f.Filename, Extension: f.Extension,
+				MimeType: f.MimeType, Size: f.Size, URL: url, CreatedAt: f.CreatedAt,
+			})
+		}
+		if filesHasMore {
+			nextFilesCursor = filesNextCursor
+		}
 	}
 
 	return DirectoryContentResponse{
-		ID:             dir.ID,
-		Name:           dir.Name,
-		Token:          link.Token,
-		Subdirectories: subdirItems,
-		Files:          fileItems,
-		OwnerUsername:  username,
+		ID:              dir.ID,
+		Name:            dir.Name,
+		Token:           link.Token,
+		Subdirectories:  subdirItems,
+		Files:           fileItems,
+		OwnerUsername:   username,
+		NextDirsCursor:  nextDirsCursor,
+		NextFilesCursor: nextFilesCursor,
 	}, nil
+}
+
+func (s *Service) ListPublicShareLinks(ctx context.Context) ([]sitemapEntry, error) {
+	return s.repo.ListPublicShareLinks(ctx, s.db)
 }
 
 func (s *Service) checkLinkAccess(link shareLinkRecord, password string, authenticated bool) error {

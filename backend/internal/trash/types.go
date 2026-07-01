@@ -13,13 +13,22 @@ type TrashItem struct {
 }
 
 type TrashListResponse struct {
-	Items     []TrashItem `json:"items"`
-	TotalSize int64       `json:"total_size"`
-	Count     int         `json:"count"`
+	Items           []TrashItem `json:"items"`
+	TotalSize       int64       `json:"total_size"`
+	Count           int         `json:"count"`
+	NextFilesCursor *string     `json:"next_files_cursor,omitempty"`
+	NextDirsCursor  *string     `json:"next_dirs_cursor,omitempty"`
 }
 
 type ClearTrashRequest struct {
 	ItemIDs []string `json:"item_ids"`
+}
+
+type TrashPaginationParams struct {
+	FilesLimit  int
+	FilesCursor string
+	DirsLimit   int
+	DirsCursor  string
 }
 
 type deletedDirectoryRecord struct {

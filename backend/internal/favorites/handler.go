@@ -2,6 +2,7 @@ package favorites
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -81,12 +82,15 @@ func (h *Handler) Remove(w http.ResponseWriter, r *http.Request) error {
 	return json.NewEncoder(w).Encode(map[string]string{"message": "файл удалён из избранного"})
 }
 
-// List returns all favorited files for the authenticated user.
+// List returns favorited files for the authenticated user.
+// Supports optional cursor-based pagination via ?limit=N&cursor=<token>.
+// Without limit/cursor, returns all favorites (backward compatible).
 // @Summary List favorited files
 // @Tags files
 // @Security BearerAuth
 // @Produce json
-// @Param limit query int false "Maximum number of favorites to return"
+// @Param limit query int false "Page size"
+// @Param cursor query string false "Pagination cursor from previous response"
 // @Success 200 {object} FavoritesListResponse
 // @Failure 401 {object} apperror.Response
 // @Router /api/v1/files/favorites [get]
@@ -105,8 +109,14 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) error {
 		limit = parsed
 	}
 
-	resp, err := h.service.List(r.Context(), claims.UserID, limit)
+	cursor := r.URL.Query().Get("cursor")
+
+	// Добавьте логирование
+	log.Printf("List favorites: userID=%s, limit=%d, cursor=%s", claims.UserID, limit, cursor)
+
+	resp, err := h.service.List(r.Context(), claims.UserID, limit, cursor)
 	if err != nil {
+		log.Printf("List favorites error: %v", err) // Добавьте это
 		return err
 	}
 

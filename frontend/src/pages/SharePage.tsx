@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Download, EyeOff, Image, KeyRound, Eye } from 'lucide-react';
 import { resolveShareLink, ShareLinkResolveResult } from '../api/sharelinks';
 import { useAuthStore } from '../store/authStore';
+import SEOHead from '../components/SEOHead';
 import { FileIcon } from '../components/ui/FileIcon';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
@@ -294,9 +295,16 @@ const SharePage: React.FC = () => {
     }
   };
 
+  const ogTitle = file ? `${file.filename}` : 'Файл';
+  const ogDescription = file
+    ? `Файл · ${formatFileSize(file.size)} · Владелец: ${file.owner_username}`
+    : 'Просмотр файла в SharedSpace';
+  const ogImage = file && file.mime_type.startsWith('image/') && file.url ? file.url : undefined;
+
   if (needsPassword && !file) {
     return (
       <div className="flex items-center justify-center min-h-[80vh] px-4">
+        <SEOHead title="Файл защищён паролем" description="Для доступа к файлу требуется пароль." />
         <Card className="w-full max-w-md">
           <div className="text-center space-y-1 mb-6">
             <div className="w-12 h-12 mx-auto flex items-center justify-center bg-brand/10 rounded-full mb-3">
@@ -354,6 +362,7 @@ const SharePage: React.FC = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-theme-primary">
+        <SEOHead title="Загрузка..." description="Загрузка информации о файле..." />
         <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -362,6 +371,7 @@ const SharePage: React.FC = () => {
   if (error || !file) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-theme-primary px-4">
+        <SEOHead title="Файл недоступен" description={error || 'Файл не найден'} />
         <div className="text-center space-y-4 max-w-sm">
           <div className="w-16 h-16 mx-auto flex items-center justify-center bg-danger-light rounded-full">
             <FileIcon type="unknown" size={28} />
@@ -382,6 +392,12 @@ const SharePage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-10">
+      <SEOHead
+        title={ogTitle}
+        description={ogDescription}
+        ogImage={ogImage}
+        canonical={`https://team5.st.ifbest.org/share/${token}`}
+      />
       {/* Навигация назад */}
       <div>
         <Link

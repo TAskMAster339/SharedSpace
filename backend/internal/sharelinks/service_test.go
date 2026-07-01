@@ -27,6 +27,9 @@ type mockRepo struct {
 	getDirSubdirsFn    func(string) ([]dirSubdirRecord, error)
 	getDirFilesFn      func(string) ([]dirFileRecord, error)
 	isSubdirectoryFn   func(string, string) (bool, error)
+	statsFn            func(string) (int, int, error)
+	incCountFn         func(string) error
+	decCountFn         func(string) error
 }
 
 func (m *mockRepo) Create(_ context.Context, _ dbTX, link shareLinkRecord) (shareLinkRecord, error) {
@@ -74,17 +77,44 @@ func (m *mockRepo) GetDirectorySubdirs(_ context.Context, _ dbTX, dirID string) 
 	}
 	return nil, nil
 }
+func (m *mockRepo) GetDirectorySubdirsAfterCursor(_ context.Context, _ dbTX, dirID string, cursorName string, cursorID string, limit int) ([]dirSubdirRecord, bool, string, error) {
+	return nil, false, "", nil
+}
 func (m *mockRepo) GetDirectoryFiles(_ context.Context, _ dbTX, dirID string) ([]dirFileRecord, error) {
 	if m.getDirFilesFn != nil {
 		return m.getDirFilesFn(dirID)
 	}
 	return nil, nil
 }
+func (m *mockRepo) GetDirectoryFilesAfterCursor(_ context.Context, _ dbTX, dirID string, cursorFilename string, cursorID string, limit int) ([]dirFileRecord, bool, string, error) {
+	return nil, false, "", nil
+}
 func (m *mockRepo) IsSubdirectory(_ context.Context, _ dbTX, parentID, childID string) (bool, error) {
 	if m.isSubdirectoryFn != nil {
 		return m.isSubdirectoryFn(parentID, childID)
 	}
 	return true, nil
+}
+func (m *mockRepo) GetShareLinksStats(_ context.Context, _ dbTX, userID string) (int, int, error) {
+	if m.statsFn != nil {
+		return m.statsFn(userID)
+	}
+	return 0, 100, nil
+}
+func (m *mockRepo) IncrementShareLinksCount(_ context.Context, _ dbTX, userID string) error {
+	if m.incCountFn != nil {
+		return m.incCountFn(userID)
+	}
+	return nil
+}
+func (m *mockRepo) DecrementShareLinksCount(_ context.Context, _ dbTX, userID string) error {
+	if m.decCountFn != nil {
+		return m.decCountFn(userID)
+	}
+	return nil
+}
+func (m *mockRepo) ListPublicShareLinks(_ context.Context, _ dbTX) ([]sitemapEntry, error) {
+	return nil, nil
 }
 
 type mockStorage struct {
@@ -124,6 +154,10 @@ func (m *mockAccessChecker) Can(ctx context.Context, userID, directoryID string,
 
 func (m *mockAccessChecker) GetPermissions(ctx context.Context, userID, directoryID string) (*access.Permissions, error) {
 	return m.getPermissionsFn(ctx, userID, directoryID)
+}
+
+func (m *mockAccessChecker) GetSharedDirectoryID(_ context.Context, _, _ string) (*string, error) {
+	return nil, nil
 }
 
 func newTestService(repo RepositoryInterface) *Service {
@@ -183,6 +217,29 @@ func TestServiceCreate_Success(t *testing.T) {
 	}
 	if resp.Token == "" {
 		t.Fatal("expected non-empty token")
+	}
+}
+
+func TestServiceCreate_LimitReached(t *testing.T) {
+	createCalled := false
+	svc := newTestService(&mockRepo{
+		getFileByIDFn: func(_ string) (fileRecord, error) { return defaultFile(), nil },
+		statsFn:       func(_ string) (int, int, error) { return 100, 100, nil },
+		createFn: func(link shareLinkRecord) (shareLinkRecord, error) {
+			createCalled = true
+			return link, nil
+		},
+	})
+
+	_, err := svc.Create(context.Background(), "user-1", "file-1", CreateShareLinkRequest{
+		AccessType: "public",
+	})
+	appErr, ok := apperror.From(err)
+	if !ok || appErr.Code() != apperror.CodeValidation {
+		t.Fatalf("expected validation, got %v", err)
+	}
+	if createCalled {
+		t.Fatal("expected Create not to be called when limit reached")
 	}
 }
 

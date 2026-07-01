@@ -22,6 +22,18 @@ export interface Directory {
   updated_at: string;
   has_share_links?: boolean;
   permissions?: Permissions;
+  shared_directory_id?: string | null;
+}
+
+export interface BreadcrumbItem {
+  id: string;
+  name: string;
+  type: 'root' | 'regular';
+  is_shared: boolean;
+}
+
+export interface DirectoryPathResponse {
+  path: BreadcrumbItem[];
 }
 
 export interface File {
@@ -40,6 +52,8 @@ export interface DirectoryContents {
   name: string;
   subdirectories: Directory[];
   files: File[];
+  next_files_cursor?: string;
+  next_dirs_cursor?: string;
 }
 
 export interface CreateDirectoryRequest {
@@ -48,8 +62,29 @@ export interface CreateDirectoryRequest {
   shared?: boolean;
 }
 
-export function getRootDirectoryContents(token: string): Promise<DirectoryContents> {
-  return apiRequest<DirectoryContents>('/directories/root/contents', {
+export interface DirectoryPaginationParams {
+  files_limit?: number;
+  files_cursor?: string;
+  dirs_limit?: number;
+  dirs_cursor?: string;
+}
+
+function buildPaginationQuery(params?: DirectoryPaginationParams): string {
+  if (!params) return '';
+  const parts: string[] = [];
+  if (params.files_limit !== undefined) parts.push(`files_limit=${params.files_limit}`);
+  if (params.files_cursor) parts.push(`files_cursor=${encodeURIComponent(params.files_cursor)}`);
+  if (params.dirs_limit !== undefined) parts.push(`dirs_limit=${params.dirs_limit}`);
+  if (params.dirs_cursor) parts.push(`dirs_cursor=${encodeURIComponent(params.dirs_cursor)}`);
+  return parts.length ? `?${parts.join('&')}` : '';
+}
+
+export function getRootDirectoryContents(
+  token: string,
+  pagination?: DirectoryPaginationParams,
+): Promise<DirectoryContents> {
+  const query = buildPaginationQuery(pagination);
+  return apiRequest<DirectoryContents>(`/directories/root/contents${query}`, {
     method: 'GET',
     token,
   });
@@ -58,8 +93,20 @@ export function getRootDirectoryContents(token: string): Promise<DirectoryConten
 export function getDirectoryContents(
   token: string,
   directoryId: string,
+  pagination?: DirectoryPaginationParams,
 ): Promise<DirectoryContents> {
-  return apiRequest<DirectoryContents>(`/directories/${directoryId}/contents`, {
+  const query = buildPaginationQuery(pagination);
+  return apiRequest<DirectoryContents>(`/directories/${directoryId}/contents${query}`, {
+    method: 'GET',
+    token,
+  });
+}
+
+export function getDirectoryPath(
+  token: string,
+  directoryId: string,
+): Promise<DirectoryPathResponse> {
+  return apiRequest<DirectoryPathResponse>(`/directories/${directoryId}/path`, {
     method: 'GET',
     token,
   });

@@ -1,10 +1,15 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { FileQuestion } from 'lucide-react';
+import SEOHead from '../components/SEOHead';
 
 const Error404Page: React.FC = () => {
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
+      <SEOHead
+        title="Страница не найдена"
+        description="Страница, которую вы ищете, не существует или была удалена."
+      />
       <div className="flex flex-col items-center gap-6 text-center">
         <FileQuestion size={64} className="text-theme-muted" />
 

@@ -12,7 +12,7 @@ type ServiceInterface interface {
 	GetSharedWithMeStats(context.Context, string) ([]SharedDirectoryWithStatsResponse, error)
 	GetMembers(context.Context, string, string, int) ([]MemberResponse, error)
 	Invite(context.Context, string, string, string) (*InvitationResponse, error)
-	GetMyInvitations(context.Context, string) ([]InvitationResponse, error)
+	GetMyInvitations(context.Context, string, int, string) (*InvitationsListResponse, error)
 	AcceptInvitation(context.Context, string, string) error
 	DeclineInvitation(context.Context, string, string) error
 	RemoveInvitation(context.Context, string, string) error
@@ -34,6 +34,7 @@ type RepositoryInterface interface {
 	IsMember(ctx context.Context, db dbTX, sharedDirID, userID string) (bool, error)
 	CreateInvitation(ctx context.Context, db dbTX, sharedDirID, invitedUserID, invitedByUserID, role string) (invitationRecord, error)
 	FindInvitationsByUser(ctx context.Context, db dbTX, userID string, statuses ...string) ([]invitationRecord, error)
+	FindInvitationsByUserPaginated(ctx context.Context, db dbTX, userID string, limit int, cursorTime string, cursorID string) ([]invitationRecord, bool, string, error)
 	FindInvitationByID(ctx context.Context, db dbTX, id string) (invitationRecord, error)
 	UpdateInvitationStatus(ctx context.Context, db dbTX, id, status string) error
 	AddMember(ctx context.Context, db dbTX, sharedDirID, userID, role string) error

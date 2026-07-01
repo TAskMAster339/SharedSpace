@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useSharedDirectoriesStore } from '../store/sharedDirectoriesStore';
 
@@ -9,23 +9,36 @@ export const useSharedDirectories = () => {
   const sharedDirectories = useSharedDirectoriesStore((state) => state.sharedDirectories);
   const sharedDirectoryIds = useSharedDirectoriesStore((state) => state.sharedDirectoryIds);
   const isLoading = useSharedDirectoriesStore((state) => state.isLoading);
+  const loadedToken = useSharedDirectoriesStore((state) => state.loadedToken);
   const load = useSharedDirectoriesStore((state) => state.loadSharedDirectories);
+  const hasTriedLoad = useRef(false);
 
-  useEffect(() => {
+  const tryLoad = useCallback(() => {
+    if (!accessToken) return;
+    if (hasTriedLoad.current && loadedToken === accessToken) return;
+    hasTriedLoad.current = true;
     load(accessToken);
-  }, [accessToken, load]);
+  }, [accessToken, loadedToken, load]);
 
   const isShared = useCallback(
-    (directoryId: string) => sharedDirectoryIds.has(directoryId),
-    [sharedDirectoryIds],
+    (directoryId: string): boolean => {
+      if (loadedToken !== accessToken) {
+        tryLoad();
+      }
+      return sharedDirectoryIds.has(directoryId);
+    },
+    [sharedDirectoryIds, loadedToken, accessToken, tryLoad],
   );
 
   const getUserRole = useCallback(
     (directoryId: string): string | null => {
+      if (loadedToken !== accessToken) {
+        tryLoad();
+      }
       const dir = sharedDirectories.find((d) => d.directory_id === directoryId);
       return dir?.role || null;
     },
-    [sharedDirectories],
+    [sharedDirectories, loadedToken, accessToken, tryLoad],
   );
 
   const canUpload = useCallback(
@@ -37,7 +50,10 @@ export const useSharedDirectories = () => {
     [getUserRole],
   );
 
-  const loadSharedDirectories = useCallback(() => load(accessToken), [accessToken, load]);
+  const loadSharedDirectories = useCallback(() => {
+    hasTriedLoad.current = true;
+    return load(accessToken);
+  }, [accessToken, load]);
 
   return {
     sharedDirectories,

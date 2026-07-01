@@ -18,7 +18,8 @@ type ServiceInterface interface {
 	Update(ctx context.Context, userID, linkID string, req UpdateShareLinkRequest) (ShareLinkResponse, error)
 	Delete(ctx context.Context, userID, linkID string) error
 	Resolve(ctx context.Context, token, password string, authenticated bool) (FileContentResponse, error)
-	ResolveDirectory(ctx context.Context, token, password string, authenticated bool, subDirID string) (DirectoryContentResponse, error)
+	ResolveDirectory(ctx context.Context, token, password string, authenticated bool, params ResolveDirectoryParams) (DirectoryContentResponse, error)
+	ListPublicShareLinks(ctx context.Context) ([]sitemapEntry, error)
 }
 
 type RepositoryInterface interface {
@@ -29,12 +30,18 @@ type RepositoryInterface interface {
 	FindByDirectoryID(ctx context.Context, db dbTX, dirID string, limit int) ([]shareLinkRecord, error)
 	Update(ctx context.Context, db dbTX, id string, link shareLinkRecord) (shareLinkRecord, error)
 	Delete(ctx context.Context, db dbTX, id string) error
+	GetShareLinksStats(ctx context.Context, db dbTX, userID string) (count, quota int, err error)
+	IncrementShareLinksCount(ctx context.Context, db dbTX, userID string) error
+	DecrementShareLinksCount(ctx context.Context, db dbTX, userID string) error
 	GetFileByID(ctx context.Context, db dbTX, fileID string) (fileRecord, error)
 	GetUsernameByID(ctx context.Context, db dbTX, userID string) (string, error)
 	GetDirectoryByID(ctx context.Context, db dbTX, dirID string) (directoryRecord, error)
 	GetDirectorySubdirs(ctx context.Context, db dbTX, dirID string) ([]dirSubdirRecord, error)
+	GetDirectorySubdirsAfterCursor(ctx context.Context, db dbTX, dirID string, cursorName string, cursorID string, limit int) ([]dirSubdirRecord, bool, string, error)
 	GetDirectoryFiles(ctx context.Context, db dbTX, dirID string) ([]dirFileRecord, error)
+	GetDirectoryFilesAfterCursor(ctx context.Context, db dbTX, dirID string, cursorFilename string, cursorID string, limit int) ([]dirFileRecord, bool, string, error)
 	IsSubdirectory(ctx context.Context, db dbTX, parentID, childID string) (bool, error)
+	ListPublicShareLinks(ctx context.Context, db dbTX) ([]sitemapEntry, error)
 }
 
 type StorageClient interface {

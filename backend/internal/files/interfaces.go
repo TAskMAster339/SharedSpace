@@ -25,7 +25,7 @@ type ServiceInterface interface {
 	SoftDelete(ctx context.Context, userID, fileID string) error
 	Restore(ctx context.Context, userID, fileID string) error
 	PermanentDelete(ctx context.Context, userID, fileID string) error
-	GetRecent(ctx context.Context, userID string, limit int) (RecentFilesResponse, error)
+	GetRecent(ctx context.Context, userID string, limit int, cursor string) (RecentFilesResponse, error)
 	Update(ctx context.Context, userID, fileID string, req UpdateFileRequest) (FileMetadataResponse, error)
 	ConvertAndSave(ctx context.Context, userID, fileID, target string) (ConversionResponse, error)
 	ConvertAndDownload(ctx context.Context, userID, fileID, target string) (downloadURL, filename string, err error)
@@ -44,6 +44,7 @@ type RepositoryInterface interface {
 	RestoreFile(ctx context.Context, db dbTX, fileID string) error
 	HardDeleteFile(ctx context.Context, db dbTX, fileID string) error
 	FindRecentByUserID(ctx context.Context, db dbTX, userID string, limit int) ([]fileRecord, error)
+	FindRecentByUserIDAfterCursor(ctx context.Context, db dbTX, userID string, cursorTime time.Time, cursorID string, limit int) ([]fileRecord, error)
 	MoveFile(ctx context.Context, db dbTX, fileID, newParentID string, newFilename *string) (fileRecord, error)
 	FindByFilenameAndDirectory(ctx context.Context, db dbTX, filename, directoryID string, excludeFileID ...string) (fileRecord, error)
 	SaveConversion(ctx context.Context, db dbTX, sourceFileID, resultFileID, sourceFormat, targetFormat, createdBy string) (conversionRecord, error)

@@ -97,8 +97,20 @@ export interface Invitation {
   created_at: string;
 }
 
-export function getMyInvitations(accessToken: string): Promise<Invitation[]> {
-  return apiRequest<Invitation[]>('/invitations', {
+export interface InvitationsListResponse {
+  items: Invitation[];
+  next_cursor?: string;
+}
+
+export function getMyInvitations(
+  accessToken: string,
+  pagination?: { limit?: number; cursor?: string },
+): Promise<InvitationsListResponse> {
+  const params = new URLSearchParams();
+  if (pagination?.limit !== undefined) params.set('limit', String(pagination.limit));
+  if (pagination?.cursor) params.set('cursor', pagination.cursor);
+  const query = params.toString() ? `?${params.toString()}` : '';
+  return apiRequest<InvitationsListResponse>(`/invitations${query}`, {
     method: 'GET',
     token: accessToken,
   });

@@ -22,7 +22,7 @@ type mockService struct {
 	updateFn     func(string, string, UpdateShareLinkRequest) (ShareLinkResponse, error)
 	deleteFn     func(string, string) error
 	resolveFn    func(string, string, bool) (FileContentResponse, error)
-	resolveDirFn func(string, string, bool, string) (DirectoryContentResponse, error)
+	resolveDirFn func(string, string, bool, ResolveDirectoryParams) (DirectoryContentResponse, error)
 }
 
 func (m *mockService) Create(_ context.Context, userID, fileID string, req CreateShareLinkRequest) (ShareLinkResponse, error) {
@@ -74,11 +74,15 @@ func (m *mockService) Resolve(_ context.Context, token, password string, authent
 	return FileContentResponse{}, nil
 }
 
-func (m *mockService) ResolveDirectory(_ context.Context, token, password string, authenticated bool, subDirID string) (DirectoryContentResponse, error) {
+func (m *mockService) ResolveDirectory(_ context.Context, token, password string, authenticated bool, params ResolveDirectoryParams) (DirectoryContentResponse, error) {
 	if m.resolveDirFn != nil {
-		return m.resolveDirFn(token, password, authenticated, subDirID)
+		return m.resolveDirFn(token, password, authenticated, params)
 	}
 	return DirectoryContentResponse{}, nil
+}
+
+func (m *mockService) ListPublicShareLinks(_ context.Context) ([]sitemapEntry, error) {
+	return nil, nil
 }
 
 type mockTokenParser struct {

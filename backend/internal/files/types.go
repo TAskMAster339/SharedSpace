@@ -41,7 +41,8 @@ type UpdateFileRequest struct {
 }
 
 type RecentFilesResponse struct {
-	Files []FileMetadataResponse `json:"files"`
+	Files      []FileMetadataResponse `json:"files"`
+	NextCursor *string                `json:"next_cursor,omitempty"`
 }
 
 type fileRecord struct {

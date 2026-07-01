@@ -2,6 +2,7 @@ package dirs
 
 import (
 	"context"
+	"fmt"
 	"time"
 )
 
@@ -37,7 +38,7 @@ func (r *Repository) FindSubdirectories(ctx context.Context, db dbTX, parentID s
 		SELECT id, name, owner_id, parent_id, type, files_count, created_at, updated_at
 		FROM directories
 		WHERE parent_id = $1 AND deleted_at IS NULL
-		ORDER BY name ASC
+		ORDER BY name ASC, id ASC
 	`, parentID)
 	if err != nil {
 		return nil, err
@@ -55,12 +56,61 @@ func (r *Repository) FindSubdirectories(ctx context.Context, db dbTX, parentID s
 	return dirs, rows.Err()
 }
 
+func (r *Repository) FindSubdirectoriesAfterCursor(ctx context.Context, db dbTX, parentID string, cursorName string, cursorID string, limit int) ([]directoryRecord, bool, string, error) {
+	query := `
+		SELECT id, name, owner_id, parent_id, type, files_count, created_at, updated_at
+		FROM directories
+		WHERE parent_id = $1 AND deleted_at IS NULL`
+	args := []any{parentID}
+
+	if cursorName != "" && cursorID != "" {
+		query += ` AND (name, id) > ($2, $3)`
+		args = append(args, cursorName, cursorID)
+	}
+
+	query += ` ORDER BY name ASC, id ASC`
+	paramIdx := len(args) + 1
+	query += fmt.Sprintf(` LIMIT $%d`, paramIdx)
+	args = append(args, limit+1)
+
+	rows, err := db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, false, "", err
+	}
+	defer rows.Close()
+
+	var dirs []directoryRecord
+	for rows.Next() {
+		var d directoryRecord
+		if err := rows.Scan(&d.ID, &d.Name, &d.OwnerID, &d.ParentID, &d.Type, &d.FilesCount, &d.CreatedAt, &d.UpdatedAt); err != nil {
+			return nil, false, "", err
+		}
+		dirs = append(dirs, d)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, false, "", err
+	}
+
+	hasMore := len(dirs) > limit
+	if hasMore {
+		dirs = dirs[:limit]
+	}
+
+	nextCursor := ""
+	if hasMore && len(dirs) > 0 {
+		last := dirs[len(dirs)-1]
+		nextCursor = fmt.Sprintf("%s|%s", last.Name, last.ID)
+	}
+
+	return dirs, hasMore, nextCursor, nil
+}
+
 func (r *Repository) FindFiles(ctx context.Context, db dbTX, directoryID string) ([]fileRecord, error) {
 	rows, err := db.Query(ctx, `
 		SELECT id, filename, extension, mime_type, size, created_at, updated_at
 		FROM files
 		WHERE directory_id = $1 AND deleted_at IS NULL
-		ORDER BY filename ASC
+		ORDER BY filename ASC, id ASC
 	`, directoryID)
 	if err != nil {
 		return nil, err
@@ -76,6 +126,55 @@ func (r *Repository) FindFiles(ctx context.Context, db dbTX, directoryID string)
 		files = append(files, f)
 	}
 	return files, rows.Err()
+}
+
+func (r *Repository) FindFilesAfterCursor(ctx context.Context, db dbTX, directoryID string, cursorFilename string, cursorID string, limit int) ([]fileRecord, bool, string, error) {
+	query := `
+		SELECT id, filename, extension, mime_type, size, created_at, updated_at
+		FROM files
+		WHERE directory_id = $1 AND deleted_at IS NULL`
+	args := []any{directoryID}
+
+	if cursorFilename != "" && cursorID != "" {
+		query += ` AND (filename, id) > ($2, $3)`
+		args = append(args, cursorFilename, cursorID)
+	}
+
+	query += ` ORDER BY filename ASC, id ASC`
+	paramIdx := len(args) + 1
+	query += fmt.Sprintf(` LIMIT $%d`, paramIdx)
+	args = append(args, limit+1)
+
+	rows, err := db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, false, "", err
+	}
+	defer rows.Close()
+
+	var files []fileRecord
+	for rows.Next() {
+		var f fileRecord
+		if err := rows.Scan(&f.ID, &f.Filename, &f.Extension, &f.MimeType, &f.Size, &f.CreatedAt, &f.UpdatedAt); err != nil {
+			return nil, false, "", err
+		}
+		files = append(files, f)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, false, "", err
+	}
+
+	hasMore := len(files) > limit
+	if hasMore {
+		files = files[:limit]
+	}
+
+	nextCursor := ""
+	if hasMore && len(files) > 0 {
+		last := files[len(files)-1]
+		nextCursor = fmt.Sprintf("%s|%s", last.Filename, last.ID)
+	}
+
+	return files, hasMore, nextCursor, nil
 }
 
 func (r *Repository) FindByNameAndParent(ctx context.Context, db dbTX, name, parentID, ownerID string) (directoryRecord, error) {
@@ -223,9 +322,13 @@ func (r *Repository) IncrementSharedDirsCount(ctx context.Context, db dbTX, user
 	return err
 }
 
-func (r *Repository) DecrementSharedDirsCount(ctx context.Context, db dbTX, userID string) error {
+func (r *Repository) RecalcSharedDirsCount(ctx context.Context, db dbTX, userID string) error {
 	_, err := db.Exec(ctx, `
-		UPDATE users SET shared_dirs_count = GREATEST(shared_dirs_count - 1, 0), updated_at = now() WHERE id = $1
+		UPDATE users SET shared_dirs_count = (
+			SELECT COUNT(*) FROM shared_directories sd
+			JOIN directories d ON d.id = sd.directory_id
+			WHERE sd.owner_id = $1 AND d.deleted_at IS NULL
+		), updated_at = now() WHERE id = $1
 	`, userID)
 	return err
 }
@@ -271,6 +374,49 @@ func (r *Repository) CheckShareLinks(ctx context.Context, db dbTX, fileIDs, dirI
 		}
 	}
 	return fileLinks, dirLinks, rows.Err()
+}
+
+type ancestorPathRecord struct {
+	ID       string
+	Name     string
+	Type     string
+	IsShared bool
+}
+
+func (r *Repository) FindAncestorsPath(ctx context.Context, db dbTX, directoryID string) ([]ancestorPathRecord, error) {
+	rows, err := db.Query(ctx, `
+		WITH RECURSIVE dir_path AS (
+			SELECT d.id, d.name, d.parent_id, d.type,
+			       COALESCE(sd.id IS NOT NULL, false) AS is_shared,
+			       0 AS level
+			FROM directories d
+			LEFT JOIN shared_directories sd ON sd.directory_id = d.id
+			WHERE d.id = $1 AND d.deleted_at IS NULL
+			UNION ALL
+			SELECT d.id, d.name, d.parent_id, d.type,
+			       COALESCE(sd.id IS NOT NULL, false) AS is_shared,
+			       dp.level + 1
+			FROM directories d
+			INNER JOIN dir_path dp ON dp.parent_id = d.id
+			LEFT JOIN shared_directories sd ON sd.directory_id = d.id
+			WHERE d.deleted_at IS NULL
+		)
+		SELECT id, name, type, is_shared FROM dir_path ORDER BY level DESC
+	`, directoryID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var path []ancestorPathRecord
+	for rows.Next() {
+		var p ancestorPathRecord
+		if err := rows.Scan(&p.ID, &p.Name, &p.Type, &p.IsShared); err != nil {
+			return nil, err
+		}
+		path = append(path, p)
+	}
+	return path, rows.Err()
 }
 
 func (r *Repository) IncrementFilesCount(ctx context.Context, db dbTX, directoryID string, delta int) error {

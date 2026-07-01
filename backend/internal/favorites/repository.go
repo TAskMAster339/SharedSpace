@@ -3,6 +3,7 @@ package favorites
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -44,7 +45,7 @@ func (r *Repository) FindAllByUserID(ctx context.Context, db dbTX, userID string
 		FROM favorite_files fav
 		JOIN files f ON f.id = fav.file_id
 		WHERE fav.user_id = $1 AND f.deleted_at IS NULL
-		ORDER BY fav.created_at DESC`
+		ORDER BY fav.created_at DESC, fav.file_id DESC`
 	args := []any{userID}
 
 	if limit > 0 {
@@ -71,11 +72,40 @@ func (r *Repository) FindAllByUserID(ctx context.Context, db dbTX, userID string
 		records = append(records, rec)
 	}
 
-	if err := rows.Err(); err != nil {
+	return records, rows.Err()
+}
+
+func (r *Repository) FindAllByUserIDAfterCursor(ctx context.Context, db dbTX, userID string, cursorTime time.Time, cursorID string, limit int) ([]favoriteFileRecord, error) {
+	rows, err := db.Query(ctx, `
+		SELECT f.id, f.filename, f.extension, f.mime_type, f.size,
+		       f.directory_id, f.owner_id, f.created_at, f.updated_at,
+		       fav.created_at AS favorited_at
+		FROM favorite_files fav
+		JOIN files f ON f.id = fav.file_id
+		WHERE fav.user_id = $1 AND f.deleted_at IS NULL
+		  AND (fav.created_at, fav.file_id) < ($2, $3)
+		ORDER BY fav.created_at DESC, fav.file_id DESC
+		LIMIT $4
+	`, userID, cursorTime, cursorID, limit+1)
+	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
-	return records, nil
+	var records []favoriteFileRecord
+	for rows.Next() {
+		var rec favoriteFileRecord
+		if err := rows.Scan(
+			&rec.ID, &rec.Filename, &rec.Extension, &rec.MimeType,
+			&rec.Size, &rec.DirectoryID, &rec.OwnerID,
+			&rec.CreatedAt, &rec.UpdatedAt, &rec.FavoritedAt,
+		); err != nil {
+			return nil, err
+		}
+		records = append(records, rec)
+	}
+
+	return records, rows.Err()
 }
 
 func (r *Repository) FindFileByID(ctx context.Context, db dbTX, fileID string) (string, error) {

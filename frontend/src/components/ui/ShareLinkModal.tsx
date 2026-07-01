@@ -28,6 +28,7 @@ import {
   listDirectoryShareLinks,
 } from '../../api/sharelinks';
 import { cn } from '../../utils/cn';
+import { useAuthStore } from '../../store/authStore';
 
 interface ShareLinkModalProps {
   isOpen: boolean;
@@ -97,6 +98,10 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
   onLinkDeleted,
   refreshKey,
 }) => {
+  const refreshUser = useAuthStore((s) => s.refreshUser);
+  const shareLinksUsed = useAuthStore((s) => s.user?.share_links_count ?? 0);
+  const shareLinksQuota = useAuthStore((s) => s.user?.share_links_quota ?? 0);
+  const atLinksLimit = shareLinksQuota > 0 && shareLinksUsed >= shareLinksQuota;
   const [links, setLinks] = useState<ShareLink[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -157,6 +162,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
         : await createDirectoryShareLink(accessToken, itemId, body);
       const wasEmpty = links.length === 0;
       setLinks((prev) => [newLink, ...prev]);
+      refreshUser();
       if (wasEmpty) {
         onLinksChanged?.(true);
       }
@@ -177,6 +183,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
     try {
       await deleteShareLink(accessToken, link.id);
       setLinks((prev) => prev.filter((l) => l.id !== link.id));
+      refreshUser();
       if (wasLast) {
         onLinksChanged?.(false);
       }
@@ -218,15 +225,20 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
         <span className="text-xs text-theme-muted shrink-0">{isFile ? 'Файл' : 'Папка'}</span>
       </div>
 
-      {!showCreateForm && (
-        <button
-          onClick={() => setShowCreateForm(true)}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-dashed border-theme hover:border-brand hover:text-brand rounded-theme-md text-sm text-theme-secondary transition-colors mb-5"
-        >
-          <Plus size={16} />
-          Создать новую ссылку
-        </button>
-      )}
+      {!showCreateForm &&
+        (atLinksLimit ? (
+          <div className="mb-5 px-4 py-2.5 rounded-theme-md bg-danger-light text-danger text-xs text-center">
+            Достигнут лимит ссылок ({shareLinksUsed}/{shareLinksQuota})
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowCreateForm(true)}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-dashed border-theme hover:border-brand hover:text-brand rounded-theme-md text-sm text-theme-secondary transition-colors mb-5"
+          >
+            <Plus size={16} />
+            Создать новую ссылку
+          </button>
+        ))}
 
       {showCreateForm && (
         <div className="mb-5 p-4 bg-theme-tertiary border border-theme rounded-theme-md space-y-4">
@@ -327,7 +339,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
               variant="primary"
               size="sm"
               onClick={handleCreate}
-              disabled={isCreating}
+              disabled={isCreating || atLinksLimit}
               className="flex-1"
             >
               {isCreating ? 'Создание...' : 'Создать'}

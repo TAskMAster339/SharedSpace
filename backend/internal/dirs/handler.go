@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 
@@ -20,10 +21,15 @@ func NewHandler(service ServiceInterface) *Handler {
 }
 
 // GetRootContents returns the contents of the authenticated user's root directory.
+// Supports optional cursor-based pagination via ?files_limit=N&files_cursor=<token>&dirs_limit=N&dirs_cursor=<token>.
 // @Summary Get root directory contents
 // @Tags directories
 // @Security BearerAuth
 // @Produce json
+// @Param files_limit query int false "Max files per page"
+// @Param files_cursor query string false "Files pagination cursor"
+// @Param dirs_limit query int false "Max subdirectories per page"
+// @Param dirs_cursor query string false "Dirs pagination cursor"
 // @Success 200 {object} DirectoryContentsResponse
 // @Failure 401 {object} apperror.Response
 // @Router /api/v1/directories/root/contents [get]
@@ -33,7 +39,12 @@ func (h *Handler) GetRootContents(w http.ResponseWriter, r *http.Request) error 
 		return apperror.Unauthorized("не авторизован")
 	}
 
-	resp, err := h.service.GetRootContents(r.Context(), claims.UserID)
+	p, err := parsePaginationParams(r)
+	if err != nil {
+		return err
+	}
+
+	resp, err := h.service.GetRootContents(r.Context(), claims.UserID, p)
 	if err != nil {
 		return err
 	}
@@ -42,11 +53,16 @@ func (h *Handler) GetRootContents(w http.ResponseWriter, r *http.Request) error 
 }
 
 // GetContents returns the contents (subdirectories and files) of a specific directory.
+// Supports optional cursor-based pagination via ?files_limit=N&files_cursor=<token>&dirs_limit=N&dirs_cursor=<token>.
 // @Summary Get directory contents
 // @Tags directories
 // @Security BearerAuth
 // @Produce json
 // @Param id path string true "Directory ID"
+// @Param files_limit query int false "Max files per page"
+// @Param files_cursor query string false "Files pagination cursor"
+// @Param dirs_limit query int false "Max subdirectories per page"
+// @Param dirs_cursor query string false "Dirs pagination cursor"
 // @Success 200 {object} DirectoryContentsResponse
 // @Failure 401 {object} apperror.Response
 // @Failure 403 {object} apperror.Response
@@ -63,7 +79,12 @@ func (h *Handler) GetContents(w http.ResponseWriter, r *http.Request) error {
 		return apperror.Validation("id директории обязателен")
 	}
 
-	resp, err := h.service.GetContents(r.Context(), claims.UserID, dirID)
+	p, err := parsePaginationParams(r)
+	if err != nil {
+		return err
+	}
+
+	resp, err := h.service.GetContents(r.Context(), claims.UserID, dirID, p)
 	if err != nil {
 		return err
 	}
@@ -173,25 +194,6 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) error {
 	return writeJSON(w, http.StatusOK, resp)
 }
 
-func decodeJSON(body io.ReadCloser, dst any) error {
-	defer body.Close()
-	dec := json.NewDecoder(body)
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(dst); err != nil {
-		return apperror.Validation("некорректный JSON")
-	}
-	return nil
-}
-
-func writeJSON(w http.ResponseWriter, status int, payload any) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(payload); err != nil {
-		return apperror.WrapInternal("ошибка кодирования ответа", err)
-	}
-	return nil
-}
-
 // SoftDelete moves a directory to trash (cascade).
 // @Summary Delete directory to trash
 // @Tags directories
@@ -269,4 +271,83 @@ func (h *Handler) PermanentDelete(w http.ResponseWriter, r *http.Request) error 
 		return err
 	}
 	return writeJSON(w, http.StatusOK, map[string]string{"message": "директория удалена навсегда"})
+}
+
+// GetPath returns the breadcrumb path for a directory (from root or shared root to the directory).
+// @Summary Get directory breadcrumb path
+// @Tags directories
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Directory ID"
+// @Success 200 {object} DirectoryPathResponse
+// @Failure 401 {object} apperror.Response
+// @Failure 403 {object} apperror.Response
+// @Failure 404 {object} apperror.Response
+// @Router /api/v1/directories/{id}/path [get]
+func (h *Handler) GetPath(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := auth.ClaimsFromCtx(r.Context())
+	if !ok {
+		return apperror.Unauthorized("не авторизован")
+	}
+
+	dirID := chi.URLParam(r, "id")
+	if dirID == "" {
+		return apperror.Validation("id директории обязателен")
+	}
+
+	resp, err := h.service.GetPath(r.Context(), claims.UserID, dirID)
+	if err != nil {
+		return err
+	}
+
+	return writeJSON(w, http.StatusOK, resp)
+}
+
+type ContentsPaginationParams struct {
+	FilesLimit  int
+	FilesCursor string
+	DirsLimit   int
+	DirsCursor  string
+}
+
+func parsePaginationParams(r *http.Request) (ContentsPaginationParams, error) {
+	var p ContentsPaginationParams
+	q := r.URL.Query()
+
+	if v := q.Get("files_limit"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 0 {
+			return p, apperror.Validation("некорректный files_limit")
+		}
+		p.FilesLimit = n
+	}
+	if v := q.Get("dirs_limit"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 0 {
+			return p, apperror.Validation("некорректный dirs_limit")
+		}
+		p.DirsLimit = n
+	}
+	p.FilesCursor = q.Get("files_cursor")
+	p.DirsCursor = q.Get("dirs_cursor")
+	return p, nil
+}
+
+func decodeJSON(body io.ReadCloser, dst any) error {
+	defer body.Close()
+	dec := json.NewDecoder(body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(dst); err != nil {
+		return apperror.Validation("некорректный JSON")
+	}
+	return nil
+}
+
+func writeJSON(w http.ResponseWriter, status int, payload any) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	if err := json.NewEncoder(w).Encode(payload); err != nil {
+		return apperror.WrapInternal("ошибка кодирования ответа", err)
+	}
+	return nil
 }

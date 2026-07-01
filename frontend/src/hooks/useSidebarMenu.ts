@@ -44,6 +44,9 @@ export const useSidebarMenu = () => {
   const storageUsed = useMemo(() => (user ? user.storage_used / BYTES_TO_GB : 0), [user]);
   const storageQuota = useMemo(() => (user ? user.storage_quota / BYTES_TO_GB : 0), [user]);
 
+  const shareLinksUsed = user?.share_links_count ?? 0;
+  const shareLinksQuota = user?.share_links_quota ?? 0;
+
   const menuItems = useMemo(
     () => [
       { label: 'Дашборд', icon: LayoutDashboard, path: '/dashboard' },
@@ -56,5 +59,5 @@ export const useSidebarMenu = () => {
     [personalStorageId],
   );
 
-  return { menuItems, storageUsed, storageQuota, isLoading };
+  return { menuItems, storageUsed, storageQuota, shareLinksUsed, shareLinksQuota, isLoading };
 };

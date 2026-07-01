@@ -2,6 +2,7 @@ package files
 
 import (
 	"encoding/json"
+	"log"
 	"mime/multipart"
 	"net/http"
 	"strconv"
@@ -159,12 +160,16 @@ func (h *Handler) GetContent(w http.ResponseWriter, r *http.Request) error {
 }
 
 // GetRecent returns the most recent files for the authenticated user.
+// Supports optional cursor-based pagination via ?limit=N&cursor=<token>.
+// Without limit/cursor, returns all files (backward compatible).
 // @Summary Get recent files
 // @Tags files
 // @Security BearerAuth
 // @Produce json
-// @Param limit query int false "Maximum number of files to return"
+// @Param limit query int false "Page size"
+// @Param cursor query string false "Pagination cursor from previous response"
 // @Success 200 {object} RecentFilesResponse
+// @Failure 400 {object} apperror.Response
 // @Failure 401 {object} apperror.Response
 // @Router /api/v1/files/recent [get]
 func (h *Handler) GetRecent(w http.ResponseWriter, r *http.Request) error {
@@ -182,8 +187,13 @@ func (h *Handler) GetRecent(w http.ResponseWriter, r *http.Request) error {
 		limit = parsed
 	}
 
-	resp, err := h.service.GetRecent(r.Context(), claims.UserID, limit)
+	cursor := r.URL.Query().Get("cursor")
+
+	log.Printf("GetRecent: userID=%s, limit=%d, cursor=%s", claims.UserID, limit, cursor)
+
+	resp, err := h.service.GetRecent(r.Context(), claims.UserID, limit, cursor)
 	if err != nil {
+		log.Printf("GetRecent error: %v", err)
 		return err
 	}
 

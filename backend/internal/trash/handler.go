@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strconv"
 
 	"sharedspace/internal/apperror"
 	"sharedspace/internal/auth"
@@ -18,10 +19,15 @@ func NewHandler(service ServiceInterface) *Handler {
 }
 
 // GetTrashList returns the list of items in the user's trash.
+// Supports optional cursor-based pagination via ?files_limit=N&files_cursor=<token>&dirs_limit=N&dirs_cursor=<token>.
 // @Summary Get trash list
 // @Tags trash
 // @Security BearerAuth
 // @Produce json
+// @Param files_limit query int false "Max files per page"
+// @Param files_cursor query string false "Files pagination cursor"
+// @Param dirs_limit query int false "Max directories per page"
+// @Param dirs_cursor query string false "Directories pagination cursor"
 // @Success 200 {object} TrashListResponse
 // @Failure 401 {object} apperror.Response
 // @Router /api/v1/trash [get]
@@ -31,7 +37,12 @@ func (h *Handler) GetTrashList(w http.ResponseWriter, r *http.Request) error {
 		return apperror.Unauthorized("не авторизован")
 	}
 
-	resp, err := h.service.GetTrashList(r.Context(), claims.UserID)
+	params, err := parsePaginationParams(r)
+	if err != nil {
+		return err
+	}
+
+	resp, err := h.service.GetTrashList(r.Context(), claims.UserID, params)
 	if err != nil {
 		return err
 	}
@@ -66,6 +77,29 @@ func (h *Handler) ClearTrash(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	return writeJSON(w, http.StatusOK, map[string]string{"message": "корзина очищена"})
+}
+
+func parsePaginationParams(r *http.Request) (TrashPaginationParams, error) {
+	var p TrashPaginationParams
+	q := r.URL.Query()
+
+	if v := q.Get("files_limit"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 0 {
+			return p, apperror.Validation("некорректный files_limit")
+		}
+		p.FilesLimit = n
+	}
+	if v := q.Get("dirs_limit"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 0 {
+			return p, apperror.Validation("некорректный dirs_limit")
+		}
+		p.DirsLimit = n
+	}
+	p.FilesCursor = q.Get("files_cursor")
+	p.DirsCursor = q.Get("dirs_cursor")
+	return p, nil
 }
 
 func decodeJSON(body io.ReadCloser, dst any) error {

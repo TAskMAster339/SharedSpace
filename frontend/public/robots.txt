@@ -1,0 +1,21 @@
+# robots.txt для SharedSpace
+User-agent: *
+
+# 1. Блокируем все API-эндпоинты
+Disallow: /api/
+Disallow: /api/v1/
+
+# 2. Блокируем приватные страницы пользователей
+Disallow: /dashboard
+Disallow: /settings
+Disallow: /profile
+Disallow: /favorites
+Disallow: /invitations
+Disallow: /trash
+
+# 3. РАЗРЕШАЕМ публичные страницы и ссылки на файлы
+Allow: /
+Allow: /share/
+
+# 4. Указываем путь к карте сайта
+Sitemap: https://team5.st.ifbest.org/sitemap.xml

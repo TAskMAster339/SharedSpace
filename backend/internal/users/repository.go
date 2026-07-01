@@ -15,10 +15,10 @@ func NewRepository() *Repository {
 func (r *Repository) FindUserByID(ctx context.Context, db dbTX, userID string) (record, error) {
 	var user record
 	err := db.QueryRow(ctx, `
-		SELECT id, username, first_name, second_name, email, password_hash, storage_quota, storage_used, shared_dirs_count, shared_dirs_quota, created_at
+		SELECT id, username, first_name, second_name, email, password_hash, storage_quota, storage_used, shared_dirs_count, shared_dirs_quota, share_links_count, share_links_quota, created_at
 		FROM users
 		WHERE id = $1
-	`, userID).Scan(&user.ID, &user.Username, &user.FirstName, &user.SecondName, &user.Email, &user.PasswordHash, &user.StorageQuota, &user.StorageUsed, &user.SharedDirsCount, &user.SharedDirsQuota, &user.CreatedAt)
+	`, userID).Scan(&user.ID, &user.Username, &user.FirstName, &user.SecondName, &user.Email, &user.PasswordHash, &user.StorageQuota, &user.StorageUsed, &user.SharedDirsCount, &user.SharedDirsQuota, &user.ShareLinksCount, &user.ShareLinksQuota, &user.CreatedAt)
 	if err != nil {
 		return record{}, err
 	}
@@ -28,11 +28,11 @@ func (r *Repository) FindUserByID(ctx context.Context, db dbTX, userID string) (
 func (r *Repository) FindUserByEmail(ctx context.Context, db dbTX, email string) (record, error) {
 	var user record
 	err := db.QueryRow(ctx, `
-		SELECT id, username, first_name, second_name, email, password_hash, storage_quota, storage_used, shared_dirs_count, shared_dirs_quota, created_at
+		SELECT id, username, first_name, second_name, email, password_hash, storage_quota, storage_used, shared_dirs_count, shared_dirs_quota, share_links_count, share_links_quota, created_at
 		FROM users
 		WHERE email = $1
 		LIMIT 1
-	`, email).Scan(&user.ID, &user.Username, &user.FirstName, &user.SecondName, &user.Email, &user.PasswordHash, &user.StorageQuota, &user.StorageUsed, &user.SharedDirsCount, &user.SharedDirsQuota, &user.CreatedAt)
+	`, email).Scan(&user.ID, &user.Username, &user.FirstName, &user.SecondName, &user.Email, &user.PasswordHash, &user.StorageQuota, &user.StorageUsed, &user.SharedDirsCount, &user.SharedDirsQuota, &user.ShareLinksCount, &user.ShareLinksQuota, &user.CreatedAt)
 	if err != nil {
 		return record{}, err
 	}
@@ -42,11 +42,11 @@ func (r *Repository) FindUserByEmail(ctx context.Context, db dbTX, email string)
 func (r *Repository) FindUserByUsername(ctx context.Context, db dbTX, username string) (record, error) {
 	var user record
 	err := db.QueryRow(ctx, `
-		SELECT id, username, first_name, second_name, email, password_hash, storage_quota, storage_used, shared_dirs_count, shared_dirs_quota, created_at
+		SELECT id, username, first_name, second_name, email, password_hash, storage_quota, storage_used, shared_dirs_count, shared_dirs_quota, share_links_count, share_links_quota, created_at
 		FROM users
 		WHERE username = $1
 		LIMIT 1
-	`, username).Scan(&user.ID, &user.Username, &user.FirstName, &user.SecondName, &user.Email, &user.PasswordHash, &user.StorageQuota, &user.StorageUsed, &user.SharedDirsCount, &user.SharedDirsQuota, &user.CreatedAt)
+	`, username).Scan(&user.ID, &user.Username, &user.FirstName, &user.SecondName, &user.Email, &user.PasswordHash, &user.StorageQuota, &user.StorageUsed, &user.SharedDirsCount, &user.SharedDirsQuota, &user.ShareLinksCount, &user.ShareLinksQuota, &user.CreatedAt)
 	if err != nil {
 		return record{}, err
 	}
@@ -64,9 +64,9 @@ func (r *Repository) UpdateUserProfile(ctx context.Context, db dbTX, userID stri
 			second_name = CASE WHEN $5::text IS NULL THEN second_name ELSE $5 END,
 			updated_at = now()
 		WHERE id = $1
-		RETURNING id, username, first_name, second_name, email, password_hash, storage_quota, storage_used, shared_dirs_count, shared_dirs_quota, created_at
+		RETURNING id, username, first_name, second_name, email, password_hash, storage_quota, storage_used, shared_dirs_count, shared_dirs_quota, share_links_count, share_links_quota, created_at
 	`, userID, input.Email, input.Username, input.FirstName, input.SecondName).Scan(
-		&user.ID, &user.Username, &user.FirstName, &user.SecondName, &user.Email, &user.PasswordHash, &user.StorageQuota, &user.StorageUsed, &user.SharedDirsCount, &user.SharedDirsQuota, &user.CreatedAt,
+		&user.ID, &user.Username, &user.FirstName, &user.SecondName, &user.Email, &user.PasswordHash, &user.StorageQuota, &user.StorageUsed, &user.SharedDirsCount, &user.SharedDirsQuota, &user.ShareLinksCount, &user.ShareLinksQuota, &user.CreatedAt,
 	)
 	if err != nil {
 		return record{}, err
@@ -104,7 +104,7 @@ func (r *Repository) RevokeAllRefreshTokensExcept(ctx context.Context, db dbTX, 
 
 func (r *Repository) SearchUsers(ctx context.Context, db dbTX, requesterID, query string, limit int) ([]record, error) {
 	rows, err := db.Query(ctx, `
-		SELECT id, username, first_name, second_name, email, password_hash, storage_quota, storage_used, shared_dirs_count, shared_dirs_quota, created_at
+		SELECT id, username, first_name, second_name, email, password_hash, storage_quota, storage_used, shared_dirs_count, shared_dirs_quota, share_links_count, share_links_quota, created_at
 		FROM users
 		WHERE id <> $1
 		  AND (username ILIKE '%' || $2 || '%' OR email ILIKE '%' || $2 || '%')
@@ -119,7 +119,7 @@ func (r *Repository) SearchUsers(ctx context.Context, db dbTX, requesterID, quer
 	users := make([]record, 0, limit)
 	for rows.Next() {
 		var user record
-		if err := rows.Scan(&user.ID, &user.Username, &user.FirstName, &user.SecondName, &user.Email, &user.PasswordHash, &user.StorageQuota, &user.StorageUsed, &user.SharedDirsCount, &user.SharedDirsQuota, &user.CreatedAt); err != nil {
+		if err := rows.Scan(&user.ID, &user.Username, &user.FirstName, &user.SecondName, &user.Email, &user.PasswordHash, &user.StorageQuota, &user.StorageUsed, &user.SharedDirsCount, &user.SharedDirsQuota, &user.ShareLinksCount, &user.ShareLinksQuota, &user.CreatedAt); err != nil {
 			return nil, err
 		}
 		users = append(users, user)
@@ -133,6 +133,17 @@ func (r *Repository) SearchUsers(ctx context.Context, db dbTX, requesterID, quer
 
 func (r *Repository) DeleteUserAndRelatedData(ctx context.Context, db dbTX, userID string) error {
 	_, err := db.Exec(ctx, `DELETE FROM users WHERE id = $1`, userID)
+	return err
+}
+
+func (r *Repository) RecalcSharedDirsCount(ctx context.Context, db dbTX, userID string) error {
+	_, err := db.Exec(ctx, `
+		UPDATE users SET shared_dirs_count = (
+			SELECT COUNT(*) FROM shared_directories sd
+			JOIN directories d ON d.id = sd.directory_id
+			WHERE sd.owner_id = $1 AND d.deleted_at IS NULL
+		), updated_at = now() WHERE id = $1
+	`, userID)
 	return err
 }
 

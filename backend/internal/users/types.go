@@ -25,6 +25,8 @@ type UserResponse struct {
 	StorageUsed     int64     `json:"storage_used"`
 	SharedDirsCount int       `json:"shared_dirs_count"`
 	SharedDirsQuota int       `json:"shared_dirs_quota"`
+	ShareLinksCount int       `json:"share_links_count"`
+	ShareLinksQuota int       `json:"share_links_quota"`
 	CreatedAt       time.Time `json:"created_at"`
 }
 
