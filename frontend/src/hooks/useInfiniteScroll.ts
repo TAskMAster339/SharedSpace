@@ -12,6 +12,11 @@ export function useInfiniteScroll(
   callbackRef.current = onLoadMore;
   activeRef.current = active;
 
+  // Когда active становится true (загрузка завершена), разрешаем следующую
+  if (active) {
+    loadingRef.current = false;
+  }
+
   useEffect(() => {
     const checkAndLoad = () => {
       if (!activeRef.current || loadingRef.current) return;
@@ -19,9 +24,6 @@ export function useInfiniteScroll(
       if (el && el.getBoundingClientRect().top < window.innerHeight + threshold) {
         loadingRef.current = true;
         callbackRef.current();
-        setTimeout(() => {
-          loadingRef.current = false;
-        }, 500);
       }
     };
 
@@ -32,7 +34,7 @@ export function useInfiniteScroll(
       window.removeEventListener('scroll', checkAndLoad);
       window.removeEventListener('resize', checkAndLoad);
     };
-  }, [threshold]);
+  }, [threshold, active]);
 
   return { sentinelRef };
 }

@@ -201,14 +201,7 @@ const DirectoryPage: React.FC = () => {
         }
       }
     },
-    [
-      accessToken,
-      navigate,
-      loadBreadcrumbs,
-      setTargetDirectoryId,
-      isLoadingShared,
-      user?.id,
-    ],
+    [accessToken, navigate, loadBreadcrumbs, setTargetDirectoryId, isLoadingShared, user?.id],
   );
 
   // --- Обработчик навигации по breadcrumbs ---
@@ -220,32 +213,20 @@ const DirectoryPage: React.FC = () => {
     [navigate],
   );
 
-  // --- Эффект 1: Обработка 'personal' ID ---
+  // --- Эффект 1: Обработка 'personal' ID (только редирект, без загрузки) ---
   useEffect(() => {
     if (redirectDone.current || !accessToken) return;
 
-    const resolveAndLoad = async () => {
-      let targetId = id;
-
-      if (id === 'personal') {
-        const rootId = personalStorageId || localStorage.getItem('rootDirectoryId');
-        if (rootId && rootId !== 'personal') {
-          targetId = rootId;
-          redirectDone.current = true;
-          navigate(`/directories/${rootId}`, { replace: true });
-        }
-      } else if (id) {
+    if (id === 'personal') {
+      const rootId = personalStorageId || localStorage.getItem('rootDirectoryId');
+      if (rootId && rootId !== 'personal') {
         redirectDone.current = true;
+        navigate(`/directories/${rootId}`, { replace: true });
       }
-
-      if (targetId && targetId !== 'personal') {
-        setActualId(targetId);
-        await loadDirectory(targetId);
-      }
-    };
-
-    resolveAndLoad();
-  }, [id, personalStorageId, accessToken, navigate, loadDirectory]);
+    } else if (id) {
+      redirectDone.current = true;
+    }
+  }, [id, personalStorageId, accessToken, navigate]);
 
   // --- Эффект 2: Обновление при изменении ID в URL ---
   useEffect(() => {
@@ -273,28 +254,20 @@ const DirectoryPage: React.FC = () => {
   ]);
 
   // Эффект 3: Когда список общих директорий загрузился,
-  // перепроверяем статус и перезагружаем breadcrumbs
+  // обновляем isDirectlyShared (checkIsShared мог вернуть false,
+  // если список общих директорий ещё не загрузился).
+  // Хлебные крошки и isShared уже корректны — они приходят с бэка
+  // и не зависят от isLoadingShared.
   useEffect(() => {
     if (!isLoadingShared && actualId && accessToken && directoryInfo) {
-      const shared = directoryInfo.shared_directory_id != null;
       setIsDirectlyShared(checkIsShared(actualId));
-      loadBreadcrumbs(actualId).then(() => {
-        if (shared !== isShared) {
-          setIsShared(shared);
-          setCurrentSection(shared ? 'shared' : 'personal');
-        }
-      });
+      const shared = directoryInfo.shared_directory_id != null;
+      if (shared !== isShared) {
+        setIsShared(shared);
+        setCurrentSection(shared ? 'shared' : 'personal');
+      }
     }
-  }, [
-    isLoadingShared,
-    actualId,
-    accessToken,
-    directoryInfo,
-    user?.id,
-    loadBreadcrumbs,
-    checkIsShared,
-    isShared,
-  ]);
+  }, [isLoadingShared, actualId, accessToken, directoryInfo, user?.id, checkIsShared, isShared]);
 
   // --- Эффект 4: Обновляем DnD target при изменении actualId ---
   useEffect(() => {
@@ -334,12 +307,10 @@ const DirectoryPage: React.FC = () => {
       // Сбрасываем state, чтобы при обновлении страницы не было проблем
       navigate(location.pathname, { replace: true, state: {} });
 
-      // Если ID из state отличается от текущего в URL, загружаем его
+      // Если ID из state отличается от текущего в URL — загружаем его.
+      // Если совпадает — Effect 2 уже загрузит директорию при монтировании.
       if (state.directoryId !== id) {
         loadDirectory(state.directoryId);
-      } else {
-        // Если тот же ID, просто перезагружаем
-        loadDirectory(id);
       }
     }
   }, [accessToken, id, location.state, location.pathname, navigate, loadDirectory]);
