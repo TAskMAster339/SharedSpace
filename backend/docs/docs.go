@@ -570,6 +570,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/directories/{id}/path": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "directories"
+                ],
+                "summary": "Get directory breadcrumb path",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Directory ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_dirs.DirectoryPathResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/directories/{id}/permanent": {
             "delete": {
                 "security": [
@@ -3017,6 +3068,23 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_dirs.BreadcrumbItem": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "is_shared": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_dirs.CreateDirectoryRequest": {
             "type": "object",
             "properties": {
@@ -3060,6 +3128,17 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_dirs.DirectoryPathResponse": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_dirs.BreadcrumbItem"
+                    }
+                }
+            }
+        },
         "internal_dirs.DirectoryResponse": {
             "type": "object",
             "properties": {
@@ -3086,6 +3165,9 @@ const docTemplate = `{
                 },
                 "permissions": {
                     "$ref": "#/definitions/sharedspace_internal_access.Permissions"
+                },
+                "shared_directory_id": {
+                    "type": "string"
                 },
                 "type": {
                     "type": "string"

@@ -273,6 +273,36 @@ func (h *Handler) PermanentDelete(w http.ResponseWriter, r *http.Request) error 
 	return writeJSON(w, http.StatusOK, map[string]string{"message": "директория удалена навсегда"})
 }
 
+// GetPath returns the breadcrumb path for a directory (from root or shared root to the directory).
+// @Summary Get directory breadcrumb path
+// @Tags directories
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Directory ID"
+// @Success 200 {object} DirectoryPathResponse
+// @Failure 401 {object} apperror.Response
+// @Failure 403 {object} apperror.Response
+// @Failure 404 {object} apperror.Response
+// @Router /api/v1/directories/{id}/path [get]
+func (h *Handler) GetPath(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := auth.ClaimsFromCtx(r.Context())
+	if !ok {
+		return apperror.Unauthorized("не авторизован")
+	}
+
+	dirID := chi.URLParam(r, "id")
+	if dirID == "" {
+		return apperror.Validation("id директории обязателен")
+	}
+
+	resp, err := h.service.GetPath(r.Context(), claims.UserID, dirID)
+	if err != nil {
+		return err
+	}
+
+	return writeJSON(w, http.StatusOK, resp)
+}
+
 type ContentsPaginationParams struct {
 	FilesLimit  int
 	FilesCursor string

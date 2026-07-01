@@ -60,6 +60,10 @@ func (m *mockAccessChecker) GetPermissions(ctx context.Context, userID, director
 	return &access.Permissions{}, nil
 }
 
+func (m *mockAccessChecker) GetSharedDirectoryID(_ context.Context, _, _ string) (*string, error) {
+	return nil, nil
+}
+
 type mockTx struct {
 	commitCount   int
 	rollbackCount int

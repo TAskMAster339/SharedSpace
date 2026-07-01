@@ -18,16 +18,28 @@ type UpdateDirectoryRequest struct {
 }
 
 type DirectoryResponse struct {
-	ID            string              `json:"id"`
-	Name          string              `json:"name"`
-	OwnerID       string              `json:"owner_id"`
-	ParentID      *string             `json:"parent_id"`
-	Type          string              `json:"type"`
-	FilesCount    int                 `json:"files_count"`
-	CreatedAt     time.Time           `json:"created_at"`
-	UpdatedAt     time.Time           `json:"updated_at"`
-	Permissions   *access.Permissions `json:"permissions,omitempty"`
-	HasShareLinks bool                `json:"has_share_links"`
+	ID                string              `json:"id"`
+	Name              string              `json:"name"`
+	OwnerID           string              `json:"owner_id"`
+	ParentID          *string             `json:"parent_id"`
+	Type              string              `json:"type"`
+	FilesCount        int                 `json:"files_count"`
+	CreatedAt         time.Time           `json:"created_at"`
+	UpdatedAt         time.Time           `json:"updated_at"`
+	Permissions       *access.Permissions `json:"permissions,omitempty"`
+	HasShareLinks     bool                `json:"has_share_links"`
+	SharedDirectoryID *string             `json:"shared_directory_id"`
+}
+
+type BreadcrumbItem struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Type     string `json:"type"`
+	IsShared bool   `json:"is_shared"`
+}
+
+type DirectoryPathResponse struct {
+	Path []BreadcrumbItem `json:"path"`
 }
 
 type FileItem struct {

@@ -12,6 +12,11 @@ export function useInfiniteScroll(
   callbackRef.current = onLoadMore;
   activeRef.current = active;
 
+  // Когда active становится true (загрузка завершена), разрешаем следующую
+  if (active) {
+    loadingRef.current = false;
+  }
+
   useEffect(() => {
     const checkAndLoad = () => {
       if (!activeRef.current || loadingRef.current) return;
@@ -19,20 +24,32 @@ export function useInfiniteScroll(
       if (el && el.getBoundingClientRect().top < window.innerHeight + threshold) {
         loadingRef.current = true;
         callbackRef.current();
-        setTimeout(() => {
-          loadingRef.current = false;
-        }, 500);
       }
     };
 
-    window.addEventListener('scroll', checkAndLoad, { passive: true });
-    window.addEventListener('resize', checkAndLoad, { passive: true });
-    checkAndLoad();
-    return () => {
-      window.removeEventListener('scroll', checkAndLoad);
-      window.removeEventListener('resize', checkAndLoad);
+    const fillViewport = () => {
+      if (!activeRef.current || loadingRef.current) return;
+      if (document.documentElement.scrollHeight <= window.innerHeight + threshold) {
+        loadingRef.current = true;
+        callbackRef.current();
+      }
     };
-  }, [threshold]);
+
+    const onScroll = checkAndLoad;
+    const onResize = () => {
+      checkAndLoad();
+      fillViewport();
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onResize, { passive: true });
+    checkAndLoad();
+    fillViewport();
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onResize);
+    };
+  }, [threshold, active]);
 
   return { sentinelRef };
 }

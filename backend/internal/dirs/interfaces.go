@@ -12,6 +12,7 @@ type ServiceInterface interface {
 	GetRootContents(ctx context.Context, userID string, params ContentsPaginationParams) (*DirectoryContentsResponse, error)
 	GetContents(ctx context.Context, userID, dirID string, params ContentsPaginationParams) (*DirectoryContentsResponse, error)
 	GetByID(ctx context.Context, userID, dirID string) (DirectoryResponse, error)
+	GetPath(ctx context.Context, userID, dirID string) (DirectoryPathResponse, error)
 	Create(ctx context.Context, userID string, req CreateDirectoryRequest) (DirectoryResponse, error)
 	Update(ctx context.Context, userID, dirID string, req UpdateDirectoryRequest) (DirectoryResponse, error)
 	SoftDelete(ctx context.Context, userID, dirID string) error
@@ -45,6 +46,7 @@ type RepositoryInterface interface {
 	RecalcSharedDirsCount(ctx context.Context, db dbTX, userID string) error
 	IncrementFilesCount(ctx context.Context, db dbTX, directoryID string, delta int) error
 	CheckShareLinks(ctx context.Context, db dbTX, fileIDs, dirIDs []string) (fileLinks map[string]bool, dirLinks map[string]bool, err error)
+	FindAncestorsPath(ctx context.Context, db dbTX, directoryID string) ([]ancestorPathRecord, error)
 }
 
 type SharingRepository interface {

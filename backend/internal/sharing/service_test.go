@@ -143,6 +143,10 @@ func (m *mockAccessChecker) GetPermissions(ctx context.Context, userID, director
 	return &access.Permissions{}, nil
 }
 
+func (m *mockAccessChecker) GetSharedDirectoryID(_ context.Context, _, _ string) (*string, error) {
+	return nil, nil
+}
+
 func newTestService(repo RepositoryInterface) *Service {
 	return &Service{
 		beginTx:       func(_ context.Context, _ pgx.TxOptions) (transaction, error) { return mockTX{}, nil },

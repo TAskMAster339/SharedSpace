@@ -93,6 +93,7 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 				r.Route("/directories", func(r chi.Router) {
 					r.Get("/root/contents", middleware.AppError(dirsHandler.GetRootContents))
 					r.Get("/{id}/contents", middleware.AppError(dirsHandler.GetContents))
+					r.Get("/{id}/path", middleware.AppError(dirsHandler.GetPath))
 					r.Get("/{id}", middleware.AppError(dirsHandler.GetByID))
 					r.Post("/", middleware.AppError(dirsHandler.Create))
 					r.Patch("/{id}", middleware.AppError(dirsHandler.Update))
