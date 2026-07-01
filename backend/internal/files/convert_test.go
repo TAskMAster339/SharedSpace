@@ -80,7 +80,7 @@ func TestConvertImageData_Pairs(t *testing.T) {
 	gifData := makeGIF(t)
 
 	t.Run("png to jpg", func(t *testing.T) {
-		out, src, mime, ext, err := convertImageData(pngData, "jpg")
+		out, src, mime, ext, err := convertImageData(pngData, "jpg", "")
 		if err != nil {
 			t.Fatalf("convert: %v", err)
 		}
@@ -93,7 +93,7 @@ func TestConvertImageData_Pairs(t *testing.T) {
 	})
 
 	t.Run("png to webp", func(t *testing.T) {
-		out, _, mime, ext, err := convertImageData(pngData, "webp")
+		out, _, mime, ext, err := convertImageData(pngData, "webp", "")
 		if err != nil {
 			t.Fatalf("convert: %v", err)
 		}
@@ -106,7 +106,7 @@ func TestConvertImageData_Pairs(t *testing.T) {
 	})
 
 	t.Run("png to gif", func(t *testing.T) {
-		out, _, mime, ext, err := convertImageData(pngData, "gif")
+		out, _, mime, ext, err := convertImageData(pngData, "gif", "")
 		if err != nil {
 			t.Fatalf("convert: %v", err)
 		}
@@ -119,7 +119,7 @@ func TestConvertImageData_Pairs(t *testing.T) {
 	})
 
 	t.Run("png to bmp", func(t *testing.T) {
-		out, _, mime, ext, err := convertImageData(pngData, "bmp")
+		out, _, mime, ext, err := convertImageData(pngData, "bmp", "")
 		if err != nil {
 			t.Fatalf("convert: %v", err)
 		}
@@ -132,13 +132,13 @@ func TestConvertImageData_Pairs(t *testing.T) {
 	})
 
 	t.Run("gif unsupported to png", func(t *testing.T) {
-		if _, _, _, _, err := convertImageData(gifData, "png"); !errors.Is(err, errUnsupportedConversion) {
+		if _, _, _, _, err := convertImageData(gifData, "png", ""); !errors.Is(err, errUnsupportedConversion) {
 			t.Fatalf("expected unsupported, got %v", err)
 		}
 	})
 
 	t.Run("jpg to webp", func(t *testing.T) {
-		out, src, _, ext, err := convertImageData(jpgData, "webp")
+		out, src, _, ext, err := convertImageData(jpgData, "webp", "")
 		if err != nil {
 			t.Fatalf("convert: %v", err)
 		}
@@ -151,7 +151,7 @@ func TestConvertImageData_Pairs(t *testing.T) {
 	})
 
 	t.Run("jpg to png", func(t *testing.T) {
-		out, _, mime, ext, err := convertImageData(jpgData, "png")
+		out, _, mime, ext, err := convertImageData(jpgData, "png", "")
 		if err != nil {
 			t.Fatalf("convert: %v", err)
 		}
@@ -164,7 +164,7 @@ func TestConvertImageData_Pairs(t *testing.T) {
 	})
 
 	t.Run("jpg to gif", func(t *testing.T) {
-		out, _, mime, ext, err := convertImageData(jpgData, "gif")
+		out, _, mime, ext, err := convertImageData(jpgData, "gif", "")
 		if err != nil {
 			t.Fatalf("convert: %v", err)
 		}
@@ -177,7 +177,7 @@ func TestConvertImageData_Pairs(t *testing.T) {
 	})
 
 	t.Run("jpg to tiff", func(t *testing.T) {
-		out, _, mime, ext, err := convertImageData(jpgData, "tiff")
+		out, _, mime, ext, err := convertImageData(jpgData, "tiff", "")
 		if err != nil {
 			t.Fatalf("convert: %v", err)
 		}
@@ -190,13 +190,13 @@ func TestConvertImageData_Pairs(t *testing.T) {
 	})
 
 	t.Run("unsupported png to avif", func(t *testing.T) {
-		if _, _, _, _, err := convertImageData(pngData, "avif"); !errors.Is(err, errUnsupportedConversion) {
+		if _, _, _, _, err := convertImageData(pngData, "avif", ""); !errors.Is(err, errUnsupportedConversion) {
 			t.Fatalf("expected unsupported, got %v", err)
 		}
 	})
 
 	t.Run("unsupported png to wav", func(t *testing.T) {
-		if _, _, _, _, err := convertImageData(pngData, "wav"); !errors.Is(err, errUnsupportedConversion) {
+		if _, _, _, _, err := convertImageData(pngData, "wav", ""); !errors.Is(err, errUnsupportedConversion) {
 			t.Fatalf("expected unsupported, got %v", err)
 		}
 	})

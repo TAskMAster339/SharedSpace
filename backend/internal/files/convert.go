@@ -29,6 +29,7 @@ var allowedConversions = map[string]map[string]bool{
 	"wav":  {"mp3": true, "flac": true, "ogg": true, "aac": true},
 	"flac": {"mp3": true, "wav": true, "ogg": true, "aac": true},
 	"ogg":  {"mp3": true, "wav": true, "flac": true, "aac": true},
+	"aac":  {"mp3": true, "wav": true, "flac": true, "ogg": true},
 }
 
 var videoCodecMap = map[string]string{
@@ -41,8 +42,11 @@ var audioCodecMap = map[string]string{
 	"mp3":  "mp3",
 	"aac":  "aac",
 	"flac": "flac",
-	"ogg":  "vorbis",
 	"wav":  "pcm_s16le",
+}
+
+var audioTargets = map[string]bool{
+	"mp3": true, "aac": true, "flac": true, "ogg": true, "wav": true,
 }
 
 var mimeMap = map[string]string{
@@ -69,13 +73,13 @@ func ffmpegAvailable() bool {
 	return err == nil
 }
 
-func convertImageData(data []byte, target string) (out []byte, sourceFormat, mimeType, ext string, err error) {
+func convertImageData(data []byte, target string, fileExt string) (out []byte, sourceFormat, mimeType, ext string, err error) {
 	target = strings.ToLower(target)
 	if target == "jpeg" {
 		target = "jpg"
 	}
 
-	sourceFormat = detectFormat(data)
+	sourceFormat = detectFormat(data, fileExt)
 	if sourceFormat == "jpeg" {
 		sourceFormat = "jpg"
 	}
@@ -103,8 +107,12 @@ func convertImageData(data []byte, target string) (out []byte, sourceFormat, mim
 	args := ffmpeg.KwArgs{}
 	if codec, ok := videoCodecMap[target]; ok {
 		args["c:v"] = codec
-	} else if codec, ok := audioCodecMap[target]; ok {
+	}
+	if codec, ok := audioCodecMap[target]; ok {
 		args["c:a"] = codec
+	}
+	if audioTargets[target] {
+		args["vn"] = ""
 	}
 
 	if err := ffmpeg.Input(inPath).
@@ -144,10 +152,12 @@ func writeTempFile(data []byte, pattern string) (string, error) {
 	return f.Name(), nil
 }
 
-func detectFormat(data []byte) string {
+func detectFormat(data []byte, ext string) string {
 	if len(data) < 12 {
 		return ""
 	}
+	ext = strings.ToLower(strings.TrimPrefix(ext, "."))
+
 	if data[0] == 0x89 && data[1] == 0x50 && data[2] == 0x4E && data[3] == 0x47 {
 		return "png"
 	}
@@ -182,6 +192,9 @@ func detectFormat(data []byte) string {
 		return "mkv"
 	}
 	if data[0] == 0xFF && (data[1]&0xE0) == 0xE0 {
+		if ext == "aac" || ext == "m4a" {
+			return "aac"
+		}
 		return "mp3"
 	}
 	if data[0] == 0x49 && data[1] == 0x44 && data[2] == 0x33 {
@@ -194,8 +207,12 @@ func detectFormat(data []byte) string {
 		return "ogg"
 	}
 	if string(data[4:8]) == "ftyp" {
-		if string(data[8:12]) == "qt  " {
+		brand := string(data[8:12])
+		if brand == "qt  " {
 			return "mov"
+		}
+		if brand == "M4A " || ext == "m4a" || ext == "aac" {
+			return "aac"
 		}
 		return "mp4"
 	}

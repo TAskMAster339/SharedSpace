@@ -164,6 +164,15 @@ export const ConvertModal: React.FC<ConvertModalProps> = ({
 
           {isSupported ? (
             <>
+              {/* Предупреждение о совместимости */}
+              <div className="bg-brand-light border border-theme rounded-theme-md p-3 text-xs text-theme-secondary">
+                <p className="font-medium mb-0.5 text-theme-primary">Важно</p>
+                <p>
+                  Не все преобразования могут быть идеально точными — некоторые форматы не полностью
+                  совместимы друг с другом. Результат может отличаться от оригинала.
+                </p>
+              </div>
+
               {/* Выбор формата */}
               <div ref={containerRef}>
                 <p className="text-sm text-theme-secondary mb-2">Выберите формат:</p>
