@@ -150,6 +150,26 @@ const SharedDirectoryPage: React.FC = () => {
   const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
   const [savedPassword, setSavedPassword] = useState<string>('');
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const dirNamesRef = useRef<Record<string, string>>({});
+  const initDoneRef = useRef(false);
+  // Restore directory names from sessionStorage on mount
+  if (token && !initDoneRef.current) {
+    initDoneRef.current = true;
+    try {
+      const stored = sessionStorage.getItem(`sd_path_names_${token}`);
+      if (stored) dirNamesRef.current = JSON.parse(stored);
+    } catch {
+      /* ignore */
+    }
+  }
+  const persistDirNames = useCallback(() => {
+    if (!token) return;
+    try {
+      sessionStorage.setItem(`sd_path_names_${token}`, JSON.stringify(dirNamesRef.current));
+    } catch {
+      /* ignore */
+    }
+  }, [token]);
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     return (localStorage.getItem('sharedDirViewMode') as ViewMode) || 'grid';
   });
@@ -184,15 +204,22 @@ const SharedDirectoryPage: React.FC = () => {
         setHasMoreFiles(!!result.next_files_cursor);
         setNeedsPassword(false);
 
-        // Rebuild breadcrumbs from current pathIds
-        setBreadcrumbs((prev) => {
-          const crumbs: Breadcrumb[] = [{ id: '', name: result.name }];
-          pathIds.forEach((id, index) => {
-            const isLast = index === pathIds.length - 1;
-            const prevCrumb = prev[index + 1];
+        // Store directory names for breadcrumbs
+        if (subDirId) {
+          dirNamesRef.current[subDirId] = result.name;
+        } else {
+          dirNamesRef.current['root'] = result.name;
+        }
+        persistDirNames();
+
+        // Rebuild breadcrumbs from stored names
+        setBreadcrumbs(() => {
+          const rootName = dirNamesRef.current['root'] || result.name;
+          const crumbs: Breadcrumb[] = [{ id: '', name: rootName }];
+          pathIds.forEach((id) => {
             crumbs.push({
               id,
-              name: isLast ? result.name : prevCrumb?.id === id ? prevCrumb.name : '...',
+              name: dirNamesRef.current[id] || '...',
             });
           });
           return crumbs;
@@ -288,11 +315,11 @@ const SharedDirectoryPage: React.FC = () => {
 
   const { sentinelRef: dirsSentinelRef } = useInfiniteScroll(
     loadMoreDirs,
-    hasMoreDirs && !isLoadingMoreDirs,
+    hasMoreDirs && !isLoadingMoreDirs && !!dirsCursor,
   );
   const { sentinelRef: filesSentinelRef } = useInfiniteScroll(
     loadMoreFiles,
-    hasMoreFiles && !isLoadingMoreFiles,
+    hasMoreFiles && !isLoadingMoreFiles && !!filesCursor,
   );
 
   const handleCopyLink = useCallback(
@@ -346,10 +373,16 @@ const SharedDirectoryPage: React.FC = () => {
   };
 
   const handleNavigate = (dirId: string) => {
+    // Store subdirectory name from current listing before navigation
+    const subdir = allSubdirs.find((s) => s.id === dirId);
+    if (subdir) {
+      dirNamesRef.current[dirId] = subdir.name;
+      persistDirNames();
+    }
     setIsNavigating(true);
     const newPathIds = [...pathIds, dirId];
     setSearchParams({ path: encodePath(newPathIds) });
-    // Add pending breadcrumb entry (name will be filled by API)
+    // Add pending breadcrumb entry (name will be filled by fetchData if missing)
     setBreadcrumbs((prev) => [...prev, { id: dirId, name: '...' }]);
   };
 
@@ -685,7 +718,7 @@ const SharedDirectoryPage: React.FC = () => {
           {crumbs.map((crumb, i) => {
             const isLast = i === crumbs.length - 1;
             return (
-              <React.Fragment key={i}>
+              <React.Fragment key={crumb.id}>
                 <ChevronRight size={14} className="text-theme-muted shrink-0" />
                 {isLast ? (
                   <span className="text-theme-primary font-medium truncate max-w-[200px]">
