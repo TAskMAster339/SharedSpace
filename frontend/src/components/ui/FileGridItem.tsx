@@ -18,6 +18,8 @@ interface FileGridItemProps {
   onDelete?: (id: string) => void;
   onMove?: (id: string) => void;
   onShare?: (id: string) => void;
+  onDownload?: (id: string) => void;
+  onConvert?: (id: string) => void;
   onDragStart?: (e: React.DragEvent, id: string, name: string) => void;
 }
 
@@ -33,6 +35,8 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
   onDelete,
   onMove,
   onShare,
+  onDownload,
+  onConvert,
   onDragStart,
 }) => {
   const [contextMenuOpen, setContextMenuOpen] = useState(false);
@@ -85,6 +89,8 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
           onDelete={onDelete ? () => onDelete(id) : undefined}
           onMove={onMove ? () => onMove(id) : undefined}
           onShare={onShare ? () => onShare(id) : undefined}
+          onDownload={onDownload ? () => onDownload(id) : undefined}
+          onConvert={onConvert ? () => onConvert(id) : undefined}
           iconSize={16}
           openMenu={contextMenuOpen}
           onCloseMenu={() => setContextMenuOpen(false)}

@@ -16,6 +16,8 @@ import { FolderItem } from '../components/ui/FolderItem';
 import { FileItem } from '../components/ui/FileItem';
 import { MoveFileModal } from '../components/ui/MoveFileModal';
 import { ShareLinkModal } from '../components/ui/ShareLinkModal';
+import { ConvertModal } from '../components/ui/ConvertModal';
+import { useFileConversion } from '../hooks/useFileConversion';
 import {
   getDirectoryContents,
   getDirectoryById,
@@ -28,7 +30,13 @@ import {
   DirectoryPaginationParams,
   File as DirectoryFile,
 } from '../api/directories';
-import { uploadFilesWithProgress, softDeleteFile, restoreFile, moveFile } from '../api/files';
+import {
+  uploadFilesWithProgress,
+  softDeleteFile,
+  restoreFile,
+  moveFile,
+  getFileContentUrl,
+} from '../api/files';
 import { createShareLink, createDirectoryShareLink } from '../api/sharelinks';
 import { formatFileSize, formatDate } from '../utils/format';
 import { useFavorites } from '../hooks/useFavorites';
@@ -71,6 +79,7 @@ const DirectoryPage: React.FC = () => {
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const { isFavorite, toggleFavorite } = useFavorites();
   const showToast = useToastStore((state) => state.showToast);
+  const { isConverting, convertAndDownload, convertAndSave } = useFileConversion();
   const [isShared, setIsShared] = useState(false);
   const [isDirectlyShared, setIsDirectlyShared] = useState(false);
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
@@ -82,6 +91,12 @@ const DirectoryPage: React.FC = () => {
     itemType: 'file' | 'directory';
   } | null>(null);
   const [shareLinkRefreshKey, setShareLinkRefreshKey] = useState(0);
+  const [convertFileData, setConvertFileData] = useState<{
+    id: string;
+    filename: string;
+    mimeType: string;
+    extension: string;
+  } | null>(null);
 
   // Pagination
   const PAGE_LIMIT = 20;
@@ -501,6 +516,61 @@ const DirectoryPage: React.FC = () => {
     [allFiles, toggleFavorite, showToast],
   );
 
+  const handleDownload = useCallback(
+    async (fileId: string) => {
+      if (!accessToken) return;
+      const file = allFiles.find((f) => f.id === fileId);
+      if (!file) return;
+
+      try {
+        const { url } = await getFileContentUrl(accessToken, fileId);
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = file.filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(link.href), 100);
+      } catch (err) {
+        console.error('Ошибка скачивания:', err);
+        showToast('Не удалось скачать файл', 'error');
+      }
+    },
+    [accessToken, allFiles, showToast],
+  );
+
+  const handleConvert = useCallback(
+    (fileId: string) => {
+      const file = allFiles.find((f) => f.id === fileId);
+      if (!file) return;
+      setConvertFileData({
+        id: file.id,
+        filename: file.filename,
+        mimeType: file.mime_type,
+        extension: file.extension,
+      });
+    },
+    [allFiles],
+  );
+
+  const handleConvertAndDownload = useCallback(
+    (format: string) => {
+      if (!convertFileData) return Promise.reject('No file');
+      return convertAndDownload(convertFileData.id, format, convertFileData.filename);
+    },
+    [convertFileData, convertAndDownload],
+  );
+
+  const handleConvertAndSave = useCallback(
+    (format: string) => {
+      if (!convertFileData) return Promise.reject('No file');
+      return convertAndSave(convertFileData.id, format, convertFileData.filename);
+    },
+    [convertFileData, convertAndSave],
+  );
+
   const loadMoreDirs = useCallback(() => {
     if (!accessToken || !actualId || !dirsCursor || isLoadingMoreDirs) return;
     setIsLoadingMoreDirs(true);
@@ -918,6 +988,8 @@ const DirectoryPage: React.FC = () => {
                         onToggleFavorite={handleToggleFavorite}
                         onDelete={perms?.delete ? handleDeleteFile : undefined}
                         onMove={handleMoveFile}
+                        onDownload={handleDownload}
+                        onConvert={handleConvert}
                         onShare={(id) => {
                           const f = formattedFiles.find((d) => d.id === id);
                           if (f)
@@ -947,6 +1019,8 @@ const DirectoryPage: React.FC = () => {
                         onToggleFavorite={handleToggleFavorite}
                         onDelete={perms?.delete ? handleDeleteFile : undefined}
                         onMove={handleMoveFile}
+                        onDownload={handleDownload}
+                        onConvert={handleConvert}
                         onShare={(id) => {
                           const f = formattedFiles.find((d) => d.id === id);
                           if (f)
@@ -1117,6 +1191,20 @@ const DirectoryPage: React.FC = () => {
         currentDirectoryId={actualId || ''}
         onMoveComplete={handleMoveComplete}
       />
+
+      {convertFileData && (
+        <ConvertModal
+          isOpen={true}
+          onClose={() => setConvertFileData(null)}
+          fileId={convertFileData.id}
+          fileName={convertFileData.filename}
+          mimeType={convertFileData.mimeType}
+          extension={convertFileData.extension}
+          onConvertAndDownload={handleConvertAndDownload}
+          onConvertAndSave={handleConvertAndSave}
+          isConverting={isConverting}
+        />
+      )}
 
       {/* Уведомления — удалены, используется глобальный ToastContainer */}
     </div>
