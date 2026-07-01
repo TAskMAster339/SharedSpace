@@ -135,11 +135,17 @@ const DashboardPage: React.FC = () => {
   );
 
   const handleConvertAndSave = useCallback(
-    (format: string) => {
-      if (!convertFileData) return Promise.reject('No file');
-      return convertAndSave(convertFileData.id, format, convertFileData.filename);
+    async (format: string) => {
+      if (!convertFileData) return null;
+      const resultFileId = await convertAndSave(
+        convertFileData.id,
+        format,
+        convertFileData.filename,
+      );
+      refreshDashboard();
+      return resultFileId;
     },
-    [convertFileData, convertAndSave],
+    [convertFileData, convertAndSave, refreshDashboard],
   );
 
   if (isStorageLoading || isLoading) {

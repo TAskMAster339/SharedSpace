@@ -96,7 +96,8 @@ const FileViewPage: React.FC = () => {
   const accessToken = useAuthStore((state: AuthState) => state.accessToken);
   const user = useAuthStore((state: AuthState) => state.user);
   const { isFavorite, toggleFavorite } = useFavorites();
-  const { isConverting, convertAndDownload, convertAndSave } = useFileConversion();
+  const { isConverting, conversionProgress, convertAndDownload, convertAndSave } =
+    useFileConversion();
   const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -672,6 +673,7 @@ const FileViewPage: React.FC = () => {
               onConvertAndDownload={handleConvertAndDownload}
               onConvertAndSave={handleConvertAndSave}
               isConverting={isConverting}
+              conversionProgress={conversionProgress}
             />
 
             {accessToken && (

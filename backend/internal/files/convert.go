@@ -14,8 +14,58 @@ import (
 var errUnsupportedConversion = errors.New("unsupported conversion")
 
 var allowedConversions = map[string]map[string]bool{
-	"png": {"jpg": true, "webp": true},
-	"jpg": {"webp": true},
+	"png":  {"jpg": true, "webp": true, "gif": true, "bmp": true, "tiff": true},
+	"jpg":  {"png": true, "webp": true, "gif": true, "bmp": true, "tiff": true},
+	"webp": {"png": true, "jpg": true, "gif": true, "bmp": true, "tiff": true},
+	"gif":  {"mp4": true, "webm": true, "avi": true, "mov": true, "mkv": true},
+	"bmp":  {"png": true, "jpg": true, "webp": true, "gif": true, "tiff": true},
+	"tiff": {"png": true, "jpg": true, "webp": true, "gif": true, "bmp": true},
+	"mp4":  {"webm": true, "avi": true, "mov": true, "mkv": true, "gif": true},
+	"webm": {"mp4": true, "avi": true, "mov": true, "mkv": true, "gif": true},
+	"avi":  {"mp4": true, "webm": true, "mov": true, "mkv": true, "gif": true},
+	"mov":  {"mp4": true, "webm": true, "avi": true, "mkv": true, "gif": true},
+	"mkv":  {"mp4": true, "webm": true, "avi": true, "mov": true, "gif": true},
+	"mp3":  {"wav": true, "flac": true, "ogg": true, "aac": true},
+	"wav":  {"mp3": true, "flac": true, "ogg": true, "aac": true},
+	"flac": {"mp3": true, "wav": true, "ogg": true, "aac": true},
+	"ogg":  {"mp3": true, "wav": true, "flac": true, "aac": true},
+	"aac":  {"mp3": true, "wav": true, "flac": true, "ogg": true},
+}
+
+var videoCodecMap = map[string]string{
+	"jpg":  "mjpeg",
+	"webp": "libwebp",
+	"gif":  "gif",
+}
+
+var audioCodecMap = map[string]string{
+	"mp3":  "mp3",
+	"aac":  "aac",
+	"flac": "flac",
+	"wav":  "pcm_s16le",
+}
+
+var audioTargets = map[string]bool{
+	"mp3": true, "aac": true, "flac": true, "ogg": true, "wav": true,
+}
+
+var mimeMap = map[string]string{
+	"jpg":  "image/jpeg",
+	"webp": "image/webp",
+	"png":  "image/png",
+	"gif":  "image/gif",
+	"bmp":  "image/bmp",
+	"tiff": "image/tiff",
+	"mp4":  "video/mp4",
+	"webm": "video/webm",
+	"avi":  "video/x-msvideo",
+	"mov":  "video/quicktime",
+	"mkv":  "video/x-matroska",
+	"mp3":  "audio/mpeg",
+	"wav":  "audio/wav",
+	"flac": "audio/flac",
+	"ogg":  "audio/ogg",
+	"aac":  "audio/aac",
 }
 
 func ffmpegAvailable() bool {
@@ -23,13 +73,13 @@ func ffmpegAvailable() bool {
 	return err == nil
 }
 
-func convertImageData(data []byte, target string) (out []byte, sourceFormat, mimeType, ext string, err error) {
+func convertImageData(data []byte, target string, fileExt string) (out []byte, sourceFormat, mimeType, ext string, err error) {
 	target = strings.ToLower(target)
 	if target == "jpeg" {
 		target = "jpg"
 	}
 
-	sourceFormat = detectFormat(data)
+	sourceFormat = detectFormat(data, fileExt)
 	if sourceFormat == "jpeg" {
 		sourceFormat = "jpg"
 	}
@@ -40,7 +90,7 @@ func convertImageData(data []byte, target string) (out []byte, sourceFormat, mim
 		return nil, "", "", "", errUnsupportedConversion
 	}
 
-	inPath, err := writeTempFile(data, "convert_in_*")
+	inPath, err := writeTempFile(data, "convert_in_*."+sourceFormat)
 	if err != nil {
 		return nil, "", "", "", err
 	}
@@ -54,13 +104,19 @@ func convertImageData(data []byte, target string) (out []byte, sourceFormat, mim
 	outFile.Close()
 	defer os.Remove(outPath)
 
-	codec := "mjpeg"
-	if target == "webp" {
-		codec = "libwebp"
+	args := ffmpeg.KwArgs{}
+	if codec, ok := videoCodecMap[target]; ok {
+		args["c:v"] = codec
+	}
+	if codec, ok := audioCodecMap[target]; ok {
+		args["c:a"] = codec
+	}
+	if audioTargets[target] {
+		args["vn"] = ""
 	}
 
 	if err := ffmpeg.Input(inPath).
-		Output(outPath, ffmpeg.KwArgs{"c:v": codec}).
+		Output(outPath, args).
 		OverWriteOutput().
 		Run(); err != nil {
 		return nil, "", "", "", fmt.Errorf("ffmpeg: %w", err)
@@ -71,14 +127,11 @@ func convertImageData(data []byte, target string) (out []byte, sourceFormat, mim
 		return nil, "", "", "", fmt.Errorf("read output: %w", err)
 	}
 
-	switch target {
-	case "jpg":
-		mimeType, ext = "image/jpeg", "jpg"
-	case "webp":
-		mimeType, ext = "image/webp", "webp"
-	default:
-		mimeType, ext = "application/octet-stream", target
+	mimeType = mimeMap[target]
+	if mimeType == "" {
+		mimeType = "application/octet-stream"
 	}
+	ext = target
 	return out, sourceFormat, mimeType, ext, nil
 }
 
@@ -99,18 +152,69 @@ func writeTempFile(data []byte, pattern string) (string, error) {
 	return f.Name(), nil
 }
 
-func detectFormat(data []byte) string {
+func detectFormat(data []byte, ext string) string {
 	if len(data) < 12 {
 		return ""
 	}
+	ext = strings.ToLower(strings.TrimPrefix(ext, "."))
+
 	if data[0] == 0x89 && data[1] == 0x50 && data[2] == 0x4E && data[3] == 0x47 {
 		return "png"
 	}
 	if data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF {
 		return "jpeg"
 	}
+	if data[0] == 0x47 && data[1] == 0x49 && data[2] == 0x46 && data[3] == 0x38 {
+		return "gif"
+	}
+	if data[0] == 0x42 && data[1] == 0x4D {
+		return "bmp"
+	}
+	if data[0] == 0x49 && data[1] == 0x49 && data[2] == 0x2A && data[3] == 0x00 {
+		return "tiff"
+	}
+	if data[0] == 0x4D && data[1] == 0x4D && data[2] == 0x00 && data[3] == 0x2A {
+		return "tiff"
+	}
 	if string(data[0:4]) == "RIFF" && string(data[8:12]) == "WEBP" {
 		return "webp"
+	}
+	if string(data[0:4]) == "RIFF" && string(data[8:12]) == "AVI " {
+		return "avi"
+	}
+	if string(data[0:4]) == "RIFF" && string(data[8:12]) == "WAVE" {
+		return "wav"
+	}
+	if data[0] == 0x1A && data[1] == 0x45 && data[2] == 0xDF && data[3] == 0xA3 {
+		if len(data) > 64 && strings.Contains(strings.ToLower(string(data[:64])), "webm") {
+			return "webm"
+		}
+		return "mkv"
+	}
+	if data[0] == 0xFF && (data[1]&0xE0) == 0xE0 {
+		if ext == "aac" || ext == "m4a" {
+			return "aac"
+		}
+		return "mp3"
+	}
+	if data[0] == 0x49 && data[1] == 0x44 && data[2] == 0x33 {
+		return "mp3"
+	}
+	if data[0] == 0x66 && data[1] == 0x4C && data[2] == 0x61 && data[3] == 0x43 {
+		return "flac"
+	}
+	if data[0] == 0x4F && data[1] == 0x67 && data[2] == 0x67 && data[3] == 0x53 {
+		return "ogg"
+	}
+	if string(data[4:8]) == "ftyp" {
+		brand := string(data[8:12])
+		if brand == "qt  " {
+			return "mov"
+		}
+		if brand == "M4A " || ext == "m4a" || ext == "aac" {
+			return "aac"
+		}
+		return "mp4"
 	}
 	return ""
 }

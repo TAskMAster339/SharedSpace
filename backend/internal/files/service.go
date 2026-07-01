@@ -496,12 +496,12 @@ func (s *Service) produceConversion(ctx context.Context, userID, fileID, target 
 		return fileRecord{}, nil, "", "", "", apperror.WrapInternal("чтение содержимого", err)
 	}
 
-	out, sourceFormat, mimeType, ext, err := convertImageData(data, target)
+	out, sourceFormat, mimeType, ext, err := convertImageData(data, target, file.Extension)
 	if err != nil {
 		if errors.Is(err, errUnsupportedConversion) {
 			return fileRecord{}, nil, "", "", "", apperror.Validation("неподдерживаемая пара форматов")
 		}
-		return fileRecord{}, nil, "", "", "", apperror.WrapInternal("конвертация изображения", err)
+		return fileRecord{}, nil, "", "", "", apperror.WrapInternal("конвертация", err)
 	}
 	return file, out, sourceFormat, mimeType, ext, nil
 }
