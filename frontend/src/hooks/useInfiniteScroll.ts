@@ -27,12 +27,27 @@ export function useInfiniteScroll(
       }
     };
 
-    window.addEventListener('scroll', checkAndLoad, { passive: true });
-    window.addEventListener('resize', checkAndLoad, { passive: true });
+    const fillViewport = () => {
+      if (!activeRef.current || loadingRef.current) return;
+      if (document.documentElement.scrollHeight <= window.innerHeight + threshold) {
+        loadingRef.current = true;
+        callbackRef.current();
+      }
+    };
+
+    const onScroll = checkAndLoad;
+    const onResize = () => {
+      checkAndLoad();
+      fillViewport();
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onResize, { passive: true });
     checkAndLoad();
+    fillViewport();
     return () => {
-      window.removeEventListener('scroll', checkAndLoad);
-      window.removeEventListener('resize', checkAndLoad);
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onResize);
     };
   }, [threshold, active]);
 
