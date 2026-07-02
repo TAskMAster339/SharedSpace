@@ -161,10 +161,11 @@ const TrashPage: React.FC = () => {
                   {directories.map((item) => (
                     <div
                       key={item.id}
-                      className="flex flex-col gap-3 p-3 rounded-theme-md bg-theme-tertiary border border-theme sm:flex-row sm:items-center sm:justify-between"
+                      onContextMenu={(e) => e.preventDefault()}
+                      className="group flex flex-col gap-3 p-3 rounded-theme-md bg-theme-tertiary border border-theme sm:flex-row sm:items-center sm:justify-between hover:bg-theme-hover transition-colors"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card shrink-0 text-theme-muted">
+                        <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card shrink-0 text-theme-muted group-hover:text-brand transition-colors">
                           <Folder size={20} />
                         </div>
                         <div className="min-w-0">
@@ -182,7 +183,7 @@ const TrashPage: React.FC = () => {
                           type="button"
                           onClick={() => handleRestore(item)}
                           disabled={restoringId === item.id}
-                          className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-theme-on-brand bg-brand hover:bg-brand-hover rounded-theme-md transition-colors disabled:opacity-50 sm:py-1.5"
+                          className="group inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-theme-on-brand bg-brand hover:bg-brand-hover rounded-theme-md transition-colors disabled:opacity-50 sm:py-1.5"
                         >
                           <RotateCcw size={16} className="shrink-0" />
                           Восстановить
@@ -193,7 +194,7 @@ const TrashPage: React.FC = () => {
                             setDeleteError('');
                             setItemToDelete(item);
                           }}
-                          className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-danger hover:bg-danger-hover rounded-theme-md transition-colors sm:py-1.5"
+                          className="group inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-danger hover:bg-danger-hover rounded-theme-md transition-colors sm:py-1.5"
                         >
                           <Trash2 size={16} className="shrink-0" />
                           Удалить навсегда
@@ -213,10 +214,11 @@ const TrashPage: React.FC = () => {
                   {files.map((item) => (
                     <div
                       key={item.id}
-                      className="flex flex-col gap-3 p-3 rounded-theme-md bg-theme-tertiary border border-theme sm:flex-row sm:items-center sm:justify-between"
+                      onContextMenu={(e) => e.preventDefault()}
+                      className="group flex flex-col gap-3 p-3 rounded-theme-md bg-theme-tertiary border border-theme sm:flex-row sm:items-center sm:justify-between hover:bg-theme-hover transition-colors"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card shrink-0 text-theme-muted">
+                        <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card shrink-0 text-theme-muted group-hover:text-brand transition-colors">
                           <FileIconLucide size={20} />
                         </div>
                         <div className="min-w-0">
@@ -234,7 +236,7 @@ const TrashPage: React.FC = () => {
                           type="button"
                           onClick={() => handleRestore(item)}
                           disabled={restoringId === item.id}
-                          className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-theme-on-brand bg-brand hover:bg-brand-hover rounded-theme-md transition-colors disabled:opacity-50 sm:py-1.5"
+                          className="group inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-theme-on-brand bg-brand hover:bg-brand-hover rounded-theme-md transition-colors disabled:opacity-50 sm:py-1.5"
                         >
                           <RotateCcw size={16} className="shrink-0" />
                           Восстановить
@@ -245,7 +247,7 @@ const TrashPage: React.FC = () => {
                             setDeleteError('');
                             setItemToDelete(item);
                           }}
-                          className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-danger hover:bg-danger-hover rounded-theme-md transition-colors sm:py-1.5"
+                          className="group inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-danger hover:bg-danger-hover rounded-theme-md transition-colors sm:py-1.5"
                         >
                           <Trash2 size={16} className="shrink-0" />
                           Удалить навсегда
