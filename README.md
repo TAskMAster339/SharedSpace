@@ -1,83 +1,41 @@
 # SharedSpace
 
-## Screenshots
+Файловый хостинг с совместным доступом.
+Загружайте файлы, делитесь ссылками и работайте в общих папках с командой.
 
-![Preview](frontend/public/prefab.png)
+---
 
-## Quick Start
+![Демонстрация SharedSpace](docs/images/sharedspace.gif)
 
-1. Clone the repository.
+*Запись сделана с помощью SharedSpace*
+
+---
+
+## Быстрый старт
+
 ```bash
 git clone https://github.com/TAskMAster339/SharedSpace.git
-```
-
-2. Create a root `.env` alike `.env.example`:
-
-```bash
+cd SharedSpace
 cp .env.example .env
+docker compose up --build
 ```
 
-3. Start the stack:
+После запуска:
+- **Фронтенд** → http://localhost
+- **API** → http://localhost:8080
+- **Swagger** → http://localhost:8080/swagger/
 
-```bash
-docker compose up --build -d
-```
+## Разработка
 
-After startup:
-- Frontend: http://localhost
-- Backend API: http://localhost:8080
-- Swagger UI: http://localhost:8080/swagger/
+Подробная документация — в папке [`/docs`](/docs).
 
-## Development
+**Бэкенд:** `cd backend && go run ./cmd/api`
+**Фронтенд:** `cd frontend && npm install && npm start`
+**Тесты:** `cd backend && go test ./...`
 
-### Backend
+## Авторы
 
-Run the backend locally from the `backend/` directory:
-
-```bash
-go run ./cmd/api
-```
-
-Lint and static checks:
-
-```bash
-cd backend
-make lint
-make fmt
-```
-
-Tests:
-
-```bash
-go test ./...
-```
-
-Generate Swagger documentation from annotations:
-
-```bash
-go install github.com/swaggo/swag/cmd/swag@v1.16.6
-cd backend
-make swagger
-```
-
-### Frontend
-
-Run the frontend locally from the `frontend/` directory:
-
-```bash
-npm install
-npm start
-```
-
-Lint and formatting checks:
-
-```bash
-npm run lint
-npm run format:check
-```
-
-Tests:
-
-```bash
-npm test
-```
+— [TAskMAster339](https://github.com/TAskMAster339)
+— [rrinnaa](https://github.com/rrinnaa)
+— [Daria0w0](https://github.com/Daria0w0)
+— [MiniLynx13](https://github.com/MiniLynx13)
