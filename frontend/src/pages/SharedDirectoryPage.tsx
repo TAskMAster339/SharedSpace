@@ -722,7 +722,10 @@ const SharedDirectoryPage: React.FC = () => {
       />
       {/* Title */}
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold text-theme-primary">{data.name}</h1>
+        <h1 className="text-2xl font-semibold text-theme-primary flex items-center gap-2">
+          <Folder size={28} className="text-brand shrink-0" />
+          {data.name}
+        </h1>
         <p className="text-sm text-theme-muted mt-0.5">Директория, полученная по ссылке</p>
       </div>
 

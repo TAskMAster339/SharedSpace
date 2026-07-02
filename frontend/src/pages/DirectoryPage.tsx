@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Upload, FolderPlus, Settings, ChevronRight, Home, Users, ArrowLeft } from 'lucide-react';
+import { Upload, Folder, FolderPlus, Settings, ChevronRight, Home, Users, ArrowLeft } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useDirectoryStore } from '../store/directoryStore';
 import { useDragDropStore } from '../store/dragDropStore';
@@ -806,6 +806,7 @@ const DirectoryPage: React.FC = () => {
       {/* Заголовок */}
       <div>
         <h1 className="text-2xl font-semibold text-theme-primary flex items-center gap-2">
+          <Folder size={28} className="text-brand shrink-0" />
           {isPersonal ? 'Личное хранилище' : directoryContents.name}
           {isSharedDirectory && (
             <span className="text-xs font-medium px-2 py-0.5 bg-brand/10 text-brand rounded-full">
