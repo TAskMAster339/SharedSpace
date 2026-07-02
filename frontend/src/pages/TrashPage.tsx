@@ -136,7 +136,10 @@ const TrashPage: React.FC = () => {
   return (
     <div className="space-y-6 pb-10">
       <div>
-        <h1 className="text-2xl font-semibold text-theme-primary mb-1">Корзина</h1>
+        <h1 className="text-2xl font-semibold text-theme-primary mb-1 flex items-center gap-2">
+          <Trash2 size={28} className="text-red-500 shrink-0" />
+          Корзина
+        </h1>
         <p className="text-sm text-theme-muted">Удалённые файлы и папки</p>
       </div>
 

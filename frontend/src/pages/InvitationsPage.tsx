@@ -92,7 +92,10 @@ const InvitationsPage: React.FC = () => {
   return (
     <div className="space-y-6 pb-10">
       <div>
-        <h1 className="text-2xl font-semibold text-theme-primary mb-1">Приглашения</h1>
+        <h1 className="text-2xl font-semibold text-theme-primary mb-1 flex items-center gap-2">
+          <Mail size={28} className="text-brand shrink-0" />
+          Приглашения
+        </h1>
         <p className="text-sm text-theme-muted">
           Принимайте или отклоняйте приглашения к совместной работе
         </p>

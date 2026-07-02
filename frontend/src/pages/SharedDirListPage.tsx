@@ -166,7 +166,10 @@ const SharedDirListPage: React.FC = () => {
     <div className="space-y-6 pb-10">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-theme-primary mb-1">Общие директории</h1>
+          <h1 className="text-2xl font-semibold text-theme-primary mb-1 flex items-center gap-2">
+            <Users size={28} className="text-brand shrink-0" />
+            Общие директории
+          </h1>
           <p className="text-sm text-theme-muted mb-2">
             Сотрудничайте с командой в общих пространствах
           </p>

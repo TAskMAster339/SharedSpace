@@ -213,7 +213,10 @@ const FavoritesPage: React.FC = () => {
   return (
     <div className="space-y-6 pb-10">
       <div>
-        <h1 className="text-2xl font-semibold text-theme-primary mb-1">Избранное</h1>
+        <h1 className="text-2xl font-semibold text-theme-primary mb-1 flex items-center gap-2">
+          <Star size={28} className="text-yellow-400 shrink-0" />
+          Избранное
+        </h1>
         <p className="text-sm text-theme-muted">Файлы, отмеченные звёздочкой</p>
       </div>
 
