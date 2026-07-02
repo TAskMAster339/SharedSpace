@@ -186,9 +186,13 @@ docker compose down -v && docker compose up
 
 **Симптом:** Файлы не загружаются, в ответе 403 от MinIO.
 
-**Причина:** Несовпадение endpoint'ов (internal vs public).
+**Причина 1:** `MINIO_PUBLIC_USE_SSL=true` при локальном запуске — presigned URL генерируются с HTTPS, но локальный сервер работает по HTTP, браузер блокирует mixed content.
 
-**Решение:**
+**Решение 1:** В `.env` поставить `MINIO_PUBLIC_USE_SSL=false`.
+
+**Причина 2:** Несовпадение endpoint'ов (internal vs public).
+
+**Решение 2:**
 - MinIO генерирует presigned URL на основе `MINIO_ENDPOINT`
 - Клиент обращается по `MINIO_PUBLIC_ENDPOINT`
 - Они должны указывать на один и тот же сервер MinIO

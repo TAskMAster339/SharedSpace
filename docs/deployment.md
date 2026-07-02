@@ -26,7 +26,8 @@ DATABASE_URL=postgres://user:password@host:5432/sharedspace?sslmode=require
 MINIO_ENDPOINT=minio.example.com:9000
 MINIO_PUBLIC_ENDPOINT=https://minio-pub.example.com
 MINIO_USE_SSL=true
-MINIO_PUBLIC_USE_SSL=true
+MINIO_PUBLIC_USE_SSL=true   # false для локальной разработки, иначе presigned-ссылки
+                            # будут с HTTPS, и браузер заблокирует загрузку по HTTP
 
 # Фронтенд
 REACT_APP_API_BASE_URL=https://api.example.com/api/v1

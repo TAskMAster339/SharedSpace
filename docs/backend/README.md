@@ -58,6 +58,8 @@ go run cmd/api/main.go
 
 Конфигурация загружается через `internal/config/config.go` из переменных окружения (с поддержкой `.env` файла через `godotenv`). Обязательные параметры: `DATABASE_URL` и `JWT_SECRET`.
 
+**Важно про MinIO:** При локальной разработке `MINIO_PUBLIC_USE_SSL` обязательно выставить в `false`. Если оставить `true`, presigned-ссылки будут сгенерированы с `https://`, браузер увидит mixed content и заблокирует загрузку/просмотр файлов. В production — `true`.
+
 ### Миграции
 
 SQL-миграции находятся в `backend/migrations/`. Применяются автоматически при запуске сервера через `database.Migrate()` в отсортированном порядке. Отслеживаются в таблице `schema_migrations`.

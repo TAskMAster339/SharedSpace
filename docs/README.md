@@ -56,10 +56,12 @@ REACT_APP_API_BASE_URL=http://localhost:8080/api/v1 npm start
 | `JWT_TTL` | Время жизни access токена (сек) | `3600` (1 час) |
 | `REFRESH_JWT_TTL` | Время жизни refresh токена (сек) | `2592000` (30 дней) |
 | `MINIO_USE_SSL` | Использовать SSL для MinIO (внутренний) | `false` |
-| `MINIO_PUBLIC_USE_SSL` | Использовать SSL для публичного MinIO | `true` |
+| `MINIO_PUBLIC_USE_SSL` | Использовать SSL для публичного MinIO | `false` (локально), `true` (production) |
 | `REACT_APP_API_BASE_URL` | Базовый URL API для фронтенда | `http://localhost:8080/api/v1` |
 
-**Внимание:** При локальном запуске бэкенда (вне Docker) `MINIO_ENDPOINT` должен быть `localhost:9000`. При запуске через Docker Compose — `minio:9000`.
+**Внимание:** При локальном запуске `MINIO_PUBLIC_USE_SSL` должен быть `false`, иначе presigned URL будут использовать HTTPS вместо HTTP и браузер заблокирует загрузку. В production — `true`.
+
+При локальном запуске бэкенда (вне Docker) `MINIO_ENDPOINT` должен быть `localhost:9000`. При запуске через Docker Compose — `minio:9000`.
 
 ### Команды разработки
 
