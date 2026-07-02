@@ -265,7 +265,7 @@ const DashboardPage: React.FC = () => {
         )}
 
         {/* Правая колонка: Общие директории (ограничение 5) */}
-        <Card>
+        <Card onContextMenu={(e) => e.preventDefault()}>
           <CardHeader>
             <CardTitle>Общие директории</CardTitle>
             <UILink to="/directories">Смотреть все</UILink>
