@@ -497,7 +497,7 @@ const SharedDirectoryPage: React.FC = () => {
 
   if (isLoading || isNavigating) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-theme-primary">
+      <div className="min-h-[80vh] flex items-center justify-center bg-theme-primary">
         <SEOHead title="Загрузка..." description="Загрузка содержимого директории..." />
         <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin" />
       </div>
@@ -506,7 +506,7 @@ const SharedDirectoryPage: React.FC = () => {
 
   if (error || !data) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-theme-primary px-4">
+      <div className="min-h-[80vh] flex items-center justify-center bg-theme-primary px-4">
         <SEOHead title="Директория недоступна" description={error || 'Директория не найдена'} />
         <div className="text-center space-y-4 max-w-sm">
           <div className="w-16 h-16 mx-auto flex items-center justify-center bg-danger-light rounded-full">
