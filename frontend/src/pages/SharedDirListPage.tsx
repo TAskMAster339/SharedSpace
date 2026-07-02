@@ -2,7 +2,12 @@ import React, { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Users, Plus, X, Check, UserPlus } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
-import { getSharedWithMeStats, getMembers, SharedDirectoryWithStats, inviteToDirectory } from '../api/sharing';
+import {
+  getSharedWithMeStats,
+  getMembers,
+  SharedDirectoryWithStats,
+  inviteToDirectory,
+} from '../api/sharing';
 import { createDirectory, getRootContents } from '../api/dirs';
 import { ApiError } from '../api/client';
 import { DirectoryCard } from '../components/ui/DirectoryCard';
@@ -70,7 +75,11 @@ const SharedDirListPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken]);
 
-  const [contextMenuDir, setContextMenuDir] = useState<{ id: string; name: string; sharedId: string } | null>(null);
+  const [contextMenuDir, setContextMenuDir] = useState<{
+    id: string;
+    name: string;
+    sharedId: string;
+  } | null>(null);
   const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
 
@@ -96,7 +105,8 @@ const SharedDirListPage: React.FC = () => {
   const handleContextMenu = (e: React.MouseEvent, dir: DirectoryCardData) => {
     e.preventDefault();
     setContextMenuDir({ id: dir.directory_id, name: dir.name, sharedId: dir.id });
-    setContextMenuPos({ x: e.clientX, y: e.clientY });
+    const menuWidth = 224;
+    setContextMenuPos({ x: Math.min(e.clientX, window.innerWidth - menuWidth - 8), y: e.clientY });
   };
 
   const handleOpenInvite = () => {
@@ -265,23 +275,30 @@ const SharedDirListPage: React.FC = () => {
         </div>
       )}
 
-      {contextMenuDir && contextMenuPos && createPortal(
-        <div
-          ref={contextMenuRef}
-          style={{ position: 'fixed', top: contextMenuPos.y, left: contextMenuPos.x, zIndex: 9999 }}
-          className="w-56 rounded-theme-md border border-theme bg-theme-secondary shadow-theme-dropdown overflow-hidden"
-        >
-          <button
-            type="button"
-            onClick={handleOpenInvite}
-            className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-theme-secondary hover:bg-theme-hover transition-colors group"
+      {contextMenuDir &&
+        contextMenuPos &&
+        createPortal(
+          <div
+            ref={contextMenuRef}
+            style={{
+              position: 'fixed',
+              top: contextMenuPos.y,
+              left: contextMenuPos.x,
+              zIndex: 9999,
+            }}
+            className="w-56 rounded-theme-md border border-theme bg-theme-secondary shadow-theme-dropdown overflow-hidden"
           >
-            <UserPlus size={16} className="group-hover:text-green-500 transition-colors" />
-            Пригласить пользователя
-          </button>
-        </div>,
-        document.body,
-      )}
+            <button
+              type="button"
+              onClick={handleOpenInvite}
+              className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-theme-secondary hover:bg-theme-hover transition-colors group"
+            >
+              <UserPlus size={16} className="group-hover:text-green-500 transition-colors" />
+              Пригласить
+            </button>
+          </div>,
+          document.body,
+        )}
 
       <Modal
         isOpen={inviteDir !== null}

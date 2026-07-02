@@ -1,15 +1,17 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { Folder, Star } from 'lucide-react';
+import { Folder, Star, UserPlus } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useAuthStore } from '../store/authStore';
 import { useDirectoryStore } from '../store/directoryStore';
 import { useDragDropStore } from '../store/dragDropStore';
 import { useFavorites } from '../hooks/useFavorites';
 import { getRecentFiles, FileMetadata, getFileContentUrl } from '../api/files';
-import { getSharedWithMe, SharedDirectory } from '../api/sharing';
+import { getSharedWithMe, SharedDirectory, inviteToDirectory } from '../api/sharing';
 import { ApiError } from '../api/client';
 import { Card, CardHeader, CardTitle } from '../components/ui/Card';
+import { Modal } from '../components/ui/Modal';
 import { FileItem } from '../components/ui/FileItem';
 import { DirectoryItem } from '../components/ui/DirectoryItem';
 import { ConvertModal } from '../components/ui/ConvertModal';
@@ -51,6 +53,60 @@ const DashboardPage: React.FC = () => {
     itemId: string;
     itemName: string;
   } | null>(null);
+  const [itemsWithLinks, setItemsWithLinks] = useState<Set<string>>(new Set());
+  const [contextMenuDir, setContextMenuDir] = useState<{ id: string; name: string } | null>(null);
+  const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
+  const contextMenuRef = useRef<HTMLDivElement>(null);
+
+  const [inviteDir, setInviteDir] = useState<{ id: string; name: string } | null>(null);
+  const [inviteUsername, setInviteUsername] = useState('');
+  const [isInviting, setIsInviting] = useState(false);
+  const [inviteError, setInviteError] = useState('');
+
+  useEffect(() => {
+    if (!contextMenuDir) return;
+    const close = (e: MouseEvent) => {
+      if (contextMenuRef.current && !contextMenuRef.current.contains(e.target as Node)) {
+        setContextMenuDir(null);
+        setContextMenuPos(null);
+      }
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [contextMenuDir]);
+
+  const handleDirContextMenu = (e: React.MouseEvent, dir: SharedDirectory, offsetLeft = false) => {
+    e.preventDefault();
+    const menuWidth = 224;
+    const x = offsetLeft ? e.clientX - menuWidth : e.clientX;
+    setContextMenuDir({ id: dir.directory_id, name: dir.name });
+    setContextMenuPos({ x: Math.min(x, window.innerWidth - menuWidth - 8), y: e.clientY });
+  };
+
+  const handleOpenInvite = () => {
+    if (!contextMenuDir) return;
+    setInviteDir({ id: contextMenuDir.id, name: contextMenuDir.name });
+    setInviteUsername('');
+    setInviteError('');
+    setContextMenuDir(null);
+    setContextMenuPos(null);
+  };
+
+  const handleInvite = async () => {
+    if (!accessToken || !inviteDir || !inviteUsername.trim()) return;
+    setIsInviting(true);
+    setInviteError('');
+    try {
+      await inviteToDirectory(accessToken, inviteDir.id, inviteUsername.trim());
+      showToast(`Приглашение отправлено: ${inviteUsername.trim()}`, 'success');
+      setInviteDir(null);
+      setInviteUsername('');
+    } catch (err) {
+      setInviteError(err instanceof ApiError ? err.message : 'Не удалось отправить приглашение.');
+    } finally {
+      setIsInviting(false);
+    }
+  };
 
   const loadDashboardData = useCallback(async () => {
     if (!accessToken) return;
@@ -255,9 +311,14 @@ const DashboardPage: React.FC = () => {
                   type={resolveFileIconType(file.mime_type, file.extension)}
                   to={`/files/${file.id}`}
                   isFavorite={isFavorite(file.id)}
+                  hasShareLinks={itemsWithLinks.has(file.id)}
                   onToggleFavorite={handleToggleFavorite}
                   onDownload={handleDownload}
                   onConvert={handleConvert}
+                  onShare={(id) => {
+                    const f = recentFiles.find((d) => d.id === id);
+                    if (f) setShareModalState({ itemId: f.id, itemName: f.filename });
+                  }}
                 />
               ))}
             </div>
@@ -288,6 +349,8 @@ const DashboardPage: React.FC = () => {
                   id={dir.id}
                   name={dir.name}
                   to={`/directories/${dir.directory_id}`}
+                  onContextMenu={(e) => handleDirContextMenu(e, dir)}
+                  onMoreClick={(e) => handleDirContextMenu(e, dir, true)}
                 />
               ))}
             </div>
@@ -317,6 +380,7 @@ const DashboardPage: React.FC = () => {
                     type={resolveFileIconType(fav.mime_type, fav.extension)}
                     to={`/files/${fav.id}`}
                     isFavorite={isFavorite(fav.id)}
+                    hasShareLinks={itemsWithLinks.has(fav.id)}
                     onToggleFavorite={handleToggleFavorite}
                     onDownload={handleDownload}
                     onConvert={handleConvert}
@@ -358,6 +422,81 @@ const DashboardPage: React.FC = () => {
         />
       )}
 
+      {contextMenuDir &&
+        contextMenuPos &&
+        createPortal(
+          <div
+            ref={contextMenuRef}
+            style={{
+              position: 'fixed',
+              top: contextMenuPos.y,
+              left: contextMenuPos.x,
+              zIndex: 9999,
+            }}
+            className="w-56 rounded-theme-md border border-theme bg-theme-secondary shadow-theme-dropdown overflow-hidden"
+          >
+            <button
+              type="button"
+              onClick={handleOpenInvite}
+              className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-theme-secondary hover:bg-theme-hover transition-colors group"
+            >
+              <UserPlus size={16} className="group-hover:text-green-500 transition-colors" />
+              Пригласить
+            </button>
+          </div>,
+          document.body,
+        )}
+
+      <Modal
+        isOpen={inviteDir !== null}
+        onClose={() => !isInviting && setInviteDir(null)}
+        title={inviteDir ? `Пригласить в «${inviteDir.name}»` : ''}
+        maxWidth="sm"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-medium text-theme-secondary mb-1.5 block">
+              Имя пользователя
+            </label>
+            <input
+              type="text"
+              value={inviteUsername}
+              onChange={(e) => setInviteUsername(e.target.value)}
+              placeholder="Введите username..."
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleInvite();
+              }}
+              className="w-full px-3 py-2.5 rounded-theme-md border-2 border-theme-hover bg-theme-tertiary text-theme-primary placeholder:text-theme-muted outline-none focus:border-brand transition-colors text-sm"
+            />
+          </div>
+
+          <p className="text-xs text-theme-muted">
+            Пользователь будет приглашён с ролью «Просмотр». Изменить роль можно после того, как он
+            примет приглашение.
+          </p>
+
+          {inviteError && <p className="text-danger text-sm">{inviteError}</p>}
+
+          <div className="flex gap-3 pt-2">
+            <button
+              onClick={() => setInviteDir(null)}
+              disabled={isInviting}
+              className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium disabled:opacity-50"
+            >
+              Отмена
+            </button>
+            <button
+              onClick={handleInvite}
+              disabled={!inviteUsername.trim() || isInviting}
+              className="flex-1 inline-flex items-center justify-center px-4 py-2 bg-brand text-theme-on-brand hover:bg-brand-hover rounded-theme-md transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isInviting ? 'Отправка...' : 'Пригласить'}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
       {shareModalState && accessToken && (
         <ShareLinkModal
           isOpen={true}
@@ -366,6 +505,14 @@ const DashboardPage: React.FC = () => {
           itemName={shareModalState.itemName}
           itemType="file"
           accessToken={accessToken}
+          onLinksChanged={(hasLinks) => {
+            setItemsWithLinks((prev) => {
+              const next = new Set(prev);
+              if (hasLinks) next.add(shareModalState.itemId);
+              else next.delete(shareModalState.itemId);
+              return next;
+            });
+          }}
         />
       )}
     </div>
