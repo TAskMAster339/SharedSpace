@@ -248,3 +248,26 @@ func (r *Repository) IncrementFilesCount(ctx context.Context, db dbTX, directory
 	`, directoryID, delta)
 	return err
 }
+
+func (r *Repository) HasShareLinks(ctx context.Context, db dbTX, fileIDs []string) (map[string]bool, error) {
+	if len(fileIDs) == 0 {
+		return make(map[string]bool), nil
+	}
+
+	rows, err := db.Query(ctx, `SELECT DISTINCT file_id FROM share_links WHERE file_id = ANY($1)`, fileIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make(map[string]bool, len(fileIDs))
+	for rows.Next() {
+		var fileID string
+		if err := rows.Scan(&fileID); err != nil {
+			return nil, err
+		}
+		result[fileID] = true
+	}
+
+	return result, rows.Err()
+}

@@ -28,6 +28,7 @@ export interface FileMetadata {
   owner_id: string;
   created_at: string;
   updated_at: string;
+  has_share_links?: boolean;
 }
 
 interface RecentFilesResponse {

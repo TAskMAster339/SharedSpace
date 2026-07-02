@@ -20,6 +20,7 @@ type RepositoryInterface interface {
 	FindAllByUserID(ctx context.Context, db dbTX, userID string, limit int) ([]favoriteFileRecord, error)
 	FindAllByUserIDAfterCursor(ctx context.Context, db dbTX, userID string, cursorTime time.Time, cursorID string, limit int) ([]favoriteFileRecord, error)
 	FindFileByID(ctx context.Context, db dbTX, fileID string) (directoryID string, err error)
+	HasShareLinks(ctx context.Context, db dbTX, fileIDs []string) (map[string]bool, error)
 }
 
 type dbTX interface {

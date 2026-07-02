@@ -8,14 +8,26 @@ interface CardProps {
   onContextMenu?: React.MouseEventHandler<HTMLDivElement>;
 }
 
-export const Card: React.FC<CardProps> = ({ children, className, variant = 'default', onContextMenu }) => {
+export const Card: React.FC<CardProps> = ({
+  children,
+  className,
+  variant = 'default',
+  onContextMenu,
+}) => {
   const variants = {
     default: 'bg-theme-secondary border border-theme shadow-theme-card',
     dark: 'bg-theme-tertiary border border-theme shadow-theme-card',
     empty: 'bg-theme-secondary border-2 border-theme-dashed',
   };
 
-  return <div className={cn('rounded-theme-lg p-5', variants[variant], className)} onContextMenu={onContextMenu}>{children}</div>;
+  return (
+    <div
+      className={cn('rounded-theme-lg p-5', variants[variant], className)}
+      onContextMenu={onContextMenu}
+    >
+      {children}
+    </div>
+  );
 };
 
 export const CardHeader: React.FC<{ children: React.ReactNode; className?: string }> = ({

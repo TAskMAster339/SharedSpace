@@ -22,6 +22,7 @@ type mockRepo struct {
 	findAllRes            []favoriteFileRecord
 	findAllAfterCursorRes []favoriteFileRecord
 	findAllAfterCursorErr error
+	hasShareLinksRes      map[string]bool
 }
 
 func (m *mockRepo) Insert(_ context.Context, _ dbTX, _, _ string) error {
@@ -42,6 +43,17 @@ func (m *mockRepo) FindAllByUserIDAfterCursor(_ context.Context, _ dbTX, _ strin
 
 func (m *mockRepo) FindFileByID(_ context.Context, _ dbTX, _ string) (string, error) {
 	return m.findFileDir, m.findFileErr
+}
+
+func (m *mockRepo) HasShareLinks(_ context.Context, _ dbTX, fileIDs []string) (map[string]bool, error) {
+	if m.hasShareLinksRes != nil {
+		return m.hasShareLinksRes, nil
+	}
+	res := make(map[string]bool, len(fileIDs))
+	for _, id := range fileIDs {
+		res[id] = true
+	}
+	return res, nil
 }
 
 type mockAccessChecker struct {

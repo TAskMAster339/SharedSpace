@@ -3322,6 +3322,9 @@ const docTemplate = `{
                 "filename": {
                     "type": "string"
                 },
+                "has_share_links": {
+                    "type": "boolean"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -3423,6 +3426,9 @@ const docTemplate = `{
                 },
                 "filename": {
                     "type": "string"
+                },
+                "has_share_links": {
+                    "type": "boolean"
                 },
                 "id": {
                     "type": "string"

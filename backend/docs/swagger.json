@@ -3318,6 +3318,9 @@
                 "filename": {
                     "type": "string"
                 },
+                "has_share_links": {
+                    "type": "boolean"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -3419,6 +3422,9 @@
                 },
                 "filename": {
                     "type": "string"
+                },
+                "has_share_links": {
+                    "type": "boolean"
                 },
                 "id": {
                     "type": "string"

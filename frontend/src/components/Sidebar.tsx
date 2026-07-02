@@ -23,7 +23,10 @@ export const Sidebar: React.FC = () => {
   }
 
   return (
-    <div onContextMenu={(e) => e.preventDefault()} className="w-64 h-[calc(100vh-4rem)] flex flex-col bg-theme-secondary border-r border-theme sticky top-0 shrink-0 px-4 py-2 hidden md:flex">
+    <div
+      onContextMenu={(e) => e.preventDefault()}
+      className="w-64 h-[calc(100vh-4rem)] flex flex-col bg-theme-secondary border-r border-theme sticky top-0 shrink-0 px-4 py-2 hidden md:flex"
+    >
       <div className="flex-1 flex flex-col space-y-1 mt-2">
         <div className="px-3 mb-2 text-sm font-medium text-theme-muted uppercase tracking-wider">
           Меню

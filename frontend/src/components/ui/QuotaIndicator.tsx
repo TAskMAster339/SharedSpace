@@ -23,14 +23,23 @@ export const QuotaIndicator: React.FC<QuotaIndicatorProps> = ({
 
   if (fullWidth) {
     return (
-      <div className={cn('flex items-center justify-between w-full select-none text-theme-secondary', className)}>
+      <div
+        className={cn(
+          'flex items-center justify-between w-full select-none text-theme-secondary',
+          className,
+        )}
+      >
         <span className="flex items-center gap-1.5 text-sm font-medium">
           <Icon size={14} className="text-theme-muted group-hover:text-brand transition-colors" />
           {label}
         </span>
         <span className="text-sm font-semibold tabular-nums">
-          <span className={cn('transition-colors', atLimit ? 'text-danger' : 'group-hover:text-brand')}>{used}</span>
-          {' '}из {total}
+          <span
+            className={cn('transition-colors', atLimit ? 'text-danger' : 'group-hover:text-brand')}
+          >
+            {used}
+          </span>{' '}
+          из {total}
         </span>
       </div>
     );
@@ -44,7 +53,13 @@ export const QuotaIndicator: React.FC<QuotaIndicatorProps> = ({
         className,
       )}
     >
-      <Icon size={13} className={cn('transition-colors', atLimit ? 'text-danger' : 'text-theme-muted group-hover:text-brand')} />
+      <Icon
+        size={13}
+        className={cn(
+          'transition-colors',
+          atLimit ? 'text-danger' : 'text-theme-muted group-hover:text-brand',
+        )}
+      />
       {label}
       <span className="tabular-nums font-semibold">
         {used} из {total}

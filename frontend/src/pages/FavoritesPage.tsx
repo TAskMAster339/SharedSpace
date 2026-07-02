@@ -40,6 +40,7 @@ const FavoritesPage: React.FC = () => {
     itemId: string;
     itemName: string;
   } | null>(null);
+  const [itemsWithLinks, setItemsWithLinks] = useState<Set<string>>(new Set());
 
   const [cursor, setCursor] = useState<string | undefined>();
   const [hasMore, setHasMore] = useState(false);
@@ -55,6 +56,7 @@ const FavoritesPage: React.FC = () => {
     try {
       const data = await getFavorites(accessToken, { limit: PAGE_LIMIT });
       setFiles(data.favorites);
+      setItemsWithLinks(new Set(data.favorites.filter((f) => f.has_share_links).map((f) => f.id)));
       setCursor(data.next_cursor);
       setHasMore(!!data.next_cursor);
     } catch (err) {
@@ -246,6 +248,7 @@ const FavoritesPage: React.FC = () => {
                 type={resolveFileIconType(file.mime_type, file.extension)}
                 to={`/files/${file.id}`}
                 isFavorite={true}
+                hasShareLinks={itemsWithLinks.has(file.id)}
                 onToggleFavorite={handleToggleFavorite}
                 onDelete={handleDeleteFile}
                 onDownload={handleDownload}
@@ -293,6 +296,14 @@ const FavoritesPage: React.FC = () => {
           itemName={shareModalState.itemName}
           itemType="file"
           accessToken={accessToken}
+          onLinksChanged={(hasLinks) => {
+            setItemsWithLinks((prev) => {
+              const next = new Set(prev);
+              if (hasLinks) next.add(shareModalState.itemId);
+              else next.delete(shareModalState.itemId);
+              return next;
+            });
+          }}
         />
       )}
     </div>

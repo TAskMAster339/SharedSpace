@@ -7,6 +7,7 @@ import { useAuthStore } from '../store/authStore';
 import { useDirectoryStore } from '../store/directoryStore';
 import { useDragDropStore } from '../store/dragDropStore';
 import { useFavorites } from '../hooks/useFavorites';
+import { useFavoritesStore } from '../store/favoritesStore';
 import { getRecentFiles, FileMetadata, getFileContentUrl } from '../api/files';
 import { getSharedWithMe, SharedDirectory, inviteToDirectory } from '../api/sharing';
 import { ApiError } from '../api/client';
@@ -79,7 +80,7 @@ const DashboardPage: React.FC = () => {
     e.preventDefault();
     const menuWidth = 224;
     const x = offsetLeft ? e.clientX - menuWidth : e.clientX;
-    setContextMenuDir({ id: dir.directory_id, name: dir.name });
+    setContextMenuDir({ id: dir.id, name: dir.name });
     setContextMenuPos({ x: Math.min(x, window.innerWidth - menuWidth - 8), y: e.clientY });
   };
 
@@ -121,6 +122,11 @@ const DashboardPage: React.FC = () => {
         loadFavorites(accessToken),
       ]);
       setRecentFiles(recent.files);
+      const linkIds = new Set(recent.files.filter((f) => f.has_share_links).map((f) => f.id));
+      useFavoritesStore.getState().favorites.forEach((f) => {
+        if (f.has_share_links) linkIds.add(f.id);
+      });
+      setItemsWithLinks(linkIds);
       setSharedDirectories(shared);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Не удалось загрузить данные.');
@@ -192,6 +198,11 @@ const DashboardPage: React.FC = () => {
         loadFavorites(accessToken, forceFavorites),
       ]);
       setRecentFiles(recent.files);
+      const linkIds = new Set(recent.files.filter((f) => f.has_share_links).map((f) => f.id));
+      useFavoritesStore.getState().favorites.forEach((f) => {
+        if (f.has_share_links) linkIds.add(f.id);
+      });
+      setItemsWithLinks(linkIds);
       setSharedDirectories(shared);
     } catch {
       // игнорируем

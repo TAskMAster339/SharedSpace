@@ -1,6 +1,15 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Upload, Folder, FolderPlus, Settings, ChevronRight, Home, Users, ArrowLeft } from 'lucide-react';
+import {
+  Upload,
+  Folder,
+  FolderPlus,
+  Settings,
+  ChevronRight,
+  Home,
+  Users,
+  ArrowLeft,
+} from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useDirectoryStore } from '../store/directoryStore';
 import { useDragDropStore } from '../store/dragDropStore';
