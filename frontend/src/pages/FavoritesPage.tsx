@@ -5,12 +5,13 @@ import { useDragDropStore } from '../store/dragDropStore';
 import { useFavorites } from '../hooks/useFavorites';
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 import { getFavorites, FavoriteFile } from '../api/favorites';
-import { softDeleteFile, restoreFile, getFileContentUrl } from '../api/files';
+import { softDeleteFile, restoreFile, renameFile, getFileContentUrl } from '../api/files';
 import { ApiError } from '../api/client';
 import { Card, CardHeader, CardTitle } from '../components/ui/Card';
 import { FileItem } from '../components/ui/FileItem';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ConvertModal } from '../components/ui/ConvertModal';
+import { RenameModal } from '../components/ui/RenameModal';
 import { ShareLinkModal } from '../components/ui/ShareLinkModal';
 import { useFileConversion } from '../hooks/useFileConversion';
 import { formatFileSize, formatDate } from '../utils/format';
@@ -39,6 +40,12 @@ const FavoritesPage: React.FC = () => {
   const [shareModalState, setShareModalState] = useState<{
     itemId: string;
     itemName: string;
+  } | null>(null);
+  const [renameState, setRenameState] = useState<{
+    id: string;
+    name: string;
+    extension?: string;
+    type: 'file' | 'directory';
   } | null>(null);
   const [itemsWithLinks, setItemsWithLinks] = useState<Set<string>>(new Set());
 
@@ -212,6 +219,17 @@ const FavoritesPage: React.FC = () => {
     [convertFileData, convertAndSave, loadFavorites],
   );
 
+  const handleRenameFile = useCallback(
+    async (newName: string) => {
+      if (!accessToken || !renameState) return;
+      const oldName = renameState.name;
+      await renameFile(accessToken, renameState.id, newName);
+      showToast(`Файл «${oldName}» переименован в «${newName}»`, 'success');
+      await loadFavorites();
+    },
+    [accessToken, renameState, showToast, loadFavorites],
+  );
+
   return (
     <div className="space-y-6 pb-10">
       <div>
@@ -250,6 +268,16 @@ const FavoritesPage: React.FC = () => {
                 isFavorite={true}
                 hasShareLinks={itemsWithLinks.has(file.id)}
                 onToggleFavorite={handleToggleFavorite}
+                onRename={(id) => {
+                  const f = files.find((d) => d.id === id);
+                  if (f)
+                    setRenameState({
+                      id: f.id,
+                      name: f.filename,
+                      extension: f.extension,
+                      type: 'file',
+                    });
+                }}
                 onDelete={handleDeleteFile}
                 onDownload={handleDownload}
                 onConvert={handleConvert}
@@ -285,6 +313,17 @@ const FavoritesPage: React.FC = () => {
           onConvertAndSave={handleConvertAndSave}
           isConverting={isConverting}
           conversionProgress={conversionProgress}
+        />
+      )}
+
+      {renameState && accessToken && (
+        <RenameModal
+          isOpen={true}
+          onClose={() => setRenameState(null)}
+          currentName={renameState.name}
+          extension={renameState.extension}
+          type={renameState.type}
+          onRename={handleRenameFile}
         />
       )}
 

@@ -300,7 +300,12 @@ func (s *Service) Update(ctx context.Context, userID, dirID string, req UpdateDi
 		}
 		return DirectoryResponse{}, apperror.WrapInternal("ошибка поиска директории", err)
 	}
-	ok, err := s.accessChecker.Can(ctx, userID, dirID, access.ActionDelete)
+	// rename-only: check ActionRename; move: check ActionDelete
+	checkAction := access.ActionRename
+	if req.ParentID != nil {
+		checkAction = access.ActionDelete
+	}
+	ok, err := s.accessChecker.Can(ctx, userID, dirID, checkAction)
 	if err != nil {
 		return DirectoryResponse{}, err
 	}

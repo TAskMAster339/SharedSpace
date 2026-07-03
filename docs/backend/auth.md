@@ -79,6 +79,7 @@
 | upload | ✓ | ✓ | ✗ |
 | create_folder | ✓ | ✓ | ✗ |
 | delete | ✓ | ✗ | ✗ |
+| rename | ✓ | ✗ | ✗ |
 | invite | ✓ | ✗ | ✗ |
 | change_role | ✓ | ✗ | ✗ |
 | remove_member | ✓ | ✗ | ✗ |

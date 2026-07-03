@@ -277,7 +277,12 @@ func (s *Service) Update(ctx context.Context, userID, fileID string, req UpdateF
 		return FileMetadataResponse{}, apperror.WrapInternal("поиск файла", err)
 	}
 
-	ok, err := s.accessChecker.Can(ctx, userID, file.DirectoryID, access.ActionDelete)
+	// rename-only: check ActionRename; move: check ActionDelete
+	checkAction := access.ActionRename
+	if req.ParentID != nil {
+		checkAction = access.ActionDelete
+	}
+	ok, err := s.accessChecker.Can(ctx, userID, file.DirectoryID, checkAction)
 	if err != nil {
 		return FileMetadataResponse{}, err
 	}

@@ -1,14 +1,15 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Folder, Star, UserPlus } from 'lucide-react';
+import { Folder, Star, UserPlus, Pencil } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useAuthStore } from '../store/authStore';
 import { useDirectoryStore } from '../store/directoryStore';
 import { useDragDropStore } from '../store/dragDropStore';
 import { useFavorites } from '../hooks/useFavorites';
 import { useFavoritesStore } from '../store/favoritesStore';
-import { getRecentFiles, FileMetadata, getFileContentUrl } from '../api/files';
+import { getRecentFiles, FileMetadata, getFileContentUrl, renameFile } from '../api/files';
 import { getSharedWithMe, SharedDirectory, inviteToDirectory } from '../api/sharing';
+import { renameDirectory } from '../api/directories';
 import { ApiError } from '../api/client';
 import { Card, CardHeader, CardTitle } from '../components/ui/Card';
 import { ContextMenu } from '../components/ui/ContextMenu';
@@ -16,6 +17,7 @@ import { Modal } from '../components/ui/Modal';
 import { FileItem } from '../components/ui/FileItem';
 import { DirectoryItem } from '../components/ui/DirectoryItem';
 import { ConvertModal } from '../components/ui/ConvertModal';
+import { RenameModal } from '../components/ui/RenameModal';
 import { ShareLinkModal } from '../components/ui/ShareLinkModal';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Link as UILink } from '../components/ui/Link';
@@ -54,8 +56,18 @@ const DashboardPage: React.FC = () => {
     itemId: string;
     itemName: string;
   } | null>(null);
+  const [renameState, setRenameState] = useState<{
+    id: string;
+    name: string;
+    extension?: string;
+    type: 'file' | 'directory';
+  } | null>(null);
   const [itemsWithLinks, setItemsWithLinks] = useState<Set<string>>(new Set());
-  const [contextMenuDir, setContextMenuDir] = useState<{ id: string; name: string } | null>(null);
+  const [contextMenuDir, setContextMenuDir] = useState<{
+    id: string;
+    directoryId: string;
+    name: string;
+  } | null>(null);
   const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
 
   const [inviteDir, setInviteDir] = useState<{ id: string; name: string } | null>(null);
@@ -65,7 +77,7 @@ const DashboardPage: React.FC = () => {
 
   const handleDirContextMenu = (e: React.MouseEvent, dir: SharedDirectory) => {
     e.preventDefault();
-    setContextMenuDir({ id: dir.id, name: dir.name });
+    setContextMenuDir({ id: dir.id, directoryId: dir.directory_id, name: dir.name });
     setContextMenuPos({ x: e.clientX, y: e.clientY });
   };
 
@@ -221,6 +233,28 @@ const DashboardPage: React.FC = () => {
     [convertFileData, convertAndSave, refreshDashboard],
   );
 
+  const handleRenameFile = useCallback(
+    async (newName: string) => {
+      if (!accessToken || !renameState) return;
+      await renameFile(accessToken, renameState.id, newName);
+      const oldName = renameState.name;
+      showToast(`Файл «${oldName}» переименован в «${newName}»`, 'success');
+      await refreshDashboard();
+    },
+    [accessToken, renameState, showToast, refreshDashboard],
+  );
+
+  const handleRenameDirectory = useCallback(
+    async (newName: string) => {
+      if (!accessToken || !renameState) return;
+      await renameDirectory(accessToken, renameState.id, newName);
+      const oldName = renameState.name;
+      showToast(`Папка «${oldName}» переименована в «${newName}»`, 'success');
+      await refreshDashboard();
+    },
+    [accessToken, renameState, showToast, refreshDashboard],
+  );
+
   if (isStorageLoading || isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -314,6 +348,16 @@ const DashboardPage: React.FC = () => {
                   isFavorite={isFavorite(file.id)}
                   hasShareLinks={itemsWithLinks.has(file.id)}
                   onToggleFavorite={handleToggleFavorite}
+                  onRename={(id) => {
+                    const f = recentFiles.find((d) => d.id === id);
+                    if (f)
+                      setRenameState({
+                        id: f.id,
+                        name: f.filename,
+                        extension: f.extension,
+                        type: 'file',
+                      });
+                  }}
                   onDownload={handleDownload}
                   onConvert={handleConvert}
                   onShare={(id) => {
@@ -383,6 +427,16 @@ const DashboardPage: React.FC = () => {
                     isFavorite={isFavorite(fav.id)}
                     hasShareLinks={itemsWithLinks.has(fav.id)}
                     onToggleFavorite={handleToggleFavorite}
+                    onRename={(id) => {
+                      const f = storeFavorites.find((d) => d.id === id);
+                      if (f)
+                        setRenameState({
+                          id: f.id,
+                          name: f.filename,
+                          extension: f.extension,
+                          type: 'file',
+                        });
+                    }}
                     onDownload={handleDownload}
                     onConvert={handleConvert}
                     onShare={(id) => {
@@ -424,6 +478,22 @@ const DashboardPage: React.FC = () => {
       )}
 
       <ContextMenu isOpen={!!contextMenuDir} onClose={closeContextMenu} position={contextMenuPos}>
+        <button
+          type="button"
+          onClick={() => {
+            if (!contextMenuDir) return;
+            setRenameState({
+              id: contextMenuDir.directoryId,
+              name: contextMenuDir.name,
+              type: 'directory',
+            });
+            closeContextMenu();
+          }}
+          className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-theme-secondary hover:bg-theme-hover transition-colors group"
+        >
+          <Pencil size={16} className="group-hover:text-yellow-500 transition-colors" />
+          Переименовать
+        </button>
         <button
           type="button"
           onClick={handleOpenInvite}
@@ -483,6 +553,17 @@ const DashboardPage: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      {renameState && accessToken && (
+        <RenameModal
+          isOpen={true}
+          onClose={() => setRenameState(null)}
+          currentName={renameState.name}
+          extension={renameState.extension}
+          type={renameState.type}
+          onRename={renameState.type === 'file' ? handleRenameFile : handleRenameDirectory}
+        />
+      )}
 
       {shareModalState && accessToken && (
         <ShareLinkModal

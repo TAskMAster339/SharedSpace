@@ -395,7 +395,7 @@ const SharePage: React.FC = () => {
           </div>
           <h1 className="text-xl font-semibold text-theme-primary">Файл недоступен</h1>
           <p className="text-sm text-theme-secondary">{error || 'Файл не найден'}</p>
-          <Link to="/">
+          <Link to={accessToken ? '/dashboard' : '/'}>
             <Button variant="primary" className="mt-2">
               На главную
             </Button>

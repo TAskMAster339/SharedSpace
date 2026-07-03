@@ -19,6 +19,8 @@ func TestCan(t *testing.T) {
 		{name: "admin_can_change_role", role: RoleAdmin, action: ActionChangeRole, expected: true},
 		{name: "admin_can_remove_member", role: RoleAdmin, action: ActionRemoveMember, expected: true},
 		{name: "admin_can_delete_directory", role: RoleAdmin, action: ActionDeleteDir, expected: true},
+		{name: "admin_can_rename", role: RoleAdmin, action: ActionRename, expected: true},
+		{name: "admin_can_create_link", role: RoleAdmin, action: ActionCreateLink, expected: true},
 
 		// Editor — view, download, upload, create_folder
 		{name: "editor_can_view", role: RoleEditor, action: ActionView, expected: true},
@@ -29,6 +31,7 @@ func TestCan(t *testing.T) {
 		{name: "editor_cannot_invite", role: RoleEditor, action: ActionInvite, expected: false},
 		{name: "editor_cannot_change_role", role: RoleEditor, action: ActionChangeRole, expected: false},
 		{name: "editor_cannot_remove_member", role: RoleEditor, action: ActionRemoveMember, expected: false},
+		{name: "editor_cannot_rename", role: RoleEditor, action: ActionRename, expected: false},
 		{name: "editor_cannot_delete_directory", role: RoleEditor, action: ActionDeleteDir, expected: false},
 
 		// Viewer — view, download only
@@ -40,6 +43,7 @@ func TestCan(t *testing.T) {
 		{name: "viewer_cannot_invite", role: RoleViewer, action: ActionInvite, expected: false},
 		{name: "viewer_cannot_change_role", role: RoleViewer, action: ActionChangeRole, expected: false},
 		{name: "viewer_cannot_remove_member", role: RoleViewer, action: ActionRemoveMember, expected: false},
+		{name: "viewer_cannot_rename", role: RoleViewer, action: ActionRename, expected: false},
 		{name: "viewer_cannot_delete_directory", role: RoleViewer, action: ActionDeleteDir, expected: false},
 	}
 

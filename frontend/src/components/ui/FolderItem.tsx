@@ -10,6 +10,7 @@ interface FolderItemProps {
   to: string;
   className?: string;
   hasShareLinks?: boolean;
+  onRename?: (id: string) => void;
   onDelete?: (id: string) => void;
   onShare?: (id: string) => void;
   onDrop?: (e: React.DragEvent, id: string) => void;
@@ -21,6 +22,7 @@ export const FolderItem: React.FC<FolderItemProps> = ({
   to,
   className,
   hasShareLinks = false,
+  onRename,
   onDelete,
   onShare,
   onDrop,
@@ -109,6 +111,7 @@ export const FolderItem: React.FC<FolderItemProps> = ({
         </div>
       </div>
       <ItemActionsMenu
+        onRename={onRename ? () => onRename(id) : undefined}
         onShare={onShare ? () => onShare(id) : undefined}
         onDelete={onDelete ? () => onDelete(id) : undefined}
         className="shrink-0"

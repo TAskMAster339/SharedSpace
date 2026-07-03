@@ -15,6 +15,7 @@ interface FileGridItemProps {
   isFavorite?: boolean;
   hasShareLinks?: boolean;
   onToggleFavorite?: (id: string) => void;
+  onRename?: (id: string) => void;
   onDelete?: (id: string) => void;
   onMove?: (id: string) => void;
   onShare?: (id: string) => void;
@@ -32,6 +33,7 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
   isFavorite = false,
   hasShareLinks = false,
   onToggleFavorite,
+  onRename,
   onDelete,
   onMove,
   onShare,
@@ -86,6 +88,7 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
         <ItemActionsMenu
           isFavorite={isFavorite}
           onToggleFavorite={onToggleFavorite ? () => onToggleFavorite(id) : undefined}
+          onRename={onRename ? () => onRename(id) : undefined}
           onDelete={onDelete ? () => onDelete(id) : undefined}
           onMove={onMove ? () => onMove(id) : undefined}
           onShare={onShare ? () => onShare(id) : undefined}

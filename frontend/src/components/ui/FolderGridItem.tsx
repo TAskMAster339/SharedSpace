@@ -10,6 +10,7 @@ interface FolderGridItemProps {
   to: string;
   className?: string;
   hasShareLinks?: boolean;
+  onRename?: (id: string) => void;
   onDelete?: (id: string) => void;
   onShare?: (id: string) => void;
   onDrop?: (e: React.DragEvent, id: string) => void;
@@ -21,6 +22,7 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
   to,
   className,
   hasShareLinks = false,
+  onRename,
   onDelete,
   onShare,
   onDrop,
@@ -102,6 +104,7 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
       </p>
 
       <ItemActionsMenu
+        onRename={onRename ? () => onRename(id) : undefined}
         onShare={onShare ? () => onShare(id) : undefined}
         onDelete={onDelete ? () => onDelete(id) : undefined}
         className="absolute top-2 right-2"

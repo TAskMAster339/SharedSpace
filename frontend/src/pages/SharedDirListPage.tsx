@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Users, Plus, X, Check, UserPlus } from 'lucide-react';
+import { Users, Plus, X, Check, UserPlus, Pencil } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import {
   getSharedWithMeStats,
@@ -8,6 +8,7 @@ import {
   inviteToDirectory,
 } from '../api/sharing';
 import { createDirectory, getRootContents } from '../api/dirs';
+import { renameDirectory } from '../api/directories';
 import { ApiError } from '../api/client';
 import { DirectoryCard } from '../components/ui/DirectoryCard';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -15,6 +16,7 @@ import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { ContextMenu } from '../components/ui/ContextMenu';
 import { QuotaIndicator } from '../components/ui/QuotaIndicator';
+import { RenameModal } from '../components/ui/RenameModal';
 import { useToastStore } from '../hooks/useToast';
 
 interface DirectoryCardData extends SharedDirectoryWithStats {
@@ -82,6 +84,11 @@ const SharedDirListPage: React.FC = () => {
   } | null>(null);
   const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
 
+  const [renameState, setRenameState] = useState<{
+    id: string;
+    name: string;
+    type: 'file' | 'directory';
+  } | null>(null);
   const [inviteDir, setInviteDir] = useState<{ id: string; name: string } | null>(null);
   const [inviteUsername, setInviteUsername] = useState('');
   const [isInviting, setIsInviting] = useState(false);
@@ -107,6 +114,15 @@ const SharedDirListPage: React.FC = () => {
   const closeContextMenu = () => {
     setContextMenuDir(null);
     setContextMenuPos(null);
+  };
+
+  const handleRenameDirectory = async (newName: string) => {
+    if (!accessToken || !renameState) return;
+    const oldName = renameState.name;
+    await renameDirectory(accessToken, renameState.id, newName);
+    showToast(`Папка «${oldName}» переименована в «${newName}»`, 'success');
+    setRenameState(null);
+    loadDirectories(accessToken);
   };
 
   const handleInvite = async () => {
@@ -269,6 +285,18 @@ const SharedDirListPage: React.FC = () => {
       <ContextMenu isOpen={!!contextMenuDir} onClose={closeContextMenu} position={contextMenuPos}>
         <button
           type="button"
+          onClick={() => {
+            if (!contextMenuDir) return;
+            setRenameState({ id: contextMenuDir.id, name: contextMenuDir.name, type: 'directory' });
+            closeContextMenu();
+          }}
+          className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-theme-secondary hover:bg-theme-hover transition-colors group"
+        >
+          <Pencil size={16} className="group-hover:text-yellow-500 transition-colors" />
+          Переименовать
+        </button>
+        <button
+          type="button"
           onClick={handleOpenInvite}
           className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-theme-secondary hover:bg-theme-hover transition-colors group"
         >
@@ -276,6 +304,16 @@ const SharedDirListPage: React.FC = () => {
           Пригласить
         </button>
       </ContextMenu>
+
+      {renameState && accessToken && (
+        <RenameModal
+          isOpen={true}
+          onClose={() => setRenameState(null)}
+          currentName={renameState.name}
+          type={renameState.type}
+          onRename={handleRenameDirectory}
+        />
+      )}
 
       <Modal
         isOpen={inviteDir !== null}

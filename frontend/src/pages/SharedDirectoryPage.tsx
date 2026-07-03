@@ -498,7 +498,7 @@ const SharedDirectoryPage: React.FC = () => {
           <h1 className="text-xl font-semibold text-theme-primary">Директория недоступна</h1>
           <p className="text-sm text-theme-secondary">{error || 'Директория не найдена'}</p>
           <Link
-            to="/"
+            to={accessToken ? '/dashboard' : '/'}
             className="inline-flex items-center px-4 py-2 bg-brand text-theme-on-brand hover:bg-brand-hover rounded-theme-md text-sm font-medium transition-colors"
           >
             На главную

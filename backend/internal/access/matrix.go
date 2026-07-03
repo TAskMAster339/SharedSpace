@@ -30,6 +30,7 @@ func GetPermissions(role Role) Permissions {
 		Upload:       Can(role, ActionUpload),
 		CreateFolder: Can(role, ActionCreateFolder),
 		Delete:       Can(role, ActionDelete),
+		Rename:       Can(role, ActionRename),
 		Invite:       Can(role, ActionInvite),
 		ChangeRole:   Can(role, ActionChangeRole),
 		RemoveMember: Can(role, ActionRemoveMember),

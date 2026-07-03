@@ -6,6 +6,7 @@ export interface Permissions {
   upload: boolean;
   create_folder: boolean;
   delete: boolean;
+  rename: boolean;
   invite: boolean;
   change_role: boolean;
   remove_member: boolean;

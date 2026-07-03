@@ -16,6 +16,7 @@ const (
 	ActionUpload       Action = "upload"
 	ActionCreateFolder Action = "create_folder"
 	ActionDelete       Action = "delete"
+	ActionRename       Action = "rename"
 	ActionInvite       Action = "invite"
 	ActionChangeRole   Action = "change_role"
 	ActionRemoveMember Action = "remove_member"
@@ -29,6 +30,7 @@ type Permissions struct {
 	Upload       bool `json:"upload"`
 	CreateFolder bool `json:"create_folder"`
 	Delete       bool `json:"delete"`
+	Rename       bool `json:"rename"`
 	Invite       bool `json:"invite"`
 	ChangeRole   bool `json:"change_role"`
 	RemoveMember bool `json:"remove_member"`

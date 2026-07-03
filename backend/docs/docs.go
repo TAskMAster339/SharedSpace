@@ -4224,6 +4224,9 @@ const docTemplate = `{
                 "remove_member": {
                     "type": "boolean"
                 },
+                "rename": {
+                    "type": "boolean"
+                },
                 "upload": {
                     "type": "boolean"
                 },

@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { MoreVertical, Star, Trash2, Move, Share2, Download, Image } from 'lucide-react';
+import { MoreVertical, Star, Trash2, Move, Share2, Download, Image, Pencil } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { ContextMenu } from './ContextMenu';
 
 interface ItemActionsMenuProps {
   isFavorite?: boolean;
   onToggleFavorite?: () => void;
+  onRename?: () => void;
   onDelete?: () => void;
   onMove?: () => void;
   onShare?: () => void;
@@ -24,6 +25,7 @@ const GAP = 4;
 export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
   isFavorite = false,
   onToggleFavorite,
+  onRename,
   onDelete,
   onMove,
   onShare,
@@ -72,7 +74,15 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
     }
   }, [menuPosition, isOpen]);
 
-  if (!onToggleFavorite && !onDelete && !onMove && !onShare && !onDownload && !onConvert)
+  if (
+    !onToggleFavorite &&
+    !onRename &&
+    !onDelete &&
+    !onMove &&
+    !onShare &&
+    !onDownload &&
+    !onConvert
+  )
     return null;
 
   const handleSelect = (e: React.MouseEvent, action: () => void) => {
@@ -106,9 +116,10 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
           Конвертировать
         </button>
       )}
-      {(onDownload || onConvert) && (onShare || onMove || onToggleFavorite || onDelete) && (
-        <div className="border-t border-theme my-1" />
-      )}
+      {(onDownload || onConvert) &&
+        (onRename || onShare || onMove || onToggleFavorite || onDelete) && (
+          <div className="border-t border-theme my-1" />
+        )}
       {onShare && (
         <button
           type="button"
@@ -120,6 +131,17 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
           Поделиться ссылкой
         </button>
       )}
+      {onRename && (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={(e) => handleSelect(e, onRename)}
+          className="group flex items-center gap-3 w-full px-4 py-3.5 text-base text-theme-secondary hover:bg-theme-hover transition-colors sm:px-3 sm:py-2 sm:text-sm"
+        >
+          <Pencil size={18} className="group-hover:text-brand transition-colors" />
+          Переименовать
+        </button>
+      )}
       {onMove && (
         <button
           type="button"
@@ -128,7 +150,7 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
           className="group flex items-center gap-3 w-full px-4 py-3.5 text-base text-theme-secondary hover:bg-theme-hover transition-colors sm:px-3 sm:py-2 sm:text-sm"
         >
           <Move size={18} className="group-hover:text-brand transition-colors" />
-          Переместить файл
+          Переместить
         </button>
       )}
       {onToggleFavorite && (
