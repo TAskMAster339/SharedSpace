@@ -9,6 +9,7 @@ interface ModalProps {
   children: React.ReactNode;
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
+  showCloseButton?: boolean;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -18,6 +19,7 @@ export const Modal: React.FC<ModalProps> = ({
   children,
   maxWidth = 'md',
   className,
+  showCloseButton = true,
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -59,15 +61,17 @@ export const Modal: React.FC<ModalProps> = ({
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-theme shrink-0">
           <h2 className="text-lg font-semibold text-theme-primary">{title}</h2>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-theme-full hover:bg-theme-hover transition-colors group"
-          >
-            <X
-              size={20}
-              className="text-theme-secondary group-hover:text-brand transition-colors"
-            />
-          </button>
+          {showCloseButton && (
+            <button
+              onClick={onClose}
+              className="p-1 rounded-theme-full hover:bg-theme-hover transition-colors group"
+            >
+              <X
+                size={20}
+                className="text-theme-secondary group-hover:text-brand transition-colors"
+              />
+            </button>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto p-6">{children}</div>

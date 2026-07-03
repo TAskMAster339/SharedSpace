@@ -136,6 +136,18 @@ export function permanentDeleteFile(accessToken: string, fileId: string): Promis
   });
 }
 
+export function renameFile(
+  accessToken: string,
+  fileId: string,
+  filename: string,
+): Promise<FileMetadata> {
+  return apiRequest<FileMetadata>(`/files/${fileId}/rename`, {
+    method: 'POST',
+    token: accessToken,
+    body: JSON.stringify({ filename }),
+  });
+}
+
 export const moveFile = async (
   accessToken: string,
   fileId: string,

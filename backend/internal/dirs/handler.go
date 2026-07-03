@@ -194,6 +194,51 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) error {
 	return writeJSON(w, http.StatusOK, resp)
 }
 
+// Rename renames a directory.
+// @Summary Rename directory
+// @Tags directories
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "Directory ID"
+// @Param body body RenameDirectoryRequest true "Rename directory request"
+// @Success 200 {object} DirectoryResponse
+// @Failure 400 {object} apperror.Response
+// @Failure 401 {object} apperror.Response
+// @Failure 403 {object} apperror.Response
+// @Failure 404 {object} apperror.Response
+// @Failure 409 {object} apperror.Response
+// @Router /api/v1/directories/{id}/rename [post]
+func (h *Handler) Rename(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := auth.ClaimsFromCtx(r.Context())
+	if !ok {
+		return apperror.Unauthorized("не авторизован")
+	}
+
+	dirID := chi.URLParam(r, "id")
+	if dirID == "" {
+		return apperror.Validation("id директории обязателен")
+	}
+
+	var req RenameDirectoryRequest
+	if err := decodeJSON(r.Body, &req); err != nil {
+		return err
+	}
+
+	if req.Name == "" {
+		return apperror.Validation("имя директории не может быть пустым")
+	}
+
+	resp, err := h.service.Update(r.Context(), claims.UserID, dirID, UpdateDirectoryRequest{
+		Name: &req.Name,
+	})
+	if err != nil {
+		return err
+	}
+
+	return writeJSON(w, http.StatusOK, resp)
+}
+
 // SoftDelete moves a directory to trash (cascade).
 // @Summary Delete directory to trash
 // @Tags directories

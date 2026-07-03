@@ -139,6 +139,18 @@ export function updateDirectory(
   });
 }
 
+export function renameDirectory(
+  token: string,
+  directoryId: string,
+  name: string,
+): Promise<Directory> {
+  return apiRequest<Directory>(`/directories/${directoryId}/rename`, {
+    method: 'POST',
+    token,
+    body: JSON.stringify({ name }),
+  });
+}
+
 export function softDeleteDirectory(token: string, directoryId: string): Promise<void> {
   return apiRequest<void>(`/directories/${directoryId}`, {
     method: 'DELETE',

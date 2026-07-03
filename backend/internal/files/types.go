@@ -41,6 +41,10 @@ type UpdateFileRequest struct {
 	ParentID *string `json:"parent_id"`
 }
 
+type RenameFileRequest struct {
+	Filename string `json:"filename"`
+}
+
 type RecentFilesResponse struct {
 	Files      []FileMetadataResponse `json:"files"`
 	NextCursor *string                `json:"next_cursor,omitempty"`

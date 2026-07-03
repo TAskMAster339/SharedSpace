@@ -1,26 +1,23 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import {
-  ArrowLeft,
-  Download,
-  Share2,
-  Star,
-  Image,
-  EyeOff,
-  Trash2,
-  Copy,
-  Check,
-} from 'lucide-react';
+import { ArrowLeft, Download, Share2, Star, Image, EyeOff, Trash2, Pencil } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import type { AuthState } from '../store/authStore';
 import { useFavorites } from '../hooks/useFavorites';
-import { getFileMetadata, getFileContentUrl, FileMetadata, softDeleteFile } from '../api/files';
+import {
+  getFileMetadata,
+  getFileContentUrl,
+  FileMetadata,
+  softDeleteFile,
+  renameFile,
+} from '../api/files';
 import { getDirectoryById, Directory } from '../api/directories';
 import { getUserById } from '../api/users';
 import { ApiError } from '../api/client';
 import { FileIcon } from '../components/ui/FileIcon';
 import { Button } from '../components/ui/Button';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
+import { RenameModal } from '../components/ui/RenameModal';
 import { ConvertModal } from '../components/ui/ConvertModal';
 import { useFileConversion } from '../hooks/useFileConversion';
 import { ShareLinkModal } from '../components/ui/ShareLinkModal';
@@ -114,7 +111,7 @@ const FileViewPage: React.FC = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-  const [isCopied, setIsCopied] = useState(false);
+  const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const showToast = useToastStore((s) => s.showToast);
 
   const [file, setFile] = useState<FileMetadata | null>(null);
@@ -356,19 +353,12 @@ const FileViewPage: React.FC = () => {
     [convertAndSave, file],
   );
 
-  const handleCopyFilename = useCallback(() => {
-    if (!file || isCopied) return;
-    navigator.clipboard
-      .writeText(file.filename)
-      .then(() => {
-        setIsCopied(true);
-        showToast('Название файла скопировано', 'success');
-        setTimeout(() => setIsCopied(false), 5000);
-      })
-      .catch(() => {
-        showToast('Не удалось скопировать название', 'error');
-      });
-  }, [file, showToast, isCopied]);
+  const handleRename = async (newName: string) => {
+    if (!file || !accessToken) return;
+    await renameFile(accessToken, file.id, newName);
+    setFile((prev) => (prev ? { ...prev, filename: newName } : null));
+    showToast(`Файл переименован в «${newName}»`, 'success');
+  };
 
   // Функция для рендера сообщения о недоступности просмотра
   const renderUnavailableMessage = (message?: string, subMessage?: string) => {
@@ -584,9 +574,9 @@ const FileViewPage: React.FC = () => {
           <div className="bg-theme-secondary border border-theme rounded-theme-lg p-5 shadow-theme-card">
             <h3 className="font-medium text-theme-primary mb-3">Информация о файле</h3>
 
-            {/* Отображение файла (как в favorites, но без обертки и звезды) */}
+            {/* Отображение файла с возможностью переименовать */}
             <button
-              onClick={handleCopyFilename}
+              onClick={() => setIsRenameModalOpen(true)}
               className="group flex items-center gap-3 p-3 bg-theme-tertiary hover:bg-theme-hover rounded-theme-md border border-theme transition-colors w-full text-left"
             >
               <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card shrink-0 group-hover:text-brand transition-colors">
@@ -599,17 +589,8 @@ const FileViewPage: React.FC = () => {
               <div className="min-w-0 flex-1">
                 <p className="text-sm text-theme-primary font-medium truncate">{file.filename}</p>
                 <p className="text-xs text-theme-muted flex items-center gap-1">
-                  {isCopied ? (
-                    <>
-                      <Check size={11} className="text-green-500" />
-                      Скопировано
-                    </>
-                  ) : (
-                    <>
-                      <Copy size={11} />
-                      Нажмите, чтобы скопировать
-                    </>
-                  )}
+                  <Pencil size={11} />
+                  Нажмите, чтобы переименовать
                 </p>
               </div>
             </button>
@@ -747,6 +728,15 @@ const FileViewPage: React.FC = () => {
                   Файл будет перемещён в корзину. Вы сможете восстановить его позже.
                 </p>
               }
+            />
+
+            <RenameModal
+              isOpen={isRenameModalOpen}
+              onClose={() => setIsRenameModalOpen(false)}
+              currentName={file.filename}
+              extension={file.extension}
+              type="file"
+              onRename={handleRename}
             />
           </div>
         </div>
