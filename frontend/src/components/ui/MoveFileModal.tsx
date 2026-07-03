@@ -15,6 +15,7 @@ import {
   Directory,
 } from '../../api/directories';
 import { moveFile } from '../../api/files';
+import { updateDirectory } from '../../api/directories';
 import { useToastStore } from '../../hooks/useToast';
 
 // Вспомогательный компонент для иконки папки
@@ -41,6 +42,7 @@ interface MoveFileModalProps {
   fileId: string;
   fileName: string;
   currentDirectoryId: string;
+  itemType?: 'file' | 'directory';
   onMoveComplete?: (fileId: string, fileName: string, fromDirectoryId: string) => void;
 }
 
@@ -50,6 +52,7 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
   fileId,
   fileName,
   currentDirectoryId,
+  itemType = 'file',
   onMoveComplete,
 }) => {
   const accessToken = useAuthStore((s) => s.accessToken);
@@ -181,24 +184,29 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
     }
   }, [newFolderName, accessToken, currentDirId, loadDirectory, showToast]);
 
-  // Перемещение файла
+  // Перемещение
   const handleMove = useCallback(async () => {
     if (!accessToken || !selectedDirectoryId || !fileId) return;
 
     if (selectedDirectoryId === currentDirectoryId) {
-      showToast('Файл уже находится в этой директории', 'info');
+      const label = itemType === 'directory' ? 'Папка' : 'Файл';
+      showToast(`${label} уже находится в этой директории`, 'info');
       onClose();
       return;
     }
 
     setIsMoving(true);
     try {
-      await moveFile(accessToken, fileId, selectedDirectoryId);
+      if (itemType === 'directory') {
+        await updateDirectory(accessToken, fileId, { parent_id: selectedDirectoryId });
+      } else {
+        await moveFile(accessToken, fileId, selectedDirectoryId);
+      }
       onMoveComplete?.(fileId, fileName, currentDirectoryId);
       onClose();
     } catch (err) {
-      console.error('Failed to move file:', err);
-      const errorMsg = err instanceof Error ? err.message : 'Не удалось переместить файл';
+      console.error('Failed to move:', err);
+      const errorMsg = err instanceof Error ? err.message : 'Не удалось переместить';
       showToast(errorMsg, 'error');
     } finally {
       setIsMoving(false);
@@ -209,6 +217,7 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
     fileId,
     currentDirectoryId,
     fileName,
+    itemType,
     showToast,
     onMoveComplete,
     onClose,
@@ -267,7 +276,12 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Переместить файл «${fileName}»`} maxWidth="lg">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={`Переместить${itemType === 'directory' ? ' папку' : ' файл'} «${fileName}»`}
+      maxWidth="lg"
+    >
       <div className="space-y-4">
         {/* Breadcrumbs */}
         <div className="flex items-center justify-between">
@@ -464,7 +478,11 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
                 Перемещение...
               </>
             ) : selectedDirectoryId === currentDirectoryId ? (
-              'Файл уже здесь'
+              itemType === 'directory' ? (
+                'Папка уже здесь'
+              ) : (
+                'Файл уже здесь'
+              )
             ) : (
               'Переместить сюда'
             )}

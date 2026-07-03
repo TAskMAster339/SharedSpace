@@ -35,6 +35,7 @@ import {
   createDirectory,
   softDeleteDirectory,
   renameDirectory,
+  updateDirectory,
   restoreDirectory,
   DirectoryContents,
   Directory,
@@ -98,6 +99,7 @@ const DirectoryPage: React.FC = () => {
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
   const [moveFileId, setMoveFileId] = useState<string>('');
   const [moveFileName, setMoveFileName] = useState<string>('');
+  const [moveItemType, setMoveItemType] = useState<'file' | 'directory'>('file');
   const [shareModalState, setShareModalState] = useState<{
     itemId: string;
     itemName: string;
@@ -666,6 +668,7 @@ const DirectoryPage: React.FC = () => {
       if (file) {
         setMoveFileId(fileId);
         setMoveFileName(file.filename);
+        setMoveItemType('file');
         setIsMoveModalOpen(true);
       }
     },
@@ -673,16 +676,21 @@ const DirectoryPage: React.FC = () => {
   );
 
   const handleMoveComplete = useCallback(
-    async (fileId: string, fileName: string, fromDirectoryId: string) => {
+    async (itemId: string, itemName: string, fromDirectoryId: string) => {
       let undoing = false;
-      showToast(`Файл «${fileName}» перемещён`, 'move', 'Отменить', async () => {
+      const itemLabel = moveItemType === 'directory' ? 'Папка' : 'Файл';
+      showToast(`${itemLabel} «${itemName}» перемещён`, 'move', 'Отменить', async () => {
         if (undoing || isUndoingRef.current) return;
         undoing = true;
         isUndoingRef.current = true;
         try {
-          await moveFile(accessToken, fileId, fromDirectoryId);
+          if (moveItemType === 'directory') {
+            await updateDirectory(accessToken, itemId, { parent_id: fromDirectoryId });
+          } else {
+            await moveFile(accessToken, itemId, fromDirectoryId);
+          }
           if (actualId) await loadDirectory(actualId, true);
-          showToast(`Файл «${fileName}» возвращён`, 'success');
+          showToast(`${itemLabel} «${itemName}» возвращён`, 'success');
         } catch (err) {
           const message = err instanceof Error ? err.message : 'Не удалось отменить перемещение';
           showToast(message, 'error');
@@ -695,7 +703,20 @@ const DirectoryPage: React.FC = () => {
         await loadDirectory(actualId, true);
       }
     },
-    [actualId, accessToken, loadDirectory, showToast],
+    [actualId, accessToken, loadDirectory, showToast, moveItemType],
+  );
+
+  const handleMoveDirectory = useCallback(
+    (dirId: string) => {
+      const folder = allSubdirectories.find((d) => d.id === dirId);
+      if (folder) {
+        setMoveFileId(dirId);
+        setMoveFileName(folder.name);
+        setMoveItemType('directory');
+        setIsMoveModalOpen(true);
+      }
+    },
+    [allSubdirectories],
   );
 
   const handleFileDragStart = useCallback(
@@ -707,10 +728,52 @@ const DirectoryPage: React.FC = () => {
     [],
   );
 
+  const handleDirectoryDragStart = useCallback(
+    (e: React.DragEvent, dirId: string, dirName: string) => {
+      e.dataTransfer.setData('application/x-sharedspace-dir-id', dirId);
+      e.dataTransfer.setData('application/x-sharedspace-dir-name', dirName);
+      e.dataTransfer.effectAllowed = 'move';
+    },
+    [],
+  );
+
   const handleFolderDrop = useCallback(
     async (e: React.DragEvent, folderId: string) => {
       const fileId = e.dataTransfer.getData('application/x-sharedspace-file-id');
       const fileName = e.dataTransfer.getData('application/x-sharedspace-file-name');
+      const dirId = e.dataTransfer.getData('application/x-sharedspace-dir-id');
+      const dirName = e.dataTransfer.getData('application/x-sharedspace-dir-name');
+
+      if (dirId) {
+        if (!accessToken || !actualId || dirId === folderId) return;
+        try {
+          await updateDirectory(accessToken, dirId, { parent_id: folderId });
+          await loadDirectory(actualId, true);
+          let undoing = false;
+          showToast(`Папка «${dirName}» перемещена`, 'move', 'Отменить', async () => {
+            if (undoing || isUndoingRef.current) return;
+            undoing = true;
+            isUndoingRef.current = true;
+            try {
+              await updateDirectory(accessToken, dirId, { parent_id: actualId });
+              await loadDirectory(actualId, true);
+              showToast(`Папка «${dirName}» возвращена`, 'success');
+            } catch (err) {
+              const message =
+                err instanceof Error ? err.message : 'Не удалось отменить перемещение';
+              showToast(message, 'error');
+            } finally {
+              isUndoingRef.current = false;
+            }
+          });
+        } catch (err) {
+          console.error('Failed to move directory via drag & drop:', err);
+          const message = err instanceof Error ? err.message : 'Не удалось переместить папку';
+          showToast(message, 'error');
+        }
+        return;
+      }
+
       if (!fileId || !accessToken || !actualId) return;
 
       try {
@@ -970,6 +1033,11 @@ const DirectoryPage: React.FC = () => {
                               }
                             : undefined
                         }
+                        onMove={
+                          (folder.permissions?.delete ?? perms?.delete)
+                            ? handleMoveDirectory
+                            : undefined
+                        }
                         onDelete={
                           (folder.permissions?.delete ?? perms?.delete) && !checkIsShared(folder.id)
                             ? handleDeleteFolder
@@ -985,6 +1053,7 @@ const DirectoryPage: React.FC = () => {
                             });
                         }}
                         onDrop={handleFolderDrop}
+                        onDragStart={handleDirectoryDragStart}
                       />
                     ))}
                   </div>
@@ -1006,6 +1075,11 @@ const DirectoryPage: React.FC = () => {
                               }
                             : undefined
                         }
+                        onMove={
+                          (folder.permissions?.delete ?? perms?.delete)
+                            ? handleMoveDirectory
+                            : undefined
+                        }
                         onDelete={
                           (folder.permissions?.delete ?? perms?.delete) && !checkIsShared(folder.id)
                             ? handleDeleteFolder
@@ -1021,6 +1095,7 @@ const DirectoryPage: React.FC = () => {
                             });
                         }}
                         onDrop={handleFolderDrop}
+                        onDragStart={handleDirectoryDragStart}
                       />
                     ))}
                   </div>
@@ -1296,6 +1371,7 @@ const DirectoryPage: React.FC = () => {
         fileId={moveFileId}
         fileName={moveFileName}
         currentDirectoryId={actualId || ''}
+        itemType={moveItemType}
         onMoveComplete={handleMoveComplete}
       />
 
