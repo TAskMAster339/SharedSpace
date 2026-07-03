@@ -191,25 +191,28 @@ const DashboardPage: React.FC = () => {
     [recentFiles, storeFavorites],
   );
 
-  const refreshDashboard = async (forceFavorites = false) => {
-    if (!accessToken) return;
-    try {
-      const [recent, shared] = await Promise.all([
-        getRecentFiles(accessToken, RECENT_FILES_LIMIT),
-        getSharedWithMe(accessToken, SHARED_DIRECTORIES_LIMIT),
-        loadFavorites(accessToken, forceFavorites),
-      ]);
-      setRecentFiles(recent.files);
-      const linkIds = new Set(recent.files.filter((f) => f.has_share_links).map((f) => f.id));
-      useFavoritesStore.getState().favorites.forEach((f) => {
-        if (f.has_share_links) linkIds.add(f.id);
-      });
-      setItemsWithLinks(linkIds);
-      setSharedDirectories(shared);
-    } catch {
-      // игнорируем
-    }
-  };
+  const refreshDashboard = useCallback(
+    async (forceFavorites = false) => {
+      if (!accessToken) return;
+      try {
+        const [recent, shared] = await Promise.all([
+          getRecentFiles(accessToken, RECENT_FILES_LIMIT),
+          getSharedWithMe(accessToken, SHARED_DIRECTORIES_LIMIT),
+          loadFavorites(accessToken, forceFavorites),
+        ]);
+        setRecentFiles(recent.files);
+        const linkIds = new Set(recent.files.filter((f) => f.has_share_links).map((f) => f.id));
+        useFavoritesStore.getState().favorites.forEach((f) => {
+          if (f.has_share_links) linkIds.add(f.id);
+        });
+        setItemsWithLinks(linkIds);
+        setSharedDirectories(shared);
+      } catch {
+        // игнорируем
+      }
+    },
+    [accessToken, loadFavorites],
+  );
 
   const handleConvertAndDownload = useCallback(
     (format: string) => {

@@ -237,7 +237,15 @@ const DirectoryPage: React.FC = () => {
         }
       }
     },
-    [accessToken, navigate, loadBreadcrumbs, setTargetDirectoryId, isLoadingShared, user?.id],
+    [
+      accessToken,
+      navigate,
+      loadBreadcrumbs,
+      setTargetDirectoryId,
+      isLoadingShared,
+      checkIsShared,
+      setCurrentSection,
+    ],
   );
 
   // --- Обработчик навигации по breadcrumbs ---
@@ -303,7 +311,16 @@ const DirectoryPage: React.FC = () => {
         setCurrentSection(shared ? 'shared' : 'personal');
       }
     }
-  }, [isLoadingShared, actualId, accessToken, directoryInfo, user?.id, checkIsShared, isShared]);
+  }, [
+    isLoadingShared,
+    actualId,
+    accessToken,
+    directoryInfo,
+    user?.id,
+    checkIsShared,
+    isShared,
+    setCurrentSection,
+  ]);
 
   // --- Эффект 4: Обновляем DnD target при изменении actualId ---
   useEffect(() => {
@@ -677,10 +694,11 @@ const DirectoryPage: React.FC = () => {
 
   const handleMoveComplete = useCallback(
     async (itemId: string, itemName: string, fromDirectoryId: string) => {
+      if (!accessToken) return;
       let undoing = false;
       const itemLabel = moveItemType === 'directory' ? 'Папка' : 'Файл';
       showToast(`${itemLabel} «${itemName}» перемещён`, 'move', 'Отменить', async () => {
-        if (undoing || isUndoingRef.current) return;
+        if (undoing || isUndoingRef.current || !accessToken) return;
         undoing = true;
         isUndoingRef.current = true;
         try {

@@ -53,15 +53,6 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
     setPosition({ x: rect.right - MENU_WIDTH, y: rect.bottom + GAP });
   }, []);
 
-  const handleOpen = () => {
-    if (menuPosition) {
-      setPosition(menuPosition);
-    } else {
-      updatePosition();
-    }
-    setIsOpen((prev) => !prev);
-  };
-
   const handleClose = useCallback(() => {
     setIsOpen(false);
     setPosition(null);

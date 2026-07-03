@@ -32,7 +32,6 @@ const TrashPage: React.FC = () => {
   const [items, setItems] = useState<TrashItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [restoringId, setRestoringId] = useState<string | null>(null);
   const [itemToDelete, setItemToDelete] = useState<TrashItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
@@ -113,7 +112,6 @@ const TrashPage: React.FC = () => {
   const handleRestore = async (item: TrashItem) => {
     if (!accessToken) return;
 
-    setRestoringId(item.id);
     try {
       if (item.type === 'directory') {
         await restoreDirectory(accessToken, item.id);
@@ -128,7 +126,6 @@ const TrashPage: React.FC = () => {
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Не удалось восстановить элемент.');
     } finally {
-      setRestoringId(null);
     }
   };
 

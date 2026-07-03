@@ -242,7 +242,7 @@ const SharedDirectoryPage: React.FC = () => {
         setIsNavigating(false);
       }
     },
-    [token, subDirId, accessToken, savedPassword],
+    [token, subDirId, accessToken, savedPassword, pathIds, persistDirNames],
   );
 
   const loadMoreDirs = useCallback(() => {
@@ -290,7 +290,7 @@ const SharedDirectoryPage: React.FC = () => {
       setData(null);
     }
     fetchData();
-  }, [fetchData]);
+  }, [fetchData, savedPassword]);
 
   const closeContextMenu = useCallback(() => {
     setContextMenuItem(null);
