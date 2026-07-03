@@ -6,6 +6,7 @@ export interface Permissions {
   upload: boolean;
   create_folder: boolean;
   delete: boolean;
+  rename: boolean;
   invite: boolean;
   change_role: boolean;
   remove_member: boolean;
@@ -136,6 +137,18 @@ export function updateDirectory(
     method: 'PATCH',
     token,
     body: JSON.stringify(data),
+  });
+}
+
+export function renameDirectory(
+  token: string,
+  directoryId: string,
+  name: string,
+): Promise<Directory> {
+  return apiRequest<Directory>(`/directories/${directoryId}/rename`, {
+    method: 'POST',
+    token,
+    body: JSON.stringify({ name }),
   });
 }
 

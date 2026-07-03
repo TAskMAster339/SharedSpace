@@ -20,15 +20,16 @@ type UploadFilesResponse struct {
 }
 
 type FileMetadataResponse struct {
-	ID          string    `json:"id"`
-	Filename    string    `json:"filename"`
-	Extension   string    `json:"extension"`
-	MimeType    string    `json:"mime_type"`
-	Size        int64     `json:"size"`
-	DirectoryID string    `json:"directory_id"`
-	OwnerID     string    `json:"owner_id"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID            string    `json:"id"`
+	Filename      string    `json:"filename"`
+	Extension     string    `json:"extension"`
+	MimeType      string    `json:"mime_type"`
+	Size          int64     `json:"size"`
+	DirectoryID   string    `json:"directory_id"`
+	OwnerID       string    `json:"owner_id"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+	HasShareLinks bool      `json:"has_share_links"`
 }
 
 type FileContentResponse struct {
@@ -38,6 +39,10 @@ type FileContentResponse struct {
 type UpdateFileRequest struct {
 	Filename *string `json:"filename"`
 	ParentID *string `json:"parent_id"`
+}
+
+type RenameFileRequest struct {
+	Filename string `json:"filename"`
 }
 
 type RecentFilesResponse struct {

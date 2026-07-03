@@ -10,9 +10,12 @@ interface FolderGridItemProps {
   to: string;
   className?: string;
   hasShareLinks?: boolean;
+  onRename?: (id: string) => void;
+  onMove?: (id: string) => void;
   onDelete?: (id: string) => void;
   onShare?: (id: string) => void;
   onDrop?: (e: React.DragEvent, id: string) => void;
+  onDragStart?: (e: React.DragEvent, id: string, name: string) => void;
 }
 
 export const FolderGridItem: React.FC<FolderGridItemProps> = ({
@@ -21,13 +24,16 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
   to,
   className,
   hasShareLinks = false,
+  onRename,
+  onMove,
   onDelete,
   onShare,
   onDrop,
+  onDragStart,
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const dragCounter = useRef(0);
-  const [contextMenuOpen, setContextMenuOpen] = useState(false);
+  const [contextMenuOpen, setContextMenuOpen] = useState<{ x: number; y: number } | null>(null);
 
   const handleDragOver = (e: React.DragEvent) => {
     if (!onDrop) return;
@@ -68,7 +74,8 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
   return (
     <Link
       to={to}
-      draggable={false}
+      draggable={!!onDragStart}
+      onDragStart={(e) => onDragStart?.(e, id, name)}
       onDragOver={handleDragOver}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
@@ -76,7 +83,7 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
       onContextMenu={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        setContextMenuOpen(true);
+        setContextMenuOpen({ x: e.clientX, y: e.clientY });
       }}
       className={cn(
         'group flex flex-col items-center p-3 rounded-theme-md transition-colors cursor-pointer relative min-w-0',
@@ -102,12 +109,15 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
       </p>
 
       <ItemActionsMenu
+        onRename={onRename ? () => onRename(id) : undefined}
+        onMove={onMove ? () => onMove(id) : undefined}
         onShare={onShare ? () => onShare(id) : undefined}
         onDelete={onDelete ? () => onDelete(id) : undefined}
         className="absolute top-2 right-2"
         iconSize={16}
-        openMenu={contextMenuOpen}
-        onCloseMenu={() => setContextMenuOpen(false)}
+        openMenu={!!contextMenuOpen}
+        menuPosition={contextMenuOpen}
+        onCloseMenu={() => setContextMenuOpen(null)}
       />
     </Link>
   );

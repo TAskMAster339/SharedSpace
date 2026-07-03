@@ -300,7 +300,12 @@ func (s *Service) Update(ctx context.Context, userID, dirID string, req UpdateDi
 		}
 		return DirectoryResponse{}, apperror.WrapInternal("ошибка поиска директории", err)
 	}
-	ok, err := s.accessChecker.Can(ctx, userID, dirID, access.ActionDelete)
+	// rename-only: check ActionRename; move: check ActionDelete
+	checkAction := access.ActionRename
+	if req.ParentID != nil {
+		checkAction = access.ActionDelete
+	}
+	ok, err := s.accessChecker.Can(ctx, userID, dirID, checkAction)
 	if err != nil {
 		return DirectoryResponse{}, err
 	}
@@ -313,6 +318,9 @@ func (s *Service) Update(ctx context.Context, userID, dirID string, req UpdateDi
 
 	targetParent := dir.ParentID
 	if req.ParentID != nil {
+		if *req.ParentID == dirID {
+			return DirectoryResponse{}, apperror.Validation("нельзя переместить папку саму в себя")
+		}
 		targetParent = req.ParentID
 	}
 	targetName := dir.Name
@@ -328,6 +336,17 @@ func (s *Service) Update(ctx context.Context, userID, dirID string, req UpdateDi
 			}
 			return DirectoryResponse{}, apperror.WrapInternal("ошибка поиска целевой родительской директории", err)
 		}
+
+		descendantIDs, err := s.repo.FindSubtreeIDs(ctx, s.db, dirID)
+		if err != nil {
+			return DirectoryResponse{}, apperror.WrapInternal("ошибка проверки вложенности директорий", err)
+		}
+		for _, id := range descendantIDs {
+			if id == *targetParent {
+				return DirectoryResponse{}, apperror.Validation("нельзя переместить папку в одну из её вложенных папок")
+			}
+		}
+
 		ok, err = s.accessChecker.Can(ctx, userID, *targetParent, access.ActionCreateFolder)
 		if err != nil {
 			return DirectoryResponse{}, err

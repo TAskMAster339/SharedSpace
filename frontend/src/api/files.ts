@@ -28,6 +28,7 @@ export interface FileMetadata {
   owner_id: string;
   created_at: string;
   updated_at: string;
+  has_share_links?: boolean;
 }
 
 interface RecentFilesResponse {
@@ -132,6 +133,18 @@ export function permanentDeleteFile(accessToken: string, fileId: string): Promis
   return apiRequest<void>(`/files/${fileId}/permanent`, {
     method: 'DELETE',
     token: accessToken,
+  });
+}
+
+export function renameFile(
+  accessToken: string,
+  fileId: string,
+  filename: string,
+): Promise<FileMetadata> {
+  return apiRequest<FileMetadata>(`/files/${fileId}/rename`, {
+    method: 'POST',
+    token: accessToken,
+    body: JSON.stringify({ filename }),
   });
 }
 

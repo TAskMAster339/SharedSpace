@@ -15,6 +15,7 @@ interface FileGridItemProps {
   isFavorite?: boolean;
   hasShareLinks?: boolean;
   onToggleFavorite?: (id: string) => void;
+  onRename?: (id: string) => void;
   onDelete?: (id: string) => void;
   onMove?: (id: string) => void;
   onShare?: (id: string) => void;
@@ -32,6 +33,7 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
   isFavorite = false,
   hasShareLinks = false,
   onToggleFavorite,
+  onRename,
   onDelete,
   onMove,
   onShare,
@@ -39,7 +41,7 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
   onConvert,
   onDragStart,
 }) => {
-  const [contextMenuOpen, setContextMenuOpen] = useState(false);
+  const [contextMenuOpen, setContextMenuOpen] = useState<{ x: number; y: number } | null>(null);
 
   return (
     <Link
@@ -49,7 +51,7 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
       onContextMenu={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        setContextMenuOpen(true);
+        setContextMenuOpen({ x: e.clientX, y: e.clientY });
       }}
       className={cn(
         'group flex flex-col items-center p-3 rounded-theme-md transition-colors cursor-pointer relative min-w-0',
@@ -86,14 +88,16 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
         <ItemActionsMenu
           isFavorite={isFavorite}
           onToggleFavorite={onToggleFavorite ? () => onToggleFavorite(id) : undefined}
+          onRename={onRename ? () => onRename(id) : undefined}
           onDelete={onDelete ? () => onDelete(id) : undefined}
           onMove={onMove ? () => onMove(id) : undefined}
           onShare={onShare ? () => onShare(id) : undefined}
           onDownload={onDownload ? () => onDownload(id) : undefined}
           onConvert={onConvert ? () => onConvert(id) : undefined}
           iconSize={16}
-          openMenu={contextMenuOpen}
-          onCloseMenu={() => setContextMenuOpen(false)}
+          openMenu={!!contextMenuOpen}
+          menuPosition={contextMenuOpen}
+          onCloseMenu={() => setContextMenuOpen(null)}
         />
       </div>
     </Link>

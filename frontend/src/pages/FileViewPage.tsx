@@ -1,21 +1,29 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, Share2, Star, Image, EyeOff, Trash2 } from 'lucide-react';
+import { ArrowLeft, Download, Share2, Star, Image, EyeOff, Trash2, Pencil } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import type { AuthState } from '../store/authStore';
 import { useFavorites } from '../hooks/useFavorites';
-import { getFileMetadata, getFileContentUrl, FileMetadata, softDeleteFile } from '../api/files';
+import {
+  getFileMetadata,
+  getFileContentUrl,
+  FileMetadata,
+  softDeleteFile,
+  renameFile,
+} from '../api/files';
 import { getDirectoryById, Directory } from '../api/directories';
 import { getUserById } from '../api/users';
 import { ApiError } from '../api/client';
 import { FileIcon } from '../components/ui/FileIcon';
 import { Button } from '../components/ui/Button';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
+import { RenameModal } from '../components/ui/RenameModal';
 import { ConvertModal } from '../components/ui/ConvertModal';
 import { useFileConversion } from '../hooks/useFileConversion';
 import { ShareLinkModal } from '../components/ui/ShareLinkModal';
 import { resolveFileIconType, getFileTypeDisplay } from '../utils/fileType';
 import { formatFileSize, formatDate } from '../utils/format';
+import { useToastStore } from '../hooks/useToast';
 import { cn } from '../utils/cn';
 
 // Определяем типы файлов для предпросмотра
@@ -103,6 +111,8 @@ const FileViewPage: React.FC = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+  const showToast = useToastStore((s) => s.showToast);
 
   const [file, setFile] = useState<FileMetadata | null>(null);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
@@ -343,6 +353,13 @@ const FileViewPage: React.FC = () => {
     [convertAndSave, file],
   );
 
+  const handleRename = async (newName: string) => {
+    if (!file || !accessToken) return;
+    await renameFile(accessToken, file.id, newName);
+    setFile((prev) => (prev ? { ...prev, filename: newName } : null));
+    showToast(`Файл переименован в «${newName}»`, 'success');
+  };
+
   // Функция для рендера сообщения о недоступности просмотра
   const renderUnavailableMessage = (message?: string, subMessage?: string) => {
     return (
@@ -557,16 +574,26 @@ const FileViewPage: React.FC = () => {
           <div className="bg-theme-secondary border border-theme rounded-theme-lg p-5 shadow-theme-card">
             <h3 className="font-medium text-theme-primary mb-3">Информация о файле</h3>
 
-            {/* Отображение файла (как в favorites, но без обертки и звезды) */}
-            <div className="flex items-center gap-3 p-3 bg-theme-tertiary rounded-theme-md border border-theme">
-              <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card shrink-0">
-                <FileIcon type={fileIconType} size={20} />
+            {/* Отображение файла с возможностью переименовать */}
+            <button
+              onClick={() => setIsRenameModalOpen(true)}
+              className="group flex items-center gap-3 p-3 bg-theme-tertiary hover:bg-theme-hover rounded-theme-md border border-theme transition-colors w-full text-left"
+            >
+              <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card shrink-0 group-hover:text-brand transition-colors">
+                <FileIcon
+                  type={fileIconType}
+                  size={20}
+                  className="group-hover:text-brand transition-colors"
+                />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm text-theme-primary font-medium truncate">{file.filename}</p>
-                <p className="text-xs text-theme-muted">Файл</p>
+                <p className="text-xs text-theme-muted flex items-center gap-1">
+                  <Pencil size={11} />
+                  Нажмите, чтобы переименовать
+                </p>
               </div>
-            </div>
+            </button>
 
             {/* Разделитель */}
             <div className="my-4 border-t border-theme" />
@@ -701,6 +728,15 @@ const FileViewPage: React.FC = () => {
                   Файл будет перемещён в корзину. Вы сможете восстановить его позже.
                 </p>
               }
+            />
+
+            <RenameModal
+              isOpen={isRenameModalOpen}
+              onClose={() => setIsRenameModalOpen(false)}
+              currentName={file.filename}
+              extension={file.extension}
+              type="file"
+              onRename={handleRename}
             />
           </div>
         </div>

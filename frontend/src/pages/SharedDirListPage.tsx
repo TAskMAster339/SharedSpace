@@ -1,13 +1,23 @@
 import React, { useEffect, useState } from 'react';
-import { Users, Plus, X, Check } from 'lucide-react';
+import { Users, Plus, X, Check, UserPlus, Pencil } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
-import { getSharedWithMeStats, getMembers, SharedDirectoryWithStats } from '../api/sharing';
+import {
+  getSharedWithMeStats,
+  getMembers,
+  SharedDirectoryWithStats,
+  inviteToDirectory,
+} from '../api/sharing';
 import { createDirectory, getRootContents } from '../api/dirs';
+import { renameDirectory } from '../api/directories';
 import { ApiError } from '../api/client';
 import { DirectoryCard } from '../components/ui/DirectoryCard';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Button } from '../components/ui/Button';
+import { Modal } from '../components/ui/Modal';
+import { ContextMenu } from '../components/ui/ContextMenu';
 import { QuotaIndicator } from '../components/ui/QuotaIndicator';
+import { RenameModal } from '../components/ui/RenameModal';
+import { useToastStore } from '../hooks/useToast';
 
 interface DirectoryCardData extends SharedDirectoryWithStats {
   memberUsernames: string[];
@@ -67,6 +77,70 @@ const SharedDirListPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken]);
 
+  const [contextMenuDir, setContextMenuDir] = useState<{
+    id: string;
+    name: string;
+    sharedId: string;
+  } | null>(null);
+  const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
+
+  const [renameState, setRenameState] = useState<{
+    id: string;
+    name: string;
+    type: 'file' | 'directory';
+  } | null>(null);
+  const [inviteDir, setInviteDir] = useState<{ id: string; name: string } | null>(null);
+  const [inviteUsername, setInviteUsername] = useState('');
+  const [isInviting, setIsInviting] = useState(false);
+  const [inviteError, setInviteError] = useState('');
+
+  const showToast = useToastStore((state) => state.showToast);
+
+  const handleContextMenu = (e: React.MouseEvent, dir: DirectoryCardData) => {
+    e.preventDefault();
+    setContextMenuDir({ id: dir.directory_id, name: dir.name, sharedId: dir.id });
+    setContextMenuPos({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleOpenInvite = () => {
+    if (!contextMenuDir) return;
+    setInviteDir({ id: contextMenuDir.sharedId, name: contextMenuDir.name });
+    setInviteUsername('');
+    setInviteError('');
+    setContextMenuDir(null);
+    setContextMenuPos(null);
+  };
+
+  const closeContextMenu = () => {
+    setContextMenuDir(null);
+    setContextMenuPos(null);
+  };
+
+  const handleRenameDirectory = async (newName: string) => {
+    if (!accessToken || !renameState) return;
+    const oldName = renameState.name;
+    await renameDirectory(accessToken, renameState.id, newName);
+    showToast(`Папка «${oldName}» переименована в «${newName}»`, 'success');
+    setRenameState(null);
+    loadDirectories(accessToken);
+  };
+
+  const handleInvite = async () => {
+    if (!accessToken || !inviteDir || !inviteUsername.trim()) return;
+    setIsInviting(true);
+    setInviteError('');
+    try {
+      await inviteToDirectory(accessToken, inviteDir.id, inviteUsername.trim());
+      showToast(`Приглашение отправлено: ${inviteUsername.trim()}`, 'success');
+      setInviteDir(null);
+      setInviteUsername('');
+    } catch (err) {
+      setInviteError(err instanceof ApiError ? err.message : 'Не удалось отправить приглашение.');
+    } finally {
+      setIsInviting(false);
+    }
+  };
+
   const openModal = () => {
     setNewName('');
     setCreateError('');
@@ -109,7 +183,10 @@ const SharedDirListPage: React.FC = () => {
     <div className="space-y-6 pb-10">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-theme-primary mb-1">Общие директории</h1>
+          <h1 className="text-2xl font-semibold text-theme-primary mb-1 flex items-center gap-2">
+            <Users size={28} className="text-brand shrink-0" />
+            Общие директории
+          </h1>
           <p className="text-sm text-theme-muted mb-2">
             Сотрудничайте с командой в общих пространствах
           </p>
@@ -152,6 +229,7 @@ const SharedDirListPage: React.FC = () => {
               fileCount={dir.file_count}
               memberUsernames={dir.memberUsernames}
               to={`/directories/${dir.directory_id}`}
+              onContextMenu={(e) => handleContextMenu(e, dir)}
             />
           ))}
         </div>
@@ -203,6 +281,89 @@ const SharedDirListPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      <ContextMenu isOpen={!!contextMenuDir} onClose={closeContextMenu} position={contextMenuPos}>
+        <button
+          type="button"
+          onClick={() => {
+            if (!contextMenuDir) return;
+            setRenameState({ id: contextMenuDir.id, name: contextMenuDir.name, type: 'directory' });
+            closeContextMenu();
+          }}
+          className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-theme-secondary hover:bg-theme-hover transition-colors group"
+        >
+          <Pencil size={16} className="group-hover:text-yellow-500 transition-colors" />
+          Переименовать
+        </button>
+        <button
+          type="button"
+          onClick={handleOpenInvite}
+          className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-theme-secondary hover:bg-theme-hover transition-colors group"
+        >
+          <UserPlus size={16} className="group-hover:text-green-500 transition-colors" />
+          Пригласить
+        </button>
+      </ContextMenu>
+
+      {renameState && accessToken && (
+        <RenameModal
+          isOpen={true}
+          onClose={() => setRenameState(null)}
+          currentName={renameState.name}
+          type={renameState.type}
+          onRename={handleRenameDirectory}
+        />
+      )}
+
+      <Modal
+        isOpen={inviteDir !== null}
+        onClose={() => !isInviting && setInviteDir(null)}
+        title={inviteDir ? `Пригласить в «${inviteDir.name}»` : ''}
+        maxWidth="sm"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-medium text-theme-secondary mb-1.5 block">
+              Имя пользователя
+            </label>
+            <input
+              type="text"
+              value={inviteUsername}
+              onChange={(e) => setInviteUsername(e.target.value)}
+              placeholder="Введите username..."
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleInvite();
+              }}
+              className="w-full px-3 py-2.5 rounded-theme-md border-2 border-theme-hover bg-theme-tertiary text-theme-primary placeholder:text-theme-muted outline-none focus:border-brand transition-colors text-sm"
+            />
+          </div>
+
+          <p className="text-xs text-theme-muted">
+            Пользователь будет приглашён с ролью «Просмотр». Изменить роль можно после того, как он
+            примет приглашение.
+          </p>
+
+          {inviteError && <p className="text-danger text-sm">{inviteError}</p>}
+
+          <div className="flex gap-3 pt-2">
+            <button
+              onClick={() => setInviteDir(null)}
+              disabled={isInviting}
+              className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium disabled:opacity-50"
+            >
+              Отмена
+            </button>
+            <button
+              onClick={handleInvite}
+              disabled={!inviteUsername.trim() || isInviting}
+              className="flex-1 inline-flex items-center justify-center px-4 py-2 bg-brand text-theme-on-brand hover:bg-brand-hover rounded-theme-md transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isInviting ? 'Отправка...' : 'Пригласить'}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

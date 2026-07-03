@@ -17,6 +17,7 @@ interface FileItemProps {
   isFavorite?: boolean;
   hasShareLinks?: boolean;
   onToggleFavorite?: (id: string) => void;
+  onRename?: (id: string) => void;
   onDelete?: (id: string) => void;
   onMove?: (id: string) => void;
   onShare?: (id: string) => void;
@@ -36,6 +37,7 @@ export const FileItem: React.FC<FileItemProps> = ({
   isFavorite = false,
   hasShareLinks = false,
   onToggleFavorite,
+  onRename,
   onDelete,
   onMove,
   onShare,
@@ -43,7 +45,7 @@ export const FileItem: React.FC<FileItemProps> = ({
   onConvert,
   onDragStart,
 }) => {
-  const [contextMenuOpen, setContextMenuOpen] = useState(false);
+  const [contextMenuOpen, setContextMenuOpen] = useState<{ x: number; y: number } | null>(null);
 
   return (
     <Link
@@ -54,7 +56,7 @@ export const FileItem: React.FC<FileItemProps> = ({
       onContextMenu={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        setContextMenuOpen(true);
+        setContextMenuOpen({ x: e.clientX, y: e.clientY });
       }}
       className={cn(
         'group flex items-center justify-between p-3 rounded-theme-md transition-colors cursor-pointer',
@@ -96,13 +98,15 @@ export const FileItem: React.FC<FileItemProps> = ({
         <ItemActionsMenu
           isFavorite={isFavorite}
           onToggleFavorite={onToggleFavorite ? () => onToggleFavorite(id) : undefined}
+          onRename={onRename ? () => onRename(id) : undefined}
           onDelete={onDelete ? () => onDelete(id) : undefined}
           onMove={onMove ? () => onMove(id) : undefined}
           onShare={onShare ? () => onShare(id) : undefined}
           onDownload={onDownload ? () => onDownload(id) : undefined}
           onConvert={onConvert ? () => onConvert(id) : undefined}
-          openMenu={contextMenuOpen}
-          onCloseMenu={() => setContextMenuOpen(false)}
+          openMenu={!!contextMenuOpen}
+          menuPosition={contextMenuOpen}
+          onCloseMenu={() => setContextMenuOpen(null)}
         />
       </div>
     </Link>

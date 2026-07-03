@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useSharedDirectoriesStore } from '../store/sharedDirectoriesStore';
 

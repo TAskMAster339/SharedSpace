@@ -209,6 +209,19 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
     setEditingLink(link);
   };
 
+  const handleCopyAndClose = async (e: React.MouseEvent, link: ShareLink) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const url = `${shareBaseUrl}/${link.token}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast('Ссылка скопирована');
+      onClose();
+    } catch {
+      showToast('Не удалось скопировать ссылку', 'error');
+    }
+  };
+
   const handleEditSaved = (updated: ShareLink) => {
     setLinks((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
   };
@@ -377,6 +390,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
             <div
               key={link.id}
               onClick={() => handleEditLink(link)}
+              onContextMenu={(e) => handleCopyAndClose(e, link)}
               className={cn(
                 'flex items-start gap-3 p-3 rounded-theme-md border transition-colors cursor-pointer',
                 expired

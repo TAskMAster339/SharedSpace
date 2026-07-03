@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Download, EyeOff, Image, KeyRound, Eye } from 'lucide-react';
+import { ArrowLeft, Download, EyeOff, Image, KeyRound, Eye, Copy, Check } from 'lucide-react';
 import { resolveShareLink, ShareLinkResolveResult } from '../api/sharelinks';
 import { useAuthStore } from '../store/authStore';
+import { useToastStore } from '../hooks/useToast';
 import SEOHead from '../components/SEOHead';
 import { FileIcon } from '../components/ui/FileIcon';
 import { Button } from '../components/ui/Button';
@@ -100,6 +101,8 @@ const SharePage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
+  const showToast = useToastStore((s) => s.showToast);
 
   useEffect(() => {
     if (!token) return;
@@ -146,6 +149,20 @@ const SharePage: React.FC = () => {
       window.open(file.url, '_blank');
     }
   }, [file]);
+
+  const handleCopyFilename = useCallback(() => {
+    if (!file || isCopied) return;
+    navigator.clipboard
+      .writeText(file.filename)
+      .then(() => {
+        setIsCopied(true);
+        showToast('Название файла скопировано', 'success');
+        setTimeout(() => setIsCopied(false), 5000);
+      })
+      .catch(() => {
+        showToast('Не удалось скопировать название', 'error');
+      });
+  }, [file, showToast, isCopied]);
 
   const handleIframeError = useCallback(() => {
     setIframeError(true);
@@ -361,7 +378,7 @@ const SharePage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-theme-primary">
+      <div className="min-h-[80vh] flex items-center justify-center bg-theme-primary">
         <SEOHead title="Загрузка..." description="Загрузка информации о файле..." />
         <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin" />
       </div>
@@ -370,7 +387,7 @@ const SharePage: React.FC = () => {
 
   if (error || !file) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-theme-primary px-4">
+      <div className="min-h-[80vh] flex items-center justify-center bg-theme-primary px-4">
         <SEOHead title="Файл недоступен" description={error || 'Файл не найден'} />
         <div className="text-center space-y-4 max-w-sm">
           <div className="w-16 h-16 mx-auto flex items-center justify-center bg-danger-light rounded-full">
@@ -378,7 +395,7 @@ const SharePage: React.FC = () => {
           </div>
           <h1 className="text-xl font-semibold text-theme-primary">Файл недоступен</h1>
           <p className="text-sm text-theme-secondary">{error || 'Файл не найден'}</p>
-          <Link to="/">
+          <Link to={accessToken ? '/dashboard' : '/'}>
             <Button variant="primary" className="mt-2">
               На главную
             </Button>
@@ -424,15 +441,34 @@ const SharePage: React.FC = () => {
           <div className="bg-theme-secondary border border-theme rounded-theme-lg p-5 shadow-theme-card">
             <h3 className="font-medium text-theme-primary mb-3">Информация о файле</h3>
 
-            <div className="flex items-center gap-3 p-3 bg-theme-tertiary rounded-theme-md border border-theme">
-              <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card shrink-0">
-                <FileIcon type={fileIconType} size={20} />
+            <button
+              onClick={handleCopyFilename}
+              className="group flex items-center gap-3 p-3 bg-theme-tertiary hover:bg-theme-hover rounded-theme-md border border-theme transition-colors w-full text-left"
+            >
+              <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card shrink-0 group-hover:text-brand transition-colors">
+                <FileIcon
+                  type={fileIconType}
+                  size={20}
+                  className="group-hover:text-brand transition-colors"
+                />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm text-theme-primary font-medium truncate">{file.filename}</p>
-                <p className="text-xs text-theme-muted">Файл</p>
+                <p className="text-xs text-theme-muted flex items-center gap-1">
+                  {isCopied ? (
+                    <>
+                      <Check size={11} className="text-green-500" />
+                      Скопировано
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={11} />
+                      Нажмите, чтобы скопировать
+                    </>
+                  )}
+                </p>
               </div>
-            </div>
+            </button>
 
             <div className="my-4 border-t border-theme" />
 

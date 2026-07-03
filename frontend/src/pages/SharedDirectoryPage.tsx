@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { createPortal } from 'react-dom';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -26,6 +25,7 @@ import { FileIcon } from '../components/ui/FileIcon';
 import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import { ContextMenu } from '../components/ui/ContextMenu';
 import { resolveFileIconType, getFileTypeDisplay } from '../utils/fileType';
 import { formatFileSize, formatDate } from '../utils/format';
 import { useToastStore } from '../hooks/useToast';
@@ -179,8 +179,6 @@ const SharedDirectoryPage: React.FC = () => {
     type: 'file' | 'dir';
   } | null>(null);
   const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
-  const contextMenuRef = useRef<HTMLDivElement>(null);
-  const [isMobile, setIsMobile] = useState(false);
   const showToast = useToastStore((state) => state.showToast);
 
   const fetchData = useCallback(
@@ -244,7 +242,7 @@ const SharedDirectoryPage: React.FC = () => {
         setIsNavigating(false);
       }
     },
-    [token, subDirId, accessToken, savedPassword],
+    [token, subDirId, accessToken, savedPassword, pathIds, persistDirNames],
   );
 
   const loadMoreDirs = useCallback(() => {
@@ -292,27 +290,12 @@ const SharedDirectoryPage: React.FC = () => {
       setData(null);
     }
     fetchData();
-  }, [fetchData]);
+  }, [fetchData, savedPassword]);
 
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 639px)');
-    const update = () => setIsMobile(mq.matches);
-    update();
-    mq.addEventListener('change', update);
-    return () => mq.removeEventListener('change', update);
+  const closeContextMenu = useCallback(() => {
+    setContextMenuItem(null);
+    setContextMenuPos(null);
   }, []);
-
-  useEffect(() => {
-    if (!contextMenuItem) return;
-    const close = (e: MouseEvent) => {
-      if (contextMenuRef.current && !contextMenuRef.current.contains(e.target as Node)) {
-        setContextMenuItem(null);
-        setContextMenuPos(null);
-      }
-    };
-    document.addEventListener('mousedown', close);
-    return () => document.removeEventListener('mousedown', close);
-  }, [contextMenuItem]);
 
   const { sentinelRef: dirsSentinelRef } = useInfiniteScroll(
     loadMoreDirs,
@@ -497,7 +480,7 @@ const SharedDirectoryPage: React.FC = () => {
 
   if (isLoading || isNavigating) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-theme-primary">
+      <div className="min-h-[80vh] flex items-center justify-center bg-theme-primary">
         <SEOHead title="Загрузка..." description="Загрузка содержимого директории..." />
         <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin" />
       </div>
@@ -506,7 +489,7 @@ const SharedDirectoryPage: React.FC = () => {
 
   if (error || !data) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-theme-primary px-4">
+      <div className="min-h-[80vh] flex items-center justify-center bg-theme-primary px-4">
         <SEOHead title="Директория недоступна" description={error || 'Директория не найдена'} />
         <div className="text-center space-y-4 max-w-sm">
           <div className="w-16 h-16 mx-auto flex items-center justify-center bg-danger-light rounded-full">
@@ -515,7 +498,7 @@ const SharedDirectoryPage: React.FC = () => {
           <h1 className="text-xl font-semibold text-theme-primary">Директория недоступна</h1>
           <p className="text-sm text-theme-secondary">{error || 'Директория не найдена'}</p>
           <Link
-            to="/"
+            to={accessToken ? '/dashboard' : '/'}
             className="inline-flex items-center px-4 py-2 bg-brand text-theme-on-brand hover:bg-brand-hover rounded-theme-md text-sm font-medium transition-colors"
           >
             На главную
@@ -722,7 +705,10 @@ const SharedDirectoryPage: React.FC = () => {
       />
       {/* Title */}
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold text-theme-primary">{data.name}</h1>
+        <h1 className="text-2xl font-semibold text-theme-primary flex items-center gap-2">
+          <Folder size={28} className="text-brand shrink-0" />
+          {data.name}
+        </h1>
         <p className="text-sm text-theme-muted mt-0.5">Директория, полученная по ссылке</p>
       </div>
 
@@ -941,94 +927,35 @@ const SharedDirectoryPage: React.FC = () => {
         </>
       )}
 
-      {contextMenuItem &&
-        contextMenuPos &&
-        createPortal(
-          isMobile ? (
-            <>
-              <div
-                className="fixed inset-0 z-[60] bg-black/40"
-                onClick={() => {
-                  setContextMenuItem(null);
-                  setContextMenuPos(null);
-                }}
-              />
-              <div
-                ref={contextMenuRef}
-                className="fixed inset-x-0 bottom-0 z-[61] w-full rounded-t-theme-xl border-t border-theme bg-theme-secondary shadow-theme-dropdown overflow-hidden pb-[env(safe-area-inset-bottom)]"
-              >
-                <div className="flex justify-center py-2">
-                  <span className="h-1 w-10 rounded-full bg-theme-muted/40" />
-                </div>
-                {contextMenuItem.type === 'file' && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const file = allFiles.find((f) => f.id === contextMenuItem.id);
-                        if (file) handleDownload(file.url, file.filename);
-                        setContextMenuItem(null);
-                        setContextMenuPos(null);
-                      }}
-                      className="group flex items-center gap-3 w-full px-4 py-3.5 text-base text-theme-secondary hover:bg-theme-hover transition-colors"
-                    >
-                      <Download size={18} className="group-hover:text-brand transition-colors" />
-                      Скачать файл
-                    </button>
-                    <div className="border-t border-theme my-1" />
-                  </>
-                )}
-                <button
-                  type="button"
-                  onClick={() => handleCopyLink(contextMenuItem.id, contextMenuItem.type)}
-                  className="group flex items-center gap-3 w-full px-4 py-3.5 text-base text-theme-secondary hover:bg-theme-hover transition-colors"
-                >
-                  <LinkIcon size={18} className="group-hover:text-green-500 transition-colors" />
-                  Копировать ссылку
-                </button>
-              </div>
-            </>
-          ) : (
-            <div
-              ref={contextMenuRef}
-              style={{
-                position: 'fixed',
-                top: contextMenuPos.y,
-                left: contextMenuPos.x,
-                zIndex: 9999,
+      <ContextMenu isOpen={!!contextMenuItem} onClose={closeContextMenu} position={contextMenuPos}>
+        {contextMenuItem?.type === 'file' && (
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                const file = allFiles.find((f) => f.id === contextMenuItem?.id);
+                if (file) handleDownload(file.url, file.filename);
+                closeContextMenu();
               }}
-              className="w-48 rounded-theme-md border border-theme bg-theme-secondary shadow-theme-dropdown overflow-hidden"
+              className="group flex items-center gap-3 w-full px-4 py-3.5 text-base text-theme-secondary hover:bg-theme-hover transition-colors sm:px-3 sm:py-2 sm:text-sm"
             >
-              {contextMenuItem.type === 'file' && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const file = allFiles.find((f) => f.id === contextMenuItem.id);
-                      if (file) handleDownload(file.url, file.filename);
-                      setContextMenuItem(null);
-                      setContextMenuPos(null);
-                    }}
-                    className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-theme-secondary hover:bg-theme-hover transition-colors group"
-                  >
-                    <Download size={16} className="group-hover:text-brand transition-colors" />
-                    Скачать файл
-                  </button>
-                  <div className="border-t border-theme my-1" />
-                </>
-              )}
-              <button
-                type="button"
-                onClick={() => handleCopyLink(contextMenuItem.id, contextMenuItem.type)}
-                className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-theme-secondary hover:bg-theme-hover transition-colors group"
-              >
-                <LinkIcon size={16} className="group-hover:text-green-500 transition-colors" />
-                Копировать ссылку
-              </button>
-            </div>
-          ),
-          document.body,
+              <Download size={18} className="group-hover:text-brand transition-colors sm:size-4" />
+              Скачать файл
+            </button>
+            <div className="border-t border-theme my-1" />
+          </>
         )}
+        <button
+          type="button"
+          onClick={() => {
+            if (contextMenuItem) handleCopyLink(contextMenuItem.id, contextMenuItem.type);
+          }}
+          className="group flex items-center gap-3 w-full px-4 py-3.5 text-base text-theme-secondary hover:bg-theme-hover transition-colors sm:px-3 sm:py-2 sm:text-sm"
+        >
+          <LinkIcon size={18} className="group-hover:text-green-500 transition-colors sm:size-4" />
+          Копировать ссылку
+        </button>
+      </ContextMenu>
     </div>
   );
 };

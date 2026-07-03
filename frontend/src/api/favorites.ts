@@ -11,6 +11,7 @@ export interface FavoriteFile {
   created_at: string;
   updated_at: string;
   favorited_at: string;
+  has_share_links?: boolean;
 }
 
 interface FavoritesListResponse {

@@ -79,6 +79,7 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 					r.Get("/{id}", middleware.AppError(filesHandler.GetMetadata))
 					r.Get("/{id}/content", middleware.AppError(filesHandler.GetContent))
 					r.Patch("/{id}", middleware.AppError(filesHandler.Update))
+					r.Post("/{id}/rename", middleware.AppError(filesHandler.Rename))
 					r.Delete("/{id}", middleware.AppError(filesHandler.SoftDelete))
 					r.Post("/{id}/restore", middleware.AppError(filesHandler.Restore))
 					r.Delete("/{id}/permanent", middleware.AppError(filesHandler.PermanentDelete))
@@ -100,6 +101,7 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 					r.Get("/{id}", middleware.AppError(dirsHandler.GetByID))
 					r.Post("/", middleware.AppError(dirsHandler.Create))
 					r.Patch("/{id}", middleware.AppError(dirsHandler.Update))
+					r.Post("/{id}/rename", middleware.AppError(dirsHandler.Rename))
 					r.Delete("/{id}", middleware.AppError(dirsHandler.SoftDelete))
 					r.Post("/{id}/restore", middleware.AppError(dirsHandler.Restore))
 					r.Delete("/{id}/permanent", middleware.AppError(dirsHandler.PermanentDelete))
@@ -129,6 +131,7 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 				r.Route("/trash", func(r chi.Router) {
 					r.Get("/", middleware.AppError(trashHandler.GetTrashList))
 					r.Delete("/", middleware.AppError(trashHandler.ClearTrash))
+					r.Delete("/all", middleware.AppError(trashHandler.ClearAllTrash))
 				})
 			}
 

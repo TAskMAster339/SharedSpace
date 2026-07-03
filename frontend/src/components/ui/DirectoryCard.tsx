@@ -15,6 +15,7 @@ interface DirectoryCardProps {
   memberUsernames: string[];
   to: string;
   className?: string;
+  onContextMenu?: (e: React.MouseEvent) => void;
 }
 
 export const DirectoryCard: React.FC<DirectoryCardProps> = ({
@@ -26,10 +27,12 @@ export const DirectoryCard: React.FC<DirectoryCardProps> = ({
   memberUsernames,
   to,
   className,
+  onContextMenu,
 }) => (
   <Link
     key={id}
     to={to}
+    onContextMenu={onContextMenu}
     className={cn(
       'block p-5 rounded-theme-lg bg-theme-secondary border border-theme shadow-theme-card group',
       'hover:bg-brand-light transition-colors',

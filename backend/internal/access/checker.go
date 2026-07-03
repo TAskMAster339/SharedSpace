@@ -50,6 +50,7 @@ func (c *Checker) GetPermissions(ctx context.Context, userID, directoryID string
 			Upload:       true,
 			CreateFolder: true,
 			Delete:       true,
+			Rename:       true,
 			Invite:       true,
 			ChangeRole:   true,
 			RemoveMember: true,
@@ -59,7 +60,7 @@ func (c *Checker) GetPermissions(ctx context.Context, userID, directoryID string
 	}
 
 	if sharedDirID == nil {
-		return nil, nil
+		return &Permissions{}, nil
 	}
 
 	role, err := c.repo.GetUserRole(ctx, c.db, userID, *sharedDirID)

@@ -17,6 +17,10 @@ type UpdateDirectoryRequest struct {
 	ParentID *string `json:"parent_id"`
 }
 
+type RenameDirectoryRequest struct {
+	Name string `json:"name"`
+}
+
 type DirectoryResponse struct {
 	ID                string              `json:"id"`
 	Name              string              `json:"name"`

@@ -186,6 +186,14 @@ func (m *mockRepo) IncrementFilesCount(_ context.Context, _ dbTX, _ string, _ in
 	return nil
 }
 
+func (m *mockRepo) HasShareLinks(_ context.Context, _ dbTX, fileIDs []string) (map[string]bool, error) {
+	res := make(map[string]bool, len(fileIDs))
+	for _, id := range fileIDs {
+		res[id] = true
+	}
+	return res, nil
+}
+
 func newTestService(repo RepositoryInterface, storage StorageClient) *Service {
 	tx := &mockTx{}
 	return &Service{

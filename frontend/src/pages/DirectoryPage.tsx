@@ -1,6 +1,15 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Upload, FolderPlus, Settings, ChevronRight, Home, Users, ArrowLeft } from 'lucide-react';
+import {
+  Upload,
+  Folder,
+  FolderPlus,
+  Settings,
+  ChevronRight,
+  Home,
+  Users,
+  ArrowLeft,
+} from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useDirectoryStore } from '../store/directoryStore';
 import { useDragDropStore } from '../store/dragDropStore';
@@ -15,6 +24,7 @@ import { FileGridItem } from '../components/ui/FileGridItem';
 import { FolderItem } from '../components/ui/FolderItem';
 import { FileItem } from '../components/ui/FileItem';
 import { MoveFileModal } from '../components/ui/MoveFileModal';
+import { RenameModal } from '../components/ui/RenameModal';
 import { ShareLinkModal } from '../components/ui/ShareLinkModal';
 import { ConvertModal } from '../components/ui/ConvertModal';
 import { useFileConversion } from '../hooks/useFileConversion';
@@ -24,6 +34,8 @@ import {
   getDirectoryPath,
   createDirectory,
   softDeleteDirectory,
+  renameDirectory,
+  updateDirectory,
   restoreDirectory,
   DirectoryContents,
   Directory,
@@ -35,6 +47,7 @@ import {
   softDeleteFile,
   restoreFile,
   moveFile,
+  renameFile,
   getFileContentUrl,
 } from '../api/files';
 import { createShareLink, createDirectoryShareLink } from '../api/sharelinks';
@@ -86,10 +99,17 @@ const DirectoryPage: React.FC = () => {
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
   const [moveFileId, setMoveFileId] = useState<string>('');
   const [moveFileName, setMoveFileName] = useState<string>('');
+  const [moveItemType, setMoveItemType] = useState<'file' | 'directory'>('file');
   const [shareModalState, setShareModalState] = useState<{
     itemId: string;
     itemName: string;
     itemType: 'file' | 'directory';
+  } | null>(null);
+  const [renameState, setRenameState] = useState<{
+    id: string;
+    name: string;
+    extension?: string;
+    type: 'file' | 'directory';
   } | null>(null);
   const [shareLinkRefreshKey, setShareLinkRefreshKey] = useState(0);
   const [convertFileData, setConvertFileData] = useState<{
@@ -217,7 +237,15 @@ const DirectoryPage: React.FC = () => {
         }
       }
     },
-    [accessToken, navigate, loadBreadcrumbs, setTargetDirectoryId, isLoadingShared, user?.id],
+    [
+      accessToken,
+      navigate,
+      loadBreadcrumbs,
+      setTargetDirectoryId,
+      isLoadingShared,
+      checkIsShared,
+      setCurrentSection,
+    ],
   );
 
   // --- Обработчик навигации по breadcrumbs ---
@@ -283,7 +311,16 @@ const DirectoryPage: React.FC = () => {
         setCurrentSection(shared ? 'shared' : 'personal');
       }
     }
-  }, [isLoadingShared, actualId, accessToken, directoryInfo, user?.id, checkIsShared, isShared]);
+  }, [
+    isLoadingShared,
+    actualId,
+    accessToken,
+    directoryInfo,
+    user?.id,
+    checkIsShared,
+    isShared,
+    setCurrentSection,
+  ]);
 
   // --- Эффект 4: Обновляем DnD target при изменении actualId ---
   useEffect(() => {
@@ -620,12 +657,35 @@ const DirectoryPage: React.FC = () => {
     loadMoreFiles,
     hasMoreFiles && !isLoadingMoreFiles && !!filesCursor,
   );
+  const handleRenameFile = useCallback(
+    async (newName: string) => {
+      if (!accessToken || !renameState || !actualId) return;
+      const oldName = renameState.name;
+      await renameFile(accessToken, renameState.id, newName);
+      showToast(`Файл «${oldName}» переименован в «${newName}»`, 'success');
+      await loadDirectory(actualId, true);
+    },
+    [accessToken, renameState, actualId, loadDirectory, showToast],
+  );
+
+  const handleRenameFolder = useCallback(
+    async (newName: string) => {
+      if (!accessToken || !renameState || !actualId) return;
+      const oldName = renameState.name;
+      await renameDirectory(accessToken, renameState.id, newName);
+      showToast(`Папка «${oldName}» переименована в «${newName}»`, 'success');
+      await loadDirectory(actualId, true);
+    },
+    [accessToken, renameState, actualId, loadDirectory, showToast],
+  );
+
   const handleMoveFile = useCallback(
     (fileId: string) => {
       const file = allFiles.find((f) => f.id === fileId);
       if (file) {
         setMoveFileId(fileId);
         setMoveFileName(file.filename);
+        setMoveItemType('file');
         setIsMoveModalOpen(true);
       }
     },
@@ -633,16 +693,22 @@ const DirectoryPage: React.FC = () => {
   );
 
   const handleMoveComplete = useCallback(
-    async (fileId: string, fileName: string, fromDirectoryId: string) => {
+    async (itemId: string, itemName: string, fromDirectoryId: string) => {
+      if (!accessToken) return;
       let undoing = false;
-      showToast(`Файл «${fileName}» перемещён`, 'move', 'Отменить', async () => {
-        if (undoing || isUndoingRef.current) return;
+      const itemLabel = moveItemType === 'directory' ? 'Папка' : 'Файл';
+      showToast(`${itemLabel} «${itemName}» перемещён`, 'move', 'Отменить', async () => {
+        if (undoing || isUndoingRef.current || !accessToken) return;
         undoing = true;
         isUndoingRef.current = true;
         try {
-          await moveFile(accessToken, fileId, fromDirectoryId);
+          if (moveItemType === 'directory') {
+            await updateDirectory(accessToken, itemId, { parent_id: fromDirectoryId });
+          } else {
+            await moveFile(accessToken, itemId, fromDirectoryId);
+          }
           if (actualId) await loadDirectory(actualId, true);
-          showToast(`Файл «${fileName}» возвращён`, 'success');
+          showToast(`${itemLabel} «${itemName}» возвращён`, 'success');
         } catch (err) {
           const message = err instanceof Error ? err.message : 'Не удалось отменить перемещение';
           showToast(message, 'error');
@@ -655,7 +721,20 @@ const DirectoryPage: React.FC = () => {
         await loadDirectory(actualId, true);
       }
     },
-    [actualId, accessToken, loadDirectory, showToast],
+    [actualId, accessToken, loadDirectory, showToast, moveItemType],
+  );
+
+  const handleMoveDirectory = useCallback(
+    (dirId: string) => {
+      const folder = allSubdirectories.find((d) => d.id === dirId);
+      if (folder) {
+        setMoveFileId(dirId);
+        setMoveFileName(folder.name);
+        setMoveItemType('directory');
+        setIsMoveModalOpen(true);
+      }
+    },
+    [allSubdirectories],
   );
 
   const handleFileDragStart = useCallback(
@@ -667,10 +746,52 @@ const DirectoryPage: React.FC = () => {
     [],
   );
 
+  const handleDirectoryDragStart = useCallback(
+    (e: React.DragEvent, dirId: string, dirName: string) => {
+      e.dataTransfer.setData('application/x-sharedspace-dir-id', dirId);
+      e.dataTransfer.setData('application/x-sharedspace-dir-name', dirName);
+      e.dataTransfer.effectAllowed = 'move';
+    },
+    [],
+  );
+
   const handleFolderDrop = useCallback(
     async (e: React.DragEvent, folderId: string) => {
       const fileId = e.dataTransfer.getData('application/x-sharedspace-file-id');
       const fileName = e.dataTransfer.getData('application/x-sharedspace-file-name');
+      const dirId = e.dataTransfer.getData('application/x-sharedspace-dir-id');
+      const dirName = e.dataTransfer.getData('application/x-sharedspace-dir-name');
+
+      if (dirId) {
+        if (!accessToken || !actualId || dirId === folderId) return;
+        try {
+          await updateDirectory(accessToken, dirId, { parent_id: folderId });
+          await loadDirectory(actualId, true);
+          let undoing = false;
+          showToast(`Папка «${dirName}» перемещена`, 'move', 'Отменить', async () => {
+            if (undoing || isUndoingRef.current) return;
+            undoing = true;
+            isUndoingRef.current = true;
+            try {
+              await updateDirectory(accessToken, dirId, { parent_id: actualId });
+              await loadDirectory(actualId, true);
+              showToast(`Папка «${dirName}» возвращена`, 'success');
+            } catch (err) {
+              const message =
+                err instanceof Error ? err.message : 'Не удалось отменить перемещение';
+              showToast(message, 'error');
+            } finally {
+              isUndoingRef.current = false;
+            }
+          });
+        } catch (err) {
+          console.error('Failed to move directory via drag & drop:', err);
+          const message = err instanceof Error ? err.message : 'Не удалось переместить папку';
+          showToast(message, 'error');
+        }
+        return;
+      }
+
       if (!fileId || !accessToken || !actualId) return;
 
       try {
@@ -806,6 +927,7 @@ const DirectoryPage: React.FC = () => {
       {/* Заголовок */}
       <div>
         <h1 className="text-2xl font-semibold text-theme-primary flex items-center gap-2">
+          <Folder size={28} className="text-brand shrink-0" />
           {isPersonal ? 'Личное хранилище' : directoryContents.name}
           {isSharedDirectory && (
             <span className="text-xs font-medium px-2 py-0.5 bg-brand/10 text-brand rounded-full">
@@ -920,6 +1042,20 @@ const DirectoryPage: React.FC = () => {
                         name={folder.name}
                         to={`/directories/${folder.id}`}
                         hasShareLinks={folder.has_share_links}
+                        onRename={
+                          (folder.permissions?.rename ?? perms?.rename)
+                            ? (id: string) => {
+                                const f = filteredSubdirectories.find((d) => d.id === id);
+                                if (f)
+                                  setRenameState({ id: f.id, name: f.name, type: 'directory' });
+                              }
+                            : undefined
+                        }
+                        onMove={
+                          (folder.permissions?.delete ?? perms?.delete)
+                            ? handleMoveDirectory
+                            : undefined
+                        }
                         onDelete={
                           (folder.permissions?.delete ?? perms?.delete) && !checkIsShared(folder.id)
                             ? handleDeleteFolder
@@ -935,6 +1071,7 @@ const DirectoryPage: React.FC = () => {
                             });
                         }}
                         onDrop={handleFolderDrop}
+                        onDragStart={handleDirectoryDragStart}
                       />
                     ))}
                   </div>
@@ -947,6 +1084,20 @@ const DirectoryPage: React.FC = () => {
                         name={folder.name}
                         to={`/directories/${folder.id}`}
                         hasShareLinks={folder.has_share_links}
+                        onRename={
+                          (folder.permissions?.rename ?? perms?.rename)
+                            ? (id: string) => {
+                                const f = filteredSubdirectories.find((d) => d.id === id);
+                                if (f)
+                                  setRenameState({ id: f.id, name: f.name, type: 'directory' });
+                              }
+                            : undefined
+                        }
+                        onMove={
+                          (folder.permissions?.delete ?? perms?.delete)
+                            ? handleMoveDirectory
+                            : undefined
+                        }
                         onDelete={
                           (folder.permissions?.delete ?? perms?.delete) && !checkIsShared(folder.id)
                             ? handleDeleteFolder
@@ -962,6 +1113,7 @@ const DirectoryPage: React.FC = () => {
                             });
                         }}
                         onDrop={handleFolderDrop}
+                        onDragStart={handleDirectoryDragStart}
                       />
                     ))}
                   </div>
@@ -995,6 +1147,20 @@ const DirectoryPage: React.FC = () => {
                         isFavorite={file.isFavorite}
                         hasShareLinks={file.has_share_links}
                         onToggleFavorite={handleToggleFavorite}
+                        onRename={
+                          perms?.rename
+                            ? (id: string) => {
+                                const f = allFiles.find((d) => d.id === id);
+                                if (f)
+                                  setRenameState({
+                                    id: f.id,
+                                    name: f.filename,
+                                    extension: f.extension,
+                                    type: 'file',
+                                  });
+                              }
+                            : undefined
+                        }
                         onDelete={perms?.delete ? handleDeleteFile : undefined}
                         onMove={handleMoveFile}
                         onDownload={handleDownload}
@@ -1026,6 +1192,20 @@ const DirectoryPage: React.FC = () => {
                         isFavorite={file.isFavorite}
                         hasShareLinks={file.has_share_links}
                         onToggleFavorite={handleToggleFavorite}
+                        onRename={
+                          perms?.rename
+                            ? (id: string) => {
+                                const f = allFiles.find((d) => d.id === id);
+                                if (f)
+                                  setRenameState({
+                                    id: f.id,
+                                    name: f.filename,
+                                    extension: f.extension,
+                                    type: 'file',
+                                  });
+                              }
+                            : undefined
+                        }
                         onDelete={perms?.delete ? handleDeleteFile : undefined}
                         onMove={handleMoveFile}
                         onDownload={handleDownload}
@@ -1116,6 +1296,17 @@ const DirectoryPage: React.FC = () => {
         </div>
       </Modal>
 
+      {renameState && accessToken && (
+        <RenameModal
+          isOpen={true}
+          onClose={() => setRenameState(null)}
+          currentName={renameState.name}
+          extension={renameState.extension}
+          type={renameState.type}
+          onRename={renameState.type === 'file' ? handleRenameFile : handleRenameFolder}
+        />
+      )}
+
       {shareModalState && accessToken && (
         <ShareLinkModal
           isOpen={true}
@@ -1198,6 +1389,7 @@ const DirectoryPage: React.FC = () => {
         fileId={moveFileId}
         fileName={moveFileName}
         currentDirectoryId={actualId || ''}
+        itemType={moveItemType}
         onMoveComplete={handleMoveComplete}
       />
 

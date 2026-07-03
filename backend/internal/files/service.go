@@ -150,7 +150,12 @@ func (s *Service) GetMetadata(ctx context.Context, userID, fileID string) (FileM
 	if !ok {
 		return FileMetadataResponse{}, apperror.Forbidden("доступ запрещён")
 	}
-	return toMetadataResponse(file), nil
+
+	links, err := s.repo.HasShareLinks(ctx, s.db, []string{file.ID})
+	if err != nil {
+		return FileMetadataResponse{}, apperror.WrapInternal("проверка общих ссылок", err)
+	}
+	return toMetadataResponse(file, links[file.ID]), nil
 }
 
 func (s *Service) GetContentURL(ctx context.Context, userID, fileID string) (FileContentResponse, error) {
@@ -183,10 +188,7 @@ func (s *Service) GetRecent(ctx context.Context, userID string, limit int, curso
 		if err != nil {
 			return RecentFilesResponse{}, apperror.WrapInternal("получение списка недавних файлов", err)
 		}
-		files := make([]FileMetadataResponse, 0, len(records))
-		for _, rec := range records {
-			files = append(files, toMetadataResponse(rec))
-		}
+		files := s.enrichRecentWithShareLinks(ctx, records)
 		return RecentFilesResponse{Files: files}, nil
 	}
 
@@ -215,10 +217,7 @@ func (s *Service) GetRecent(ctx context.Context, userID string, limit int, curso
 		records = records[:limit]
 	}
 
-	files := make([]FileMetadataResponse, 0, len(records))
-	for _, rec := range records {
-		files = append(files, toMetadataResponse(rec))
-	}
+	files := s.enrichRecentWithShareLinks(ctx, records)
 
 	resp := RecentFilesResponse{Files: files}
 
@@ -229,6 +228,32 @@ func (s *Service) GetRecent(ctx context.Context, userID string, limit int, curso
 	}
 
 	return resp, nil
+}
+
+func (s *Service) enrichRecentWithShareLinks(ctx context.Context, records []fileRecord) []FileMetadataResponse {
+	if len(records) == 0 {
+		return nil
+	}
+
+	fileIDs := make([]string, len(records))
+	for i, rec := range records {
+		fileIDs[i] = rec.ID
+	}
+
+	links, err := s.repo.HasShareLinks(ctx, s.db, fileIDs)
+	if err != nil {
+		files := make([]FileMetadataResponse, len(records))
+		for i, rec := range records {
+			files[i] = toMetadataResponse(rec, false)
+		}
+		return files
+	}
+
+	files := make([]FileMetadataResponse, len(records))
+	for i, rec := range records {
+		files[i] = toMetadataResponse(rec, links[rec.ID])
+	}
+	return files
 }
 
 func (s *Service) Update(ctx context.Context, userID, fileID string, req UpdateFileRequest) (FileMetadataResponse, error) {
@@ -252,7 +277,12 @@ func (s *Service) Update(ctx context.Context, userID, fileID string, req UpdateF
 		return FileMetadataResponse{}, apperror.WrapInternal("поиск файла", err)
 	}
 
-	ok, err := s.accessChecker.Can(ctx, userID, file.DirectoryID, access.ActionDelete)
+	// rename-only: check ActionRename; move: check ActionDelete
+	checkAction := access.ActionRename
+	if req.ParentID != nil {
+		checkAction = access.ActionDelete
+	}
+	ok, err := s.accessChecker.Can(ctx, userID, file.DirectoryID, checkAction)
 	if err != nil {
 		return FileMetadataResponse{}, err
 	}
@@ -307,7 +337,11 @@ func (s *Service) Update(ctx context.Context, userID, fileID string, req UpdateF
 		return FileMetadataResponse{}, apperror.WrapInternal("сохранение перемещения файла", err)
 	}
 
-	return toMetadataResponse(updated), nil
+	links, err := s.repo.HasShareLinks(ctx, s.db, []string{updated.ID})
+	if err != nil {
+		return FileMetadataResponse{}, apperror.WrapInternal("проверка общих ссылок", err)
+	}
+	return toMetadataResponse(updated, links[updated.ID]), nil
 }
 
 func (s *Service) cleanupObjects(keys []string) {
@@ -343,17 +377,18 @@ func ExtractExtension(filename string) string {
 	return strings.ToLower(strings.TrimPrefix(ext, "."))
 }
 
-func toMetadataResponse(f fileRecord) FileMetadataResponse {
+func toMetadataResponse(f fileRecord, hasShareLinks bool) FileMetadataResponse {
 	return FileMetadataResponse{
-		ID:          f.ID,
-		Filename:    f.Filename,
-		Extension:   f.Extension,
-		MimeType:    f.MimeType,
-		Size:        f.Size,
-		DirectoryID: f.DirectoryID,
-		OwnerID:     f.OwnerID,
-		CreatedAt:   f.CreatedAt,
-		UpdatedAt:   f.UpdatedAt,
+		ID:            f.ID,
+		Filename:      f.Filename,
+		Extension:     f.Extension,
+		MimeType:      f.MimeType,
+		Size:          f.Size,
+		DirectoryID:   f.DirectoryID,
+		OwnerID:       f.OwnerID,
+		CreatedAt:     f.CreatedAt,
+		UpdatedAt:     f.UpdatedAt,
+		HasShareLinks: hasShareLinks,
 	}
 }
 

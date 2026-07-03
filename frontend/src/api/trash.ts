@@ -53,3 +53,10 @@ export function clearTrash(accessToken: string, itemIds: string[]): Promise<void
     body: JSON.stringify({ item_ids: itemIds }),
   });
 }
+
+export function clearAllTrash(accessToken: string): Promise<void> {
+  return apiRequest<void>('/trash/all', {
+    method: 'DELETE',
+    token: accessToken,
+  });
+}
