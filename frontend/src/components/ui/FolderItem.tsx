@@ -27,7 +27,7 @@ export const FolderItem: React.FC<FolderItemProps> = ({
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const dragCounter = useRef(0);
-  const [contextMenuOpen, setContextMenuOpen] = useState(false);
+  const [contextMenuOpen, setContextMenuOpen] = useState<{ x: number; y: number } | null>(null);
 
   const handleDragOver = (e: React.DragEvent) => {
     if (!onDrop) return;
@@ -76,7 +76,7 @@ export const FolderItem: React.FC<FolderItemProps> = ({
       onContextMenu={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        setContextMenuOpen(true);
+        setContextMenuOpen({ x: e.clientX, y: e.clientY });
       }}
       className={cn(
         'group flex items-center justify-between gap-3 p-3 rounded-theme-md transition-colors cursor-pointer',
@@ -112,8 +112,9 @@ export const FolderItem: React.FC<FolderItemProps> = ({
         onShare={onShare ? () => onShare(id) : undefined}
         onDelete={onDelete ? () => onDelete(id) : undefined}
         className="shrink-0"
-        openMenu={contextMenuOpen}
-        onCloseMenu={() => setContextMenuOpen(false)}
+        openMenu={!!contextMenuOpen}
+        menuPosition={contextMenuOpen}
+        onCloseMenu={() => setContextMenuOpen(null)}
       />
     </Link>
   );

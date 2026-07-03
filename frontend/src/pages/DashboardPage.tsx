@@ -1,5 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Folder, Star, UserPlus } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
@@ -12,6 +11,7 @@ import { getRecentFiles, FileMetadata, getFileContentUrl } from '../api/files';
 import { getSharedWithMe, SharedDirectory, inviteToDirectory } from '../api/sharing';
 import { ApiError } from '../api/client';
 import { Card, CardHeader, CardTitle } from '../components/ui/Card';
+import { ContextMenu } from '../components/ui/ContextMenu';
 import { Modal } from '../components/ui/Modal';
 import { FileItem } from '../components/ui/FileItem';
 import { DirectoryItem } from '../components/ui/DirectoryItem';
@@ -57,31 +57,16 @@ const DashboardPage: React.FC = () => {
   const [itemsWithLinks, setItemsWithLinks] = useState<Set<string>>(new Set());
   const [contextMenuDir, setContextMenuDir] = useState<{ id: string; name: string } | null>(null);
   const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
-  const contextMenuRef = useRef<HTMLDivElement>(null);
 
   const [inviteDir, setInviteDir] = useState<{ id: string; name: string } | null>(null);
   const [inviteUsername, setInviteUsername] = useState('');
   const [isInviting, setIsInviting] = useState(false);
   const [inviteError, setInviteError] = useState('');
 
-  useEffect(() => {
-    if (!contextMenuDir) return;
-    const close = (e: MouseEvent) => {
-      if (contextMenuRef.current && !contextMenuRef.current.contains(e.target as Node)) {
-        setContextMenuDir(null);
-        setContextMenuPos(null);
-      }
-    };
-    document.addEventListener('mousedown', close);
-    return () => document.removeEventListener('mousedown', close);
-  }, [contextMenuDir]);
-
-  const handleDirContextMenu = (e: React.MouseEvent, dir: SharedDirectory, offsetLeft = false) => {
+  const handleDirContextMenu = (e: React.MouseEvent, dir: SharedDirectory) => {
     e.preventDefault();
-    const menuWidth = 224;
-    const x = offsetLeft ? e.clientX - menuWidth : e.clientX;
     setContextMenuDir({ id: dir.id, name: dir.name });
-    setContextMenuPos({ x: Math.min(x, window.innerWidth - menuWidth - 8), y: e.clientY });
+    setContextMenuPos({ x: e.clientX, y: e.clientY });
   };
 
   const handleOpenInvite = () => {
@@ -89,6 +74,11 @@ const DashboardPage: React.FC = () => {
     setInviteDir({ id: contextMenuDir.id, name: contextMenuDir.name });
     setInviteUsername('');
     setInviteError('');
+    setContextMenuDir(null);
+    setContextMenuPos(null);
+  };
+
+  const closeContextMenu = () => {
     setContextMenuDir(null);
     setContextMenuPos(null);
   };
@@ -361,7 +351,7 @@ const DashboardPage: React.FC = () => {
                   name={dir.name}
                   to={`/directories/${dir.directory_id}`}
                   onContextMenu={(e) => handleDirContextMenu(e, dir)}
-                  onMoreClick={(e) => handleDirContextMenu(e, dir, true)}
+                  onMoreClick={(e) => handleDirContextMenu(e, dir)}
                 />
               ))}
             </div>
@@ -433,30 +423,16 @@ const DashboardPage: React.FC = () => {
         />
       )}
 
-      {contextMenuDir &&
-        contextMenuPos &&
-        createPortal(
-          <div
-            ref={contextMenuRef}
-            style={{
-              position: 'fixed',
-              top: contextMenuPos.y,
-              left: contextMenuPos.x,
-              zIndex: 9999,
-            }}
-            className="w-56 rounded-theme-md border border-theme bg-theme-secondary shadow-theme-dropdown overflow-hidden"
-          >
-            <button
-              type="button"
-              onClick={handleOpenInvite}
-              className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-theme-secondary hover:bg-theme-hover transition-colors group"
-            >
-              <UserPlus size={16} className="group-hover:text-green-500 transition-colors" />
-              Пригласить
-            </button>
-          </div>,
-          document.body,
-        )}
+      <ContextMenu isOpen={!!contextMenuDir} onClose={closeContextMenu} position={contextMenuPos}>
+        <button
+          type="button"
+          onClick={handleOpenInvite}
+          className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-theme-secondary hover:bg-theme-hover transition-colors group"
+        >
+          <UserPlus size={16} className="group-hover:text-green-500 transition-colors" />
+          Пригласить
+        </button>
+      </ContextMenu>
 
       <Modal
         isOpen={inviteDir !== null}

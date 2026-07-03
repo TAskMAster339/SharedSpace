@@ -39,7 +39,7 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
   onConvert,
   onDragStart,
 }) => {
-  const [contextMenuOpen, setContextMenuOpen] = useState(false);
+  const [contextMenuOpen, setContextMenuOpen] = useState<{ x: number; y: number } | null>(null);
 
   return (
     <Link
@@ -49,7 +49,7 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
       onContextMenu={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        setContextMenuOpen(true);
+        setContextMenuOpen({ x: e.clientX, y: e.clientY });
       }}
       className={cn(
         'group flex flex-col items-center p-3 rounded-theme-md transition-colors cursor-pointer relative min-w-0',
@@ -92,8 +92,9 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
           onDownload={onDownload ? () => onDownload(id) : undefined}
           onConvert={onConvert ? () => onConvert(id) : undefined}
           iconSize={16}
-          openMenu={contextMenuOpen}
-          onCloseMenu={() => setContextMenuOpen(false)}
+          openMenu={!!contextMenuOpen}
+          menuPosition={contextMenuOpen}
+          onCloseMenu={() => setContextMenuOpen(null)}
         />
       </div>
     </Link>

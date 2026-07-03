@@ -27,7 +27,7 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const dragCounter = useRef(0);
-  const [contextMenuOpen, setContextMenuOpen] = useState(false);
+  const [contextMenuOpen, setContextMenuOpen] = useState<{ x: number; y: number } | null>(null);
 
   const handleDragOver = (e: React.DragEvent) => {
     if (!onDrop) return;
@@ -76,7 +76,7 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
       onContextMenu={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        setContextMenuOpen(true);
+        setContextMenuOpen({ x: e.clientX, y: e.clientY });
       }}
       className={cn(
         'group flex flex-col items-center p-3 rounded-theme-md transition-colors cursor-pointer relative min-w-0',
@@ -106,8 +106,9 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
         onDelete={onDelete ? () => onDelete(id) : undefined}
         className="absolute top-2 right-2"
         iconSize={16}
-        openMenu={contextMenuOpen}
-        onCloseMenu={() => setContextMenuOpen(false)}
+        openMenu={!!contextMenuOpen}
+        menuPosition={contextMenuOpen}
+        onCloseMenu={() => setContextMenuOpen(null)}
       />
     </Link>
   );

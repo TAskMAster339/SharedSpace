@@ -43,7 +43,7 @@ export const FileItem: React.FC<FileItemProps> = ({
   onConvert,
   onDragStart,
 }) => {
-  const [contextMenuOpen, setContextMenuOpen] = useState(false);
+  const [contextMenuOpen, setContextMenuOpen] = useState<{ x: number; y: number } | null>(null);
 
   return (
     <Link
@@ -54,7 +54,7 @@ export const FileItem: React.FC<FileItemProps> = ({
       onContextMenu={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        setContextMenuOpen(true);
+        setContextMenuOpen({ x: e.clientX, y: e.clientY });
       }}
       className={cn(
         'group flex items-center justify-between p-3 rounded-theme-md transition-colors cursor-pointer',
@@ -101,8 +101,9 @@ export const FileItem: React.FC<FileItemProps> = ({
           onShare={onShare ? () => onShare(id) : undefined}
           onDownload={onDownload ? () => onDownload(id) : undefined}
           onConvert={onConvert ? () => onConvert(id) : undefined}
-          openMenu={contextMenuOpen}
-          onCloseMenu={() => setContextMenuOpen(false)}
+          openMenu={!!contextMenuOpen}
+          menuPosition={contextMenuOpen}
+          onCloseMenu={() => setContextMenuOpen(null)}
         />
       </div>
     </Link>
