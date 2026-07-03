@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -124,7 +124,7 @@ const SharedDirectoryPage: React.FC = () => {
   const accessToken = useAuthStore((state) => state.accessToken);
 
   const pathParam = searchParams.get('path') || '';
-  const pathIds = parsePath(pathParam);
+  const pathIds = useMemo(() => parsePath(pathParam), [pathParam]);
   const subDirId = pathIds.length > 0 ? pathIds[pathIds.length - 1] : '';
   const previewFileId = searchParams.get('file') || '';
 
