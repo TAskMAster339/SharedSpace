@@ -191,6 +191,11 @@ const TrashPage: React.FC = () => {
     setMenuPosition({ x: rect.right - MENU_WIDTH, y: rect.bottom + GAP });
   };
 
+  const handleItemClick = (e: React.MouseEvent, itemId: string) => {
+    setActiveMenuId(itemId);
+    setMenuPosition({ x: e.clientX, y: e.clientY });
+  };
+
   const handleContextMenu = (e: React.MouseEvent, itemId: string) => {
     e.preventDefault();
     e.stopPropagation();
@@ -205,8 +210,9 @@ const TrashPage: React.FC = () => {
   const renderItem = (item: TrashItem) => (
     <div
       key={item.id}
+      onClick={(e) => handleItemClick(e, item.id)}
       onContextMenu={(e) => handleContextMenu(e, item.id)}
-      className="group flex items-center gap-3 p-3 rounded-theme-md bg-theme-tertiary border border-theme hover:bg-theme-hover transition-colors"
+      className="group flex items-center gap-3 p-3 rounded-theme-md bg-theme-tertiary border border-theme hover:bg-theme-hover transition-colors cursor-pointer"
     >
       <div className="flex items-center gap-3 min-w-0 flex-1">
         <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card shrink-0 text-theme-muted group-hover:text-brand transition-colors">
@@ -249,7 +255,7 @@ const TrashPage: React.FC = () => {
               setClearAllError('');
               setIsClearAllOpen(true);
             }}
-            className="flex items-center gap-1.5 shrink-0 !bg-danger !text-white hover:!bg-danger-hover"
+            className="flex items-center gap-1.5 shrink-0 !bg-danger !text-white hover:brightness-110 transition-all duration-200"
           >
             <TrashIcon size={16} /> Очистить корзину
           </Button>
