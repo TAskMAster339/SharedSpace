@@ -129,6 +129,7 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 				r.Route("/trash", func(r chi.Router) {
 					r.Get("/", middleware.AppError(trashHandler.GetTrashList))
 					r.Delete("/", middleware.AppError(trashHandler.ClearTrash))
+					r.Delete("/all", middleware.AppError(trashHandler.ClearAllTrash))
 				})
 			}
 

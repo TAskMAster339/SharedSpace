@@ -71,9 +71,9 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
       />
       <div className="relative bg-theme-secondary rounded-theme-xl max-w-md w-full p-6 shadow-theme-dropdown border border-theme">
         {/* Шапка: иконка и заголовок */}
-        <div className="flex items-start gap-3">
-          <div className={cn('p-3 rounded-theme-full shrink-0', styles.iconBg, styles.iconColor)}>
-            {icon || <AlertTriangle size={24} />}
+        <div className="flex items-center gap-3">
+          <div className={cn('p-2 rounded-theme-full shrink-0', styles.iconBg, styles.iconColor)}>
+            {icon || <AlertTriangle size={20} />}
           </div>
           <div className="flex-1 min-w-0 break-words">{title}</div>
         </div>

@@ -50,7 +50,7 @@ func (h *Handler) GetTrashList(w http.ResponseWriter, r *http.Request) error {
 	return writeJSON(w, http.StatusOK, resp)
 }
 
-// ClearTrash clears the trash (all items or selected ones).
+// ClearTrash clears the trash (selected items only).
 // @Summary Clear trash
 // @Tags trash
 // @Security BearerAuth
@@ -73,6 +73,26 @@ func (h *Handler) ClearTrash(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	if err := h.service.ClearTrash(r.Context(), claims.UserID, req.ItemIDs); err != nil {
+		return err
+	}
+
+	return writeJSON(w, http.StatusOK, map[string]string{"message": "корзина очищена"})
+}
+
+// ClearAllTrash permanently deletes all items in the user's trash.
+// @Summary Clear all trash
+// @Tags trash
+// @Security BearerAuth
+// @Success 200 {object} map[string]string
+// @Failure 401 {object} apperror.Response
+// @Router /api/v1/trash/all [delete]
+func (h *Handler) ClearAllTrash(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := auth.ClaimsFromCtx(r.Context())
+	if !ok {
+		return apperror.Unauthorized("не авторизован")
+	}
+
+	if err := h.service.ClearTrash(r.Context(), claims.UserID, []string{}); err != nil {
 		return err
 	}
 
