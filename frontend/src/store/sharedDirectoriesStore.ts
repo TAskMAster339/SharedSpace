@@ -6,7 +6,7 @@ interface SharedDirectoriesState {
   sharedDirectoryIds: Set<string>;
   isLoading: boolean;
   loadedToken: string | null;
-  loadSharedDirectories: (accessToken: string | null) => Promise<void>;
+  loadSharedDirectories: (accessToken: string | null, force?: boolean) => Promise<void>;
   reset: () => void;
 }
 
@@ -18,15 +18,15 @@ export const useSharedDirectoriesStore = create<SharedDirectoriesState>((set, ge
   isLoading: true,
   loadedToken: null,
 
-  loadSharedDirectories: async (accessToken) => {
+  loadSharedDirectories: async (accessToken, force = false) => {
     if (!accessToken) {
       set({ isLoading: false });
       return;
     }
 
-    if (get().loadedToken === accessToken && !get().isLoading) return;
+    if (!force && get().loadedToken === accessToken && !get().isLoading) return;
 
-    if (inFlight) return inFlight;
+    if (!force && inFlight) return inFlight;
 
     set({ isLoading: true });
 

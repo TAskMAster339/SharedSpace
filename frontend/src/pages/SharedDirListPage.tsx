@@ -18,6 +18,7 @@ import { ContextMenu } from '../components/ui/ContextMenu';
 import { QuotaIndicator } from '../components/ui/QuotaIndicator';
 import { RenameModal } from '../components/ui/RenameModal';
 import { useToastStore } from '../hooks/useToast';
+import { useSharedDirectoriesStore } from '../store/sharedDirectoriesStore';
 
 interface DirectoryCardData extends SharedDirectoryWithStats {
   memberUsernames: string[];
@@ -168,7 +169,10 @@ const SharedDirListPage: React.FC = () => {
       const root = await getRootContents(accessToken);
       await createDirectory(accessToken, { name, parent_id: root.id, shared: true });
       setIsModalOpen(false);
-      await loadDirectories(accessToken);
+      await Promise.all([
+        loadDirectories(accessToken),
+        useSharedDirectoriesStore.getState().loadSharedDirectories(accessToken, true),
+      ]);
       refreshUser();
     } catch (err) {
       setCreateError(

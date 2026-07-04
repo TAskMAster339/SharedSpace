@@ -596,6 +596,15 @@ func (s *Service) Restore(ctx context.Context, userID, dirID string) error {
 		if parent.DeletedAt != nil {
 			return apperror.Conflict("сначала восстановите родительскую директорию")
 		}
+
+		if _, err := s.repo.FindByNameAndParent(ctx, s.db, dir.Name, *dir.ParentID, dir.OwnerID); err == nil {
+			return apperror.Conflict("невозможно восстановить директорию: директория с таким именем уже существует")
+		}
+	}
+
+	isShared, err := s.sharingRepo.FindByDirectoryID(ctx, s.db, dirID)
+	if err != nil {
+		return apperror.WrapInternal("проверка общей директории", err)
 	}
 
 	ids, err := s.repo.FindSubtreeIDs(ctx, s.db, dirID)
@@ -608,6 +617,21 @@ func (s *Service) Restore(ctx context.Context, userID, dirID string) error {
 		return apperror.WrapInternal("начало транзакции", err)
 	}
 	defer tx.Rollback(ctx)
+
+	if isShared {
+		if err := s.repo.RecalcSharedDirsCount(ctx, tx, dir.OwnerID); err != nil {
+			return apperror.WrapInternal("обновление счётчика", err)
+		}
+		count, quota, err := s.repo.GetSharedDirsStats(ctx, tx, dir.OwnerID)
+		if err != nil {
+			return apperror.WrapInternal("получение статистики общих директорий", err)
+		}
+		if count >= quota {
+			return apperror.Validation(
+				fmt.Sprintf("невозможно восстановить директорию: достигнут лимит %d/%d", count, quota),
+			)
+		}
+	}
 
 	restoredFiles, err := s.repo.FindDeletedFilesInDirs(ctx, s.db, ids)
 	if err != nil {

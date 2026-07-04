@@ -379,8 +379,8 @@ const DirectoryPage: React.FC = () => {
   const perms = useMemo(() => directoryInfo?.permissions, [directoryInfo]);
 
   const isSharedDirectory = useMemo(() => {
-    return isDirectlyShared && !isPersonal;
-  }, [isDirectlyShared, isPersonal]);
+    return !isPersonal && (isDirectlyShared || directoryInfo?.shared_directory_id != null);
+  }, [isDirectlyShared, isPersonal, directoryInfo]);
 
   // Сбрасываем при уходе со страницы
   useEffect(() => {

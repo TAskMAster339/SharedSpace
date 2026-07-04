@@ -54,6 +54,9 @@ type SharingRepository interface {
 		Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
 		QueryRow(context.Context, string, ...any) pgx.Row
 	}, directoryID, ownerID string) error
+	FindByDirectoryID(ctx context.Context, db interface {
+		QueryRow(context.Context, string, ...any) pgx.Row
+	}, directoryID string) (bool, error)
 }
 
 type dbTX interface {
