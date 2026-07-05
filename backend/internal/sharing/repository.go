@@ -43,7 +43,7 @@ func (r *Repository) FindByMember(ctx context.Context, db dbTX, userID string, l
 		JOIN shared_directory_members sdm ON sdm.shared_directory_id = sd.id
 		JOIN directories d ON d.id = sd.directory_id
 		JOIN users u ON u.id = sd.owner_id
-		WHERE sdm.user_id = $1
+		WHERE sdm.user_id = $1 AND d.deleted_at IS NULL
 		ORDER BY sd.created_at DESC`
 	args := []any{userID}
 
@@ -85,7 +85,7 @@ func (r *Repository) FindByMemberWithStats(ctx context.Context, db dbTX, userID 
 		JOIN shared_directory_members sdm ON sdm.shared_directory_id = sd.id
 		JOIN directories d ON d.id = sd.directory_id
 		JOIN users u ON u.id = sd.owner_id
-		WHERE sdm.user_id = $1
+		WHERE sdm.user_id = $1 AND d.deleted_at IS NULL
 		ORDER BY sd.created_at DESC
 	`, userID)
 	if err != nil {
@@ -145,6 +145,18 @@ func (r *Repository) FindByID(ctx context.Context, db dbTX, id string) (sharedDi
 		WHERE sd.id = $1
 	`, id).Scan(&rec.ID, &rec.DirectoryID, &rec.OwnerID, &rec.Name, &rec.OwnerName, &rec.Role, &rec.CreatedAt)
 	return rec, err
+}
+
+func (r *Repository) FindByDirectoryID(ctx context.Context, db interface {
+	QueryRow(context.Context, string, ...any) pgx.Row
+}, directoryID string) (bool, error) {
+	var exists bool
+	err := db.QueryRow(ctx, `
+		SELECT EXISTS(
+			SELECT 1 FROM shared_directories WHERE directory_id = $1
+		)
+	`, directoryID).Scan(&exists)
+	return exists, err
 }
 
 func (r *Repository) FindUserByUsername(ctx context.Context, db dbTX, username string) (string, error) {
@@ -340,8 +352,9 @@ func (r *Repository) GetUserSharedDirectories(ctx context.Context, db dbTX, user
 		JOIN users owner ON owner.id = sd.owner_id
 		LEFT JOIN shared_directory_members sdm
 			ON sdm.shared_directory_id = sd.id AND sdm.user_id = $1
-		WHERE sd.owner_id = $1
-		   OR (sdm.user_id = $1 AND sdm.role = 'admin')
+		WHERE (sd.owner_id = $1
+		   OR (sdm.user_id = $1 AND sdm.role = 'admin'))
+		   AND d.deleted_at IS NULL
 		ORDER BY d.created_at DESC`
 	args := []any{userID}
 

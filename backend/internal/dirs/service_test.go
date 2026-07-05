@@ -300,9 +300,17 @@ func (m *mockStorage) Delete(_ context.Context, objectKey string) error {
 }
 
 type mockSharingRepo struct {
-	createSharedErr     error
-	createSharedDirID   string
-	createSharedOwnerID string
+	createSharedErr      error
+	createSharedDirID    string
+	createSharedOwnerID  string
+	findByDirectoryIDRes bool
+	findByDirectoryIDErr error
+}
+
+func (m *mockSharingRepo) FindByDirectoryID(_ context.Context, _ interface {
+	QueryRow(context.Context, string, ...any) pgx.Row
+}, _ string) (bool, error) {
+	return m.findByDirectoryIDRes, m.findByDirectoryIDErr
 }
 
 func (m *mockSharingRepo) CreateShared(_ context.Context, _ interface {

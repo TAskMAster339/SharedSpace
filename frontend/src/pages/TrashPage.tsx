@@ -124,8 +124,10 @@ const TrashPage: React.FC = () => {
       const restored = item.type === 'directory' ? 'восстановлена' : 'восстановлен';
       showToast(`${label} «${item.name}» ${restored}`, 'success');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Не удалось восстановить элемент.');
-    } finally {
+      showToast(
+        err instanceof ApiError ? err.message : 'Не удалось восстановить элемент.',
+        'error',
+      );
     }
   };
 

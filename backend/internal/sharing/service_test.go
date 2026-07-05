@@ -44,6 +44,14 @@ type mockRepo struct {
 	removeMemberErr                 error
 	getUserSharedDirsResult         []SharedDirectoryResponse
 	getUserSharedDirsErr            error
+	findByDirectoryIDResult         bool
+	findByDirectoryIDErr            error
+}
+
+func (m *mockRepo) FindByDirectoryID(_ context.Context, _ interface {
+	QueryRow(context.Context, string, ...any) pgx.Row
+}, _ string) (bool, error) {
+	return m.findByDirectoryIDResult, m.findByDirectoryIDErr
 }
 
 func (m *mockRepo) FindByMember(_ context.Context, _ dbTX, _ string, _ int) ([]sharedDirectoryRecord, error) {

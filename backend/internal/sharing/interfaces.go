@@ -30,6 +30,9 @@ type RepositoryInterface interface {
 	FindByMemberWithStats(ctx context.Context, db dbTX, userID string) ([]sharedDirectoryWithStatsRecord, error)
 	FindMembers(ctx context.Context, db dbTX, sharedDirID string, limit int) ([]memberRecord, error)
 	FindByID(ctx context.Context, db dbTX, id string) (sharedDirectoryRecord, error)
+	FindByDirectoryID(ctx context.Context, db interface {
+		QueryRow(context.Context, string, ...any) pgx.Row
+	}, directoryID string) (bool, error)
 	FindUserByUsername(ctx context.Context, db dbTX, username string) (string, error)
 	IsMember(ctx context.Context, db dbTX, sharedDirID, userID string) (bool, error)
 	CreateInvitation(ctx context.Context, db dbTX, sharedDirID, invitedUserID, invitedByUserID, role string) (invitationRecord, error)
