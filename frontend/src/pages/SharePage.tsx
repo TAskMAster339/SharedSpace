@@ -413,7 +413,7 @@ const SharePage: React.FC = () => {
         title={ogTitle}
         description={ogDescription}
         ogImage={ogImage}
-        canonical={`https://team5.st.ifbest.org/share/${token}`}
+        canonical={`https://shared-space.ru/share/${token}`}
       />
       {/* Навигация назад */}
       <div>

@@ -21,43 +21,9 @@ jobs:
           port: ${{ secrets.SERVER_PORT }}
           script: |
             set -e
-            DEPLOY_PATH=/home/${{ secrets.SERVER_USER }}/SharedSpace
-
-            echo "=== Обновляем код ==="
-            cd $DEPLOY_PATH
+            cd ${{ secrets.SERVER_DEPLOY_PATH }}
             git pull origin main
-
-            echo "=== Собираем бэкенд ==="
-            cd $DEPLOY_PATH/backend
-
-            if [ ! -L migrations ]; then
-              ln -s internal/database/migrations migrations
-            fi
-
-            export PATH=$PATH:/usr/local/go/bin
-            go mod download
-            go build -o /tmp/sharedspace-backend ./cmd/api
-
-            echo "=== Останавливаем бэкенд ==="
-            sudo /etc/init.d/sharedspace-backend stop || true
-            sleep 2
-
-            echo "=== Заменяем бинарник ==="
-            sudo cp /tmp/sharedspace-backend /usr/local/bin/sharedspace-backend
-
-            echo "=== Запускаем бэкенд ==="
-            sudo /etc/init.d/sharedspace-backend start
-
-            echo "=== Собираем фронтенд ==="
-            cd $DEPLOY_PATH/frontend
-            export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-            npm install
-            npm run build
-            sudo rm -rf /var/www/sharedspace/*
-            sudo cp -r build/* /var/www/sharedspace/
-
-            echo "=== Перезапускаем сервисы ==="
-            sudo /etc/init.d/nginx reload
-
+            docker compose down
+            docker compose up -d --build
+            docker compose ps
             echo "✅ Deployment completed!"

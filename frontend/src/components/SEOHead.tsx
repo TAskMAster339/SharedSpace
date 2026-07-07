@@ -2,8 +2,8 @@ import React from 'react';
 import { Helmet } from 'react-helmet-async';
 
 const SITE_NAME = 'SharedSpace';
-const DEFAULT_OG_IMAGE = 'https://team5.st.ifbest.org/prefab.png';
-const SITE_URL = 'https://team5.st.ifbest.org';
+const DEFAULT_OG_IMAGE = 'https://shared-space.ru/prefab.png';
+const SITE_URL = 'https://shared-space.ru';
 
 interface SEOHeadProps {
   title: string;
