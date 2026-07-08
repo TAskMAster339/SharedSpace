@@ -17,15 +17,17 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    restart: on-failure
     environment:
       DATABASE_URL: ${DATABASE_URL}
-      MINIO_ENDPOINT: minio:9000
-      MINIO_PUBLIC_ENDPOINT: ${DOMAIN}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT}
+      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT}
       MINIO_USE_SSL: ${MINIO_USE_SSL}
       MINIO_PUBLIC_USE_SSL: ${MINIO_PUBLIC_USE_SSL}
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
       MINIO_BUCKET: ${MINIO_BUCKET}
+      MINIO_TMP_BUCKET: ${MINIO_TMP_BUCKET}
       JWT_SECRET: ${JWT_SECRET}
       JWT_TTL: ${JWT_TTL}
     depends_on:
@@ -44,6 +46,7 @@ services:
 
   nginx:
     image: nginx:alpine
+    restart: on-failure
     ports:
       - "80:80"
       - "443:443"
