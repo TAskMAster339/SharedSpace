@@ -17,5 +17,6 @@ Disallow: /trash
 Allow: /
 Allow: /share/
 
-# 4. Указываем путь к карте сайта
-Sitemap: https://team5.st.ifbest.org/sitemap.xml
+# 4. Указываем пути к картам сайта
+Sitemap: https://shared-space.ru/sitemap.xml
+Sitemap: https://shared-space.ru/api/v1/sitemap.xml

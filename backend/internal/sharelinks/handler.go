@@ -387,7 +387,7 @@ func (h *Handler) ServeOG(w http.ResponseWriter, r *http.Request) error {
 		return apperror.Validation("token обязателен")
 	}
 
-	baseURL := "https://team5.st.ifbest.org"
+	baseURL := "https://shared-space.ru"
 	shareURL := fmt.Sprintf("%s/share/%s", baseURL, token)
 
 	resp, err := h.service.Resolve(r.Context(), token, "", false)
@@ -421,7 +421,7 @@ func (h *Handler) ServeDirectoryOG(w http.ResponseWriter, r *http.Request) error
 		return apperror.Validation("token обязателен")
 	}
 
-	baseURL := "https://team5.st.ifbest.org"
+	baseURL := "https://shared-space.ru"
 	shareURL := fmt.Sprintf("%s/share/dir/%s", baseURL, token)
 
 	resp, err := h.service.ResolveDirectory(r.Context(), token, "", false, ResolveDirectoryParams{
@@ -457,10 +457,10 @@ func (h *Handler) ServeSitemap(w http.ResponseWriter, r *http.Request) error {
 
 	fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-<url><loc>https://team5.st.ifbest.org/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+<url><loc>https://shared-space.ru/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
 `)
 
-	baseURL := "https://team5.st.ifbest.org"
+	baseURL := "https://shared-space.ru"
 	for _, e := range entries {
 		var loc string
 		if e.IsDirectory {

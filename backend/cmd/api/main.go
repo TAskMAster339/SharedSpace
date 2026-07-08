@@ -50,13 +50,13 @@ func main() {
 	}
 
 	store, err := storage.New(ctx, cfg.MinIOEndpoint, cfg.MinIOAccessKey,
-		cfg.MinIOSecretKey, cfg.MinIOBucket, cfg.MinIOPublicEndpoint, cfg.MinIOUseSSL, cfg.MinIOPublicUseSSL)
+		cfg.MinIOSecretKey, cfg.MinIOBucket, cfg.MinIOPublicEndpoint, cfg.MinIOUseSSL, cfg.MinIOPublicUseSSL, cfg.MinioRegion)
 	if err != nil {
 		log.Fatalf("storage: %v", err)
 	}
 
 	tmpStore, err := storage.New(ctx, cfg.MinIOEndpoint, cfg.MinIOAccessKey,
-		cfg.MinIOSecretKey, cfg.MinIOTmpBucket, cfg.MinIOPublicEndpoint, cfg.MinIOUseSSL, cfg.MinIOPublicUseSSL)
+		cfg.MinIOSecretKey, cfg.MinIOTmpBucket, cfg.MinIOPublicEndpoint, cfg.MinIOUseSSL, cfg.MinIOPublicUseSSL, cfg.MinioRegion)
 	if err != nil {
 		log.Fatalf("tmp storage: %v", err)
 	}

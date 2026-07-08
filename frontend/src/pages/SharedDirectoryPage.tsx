@@ -616,7 +616,7 @@ const SharedDirectoryPage: React.FC = () => {
           title={previewFile.filename}
           description={`Файл · ${formatFileSize(previewFile.size)} · Общая папка ${data.name}`}
           ogImage={previewFile.mime_type.startsWith('image/') ? previewFile.url : undefined}
-          canonical={`https://team5.st.ifbest.org/share/dir/${token}?file=${previewFileId}`}
+          canonical={`https://shared-space.ru/share/dir/${token}?file=${previewFileId}`}
         />
         <div>
           <button
@@ -701,7 +701,7 @@ const SharedDirectoryPage: React.FC = () => {
       <SEOHead
         title={data.name + ' — общая папка'}
         description={`Общая папка · ${fileCount} элементов · Владелец: ${data.owner_username}`}
-        canonical={`https://team5.st.ifbest.org/share/dir/${token}`}
+        canonical={`https://shared-space.ru/share/dir/${token}`}
       />
       {/* Title */}
       <div className="space-y-1">
