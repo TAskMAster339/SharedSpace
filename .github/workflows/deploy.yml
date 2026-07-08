@@ -23,7 +23,8 @@ jobs:
             set -e
             cd ${{ secrets.SERVER_DEPLOY_PATH }}
             git pull origin main
-            docker compose down
-            docker compose up -d --build
-            docker compose ps
+            make prod-down
+            make prod-build
+            make prod-up
+            make prod-ps
             echo "✅ Deployment completed!"

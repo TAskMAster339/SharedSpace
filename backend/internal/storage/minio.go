@@ -19,10 +19,11 @@ type Storage struct {
 	publicUseSSL   bool
 }
 
-func New(ctx context.Context, endpoint, accessKey, secretKey, bucket, publicEndpoint string, useSSL bool, publicUseSSL bool) (*Storage, error) {
+func New(ctx context.Context, endpoint, accessKey, secretKey, bucket, publicEndpoint string, useSSL bool, publicUseSSL bool, region string) (*Storage, error) {
 	client, err := minio.New(endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
 		Secure: useSSL,
+		Region: region,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("minio client: %w", err)

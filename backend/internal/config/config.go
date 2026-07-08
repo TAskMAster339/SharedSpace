@@ -36,6 +36,7 @@ type Config struct {
 	MinIOPublicUseSSL   bool
 	MinIOPublicEndpoint string
 	MinIOTmpBucket      string
+	MinioRegion         string
 
 	JWTSecret     string
 	JWTTTL        time.Duration
@@ -79,6 +80,7 @@ func Load() (*Config, error) {
 		MinIOUseSSL:         getEnv("MINIO_USE_SSL", "false") == "true",
 		MinIOPublicUseSSL:   getEnv("MINIO_PUBLIC_USE_SSL", "true") == "true",
 		MinIOTmpBucket:      getEnv("MINIO_TMP_BUCKET", "tmp"),
+		MinioRegion:         getEnv("MINIO_REGION", ""),
 
 		JWTSecret:     secret,
 		JWTTTL:        time.Duration(ttl) * time.Second,
