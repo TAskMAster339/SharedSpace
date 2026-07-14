@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Folder, Share2 } from 'lucide-react';
+import { Share2 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useFavorites } from '../hooks/useFavorites';
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
@@ -8,9 +7,12 @@ import { getLinks, LinkItem } from '../api/mylinks';
 import { softDeleteFile, restoreFile, renameFile, getFileContentUrl } from '../api/files';
 import { softDeleteDirectory, restoreDirectory, renameDirectory } from '../api/directories';
 import { ApiError } from '../api/client';
-import { Card, CardHeader, CardTitle } from '../components/ui/Card';
+import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
+import { ItemGroup } from '../components/ui/ItemGroup';
+import { FolderItem } from '../components/ui/FolderItem';
+import { FolderGridItem } from '../components/ui/FolderGridItem';
 import { FileItem } from '../components/ui/FileItem';
-import { ItemActionsMenu } from '../components/ui/ItemActionsMenu';
+import { FileGridItem } from '../components/ui/FileGridItem';
 import { EmptyState } from '../components/ui/EmptyState';
 import { RenameModal } from '../components/ui/RenameModal';
 import { ShareLinkModal } from '../components/ui/ShareLinkModal';
@@ -37,6 +39,9 @@ const MyLinksPage: React.FC = () => {
   const [hasMore, setHasMore] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [itemsWithLinks, setItemsWithLinks] = useState<Set<string>>(new Set());
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    return (localStorage.getItem('directoryViewMode') as ViewMode) || 'grid';
+  });
 
   const [convertFileData, setConvertFileData] = useState<{
     id: string;
@@ -54,10 +59,6 @@ const MyLinksPage: React.FC = () => {
     name: string;
     extension?: string;
     type: 'file' | 'directory';
-  } | null>(null);
-  const [contextMenuState, setContextMenuState] = useState<{
-    itemId: string;
-    position: { x: number; y: number };
   } | null>(null);
 
   const loadLinks = useCallback(async () => {
@@ -98,6 +99,17 @@ const MyLinksPage: React.FC = () => {
   }, [accessToken, cursor, isLoadingMore]);
 
   const { sentinelRef } = useInfiniteScroll(loadMore, hasMore && !isLoadingMore);
+
+  useEffect(() => {
+    localStorage.setItem('directoryViewMode', viewMode);
+  }, [viewMode]);
+
+  const directories = items.filter((item) => item.item_type === 'directory');
+  const files = items.filter((item) => item.item_type === 'file');
+
+  const handleViewModeChange = useCallback((mode: ViewMode) => {
+    setViewMode(mode);
+  }, []);
 
   const handleToggleFavorite = async (fileId: string) => {
     if (!accessToken) return;
@@ -248,170 +260,155 @@ const MyLinksPage: React.FC = () => {
     [accessToken, renameState, showToast, loadLinks],
   );
 
-  const files = items.filter((item) => item.item_type === 'file');
-  const directories = items.filter((item) => item.item_type === 'directory');
-
   return (
     <div className="space-y-6 pb-10">
-      <div>
-        <h1 className="text-2xl font-semibold text-theme-primary mb-1 flex items-center gap-2">
-          <Share2 size={28} className="text-green-500 shrink-0" />
-          Мои ссылки
-        </h1>
-        <p className="text-sm text-theme-muted">Файлы и папки, на которые созданы ссылки</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-theme-primary mb-1 flex items-center gap-2">
+            <Share2 size={28} className="text-green-500 shrink-0" />
+            Мои ссылки
+          </h1>
+          <p className="text-sm text-theme-muted">Файлы и папки, на которые созданы ссылки</p>
+        </div>
+        <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} className="mt-1" />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Элементы</CardTitle>
-        </CardHeader>
-
-        {isLoading ? (
-          <p className="text-sm text-theme-muted py-8 text-center">Загрузка...</p>
-        ) : error ? (
-          <p className="text-danger text-sm py-8 text-center">{error}</p>
-        ) : items.length === 0 ? (
-          <EmptyState
-            icon={<Share2 size={24} className="text-green-500" />}
-            description="Здесь появятся файлы и папки, на которые вы создали ссылки."
-          />
-        ) : (
-          <div className="space-y-6">
-            {directories.length > 0 && (
-              <div>
-                <h3 className="text-sm font-medium text-theme-secondary mb-3">Папки</h3>
-                <div className="space-y-1">
-                  {directories.map((item) => {
-                    const isContextOpen = contextMenuState?.itemId === item.id;
-                    return (
-                      <Link
-                        key={item.id}
-                        to={`/directories/${item.id}`}
-                        onContextMenu={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setContextMenuState({
-                            itemId: item.id,
-                            position: { x: e.clientX, y: e.clientY },
-                          });
-                        }}
-                        className="group flex items-center justify-between p-3 rounded-theme-md transition-colors cursor-pointer bg-theme-tertiary hover:bg-theme-hover border border-theme"
-                      >
-                        <div className="flex items-center gap-3 min-w-0 flex-1">
-                          <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card shrink-0 relative">
-                            <Folder
-                              size={20}
-                              className="text-theme-muted group-hover:text-brand transition-colors"
-                            />
-                            <span
-                              className={`absolute -top-1.5 flex items-center justify-center rounded-full bg-theme-tertiary border border-theme p-0.5 shadow-theme-card ${
-                                item.is_active ? 'opacity-100' : 'opacity-0'
-                              }`}
-                              style={{ left: '25px' }}
-                            >
-                              <Share2 size={11} className="text-green-500" />
-                            </span>
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-sm text-theme-primary font-medium truncate">
-                              {item.filename}
-                            </p>
-                            <p className="text-xs text-theme-muted">
-                              Создана {formatDate(item.created_at)}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3 shrink-0 ml-3">
-                          <ItemActionsMenu
-                            iconSize={16}
-                            openMenu={isContextOpen}
-                            menuPosition={isContextOpen ? contextMenuState.position : null}
-                            onCloseMenu={() => setContextMenuState(null)}
-                            onRename={() => {
-                              setContextMenuState(null);
-                              setRenameState({
-                                id: item.id,
-                                name: item.filename,
-                                type: 'directory',
-                              });
-                            }}
-                            onDelete={() => {
-                              setContextMenuState(null);
-                              handleDeleteDirectory(item.id);
-                            }}
-                            onShare={() => {
-                              setContextMenuState(null);
-                              setShareModalState({
-                                itemId: item.id,
-                                itemName: item.filename,
-                                itemType: 'directory',
-                              });
-                            }}
-                          />
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {files.length > 0 && (
-              <div>
-                <h3 className="text-sm font-medium text-theme-secondary mb-3">Файлы</h3>
-                <div className="space-y-1">
-                  {files.map((file) => (
-                    <FileItem
-                      key={file.id}
-                      id={file.id}
-                      name={file.filename}
-                      date={formatDate(file.link_created_at)}
-                      size={formatFileSize(file.size)}
-                      type={resolveFileIconType(file.mime_type, file.extension)}
-                      to={`/files/${file.id}`}
-                      isFavorite={false}
-                      hasShareLinks={itemsWithLinks.has(file.id)}
-                      onToggleFavorite={handleToggleFavorite}
-                      onRename={(id) => {
-                        const f = items.find((d) => d.id === id);
-                        if (f)
-                          setRenameState({
-                            id: f.id,
-                            name: f.filename,
-                            extension: f.extension,
-                            type: 'file',
-                          });
-                      }}
-                      onDelete={handleDeleteFile}
-                      onDownload={handleDownload}
-                      onConvert={handleConvert}
-                      onShare={(id) => {
-                        const f = items.find((d) => d.id === id);
-                        if (f)
-                          setShareModalState({
-                            itemId: f.id,
-                            itemName: f.filename,
-                            itemType: 'file',
-                          });
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {hasMore && (
-              <div className="flex items-center justify-center py-2">
-                {isLoadingMore ? (
-                  <div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+      {isLoading ? (
+        <p className="text-sm text-theme-muted py-8 text-center">Загрузка...</p>
+      ) : error ? (
+        <p className="text-danger text-sm py-8 text-center">{error}</p>
+      ) : items.length === 0 ? (
+        <EmptyState
+          icon={<Share2 size={24} className="text-green-500" />}
+          description="Здесь появятся файлы и папки, на которые вы создали ссылки."
+        />
+      ) : (
+        <div className="space-y-6">
+          {directories.length > 0 && (
+            <ItemGroup title="Папки" viewMode={viewMode}>
+              {directories.map((item) =>
+                viewMode === 'grid' ? (
+                  <FolderGridItem
+                    key={item.id}
+                    id={item.id}
+                    name={item.filename}
+                    to={`/directories/${item.id}`}
+                    hasShareLinks={itemsWithLinks.has(item.id)}
+                    onRename={() =>
+                      setRenameState({ id: item.id, name: item.filename, type: 'directory' })
+                    }
+                    onDelete={handleDeleteDirectory}
+                    onShare={() =>
+                      setShareModalState({
+                        itemId: item.id,
+                        itemName: item.filename,
+                        itemType: 'directory',
+                      })
+                    }
+                  />
                 ) : (
-                  <div ref={sentinelRef} className="h-1" />
-                )}
-              </div>
-            )}
-          </div>
-        )}
-      </Card>
+                  <FolderItem
+                    key={item.id}
+                    id={item.id}
+                    name={item.filename}
+                    to={`/directories/${item.id}`}
+                    hasShareLinks={itemsWithLinks.has(item.id)}
+                    onRename={() =>
+                      setRenameState({ id: item.id, name: item.filename, type: 'directory' })
+                    }
+                    onDelete={handleDeleteDirectory}
+                    onShare={() =>
+                      setShareModalState({
+                        itemId: item.id,
+                        itemName: item.filename,
+                        itemType: 'directory',
+                      })
+                    }
+                  />
+                ),
+              )}
+            </ItemGroup>
+          )}
+
+          {files.length > 0 && (
+            <ItemGroup title="Файлы" viewMode={viewMode}>
+              {files.map((item) =>
+                viewMode === 'grid' ? (
+                  <FileGridItem
+                    key={item.id}
+                    id={item.id}
+                    name={item.filename}
+                    type={resolveFileIconType(item.mime_type, item.extension)}
+                    to={`/files/${item.id}`}
+                    isFavorite={false}
+                    hasShareLinks={itemsWithLinks.has(item.id)}
+                    onToggleFavorite={handleToggleFavorite}
+                    onRename={() =>
+                      setRenameState({
+                        id: item.id,
+                        name: item.filename,
+                        extension: item.extension,
+                        type: 'file',
+                      })
+                    }
+                    onDelete={handleDeleteFile}
+                    onDownload={handleDownload}
+                    onConvert={handleConvert}
+                    onShare={() =>
+                      setShareModalState({
+                        itemId: item.id,
+                        itemName: item.filename,
+                        itemType: 'file',
+                      })
+                    }
+                  />
+                ) : (
+                  <FileItem
+                    key={item.id}
+                    id={item.id}
+                    name={item.filename}
+                    date={formatDate(item.link_created_at)}
+                    size={formatFileSize(item.size)}
+                    type={resolveFileIconType(item.mime_type, item.extension)}
+                    to={`/files/${item.id}`}
+                    isFavorite={false}
+                    hasShareLinks={itemsWithLinks.has(item.id)}
+                    onToggleFavorite={handleToggleFavorite}
+                    onRename={() =>
+                      setRenameState({
+                        id: item.id,
+                        name: item.filename,
+                        extension: item.extension,
+                        type: 'file',
+                      })
+                    }
+                    onDelete={handleDeleteFile}
+                    onDownload={handleDownload}
+                    onConvert={handleConvert}
+                    onShare={() =>
+                      setShareModalState({
+                        itemId: item.id,
+                        itemName: item.filename,
+                        itemType: 'file',
+                      })
+                    }
+                  />
+                ),
+              )}
+            </ItemGroup>
+          )}
+
+          {hasMore && (
+            <div className="flex items-center justify-center py-2">
+              {isLoadingMore ? (
+                <div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <div ref={sentinelRef} className="h-1" />
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {convertFileData && (
         <ConvertModal

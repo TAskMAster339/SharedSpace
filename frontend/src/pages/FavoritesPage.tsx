@@ -7,8 +7,10 @@ import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 import { getFavorites, FavoriteFile } from '../api/favorites';
 import { softDeleteFile, restoreFile, renameFile, getFileContentUrl } from '../api/files';
 import { ApiError } from '../api/client';
-import { Card, CardHeader, CardTitle } from '../components/ui/Card';
+import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
+import { ItemGroup } from '../components/ui/ItemGroup';
 import { FileItem } from '../components/ui/FileItem';
+import { FileGridItem } from '../components/ui/FileGridItem';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ConvertModal } from '../components/ui/ConvertModal';
 import { RenameModal } from '../components/ui/RenameModal';
@@ -53,6 +55,9 @@ const FavoritesPage: React.FC = () => {
   const [cursor, setCursor] = useState<string | undefined>();
   const [hasMore, setHasMore] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    return (localStorage.getItem('directoryViewMode') as ViewMode) || 'grid';
+  });
 
   const loadFavorites = useCallback(async () => {
     if (!accessToken) return;
@@ -103,6 +108,14 @@ const FavoritesPage: React.FC = () => {
   }, [accessToken, cursor, isLoadingMore]);
 
   const { sentinelRef } = useInfiniteScroll(loadMore, hasMore && !isLoadingMore);
+
+  useEffect(() => {
+    localStorage.setItem('directoryViewMode', viewMode);
+  }, [viewMode]);
+
+  const handleViewModeChange = useCallback((mode: ViewMode) => {
+    setViewMode(mode);
+  }, []);
 
   const handleToggleFavorite = async (fileId: string) => {
     if (!accessToken) return;
@@ -234,73 +247,93 @@ const FavoritesPage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-10">
-      <div>
-        <h1 className="text-2xl font-semibold text-theme-primary mb-1 flex items-center gap-2">
-          <Star size={28} className="text-yellow-400 shrink-0" />
-          Избранное
-        </h1>
-        <p className="text-sm text-theme-muted">Файлы, отмеченные звёздочкой</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-theme-primary mb-1 flex items-center gap-2">
+            <Star size={28} className="text-yellow-400 shrink-0" />
+            Избранное
+          </h1>
+          <p className="text-sm text-theme-muted">Файлы, отмеченные звёздочкой</p>
+        </div>
+        <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} className="mt-1" />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Файлы</CardTitle>
-        </CardHeader>
-
-        {isLoading ? (
-          <p className="text-sm text-theme-muted py-8 text-center">Загрузка...</p>
-        ) : error ? (
-          <p className="text-danger text-sm py-8 text-center">{error}</p>
-        ) : files.length === 0 ? (
-          <EmptyState
-            icon={<Star size={24} />}
-            description="Здесь появятся файлы, отмеченные звёздочкой."
-          />
-        ) : (
-          <div className="space-y-4">
-            {files.map((file) => (
-              <FileItem
-                key={file.id}
-                id={file.id}
-                name={file.filename}
-                date={formatDate(file.favorited_at)}
-                size={formatFileSize(file.size)}
-                type={resolveFileIconType(file.mime_type, file.extension)}
-                to={`/files/${file.id}`}
-                isFavorite={true}
-                hasShareLinks={itemsWithLinks.has(file.id)}
-                onToggleFavorite={handleToggleFavorite}
-                onRename={(id) => {
-                  const f = files.find((d) => d.id === id);
-                  if (f)
-                    setRenameState({
-                      id: f.id,
-                      name: f.filename,
-                      extension: f.extension,
-                      type: 'file',
-                    });
-                }}
-                onDelete={handleDeleteFile}
-                onDownload={handleDownload}
-                onConvert={handleConvert}
-                onShare={(id) => {
-                  const f = files.find((d) => d.id === id);
-                  if (f) setShareModalState({ itemId: f.id, itemName: f.filename });
-                }}
-              />
-            ))}
-            {hasMore && (
-              <div className="flex items-center justify-center py-2">
-                {isLoadingMore ? (
-                  <div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <div ref={sentinelRef} className="h-1" />
-                )}
-              </div>
+      {isLoading ? (
+        <p className="text-sm text-theme-muted py-8 text-center">Загрузка...</p>
+      ) : error ? (
+        <p className="text-danger text-sm py-8 text-center">{error}</p>
+      ) : files.length === 0 ? (
+        <EmptyState
+          icon={<Star size={24} />}
+          description="Здесь появятся файлы, отмеченные звёздочкой."
+        />
+      ) : (
+        <div className="space-y-6">
+          <ItemGroup title="Файлы" viewMode={viewMode} hasMore={hasMore} isLoadingMore={isLoadingMore} sentinelRef={sentinelRef}>
+            {files.map((file) =>
+              viewMode === 'grid' ? (
+                <FileGridItem
+                  key={file.id}
+                  id={file.id}
+                  name={file.filename}
+                  type={resolveFileIconType(file.mime_type, file.extension)}
+                  to={`/files/${file.id}`}
+                  isFavorite={true}
+                  hasShareLinks={itemsWithLinks.has(file.id)}
+                  onToggleFavorite={handleToggleFavorite}
+                  onRename={(id) => {
+                    const f = files.find((d) => d.id === id);
+                    if (f)
+                      setRenameState({
+                        id: f.id,
+                        name: f.filename,
+                        extension: f.extension,
+                        type: 'file',
+                      });
+                  }}
+                  onDelete={handleDeleteFile}
+                  onDownload={handleDownload}
+                  onConvert={handleConvert}
+                  onShare={(id) => {
+                    const f = files.find((d) => d.id === id);
+                    if (f) setShareModalState({ itemId: f.id, itemName: f.filename });
+                  }}
+                />
+              ) : (
+                <FileItem
+                  key={file.id}
+                  id={file.id}
+                  name={file.filename}
+                  date={formatDate(file.favorited_at)}
+                  size={formatFileSize(file.size)}
+                  type={resolveFileIconType(file.mime_type, file.extension)}
+                  to={`/files/${file.id}`}
+                  isFavorite={true}
+                  hasShareLinks={itemsWithLinks.has(file.id)}
+                  onToggleFavorite={handleToggleFavorite}
+                  onRename={(id) => {
+                    const f = files.find((d) => d.id === id);
+                    if (f)
+                      setRenameState({
+                        id: f.id,
+                        name: f.filename,
+                        extension: f.extension,
+                        type: 'file',
+                      });
+                  }}
+                  onDelete={handleDeleteFile}
+                  onDownload={handleDownload}
+                  onConvert={handleConvert}
+                  onShare={(id) => {
+                    const f = files.find((d) => d.id === id);
+                    if (f) setShareModalState({ itemId: f.id, itemName: f.filename });
+                  }}
+                />
+              ),
             )}
-          </div>
-        )}
-      </Card>
+          </ItemGroup>
+        </div>
+      )}
 
       {convertFileData && (
         <ConvertModal

@@ -109,20 +109,13 @@ const App: React.FC = () => {
               </DropZoneWrapper>
             }
           />
-          <Route
-            path="/links"
-            element={
-              <DropZoneWrapper>
-                <MyLinksPage />
-              </DropZoneWrapper>
-            }
-          />
 
           {/* Страницы без DropZone */}
           <Route path="/settings" element={<ProfileSettingsPage />} />
           <Route path="/directories" element={<SharedDirListPage />} />
           <Route path="/files/:id" element={<FileViewPage />} />
           <Route path="/shared/:id/settings" element={<SharedSettingsPage />} />
+          <Route path="/links" element={<MyLinksPage />} />
           <Route path="/invitations" element={<InvitationsPage />} />
           <Route path="/trash" element={<TrashPage />} />
         </Route>

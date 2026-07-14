@@ -18,6 +18,7 @@ import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 import { Modal } from '../components/ui/Modal';
 import { DropZone } from '../components/ui/DropZone';
 import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
+import { ItemGroup } from '../components/ui/ItemGroup';
 import { Button } from '../components/ui/Button';
 import { FolderGridItem } from '../components/ui/FolderGridItem';
 import { FileGridItem } from '../components/ui/FileGridItem';
@@ -926,61 +927,57 @@ const DirectoryPage: React.FC = () => {
         </button>
       )}
 
-      {/* Заголовок */}
-      <div>
-        <h1 className="text-2xl font-semibold text-theme-primary flex items-center gap-2">
-          <Folder size={28} className="text-brand shrink-0" />
-          {isPersonal ? 'Личное хранилище' : directoryContents.name}
-          {isSharedDirectory && (
-            <span className="text-xs font-medium px-2 py-0.5 bg-brand/10 text-brand rounded-full">
-              Общая
-            </span>
+      {/* Заголовок и кнопки действий */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-theme-primary flex items-center gap-2">
+            <Folder size={28} className="text-brand shrink-0" />
+            {isPersonal ? 'Личное хранилище' : directoryContents.name}
+            {isSharedDirectory && (
+              <span className="text-xs font-medium px-2 py-0.5 bg-brand/10 text-brand rounded-full">
+                Общая
+              </span>
+            )}
+          </h1>
+          <p className="text-sm text-theme-muted mt-0.5">
+            {isPersonal
+              ? 'Ваши личные файлы и папки'
+              : isSharedDirectory
+                ? isOwner
+                  ? 'Ваша общая директория'
+                  : 'Общая директория, доступная вам'
+                : isOwner
+                  ? 'Ваша директория'
+                  : 'Доступная директория'}
+          </p>
+          <div className="mt-2">{renderBreadcrumbs()}</div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0 mt-1">
+          <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} />
+          {perms?.upload && (
+            <button
+              onClick={() => {
+                setUploadError(null);
+                setIsUploadModalOpen(true);
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-brand text-theme-on-brand rounded-theme-md hover:bg-brand-hover transition-colors text-sm font-medium"
+            >
+              <Upload size={16} />
+              Загрузить
+            </button>
           )}
-        </h1>
-        <p className="text-sm text-theme-muted mt-0.5">
-          {isPersonal
-            ? 'Ваши личные файлы и папки'
-            : isSharedDirectory
-              ? isOwner
-                ? 'Ваша общая директория'
-                : 'Общая директория, доступная вам'
-              : isOwner
-                ? 'Ваша директория'
-                : 'Доступная директория'}
-        </p>
-
-        <div className="mt-2">{renderBreadcrumbs()}</div>
+          {perms?.create_folder && (
+            <button
+              onClick={() => setIsCreateFolderModalOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium"
+            >
+              <FolderPlus size={16} />
+              Новая папка
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Кнопки действий */}
-      <div className="flex items-center justify-end gap-2 flex-wrap -mt-2">
-        {perms?.upload && (
-          <button
-            onClick={() => {
-              setUploadError(null);
-              setIsUploadModalOpen(true);
-            }}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-brand text-theme-on-brand rounded-theme-md hover:bg-brand-hover transition-colors text-sm font-medium"
-          >
-            <Upload size={16} />
-            Загрузить
-          </button>
-        )}
-
-        {perms?.create_folder && (
-          <button
-            onClick={() => setIsCreateFolderModalOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium"
-          >
-            <FolderPlus size={16} />
-            Новая папка
-          </button>
-        )}
-
-        <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} />
-      </div>
-
-      {/* Настройки директории / участники */}
       {isSharedDirectory && (
         <div className="flex justify-end">
           <button
@@ -1030,212 +1027,186 @@ const DirectoryPage: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-6">
-          {/* Папки */}
           {filteredSubdirectories.length > 0 && (
-            <div>
-              <div className="bg-theme-secondary border border-theme rounded-theme-lg p-4 shadow-theme-card">
-                <h2 className="text-sm font-medium text-theme-secondary mb-3">Папки</h2>
-                {viewMode === 'grid' ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                    {filteredSubdirectories.map((folder) => (
-                      <FolderGridItem
-                        key={folder.id}
-                        id={folder.id}
-                        name={folder.name}
-                        to={`/directories/${folder.id}`}
-                        hasShareLinks={folder.has_share_links}
-                        onRename={
-                          (folder.permissions?.rename ?? perms?.rename)
-                            ? (id: string) => {
-                                const f = filteredSubdirectories.find((d) => d.id === id);
-                                if (f)
-                                  setRenameState({ id: f.id, name: f.name, type: 'directory' });
-                              }
-                            : undefined
-                        }
-                        onMove={
-                          (folder.permissions?.delete ?? perms?.delete)
-                            ? handleMoveDirectory
-                            : undefined
-                        }
-                        onDelete={
-                          (folder.permissions?.delete ?? perms?.delete) && !checkIsShared(folder.id)
-                            ? handleDeleteFolder
-                            : undefined
-                        }
-                        onShare={(id) => {
-                          const f = filteredSubdirectories.find((d) => d.id === id);
-                          if (f)
-                            setShareModalState({
-                              itemId: f.id,
-                              itemName: f.name,
-                              itemType: 'directory',
-                            });
-                        }}
-                        onDrop={handleFolderDrop}
-                        onDragStart={handleDirectoryDragStart}
-                      />
-                    ))}
-                  </div>
+            <ItemGroup
+              title="Папки"
+              viewMode={viewMode}
+              hasMore={hasMoreDirs}
+              isLoadingMore={isLoadingMoreDirs}
+              sentinelRef={dirsSentinelRef}
+            >
+              {filteredSubdirectories.map((folder) =>
+                viewMode === 'grid' ? (
+                  <FolderGridItem
+                    key={folder.id}
+                    id={folder.id}
+                    name={folder.name}
+                    to={`/directories/${folder.id}`}
+                    hasShareLinks={folder.has_share_links}
+                    onRename={
+                      (folder.permissions?.rename ?? perms?.rename)
+                        ? (id: string) => {
+                            const f = filteredSubdirectories.find((d) => d.id === id);
+                            if (f) setRenameState({ id: f.id, name: f.name, type: 'directory' });
+                          }
+                        : undefined
+                    }
+                    onMove={
+                      (folder.permissions?.delete ?? perms?.delete)
+                        ? handleMoveDirectory
+                        : undefined
+                    }
+                    onDelete={
+                      (folder.permissions?.delete ?? perms?.delete) && !checkIsShared(folder.id)
+                        ? handleDeleteFolder
+                        : undefined
+                    }
+                    onShare={(id) => {
+                      const f = filteredSubdirectories.find((d) => d.id === id);
+                      if (f)
+                        setShareModalState({
+                          itemId: f.id,
+                          itemName: f.name,
+                          itemType: 'directory',
+                        });
+                    }}
+                    onDrop={handleFolderDrop}
+                    onDragStart={handleDirectoryDragStart}
+                  />
                 ) : (
-                  <div className="space-y-1">
-                    {filteredSubdirectories.map((folder) => (
-                      <FolderItem
-                        key={folder.id}
-                        id={folder.id}
-                        name={folder.name}
-                        to={`/directories/${folder.id}`}
-                        hasShareLinks={folder.has_share_links}
-                        onRename={
-                          (folder.permissions?.rename ?? perms?.rename)
-                            ? (id: string) => {
-                                const f = filteredSubdirectories.find((d) => d.id === id);
-                                if (f)
-                                  setRenameState({ id: f.id, name: f.name, type: 'directory' });
-                              }
-                            : undefined
-                        }
-                        onMove={
-                          (folder.permissions?.delete ?? perms?.delete)
-                            ? handleMoveDirectory
-                            : undefined
-                        }
-                        onDelete={
-                          (folder.permissions?.delete ?? perms?.delete) && !checkIsShared(folder.id)
-                            ? handleDeleteFolder
-                            : undefined
-                        }
-                        onShare={(id) => {
-                          const f = filteredSubdirectories.find((d) => d.id === id);
-                          if (f)
-                            setShareModalState({
-                              itemId: f.id,
-                              itemName: f.name,
-                              itemType: 'directory',
-                            });
-                        }}
-                        onDrop={handleFolderDrop}
-                        onDragStart={handleDirectoryDragStart}
-                      />
-                    ))}
-                  </div>
-                )}
-                {hasMoreDirs && (
-                  <div className="mt-3 flex items-center justify-center gap-3">
-                    {isLoadingMoreDirs && (
-                      <div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin" />
-                    )}
-                    <div ref={dirsSentinelRef} className="h-2" />
-                  </div>
-                )}
-              </div>
-            </div>
+                  <FolderItem
+                    key={folder.id}
+                    id={folder.id}
+                    name={folder.name}
+                    to={`/directories/${folder.id}`}
+                    hasShareLinks={folder.has_share_links}
+                    onRename={
+                      (folder.permissions?.rename ?? perms?.rename)
+                        ? (id: string) => {
+                            const f = filteredSubdirectories.find((d) => d.id === id);
+                            if (f) setRenameState({ id: f.id, name: f.name, type: 'directory' });
+                          }
+                        : undefined
+                    }
+                    onMove={
+                      (folder.permissions?.delete ?? perms?.delete)
+                        ? handleMoveDirectory
+                        : undefined
+                    }
+                    onDelete={
+                      (folder.permissions?.delete ?? perms?.delete) && !checkIsShared(folder.id)
+                        ? handleDeleteFolder
+                        : undefined
+                    }
+                    onShare={(id) => {
+                      const f = filteredSubdirectories.find((d) => d.id === id);
+                      if (f)
+                        setShareModalState({
+                          itemId: f.id,
+                          itemName: f.name,
+                          itemType: 'directory',
+                        });
+                    }}
+                    onDrop={handleFolderDrop}
+                    onDragStart={handleDirectoryDragStart}
+                  />
+                ),
+              )}
+            </ItemGroup>
           )}
 
-          {/* Файлы */}
           {allFiles.length > 0 && (
-            <div>
-              <div className="bg-theme-secondary border border-theme rounded-theme-lg p-4 shadow-theme-card">
-                <h2 className="text-sm font-medium text-theme-secondary mb-3">Файлы</h2>
-                {viewMode === 'grid' ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                    {formattedFiles.map((file) => (
-                      <FileGridItem
-                        key={file.id}
-                        id={file.id}
-                        name={file.name}
-                        type={file.type}
-                        to={`/files/${file.id}`}
-                        isFavorite={file.isFavorite}
-                        hasShareLinks={file.has_share_links}
-                        onToggleFavorite={handleToggleFavorite}
-                        onRename={
-                          perms?.rename
-                            ? (id: string) => {
-                                const f = allFiles.find((d) => d.id === id);
-                                if (f)
-                                  setRenameState({
-                                    id: f.id,
-                                    name: f.filename,
-                                    extension: f.extension,
-                                    type: 'file',
-                                  });
-                              }
-                            : undefined
-                        }
-                        onDelete={perms?.delete ? handleDeleteFile : undefined}
-                        onMove={handleMoveFile}
-                        onDownload={handleDownload}
-                        onConvert={handleConvert}
-                        onShare={(id) => {
-                          const f = formattedFiles.find((d) => d.id === id);
-                          if (f)
-                            setShareModalState({
-                              itemId: f.id,
-                              itemName: f.name,
-                              itemType: 'file',
-                            });
-                        }}
-                        onDragStart={handleFileDragStart}
-                      />
-                    ))}
-                  </div>
+            <ItemGroup
+              title="Файлы"
+              viewMode={viewMode}
+              hasMore={hasMoreFiles}
+              isLoadingMore={isLoadingMoreFiles}
+              sentinelRef={filesSentinelRef}
+            >
+              {formattedFiles.map((file) =>
+                viewMode === 'grid' ? (
+                  <FileGridItem
+                    key={file.id}
+                    id={file.id}
+                    name={file.name}
+                    type={file.type}
+                    to={`/files/${file.id}`}
+                    isFavorite={file.isFavorite}
+                    hasShareLinks={file.has_share_links}
+                    onToggleFavorite={handleToggleFavorite}
+                    onRename={
+                      perms?.rename
+                        ? (id: string) => {
+                            const f = allFiles.find((d) => d.id === id);
+                            if (f)
+                              setRenameState({
+                                id: f.id,
+                                name: f.filename,
+                                extension: f.extension,
+                                type: 'file',
+                              });
+                          }
+                        : undefined
+                    }
+                    onDelete={perms?.delete ? handleDeleteFile : undefined}
+                    onMove={handleMoveFile}
+                    onDownload={handleDownload}
+                    onConvert={handleConvert}
+                    onShare={(id) => {
+                      const f = formattedFiles.find((d) => d.id === id);
+                      if (f)
+                        setShareModalState({
+                          itemId: f.id,
+                          itemName: f.name,
+                          itemType: 'file',
+                        });
+                    }}
+                    onDragStart={handleFileDragStart}
+                  />
                 ) : (
-                  <div className="space-y-1">
-                    {formattedFiles.map((file) => (
-                      <FileItem
-                        key={file.id}
-                        id={file.id}
-                        name={file.name}
-                        date={file.date}
-                        size={file.size}
-                        type={file.type}
-                        to={`/files/${file.id}`}
-                        isFavorite={file.isFavorite}
-                        hasShareLinks={file.has_share_links}
-                        onToggleFavorite={handleToggleFavorite}
-                        onRename={
-                          perms?.rename
-                            ? (id: string) => {
-                                const f = allFiles.find((d) => d.id === id);
-                                if (f)
-                                  setRenameState({
-                                    id: f.id,
-                                    name: f.filename,
-                                    extension: f.extension,
-                                    type: 'file',
-                                  });
-                              }
-                            : undefined
-                        }
-                        onDelete={perms?.delete ? handleDeleteFile : undefined}
-                        onMove={handleMoveFile}
-                        onDownload={handleDownload}
-                        onConvert={handleConvert}
-                        onShare={(id) => {
-                          const f = formattedFiles.find((d) => d.id === id);
-                          if (f)
-                            setShareModalState({
-                              itemId: f.id,
-                              itemName: f.name,
-                              itemType: 'file',
-                            });
-                        }}
-                        onDragStart={handleFileDragStart}
-                      />
-                    ))}
-                  </div>
-                )}
-                {hasMoreFiles && (
-                  <div className="mt-3 flex items-center justify-center gap-3">
-                    {isLoadingMoreFiles && (
-                      <div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin" />
-                    )}
-                    <div ref={filesSentinelRef} className="h-2" />
-                  </div>
-                )}
-              </div>
-            </div>
+                  <FileItem
+                    key={file.id}
+                    id={file.id}
+                    name={file.name}
+                    date={file.date}
+                    size={file.size}
+                    type={file.type}
+                    to={`/files/${file.id}`}
+                    isFavorite={file.isFavorite}
+                    hasShareLinks={file.has_share_links}
+                    onToggleFavorite={handleToggleFavorite}
+                    onRename={
+                      perms?.rename
+                        ? (id: string) => {
+                            const f = allFiles.find((d) => d.id === id);
+                            if (f)
+                              setRenameState({
+                                id: f.id,
+                                name: f.filename,
+                                extension: f.extension,
+                                type: 'file',
+                              });
+                          }
+                        : undefined
+                    }
+                    onDelete={perms?.delete ? handleDeleteFile : undefined}
+                    onMove={handleMoveFile}
+                    onDownload={handleDownload}
+                    onConvert={handleConvert}
+                    onShare={(id) => {
+                      const f = formattedFiles.find((d) => d.id === id);
+                      if (f)
+                        setShareModalState({
+                          itemId: f.id,
+                          itemName: f.name,
+                          itemType: 'file',
+                        });
+                    }}
+                    onDragStart={handleFileDragStart}
+                  />
+                ),
+              )}
+            </ItemGroup>
           )}
         </div>
       )}

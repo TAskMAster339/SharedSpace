@@ -14,10 +14,11 @@ import { restoreFile, permanentDeleteFile } from '../api/files';
 import { restoreDirectory, permanentDeleteDirectory } from '../api/directories';
 import { ApiError } from '../api/client';
 import { Button } from '../components/ui/Button';
-import { Card, CardHeader, CardTitle } from '../components/ui/Card';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { ContextMenu } from '../components/ui/ContextMenu';
 import { EmptyState } from '../components/ui/EmptyState';
+import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
+import { ItemGroup } from '../components/ui/ItemGroup';
 import { useToastStore } from '../hooks/useToast';
 import { formatFileSize, formatDate } from '../utils/format';
 
@@ -45,6 +46,9 @@ const TrashPage: React.FC = () => {
   const [hasMoreFiles, setHasMoreFiles] = useState(false);
   const [hasMoreDirs, setHasMoreDirs] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    return (localStorage.getItem('directoryViewMode') as ViewMode) || 'grid';
+  });
 
   const showToast = useToastStore((state) => state.showToast);
 
@@ -108,6 +112,14 @@ const TrashPage: React.FC = () => {
     loadMore,
     (hasMoreFiles || hasMoreDirs) && !isLoadingMore,
   );
+
+  useEffect(() => {
+    localStorage.setItem('directoryViewMode', viewMode);
+  }, [viewMode]);
+
+  const handleViewModeChange = useCallback((mode: ViewMode) => {
+    setViewMode(mode);
+  }, []);
 
   const handleRestore = async (item: TrashItem) => {
     if (!accessToken) return;
@@ -208,37 +220,6 @@ const TrashPage: React.FC = () => {
   const directories = items.filter((item) => item.type === 'directory');
   const activeItem = activeMenuId ? items.find((i) => i.id === activeMenuId) : null;
 
-  const renderItem = (item: TrashItem) => (
-    <div
-      key={item.id}
-      onClick={(e) => handleItemClick(e, item.id)}
-      onContextMenu={(e) => handleContextMenu(e, item.id)}
-      className="group flex items-center gap-3 p-3 rounded-theme-md bg-theme-tertiary border border-theme hover:bg-theme-hover transition-colors cursor-pointer"
-    >
-      <div className="flex items-center gap-3 min-w-0 flex-1">
-        <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card shrink-0 text-theme-muted group-hover:text-brand transition-colors">
-          {item.type === 'directory' ? <Folder size={20} /> : <FileIconLucide size={20} />}
-        </div>
-        <div className="min-w-0">
-          <p className="text-sm text-theme-primary font-medium truncate">{item.name}</p>
-          <p className="text-xs text-theme-muted">
-            Удалено {formatDate(item.deleted_at)} · {formatFileSize(item.size)}
-          </p>
-        </div>
-      </div>
-      <button
-        type="button"
-        aria-label="Открыть меню действий"
-        aria-haspopup="menu"
-        aria-expanded={activeMenuId === item.id}
-        onClick={(e) => handleMenuClick(e, item.id)}
-        className="p-2 -m-1 rounded-theme-sm text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors shrink-0"
-      >
-        <MoreVertical size={18} />
-      </button>
-    </div>
-  );
-
   return (
     <div className="space-y-6 pb-10">
       <div className="flex items-start justify-between gap-4">
@@ -249,59 +230,162 @@ const TrashPage: React.FC = () => {
           </h1>
           <p className="text-sm text-theme-muted">Удалённые файлы и папки</p>
         </div>
-        {items.length > 0 && (
-          <Button
-            variant="danger"
-            onClick={() => {
-              setClearAllError('');
-              setIsClearAllOpen(true);
-            }}
-            className="flex items-center gap-1.5 shrink-0 !bg-danger !text-white hover:brightness-110 transition-all duration-200"
-          >
-            <TrashIcon size={16} /> Очистить корзину
-          </Button>
-        )}
+        <div className="flex items-center gap-2 shrink-0 mt-1">
+          <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} />
+          {items.length > 0 && (
+            <Button
+              variant="danger"
+              onClick={() => {
+                setClearAllError('');
+                setIsClearAllOpen(true);
+              }}
+              className="flex items-center gap-1.5 !bg-danger !text-white hover:brightness-110 transition-all duration-200"
+            >
+              <TrashIcon size={16} /> Очистить корзину
+            </Button>
+          )}
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Удалённые элементы</CardTitle>
-        </CardHeader>
-
-        {isLoading ? (
-          <p className="text-sm text-theme-muted py-8 text-center">Загрузка...</p>
-        ) : error ? (
-          <p className="text-danger text-sm py-8 text-center">{error}</p>
-        ) : items.length === 0 ? (
-          <EmptyState icon={<Trash2 size={24} />} description="Корзина пуста." />
-        ) : (
-          <div className="space-y-6">
-            {directories.length > 0 && (
-              <div>
-                <h3 className="text-sm font-medium text-theme-secondary mb-3">Папки</h3>
-                <div className="space-y-1">{directories.map(renderItem)}</div>
-              </div>
-            )}
-
-            {files.length > 0 && (
-              <div>
-                <h3 className="text-sm font-medium text-theme-secondary mb-3">Файлы</h3>
-                <div className="space-y-1">{files.map(renderItem)}</div>
-              </div>
-            )}
-
-            {(hasMoreFiles || hasMoreDirs) && (
-              <div className="flex items-center justify-center py-2">
-                {isLoadingMore ? (
-                  <div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+      {isLoading ? (
+        <p className="text-sm text-theme-muted py-8 text-center">Загрузка...</p>
+      ) : error ? (
+        <p className="text-danger text-sm py-8 text-center">{error}</p>
+      ) : items.length === 0 ? (
+        <EmptyState icon={<Trash2 size={24} />} description="Корзина пуста." />
+      ) : (
+        <div className="space-y-6">
+          {directories.length > 0 && (
+            <ItemGroup title="Папки" viewMode={viewMode}>
+              {directories.map((item) =>
+                viewMode === 'grid' ? (
+                  <div
+                    key={item.id}
+                    onContextMenu={(e) => handleContextMenu(e, item.id)}
+                    className="group flex flex-col items-center p-3 rounded-theme-md transition-colors cursor-pointer relative min-w-0 bg-theme-tertiary hover:bg-theme-hover border border-theme"
+                  >
+                    <div className="w-16 h-16 flex items-center justify-center text-theme-muted group-hover:text-brand transition-colors">
+                      <Folder size={40} strokeWidth={1.5} />
+                    </div>
+                    <p className="text-sm text-theme-primary font-medium text-center mt-2 truncate w-full max-w-[120px]">
+                      {item.name}
+                    </p>
+                    <button
+                      type="button"
+                      aria-label="Открыть меню действий"
+                      aria-haspopup="menu"
+                      aria-expanded={activeMenuId === item.id}
+                      onClick={(e) => handleMenuClick(e, item.id)}
+                      className="absolute top-2 right-2 p-1 rounded-theme-sm text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors "
+                    >
+                      <MoreVertical size={16} />
+                    </button>
+                  </div>
                 ) : (
-                  <div ref={sentinelRef} className="h-2" />
-                )}
-              </div>
-            )}
-          </div>
-        )}
-      </Card>
+                  <div
+                    key={item.id}
+                    onClick={(e) => handleItemClick(e, item.id)}
+                    onContextMenu={(e) => handleContextMenu(e, item.id)}
+                    className="group flex items-center gap-3 p-3 rounded-theme-md bg-theme-tertiary border border-theme hover:bg-theme-hover transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card shrink-0 text-theme-muted group-hover:text-brand transition-colors">
+                        <Folder size={20} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm text-theme-primary font-medium truncate">{item.name}</p>
+                        <p className="text-xs text-theme-muted">
+                          Удалено {formatDate(item.deleted_at)} · {formatFileSize(item.size)}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      aria-label="Открыть меню действий"
+                      aria-haspopup="menu"
+                      aria-expanded={activeMenuId === item.id}
+                      onClick={(e) => handleMenuClick(e, item.id)}
+                      className="p-2 -m-1 rounded-theme-sm text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors shrink-0"
+                    >
+                      <MoreVertical size={18} />
+                    </button>
+                  </div>
+                ),
+              )}
+            </ItemGroup>
+          )}
+
+          {files.length > 0 && (
+            <ItemGroup title="Файлы" viewMode={viewMode}>
+              {files.map((item) =>
+                viewMode === 'grid' ? (
+                  <div
+                    key={item.id}
+                    onContextMenu={(e) => handleContextMenu(e, item.id)}
+                    className="group flex flex-col items-center p-3 rounded-theme-md transition-colors cursor-pointer relative min-w-0 bg-theme-tertiary hover:bg-theme-hover border border-theme"
+                  >
+                    <div className="w-16 h-16 flex items-center justify-center text-theme-muted group-hover:text-brand transition-colors">
+                      <FileIconLucide size={40} strokeWidth={1.5} />
+                    </div>
+                    <p className="text-sm text-theme-primary font-medium text-center mt-2 truncate w-full max-w-[120px]">
+                      {item.name}
+                    </p>
+                    <button
+                      type="button"
+                      aria-label="Открыть меню действий"
+                      aria-haspopup="menu"
+                      aria-expanded={activeMenuId === item.id}
+                      onClick={(e) => handleMenuClick(e, item.id)}
+                      className="absolute top-2 right-2 p-1 rounded-theme-sm text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors "
+                    >
+                      <MoreVertical size={16} />
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    key={item.id}
+                    onClick={(e) => handleItemClick(e, item.id)}
+                    onContextMenu={(e) => handleContextMenu(e, item.id)}
+                    className="group flex items-center gap-3 p-3 rounded-theme-md bg-theme-tertiary border border-theme hover:bg-theme-hover transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card shrink-0 text-theme-muted group-hover:text-brand transition-colors">
+                        <FileIconLucide size={20} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm text-theme-primary font-medium truncate">{item.name}</p>
+                        <p className="text-xs text-theme-muted">
+                          Удалено {formatDate(item.deleted_at)} · {formatFileSize(item.size)}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      aria-label="Открыть меню действий"
+                      aria-haspopup="menu"
+                      aria-expanded={activeMenuId === item.id}
+                      onClick={(e) => handleMenuClick(e, item.id)}
+                      className="p-2 -m-1 rounded-theme-sm text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors shrink-0"
+                    >
+                      <MoreVertical size={18} />
+                    </button>
+                  </div>
+                ),
+              )}
+            </ItemGroup>
+          )}
+
+          {(hasMoreFiles || hasMoreDirs) && (
+            <div className="flex items-center justify-center py-2">
+              {isLoadingMore ? (
+                <div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <div ref={sentinelRef} className="h-2" />
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       <ContextMenu
         isOpen={activeMenuId !== null && menuPosition !== null}

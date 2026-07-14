@@ -23,6 +23,7 @@ import SEOHead from '../components/SEOHead';
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 import { FileIcon } from '../components/ui/FileIcon';
 import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
+import { ItemGroup } from '../components/ui/ItemGroup';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { ContextMenu } from '../components/ui/ContextMenu';
@@ -757,174 +758,131 @@ const SharedDirectoryPage: React.FC = () => {
         </div>
       )}
 
-      {/* Subdirectories */}
       {allSubdirs.length > 0 && (
-        <>
-          <div className="bg-theme-secondary border border-theme rounded-theme-lg p-4 shadow-theme-card">
-            <h2 className="text-sm font-medium text-theme-secondary mb-3">Папки</h2>
-
-            {/* Grid view */}
-            <div className={viewMode === 'grid' ? '' : 'hidden'}>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                {allSubdirs.map((subdir) => (
-                  <div
-                    key={subdir.id}
-                    onClick={() => handleNavigate(subdir.id)}
-                    onContextMenu={(e) => handleContextMenu(e, subdir.id, 'dir')}
-                    className="group relative flex flex-col items-center p-3 rounded-theme-md transition-colors cursor-pointer bg-theme-tertiary hover:bg-theme-hover border border-theme"
-                  >
-                    <div className="w-16 h-16 flex items-center justify-center text-theme-muted group-hover:text-brand transition-colors">
-                      <Folder size={40} strokeWidth={1.5} />
-                    </div>
-                    <p className="text-sm text-theme-primary font-medium text-center mt-2 truncate w-full max-w-[120px]">
-                      {subdir.name}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={(e) => handleThreeDotsClick(e, subdir.id, 'dir')}
-                      className="absolute top-2 right-2 p-1.5 rounded-theme-sm text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors"
-                    >
-                      <MoreVertical size={16} />
-                    </button>
-                  </div>
-                ))}
+        <ItemGroup
+          title="Папки"
+          viewMode={viewMode}
+          hasMore={hasMoreDirs}
+          isLoadingMore={isLoadingMoreDirs}
+          sentinelRef={dirsSentinelRef}
+        >
+          {allSubdirs.map((subdir) =>
+            viewMode === 'grid' ? (
+              <div
+                key={subdir.id}
+                onClick={() => handleNavigate(subdir.id)}
+                onContextMenu={(e) => handleContextMenu(e, subdir.id, 'dir')}
+                className="group relative flex flex-col items-center p-3 rounded-theme-md transition-colors cursor-pointer bg-theme-tertiary hover:bg-theme-hover border border-theme"
+              >
+                <div className="w-16 h-16 flex items-center justify-center text-theme-muted group-hover:text-brand transition-colors">
+                  <Folder size={40} strokeWidth={1.5} />
+                </div>
+                <p className="text-sm text-theme-primary font-medium text-center mt-2 truncate w-full max-w-[120px]">
+                  {subdir.name}
+                </p>
+                <button
+                  type="button"
+                  onClick={(e) => handleThreeDotsClick(e, subdir.id, 'dir')}
+                  className="absolute top-2 right-2 p-1.5 rounded-theme-sm text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors"
+                >
+                  <MoreVertical size={16} />
+                </button>
               </div>
-            </div>
-
-            {/* List view */}
-            <div className={viewMode === 'list' ? '' : 'hidden'}>
-              <div className="space-y-1">
-                {allSubdirs.map((subdir) => (
-                  <div
-                    key={subdir.id}
-                    onClick={() => handleNavigate(subdir.id)}
-                    onContextMenu={(e) => handleContextMenu(e, subdir.id, 'dir')}
-                    className="group flex items-center gap-3 w-full p-3 rounded-theme-md transition-colors cursor-pointer bg-theme-tertiary hover:bg-theme-hover border border-theme text-left"
-                  >
-                    <div className="p-2 bg-theme-secondary rounded-theme-sm shrink-0">
-                      <Folder
-                        size={20}
-                        className="text-theme-muted group-hover:text-brand transition-colors"
-                      />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm text-theme-primary font-medium truncate">
-                        {subdir.name}
-                      </p>
-                      <p className="text-xs text-theme-muted">Папка</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={(e) => handleThreeDotsClick(e, subdir.id, 'dir')}
-                      className="p-1.5 rounded-theme-sm text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors shrink-0"
-                    >
-                      <MoreVertical size={18} />
-                    </button>
-                  </div>
-                ))}
+            ) : (
+              <div
+                key={subdir.id}
+                onClick={() => handleNavigate(subdir.id)}
+                onContextMenu={(e) => handleContextMenu(e, subdir.id, 'dir')}
+                className="group flex items-center gap-3 w-full p-3 rounded-theme-md transition-colors cursor-pointer bg-theme-tertiary hover:bg-theme-hover border border-theme text-left"
+              >
+                <div className="p-2 bg-theme-secondary rounded-theme-sm shrink-0">
+                  <Folder
+                    size={20}
+                    className="text-theme-muted group-hover:text-brand transition-colors"
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-theme-primary font-medium truncate">{subdir.name}</p>
+                  <p className="text-xs text-theme-muted">Папка</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => handleThreeDotsClick(e, subdir.id, 'dir')}
+                  className="p-1.5 rounded-theme-sm text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors shrink-0"
+                >
+                  <MoreVertical size={18} />
+                </button>
               </div>
-            </div>
-          </div>
-          {hasMoreDirs && (
-            <div className="mt-3 flex items-center justify-center gap-3">
-              {isLoadingMoreDirs && (
-                <div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin" />
-              )}
-              <div ref={dirsSentinelRef} className="h-2" />
-            </div>
+            ),
           )}
-        </>
+        </ItemGroup>
       )}
 
-      {/* Files */}
       {allFiles.length > 0 && (
-        <>
-          <div className="bg-theme-secondary border border-theme rounded-theme-lg p-4 shadow-theme-card">
-            <h2 className="text-sm font-medium text-theme-secondary mb-3">Файлы</h2>
-
-            {/* Grid view */}
-            <div className={viewMode === 'grid' ? '' : 'hidden'}>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                {allFiles.map((file) => {
-                  const iconType = resolveFileIconType(file.mime_type, file.extension);
-                  return (
-                    <div
-                      key={file.id}
-                      onClick={() => handleFileClick(file)}
-                      onContextMenu={(e) => handleContextMenu(e, file.id, 'file')}
-                      className="group relative flex flex-col items-center p-3 rounded-theme-md transition-colors cursor-pointer bg-theme-tertiary hover:bg-theme-hover border border-theme"
-                    >
-                      <div className="w-16 h-16 flex items-center justify-center transition-colors">
-                        <FileIcon
-                          type={iconType}
-                          size={40}
-                          className="group-hover:text-brand transition-colors"
-                        />
-                      </div>
-                      <p className="text-sm text-theme-primary font-medium text-center mt-2 truncate w-full max-w-[120px]">
-                        {file.filename}
-                      </p>
-                      <p className="text-xs text-theme-muted mt-0.5">{formatFileSize(file.size)}</p>
-                      <button
-                        type="button"
-                        onClick={(e) => handleThreeDotsClick(e, file.id, 'file')}
-                        className="absolute top-2 right-2 p-1.5 rounded-theme-sm text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors"
-                      >
-                        <MoreVertical size={16} />
-                      </button>
-                    </div>
-                  );
-                })}
+        <ItemGroup
+          title="Файлы"
+          viewMode={viewMode}
+          hasMore={hasMoreFiles}
+          isLoadingMore={isLoadingMoreFiles}
+          sentinelRef={filesSentinelRef}
+        >
+          {allFiles.map((file) => {
+            const iconType = resolveFileIconType(file.mime_type, file.extension);
+            return viewMode === 'grid' ? (
+              <div
+                key={file.id}
+                onClick={() => handleFileClick(file)}
+                onContextMenu={(e) => handleContextMenu(e, file.id, 'file')}
+                className="group relative flex flex-col items-center p-3 rounded-theme-md transition-colors cursor-pointer bg-theme-tertiary hover:bg-theme-hover border border-theme"
+              >
+                <div className="w-16 h-16 flex items-center justify-center transition-colors">
+                  <FileIcon
+                    type={iconType}
+                    size={40}
+                    className="group-hover:text-brand transition-colors"
+                  />
+                </div>
+                <p className="text-sm text-theme-primary font-medium text-center mt-2 truncate w-full max-w-[120px]">
+                  {file.filename}
+                </p>
+                <p className="text-xs text-theme-muted mt-0.5">{formatFileSize(file.size)}</p>
+                <button
+                  type="button"
+                  onClick={(e) => handleThreeDotsClick(e, file.id, 'file')}
+                  className="absolute top-2 right-2 p-1.5 rounded-theme-sm text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors"
+                >
+                  <MoreVertical size={16} />
+                </button>
               </div>
-            </div>
-
-            {/* List view */}
-            <div className={viewMode === 'list' ? '' : 'hidden'}>
-              <div className="space-y-1">
-                {allFiles.map((file) => {
-                  const iconType = resolveFileIconType(file.mime_type, file.extension);
-                  return (
-                    <div
-                      key={file.id}
-                      onClick={() => handleFileClick(file)}
-                      onContextMenu={(e) => handleContextMenu(e, file.id, 'file')}
-                      className="group flex items-center gap-3 w-full p-3 rounded-theme-md transition-colors cursor-pointer bg-theme-tertiary hover:bg-theme-hover border border-theme text-left"
-                    >
-                      <div className="p-2 bg-theme-secondary rounded-theme-sm shrink-0">
-                        <FileIcon
-                          type={iconType}
-                          size={20}
-                          className="text-theme-muted group-hover:text-brand transition-colors"
-                        />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm text-theme-primary font-medium truncate">
-                          {file.filename}
-                        </p>
-                        <p className="text-xs text-theme-muted">{formatFileSize(file.size)}</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={(e) => handleThreeDotsClick(e, file.id, 'file')}
-                        className="p-1.5 rounded-theme-sm text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors shrink-0"
-                      >
-                        <MoreVertical size={18} />
-                      </button>
-                    </div>
-                  );
-                })}
+            ) : (
+              <div
+                key={file.id}
+                onClick={() => handleFileClick(file)}
+                onContextMenu={(e) => handleContextMenu(e, file.id, 'file')}
+                className="group flex items-center gap-3 w-full p-3 rounded-theme-md transition-colors cursor-pointer bg-theme-tertiary hover:bg-theme-hover border border-theme text-left"
+              >
+                <div className="p-2 bg-theme-secondary rounded-theme-sm shrink-0">
+                  <FileIcon
+                    type={iconType}
+                    size={20}
+                    className="text-theme-muted group-hover:text-brand transition-colors"
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-theme-primary font-medium truncate">{file.filename}</p>
+                  <p className="text-xs text-theme-muted">{formatFileSize(file.size)}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => handleThreeDotsClick(e, file.id, 'file')}
+                  className="p-1.5 rounded-theme-sm text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors shrink-0"
+                >
+                  <MoreVertical size={18} />
+                </button>
               </div>
-            </div>
-          </div>
-          {hasMoreFiles && (
-            <div className="mt-3 flex items-center justify-center gap-3">
-              {isLoadingMoreFiles && (
-                <div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin" />
-              )}
-              <div ref={filesSentinelRef} className="h-2" />
-            </div>
-          )}
-        </>
+            );
+          })}
+        </ItemGroup>
       )}
 
       <ContextMenu isOpen={!!contextMenuItem} onClose={closeContextMenu} position={contextMenuPos}>
