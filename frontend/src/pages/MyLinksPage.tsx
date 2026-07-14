@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Link2, Folder, ExternalLink, Power, PowerOff } from 'lucide-react';
+import { Folder, Share2 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useFavorites } from '../hooks/useFavorites';
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
@@ -54,6 +54,10 @@ const MyLinksPage: React.FC = () => {
     name: string;
     extension?: string;
     type: 'file' | 'directory';
+  } | null>(null);
+  const [contextMenuState, setContextMenuState] = useState<{
+    itemId: string;
+    position: { x: number; y: number };
   } | null>(null);
 
   const loadLinks = useCallback(async () => {
@@ -251,7 +255,7 @@ const MyLinksPage: React.FC = () => {
     <div className="space-y-6 pb-10">
       <div>
         <h1 className="text-2xl font-semibold text-theme-primary mb-1 flex items-center gap-2">
-          <Link2 size={28} className="text-brand shrink-0" />
+          <Share2 size={28} className="text-green-500 shrink-0" />
           Мои ссылки
         </h1>
         <p className="text-sm text-theme-muted">Файлы и папки, на которые созданы ссылки</p>
@@ -268,7 +272,7 @@ const MyLinksPage: React.FC = () => {
           <p className="text-danger text-sm py-8 text-center">{error}</p>
         ) : items.length === 0 ? (
           <EmptyState
-            icon={<Link2 size={24} />}
+            icon={<Share2 size={24} className="text-green-500" />}
             description="Здесь появятся файлы и папки, на которые вы создали ссылки."
           />
         ) : (
@@ -277,58 +281,77 @@ const MyLinksPage: React.FC = () => {
               <div>
                 <h3 className="text-sm font-medium text-theme-secondary mb-3">Папки</h3>
                 <div className="space-y-1">
-                  {directories.map((item) => (
-                    <Link
-                      key={item.id}
-                      to={`/directories/${item.id}`}
-                      className="group flex items-center justify-between p-3 rounded-theme-md transition-colors cursor-pointer bg-theme-tertiary hover:bg-theme-hover border border-theme"
-                    >
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card shrink-0 relative">
-                          <Folder
-                            size={20}
-                            className="text-theme-muted group-hover:text-brand transition-colors"
+                  {directories.map((item) => {
+                    const isContextOpen = contextMenuState?.itemId === item.id;
+                    return (
+                      <Link
+                        key={item.id}
+                        to={`/directories/${item.id}`}
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setContextMenuState({
+                            itemId: item.id,
+                            position: { x: e.clientX, y: e.clientY },
+                          });
+                        }}
+                        className="group flex items-center justify-between p-3 rounded-theme-md transition-colors cursor-pointer bg-theme-tertiary hover:bg-theme-hover border border-theme"
+                      >
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card shrink-0 relative">
+                            <Folder
+                              size={20}
+                              className="text-theme-muted group-hover:text-brand transition-colors"
+                            />
+                            <span
+                              className={`absolute -top-1.5 flex items-center justify-center rounded-full bg-theme-tertiary border border-theme p-0.5 shadow-theme-card ${
+                                item.is_active ? 'opacity-100' : 'opacity-0'
+                              }`}
+                              style={{ left: '25px' }}
+                            >
+                              <Share2 size={11} className="text-green-500" />
+                            </span>
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm text-theme-primary font-medium truncate">
+                              {item.filename}
+                            </p>
+                            <p className="text-xs text-theme-muted">
+                              Создана {formatDate(item.created_at)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0 ml-3">
+                          <ItemActionsMenu
+                            iconSize={16}
+                            openMenu={isContextOpen}
+                            menuPosition={isContextOpen ? contextMenuState.position : null}
+                            onCloseMenu={() => setContextMenuState(null)}
+                            onRename={() => {
+                              setContextMenuState(null);
+                              setRenameState({
+                                id: item.id,
+                                name: item.filename,
+                                type: 'directory',
+                              });
+                            }}
+                            onDelete={() => {
+                              setContextMenuState(null);
+                              handleDeleteDirectory(item.id);
+                            }}
+                            onShare={() => {
+                              setContextMenuState(null);
+                              setShareModalState({
+                                itemId: item.id,
+                                itemName: item.filename,
+                                itemType: 'directory',
+                              });
+                            }}
                           />
-                          <span
-                            className={`absolute -top-1.5 flex items-center justify-center rounded-full bg-theme-tertiary border border-theme p-0.5 shadow-theme-card ${
-                              item.is_active ? 'opacity-100' : 'opacity-0'
-                            }`}
-                            style={{ left: '25px' }}
-                          >
-                            <ExternalLink size={11} className="text-green-500" />
-                          </span>
                         </div>
-                        <div className="min-w-0">
-                          <p className="text-sm text-theme-primary font-medium truncate">
-                            {item.filename}
-                          </p>
-                          <p className="text-xs text-theme-muted">
-                            Создана {formatDate(item.created_at)}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 shrink-0 ml-3">
-                        <ItemActionsMenu
-                          iconSize={16}
-                          onRename={() =>
-                            setRenameState({
-                              id: item.id,
-                              name: item.filename,
-                              type: 'directory',
-                            })
-                          }
-                          onDelete={() => handleDeleteDirectory(item.id)}
-                          onShare={() =>
-                            setShareModalState({
-                              itemId: item.id,
-                              itemName: item.filename,
-                              itemType: 'directory',
-                            })
-                          }
-                        />
-                      </div>
-                    </Link>
-                  ))}
+                      </Link>
+                    );
+                  })}
                 </div>
               </div>
             )}
