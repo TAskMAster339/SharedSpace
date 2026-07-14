@@ -1,11 +1,13 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Settings, LogOut, ChevronDown, MoonStar, Menu, X, Search } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
+import { useNavigationStore } from '../store/navigationStore';
 import { UserSearch } from './UserSearch';
 import { MobileNavMenu } from './MobileNavMenu';
 import { Avatar } from './ui/Avatar';
+import { NavArrows } from './ui/NavArrows';
 
 const logo = '/logo-mark.png';
 
@@ -25,6 +27,8 @@ export const Header: React.FC = () => {
   const mobileNavBtnRef = useRef<HTMLButtonElement>(null);
   const mobileSearchRef = useRef<HTMLDivElement>(null);
   const mobileSearchBtnRef = useRef<HTMLButtonElement>(null);
+  const skipNextRef = useRef(false);
+  const push = useNavigationStore((s) => s.push);
 
   // Закрытие выпадающих элементов по клику в любом месте вне их самих и их триггеров
   useEffect(() => {
@@ -55,6 +59,33 @@ export const Header: React.FC = () => {
     document.addEventListener('mousedown', handlePointerDown);
     return () => document.removeEventListener('mousedown', handlePointerDown);
   }, [dropdownOpen, mobileNavOpen, mobileSearchOpen]);
+
+  // Track navigation history
+  useEffect(() => {
+    if (skipNextRef.current) {
+      skipNextRef.current = false;
+      return;
+    }
+    if (isAuthenticated && location.pathname) {
+      push(location.pathname);
+    }
+  }, [location.pathname, isAuthenticated, push]);
+
+  const handleBack = useCallback(() => {
+    const path = useNavigationStore.getState().back();
+    if (path) {
+      skipNextRef.current = true;
+      navigate(path);
+    }
+  }, [navigate]);
+
+  const handleForward = useCallback(() => {
+    const path = useNavigationStore.getState().forward();
+    if (path) {
+      skipNextRef.current = true;
+      navigate(path);
+    }
+  }, [navigate]);
 
   const toggleMobileNav = () => {
     setMobileSearchOpen(false);
@@ -124,6 +155,9 @@ export const Header: React.FC = () => {
               <span className="text-brand">Space</span>
             </span>
           </Link>
+        )}
+        {isAuthenticated && (
+          <NavArrows onBack={handleBack} onForward={handleForward} />
         )}
 
         {!isAuthenticated && (
