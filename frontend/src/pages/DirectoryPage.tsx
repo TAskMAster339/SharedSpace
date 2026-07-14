@@ -476,6 +476,7 @@ const DirectoryPage: React.FC = () => {
 
       try {
         await softDeleteFile(accessToken, fileId);
+        refreshUser();
         await loadDirectory(actualId, true);
         const name = file?.filename || 'Файл';
         let undoing = false;
@@ -504,6 +505,7 @@ const DirectoryPage: React.FC = () => {
 
       try {
         await softDeleteDirectory(accessToken, folderId);
+        refreshUser();
         await loadDirectory(actualId, true);
         const name = folder?.name || 'Папка';
         let undoing = false;

@@ -10,6 +10,7 @@ import (
 
 	"sharedspace/internal/access"
 	"sharedspace/internal/apperror"
+	"sharedspace/internal/sharelinks"
 )
 
 type mockRow struct {
@@ -56,7 +57,7 @@ func (t *mockTx) Query(_ context.Context, sql string, args ...any) (pgx.Rows, er
 	if t.queryFn != nil {
 		return t.queryFn(sql, args...)
 	}
-	return nil, nil
+	return &mockRows{}, nil
 }
 
 func (t *mockTx) Commit(context.Context) error {
@@ -110,6 +111,8 @@ func (m *mockRows) Err() error {
 func (m *mockRows) CommandTag() pgconn.CommandTag {
 	return pgconn.CommandTag{}
 }
+
+func (m *mockRows) Conn() *pgx.Conn { return nil }
 
 func (m *mockRows) FieldDescriptions() []pgconn.FieldDescription {
 	return nil
@@ -374,6 +377,7 @@ func newTestService(repo RepositoryInterface) (*Service, *mockTx) {
 		sharingRepo:   &mockSharingRepo{},
 		accessChecker: &mockAccessChecker{canFn: func(_ context.Context, _, _ string, _ access.Action) (bool, error) { return true, nil }},
 		storage:       &mockStorage{},
+		shareLinkRepo: sharelinks.NewRepository(),
 	}
 	return service, tx
 }

@@ -13,6 +13,7 @@ import (
 
 	"sharedspace/internal/access"
 	"sharedspace/internal/apperror"
+	"sharedspace/internal/sharelinks"
 )
 
 type mockRepo struct {
@@ -133,7 +134,7 @@ func (m *mockTx) QueryRow(_ context.Context, _ string, _ ...any) pgx.Row {
 }
 
 func (m *mockTx) Query(_ context.Context, _ string, _ ...any) (pgx.Rows, error) {
-	return nil, nil
+	return &mockRows{}, nil
 }
 
 func (m *mockTx) Exec(_ context.Context, _ string, _ ...any) (pgconn.CommandTag, error) {
@@ -146,6 +147,20 @@ func (m *mockTx) Rollback(_ context.Context) error { return nil }
 type mockRow struct{}
 
 func (r mockRow) Scan(_ ...any) error { return nil }
+
+type mockRows struct {
+	pos int
+}
+
+func (m *mockRows) Next() bool                                   { return false }
+func (m *mockRows) Scan(dest ...any) error                       { return nil }
+func (m *mockRows) Close()                                       {}
+func (m *mockRows) Err() error                                   { return nil }
+func (m *mockRows) CommandTag() pgconn.CommandTag                { return pgconn.CommandTag{} }
+func (m *mockRows) FieldDescriptions() []pgconn.FieldDescription { return nil }
+func (m *mockRows) Values() ([]any, error)                       { return nil, nil }
+func (m *mockRows) RawValues() [][]byte                          { return nil }
+func (m *mockRows) Conn() *pgx.Conn                              { return nil }
 
 type mockAccessChecker struct {
 	canFn            func(ctx context.Context, userID, directoryID string, action access.Action) (bool, error)
@@ -205,6 +220,7 @@ func newTestService(repo RepositoryInterface, storage StorageClient) *Service {
 		storage:       storage,
 		tmpStorage:    storage,
 		accessChecker: &mockAccessChecker{canFn: func(_ context.Context, _, _ string, _ access.Action) (bool, error) { return true, nil }},
+		shareLinkRepo: sharelinks.NewRepository(),
 	}
 }
 

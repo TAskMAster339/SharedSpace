@@ -22,6 +22,7 @@ const PAGE_LIMIT = 20;
 
 const FavoritesPage: React.FC = () => {
   const accessToken = useAuthStore((state) => state.accessToken);
+  const refreshUser = useAuthStore((state) => state.refreshUser);
   const { toggleFavorite } = useFavorites();
   const { setOnUploadComplete } = useDragDropStore();
   const [files, setFiles] = useState<FavoriteFile[]>([]);
@@ -139,6 +140,7 @@ const FavoritesPage: React.FC = () => {
 
     try {
       await softDeleteFile(accessToken, fileId);
+      refreshUser();
       let undoing = false;
       showToast(`«${name}» перемещён в корзину`, 'undo', 'Отменить', async () => {
         if (undoing) return;

@@ -302,6 +302,72 @@ func (r *Repository) GetDirectoryFilesAfterCursor(ctx context.Context, db dbTX, 
 	return files, hasMore, nextCursor, nil
 }
 
+func (r *Repository) DeleteByFileIDs(ctx context.Context, db dbTX, fileIDs []string) (map[string]int, error) {
+	if len(fileIDs) == 0 {
+		return nil, nil
+	}
+
+	rows, err := db.Query(ctx, `DELETE FROM share_links WHERE file_id = ANY($1) RETURNING created_by`, fileIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	counts := make(map[string]int)
+	for rows.Next() {
+		var createdBy string
+		if err := rows.Scan(&createdBy); err != nil {
+			return nil, err
+		}
+		counts[createdBy]++
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return counts, nil
+}
+
+func (r *Repository) DeleteByDirectoryIDs(ctx context.Context, db dbTX, dirIDs []string) (map[string]int, error) {
+	if len(dirIDs) == 0 {
+		return nil, nil
+	}
+
+	rows, err := db.Query(ctx, `DELETE FROM share_links WHERE directory_id = ANY($1) RETURNING created_by`, dirIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	counts := make(map[string]int)
+	for rows.Next() {
+		var createdBy string
+		if err := rows.Scan(&createdBy); err != nil {
+			return nil, err
+		}
+		counts[createdBy]++
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return counts, nil
+}
+
+func (r *Repository) DecrementShareLinksCounts(ctx context.Context, db dbTX, counts map[string]int) error {
+	for userID, n := range counts {
+		if n <= 0 {
+			continue
+		}
+		if _, err := db.Exec(ctx, `
+			UPDATE users SET share_links_count = GREATEST(share_links_count - $1, 0), updated_at = now() WHERE id = $2
+		`, n, userID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (r *Repository) ListPublicShareLinks(ctx context.Context, db dbTX) ([]sitemapEntry, error) {
 	rows, err := db.Query(ctx, `
 		SELECT token,

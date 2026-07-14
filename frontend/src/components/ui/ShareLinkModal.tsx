@@ -99,8 +99,9 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
   refreshKey,
 }) => {
   const refreshUser = useAuthStore((s) => s.refreshUser);
-  const shareLinksUsed = useAuthStore((s) => s.user?.share_links_count ?? 0);
-  const shareLinksQuota = useAuthStore((s) => s.user?.share_links_quota ?? 0);
+  const user = useAuthStore((s) => s.user);
+  const shareLinksUsed = user?.share_links_count ?? 0;
+  const shareLinksQuota = user?.share_links_quota ?? 0;
   const atLinksLimit = shareLinksQuota > 0 && shareLinksUsed >= shareLinksQuota;
   const [links, setLinks] = useState<ShareLink[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -118,6 +119,14 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
   const [editingLink, setEditingLink] = useState<ShareLink | null>(null);
 
   const showToast = useToastStore((s) => s.showToast);
+
+  const updateCounter = useCallback((delta: number) => {
+    useAuthStore.setState((state) => {
+      if (!state.user) return state;
+      const newCount = Math.max(0, (state.user.share_links_count ?? 0) + delta);
+      return { user: { ...state.user, share_links_count: newCount } };
+    });
+  }, []);
 
   const isFile = itemType === 'file';
   const shareBaseUrl = isFile ? FILE_SHARE_BASE_URL : DIR_SHARE_BASE_URL;
@@ -162,6 +171,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
         : await createDirectoryShareLink(accessToken, itemId, body);
       const wasEmpty = links.length === 0;
       setLinks((prev) => [newLink, ...prev]);
+      updateCounter(1);
       refreshUser();
       if (wasEmpty) {
         onLinksChanged?.(true);
@@ -183,6 +193,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
     try {
       await deleteShareLink(accessToken, link.id);
       setLinks((prev) => prev.filter((l) => l.id !== link.id));
+      updateCounter(-1);
       refreshUser();
       if (wasLast) {
         onLinksChanged?.(false);

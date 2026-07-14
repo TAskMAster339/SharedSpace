@@ -73,14 +73,17 @@ func main() {
 	accessRepository := access.NewRepository()
 	accessChecker := access.NewChecker(pool, accessRepository)
 
+	// share links repository (needed by multiple services)
+	shareLinksRepository := sharelinks.NewRepository()
+
 	// dirs
 	dirsRepository := dirs.NewRepository()
 	sharingRepository := sharing.NewRepository()
-	dirsService := dirs.NewService(pool, dirsRepository, sharingRepository, accessChecker, store)
+	dirsService := dirs.NewService(pool, dirsRepository, sharingRepository, accessChecker, store, shareLinksRepository)
 	dirsHandler := dirs.NewHandler(dirsService)
 	// file
 	filesRepository := files.NewRepository()
-	filesService := files.NewService(pool, filesRepository, store, tmpStore, accessChecker)
+	filesService := files.NewService(pool, filesRepository, store, tmpStore, accessChecker, shareLinksRepository)
 	filesService.StartCleanupWorker(ctx)
 	filesHandler := files.NewHandler(filesService)
 	// sharing
@@ -92,10 +95,9 @@ func main() {
 	favoritesHandler := favorites.NewHandler(favoritesService)
 	// trash
 	trashRepository := trash.NewRepository()
-	trashService := trash.NewService(pool, trashRepository, store)
+	trashService := trash.NewService(pool, trashRepository, store, shareLinksRepository)
 	trashHandler := trash.NewHandler(trashService)
 	// share links
-	shareLinksRepository := sharelinks.NewRepository()
 	shareLinksService := sharelinks.NewService(pool, shareLinksRepository, store, accessChecker)
 	shareLinksHandler := sharelinks.NewHandler(shareLinksService, authService)
 

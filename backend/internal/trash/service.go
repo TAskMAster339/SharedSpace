@@ -9,16 +9,18 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"sharedspace/internal/apperror"
+	"sharedspace/internal/sharelinks"
 )
 
 type Service struct {
-	beginTx beginTxFunc
-	db      dbTX
-	repo    RepositoryInterface
-	storage StorageClient
+	beginTx       beginTxFunc
+	db            dbTX
+	repo          RepositoryInterface
+	storage       StorageClient
+	shareLinkRepo *sharelinks.Repository
 }
 
-func NewService(pool *pgxpool.Pool, repo RepositoryInterface, storage StorageClient) *Service {
+func NewService(pool *pgxpool.Pool, repo RepositoryInterface, storage StorageClient, shareLinkRepo *sharelinks.Repository) *Service {
 	beginTx := func(ctx context.Context, opts pgx.TxOptions) (transaction, error) {
 		tx, err := pool.BeginTx(ctx, opts)
 		if err != nil {
@@ -27,10 +29,11 @@ func NewService(pool *pgxpool.Pool, repo RepositoryInterface, storage StorageCli
 		return txWrapper{Tx: tx}, nil
 	}
 	return &Service{
-		beginTx: beginTx,
-		db:      pool,
-		repo:    repo,
-		storage: storage,
+		beginTx:       beginTx,
+		db:            pool,
+		repo:          repo,
+		storage:       storage,
+		shareLinkRepo: shareLinkRepo,
 	}
 }
 
@@ -382,6 +385,21 @@ func (s *Service) deleteItems(ctx context.Context, dirIDs, fileIDs []string, fil
 		return apperror.WrapInternal("ошибка начала транзакции", err)
 	}
 	defer tx.Rollback(ctx)
+
+	fileCounts, err := s.shareLinkRepo.DeleteByFileIDs(ctx, tx, fileIDs)
+	if err != nil {
+		return apperror.WrapInternal("ошибка удаления ссылок файлов", err)
+	}
+	dirCounts, err := s.shareLinkRepo.DeleteByDirectoryIDs(ctx, tx, dirIDs)
+	if err != nil {
+		return apperror.WrapInternal("ошибка удаления ссылок директорий", err)
+	}
+	for k, v := range dirCounts {
+		fileCounts[k] += v
+	}
+	if err := s.shareLinkRepo.DecrementShareLinksCounts(ctx, tx, fileCounts); err != nil {
+		return apperror.WrapInternal("ошибка обновления счётчика ссылок", err)
+	}
 
 	if len(fileIDs) > 0 {
 		if err := s.repo.ClearFiles(ctx, tx, fileIDs); err != nil {

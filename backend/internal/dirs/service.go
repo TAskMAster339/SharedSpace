@@ -13,6 +13,7 @@ import (
 
 	"sharedspace/internal/access"
 	"sharedspace/internal/apperror"
+	"sharedspace/internal/sharelinks"
 )
 
 type Service struct {
@@ -22,9 +23,10 @@ type Service struct {
 	sharingRepo   SharingRepository
 	accessChecker access.AccessChecker
 	storage       StorageClient
+	shareLinkRepo *sharelinks.Repository
 }
 
-func NewService(pool *pgxpool.Pool, repo RepositoryInterface, sharingRepo SharingRepository, accessChecker access.AccessChecker, storage StorageClient) *Service {
+func NewService(pool *pgxpool.Pool, repo RepositoryInterface, sharingRepo SharingRepository, accessChecker access.AccessChecker, storage StorageClient, shareLinkRepo *sharelinks.Repository) *Service {
 	beginTx := func(ctx context.Context, opts pgx.TxOptions) (transaction, error) {
 		tx, err := pool.BeginTx(ctx, opts)
 		if err != nil {
@@ -39,6 +41,7 @@ func NewService(pool *pgxpool.Pool, repo RepositoryInterface, sharingRepo Sharin
 		sharingRepo:   sharingRepo,
 		accessChecker: accessChecker,
 		storage:       storage,
+		shareLinkRepo: shareLinkRepo,
 	}
 }
 
@@ -560,6 +563,24 @@ func (s *Service) SoftDelete(ctx context.Context, userID, dirID string) error {
 		return apperror.WrapInternal("обновление счётчика общих директорий", err)
 	}
 
+	aliveFileIDs := make([]string, 0, len(aliveFiles))
+	for _, f := range aliveFiles {
+		aliveFileIDs = append(aliveFileIDs, f.ID)
+	}
+
+	fileCounts, err := s.shareLinkRepo.DeleteByFileIDs(ctx, tx, aliveFileIDs)
+	if err != nil {
+		return apperror.WrapInternal("удаление ссылок файлов", err)
+	}
+	dirCounts, err := s.shareLinkRepo.DeleteByDirectoryIDs(ctx, tx, ids)
+	if err != nil {
+		return apperror.WrapInternal("удаление ссылок директорий", err)
+	}
+	mergeCounts(fileCounts, dirCounts)
+	if err := s.shareLinkRepo.DecrementShareLinksCounts(ctx, tx, fileCounts); err != nil {
+		return apperror.WrapInternal("обновление счётчика ссылок", err)
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		return apperror.WrapInternal("сохранение", err)
 	}
@@ -706,6 +727,24 @@ func (s *Service) PermanentDelete(ctx context.Context, userID, dirID string) err
 	}
 	defer tx.Rollback(ctx)
 
+	allFileIDs := make([]string, 0, len(allFiles))
+	for _, f := range allFiles {
+		allFileIDs = append(allFileIDs, f.ID)
+	}
+
+	fileCounts, err := s.shareLinkRepo.DeleteByFileIDs(ctx, tx, allFileIDs)
+	if err != nil {
+		return apperror.WrapInternal("удаление ссылок файлов", err)
+	}
+	dirCounts, err := s.shareLinkRepo.DeleteByDirectoryIDs(ctx, tx, ids)
+	if err != nil {
+		return apperror.WrapInternal("удаление ссылок директорий", err)
+	}
+	mergeCounts(fileCounts, dirCounts)
+	if err := s.shareLinkRepo.DecrementShareLinksCounts(ctx, tx, fileCounts); err != nil {
+		return apperror.WrapInternal("обновление счётчика ссылок", err)
+	}
+
 	if err := s.repo.HardDeleteSubtree(ctx, tx, ids); err != nil {
 		return apperror.WrapInternal("удаление директорий", err)
 	}
@@ -728,8 +767,18 @@ func (s *Service) PermanentDelete(ctx context.Context, userID, dirID string) err
 		}
 	}
 
+	if err := s.repo.RecalcSharedDirsCount(ctx, tx, dir.OwnerID); err != nil {
+		return apperror.WrapInternal("обновление счётчика общих директорий", err)
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		return apperror.WrapInternal("сохранение", err)
 	}
 	return nil
+}
+
+func mergeCounts(a, b map[string]int) {
+	for k, v := range b {
+		a[k] += v
+	}
 }

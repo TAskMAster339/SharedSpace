@@ -14,22 +14,25 @@ import (
 )
 
 type mockRepo struct {
-	createFn           func(shareLinkRecord) (shareLinkRecord, error)
-	findByIDFn         func(string) (shareLinkRecord, error)
-	findByTokenFn      func(string) (shareLinkRecord, error)
-	findByFileIDFn     func(string, int) ([]shareLinkRecord, error)
-	findByDirIDFn      func(string, int) ([]shareLinkRecord, error)
-	updateFn           func(string, shareLinkRecord) (shareLinkRecord, error)
-	deleteFn           func(string) error
-	getFileByIDFn      func(string) (fileRecord, error)
-	getUsernameByIDFn  func(string) (string, error)
-	getDirectoryByIDFn func(string) (directoryRecord, error)
-	getDirSubdirsFn    func(string) ([]dirSubdirRecord, error)
-	getDirFilesFn      func(string) ([]dirFileRecord, error)
-	isSubdirectoryFn   func(string, string) (bool, error)
-	statsFn            func(string) (int, int, error)
-	incCountFn         func(string) error
-	decCountFn         func(string) error
+	createFn               func(shareLinkRecord) (shareLinkRecord, error)
+	findByIDFn             func(string) (shareLinkRecord, error)
+	findByTokenFn          func(string) (shareLinkRecord, error)
+	findByFileIDFn         func(string, int) ([]shareLinkRecord, error)
+	findByDirIDFn          func(string, int) ([]shareLinkRecord, error)
+	updateFn               func(string, shareLinkRecord) (shareLinkRecord, error)
+	deleteFn               func(string) error
+	getFileByIDFn          func(string) (fileRecord, error)
+	getUsernameByIDFn      func(string) (string, error)
+	getDirectoryByIDFn     func(string) (directoryRecord, error)
+	getDirSubdirsFn        func(string) ([]dirSubdirRecord, error)
+	getDirFilesFn          func(string) ([]dirFileRecord, error)
+	isSubdirectoryFn       func(string, string) (bool, error)
+	statsFn                func(string) (int, int, error)
+	incCountFn             func(string) error
+	decCountFn             func(string) error
+	deleteByFileIDsFn      func([]string) (map[string]int, error)
+	deleteByDirectoryIDsFn func([]string) (map[string]int, error)
+	decrementCountsFn      func(map[string]int) error
 }
 
 func (m *mockRepo) Create(_ context.Context, _ dbTX, link shareLinkRecord) (shareLinkRecord, error) {
@@ -115,6 +118,24 @@ func (m *mockRepo) DecrementShareLinksCount(_ context.Context, _ dbTX, userID st
 }
 func (m *mockRepo) ListPublicShareLinks(_ context.Context, _ dbTX) ([]sitemapEntry, error) {
 	return nil, nil
+}
+func (m *mockRepo) DeleteByFileIDs(_ context.Context, _ dbTX, fileIDs []string) (map[string]int, error) {
+	if m.deleteByFileIDsFn != nil {
+		return m.deleteByFileIDsFn(fileIDs)
+	}
+	return nil, nil
+}
+func (m *mockRepo) DeleteByDirectoryIDs(_ context.Context, _ dbTX, dirIDs []string) (map[string]int, error) {
+	if m.deleteByDirectoryIDsFn != nil {
+		return m.deleteByDirectoryIDsFn(dirIDs)
+	}
+	return nil, nil
+}
+func (m *mockRepo) DecrementShareLinksCounts(_ context.Context, _ dbTX, counts map[string]int) error {
+	if m.decrementCountsFn != nil {
+		return m.decrementCountsFn(counts)
+	}
+	return nil
 }
 
 type mockStorage struct {
