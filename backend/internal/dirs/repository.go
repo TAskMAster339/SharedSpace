@@ -341,7 +341,7 @@ func (r *Repository) CheckShareLinks(ctx context.Context, db dbTX, fileIDs, dirI
 		return
 	}
 
-	query := `SELECT file_id, directory_id FROM share_links WHERE`
+	query := `SELECT file_id, directory_id FROM share_links WHERE is_active = true AND`
 	args := make([]any, 0, 2)
 
 	if len(fileIDs) > 0 && len(dirIDs) > 0 {

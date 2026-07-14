@@ -394,6 +394,62 @@ func TestServiceSoftDelete_Forbidden(t *testing.T) {
 	}
 }
 
+func TestServiceRestore_Success(t *testing.T) {
+	now := time.Now()
+	repo := &mockRepo{
+		file: fileRecord{ID: "f-1", DirectoryID: "d-1", OwnerID: "user-1", DeletedAt: &now},
+		dir:  directoryRecord{ID: "d-1", OwnerID: "user-1"},
+	}
+	svc := newTestService(repo, &mockStorage{})
+
+	if err := svc.Restore(context.Background(), "user-1", "f-1"); err != nil {
+		t.Fatalf("Restore: %v", err)
+	}
+}
+
+func TestServiceRestore_NotInTrash(t *testing.T) {
+	repo := &mockRepo{
+		file: fileRecord{ID: "f-1", DirectoryID: "d-1"},
+	}
+	svc := newTestService(repo, &mockStorage{})
+
+	err := svc.Restore(context.Background(), "user-1", "f-1")
+	appErr, ok := apperror.From(err)
+	if !ok || appErr.Code() != apperror.CodeValidation {
+		t.Fatalf("expected validation, got %v", err)
+	}
+}
+
+func TestServiceRestore_Forbidden(t *testing.T) {
+	now := time.Now()
+	repo := &mockRepo{
+		file: fileRecord{ID: "f-1", DirectoryID: "d-1", DeletedAt: &now},
+	}
+	svc := newTestService(repo, &mockStorage{})
+	svc.accessChecker = &mockAccessChecker{canFn: func(_ context.Context, _, _ string, _ access.Action) (bool, error) { return false, nil }}
+
+	err := svc.Restore(context.Background(), "user-1", "f-1")
+	appErr, ok := apperror.From(err)
+	if !ok || appErr.Code() != apperror.CodeForbidden {
+		t.Fatalf("expected forbidden, got %v", err)
+	}
+}
+
+func TestServiceRestore_ParentDeleted(t *testing.T) {
+	now := time.Now()
+	repo := &mockRepo{
+		file: fileRecord{ID: "f-1", DirectoryID: "d-1", OwnerID: "user-1", DeletedAt: &now},
+		dir:  directoryRecord{ID: "d-1", OwnerID: "user-1", DeletedAt: &now},
+	}
+	svc := newTestService(repo, &mockStorage{})
+
+	err := svc.Restore(context.Background(), "user-1", "f-1")
+	appErr, ok := apperror.From(err)
+	if !ok || appErr.Code() != apperror.CodeConflict {
+		t.Fatalf("expected conflict, got %v", err)
+	}
+}
+
 func TestServicePermanentDelete_Success(t *testing.T) {
 	repo := &mockRepo{file: fileRecord{ID: "f-1", DirectoryID: "d-1", OwnerID: "user-1", Size: 100, ObjectKey: "key-1"}}
 	storage := &mockStorage{}

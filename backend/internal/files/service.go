@@ -419,10 +419,8 @@ func (s *Service) SoftDelete(ctx context.Context, userID, fileID string) error {
 		return apperror.WrapInternal("обновление счётчика файлов", err)
 	}
 
-	if counts, err := s.shareLinkRepo.DeleteByFileIDs(ctx, s.db, []string{fileID}); err != nil {
-		return apperror.WrapInternal("удаление ссылок файла", err)
-	} else if err := s.shareLinkRepo.DecrementShareLinksCounts(ctx, s.db, counts); err != nil {
-		return apperror.WrapInternal("обновление счётчика ссылок", err)
+	if err := s.shareLinkRepo.SetActiveByFileIDs(ctx, s.db, []string{fileID}, false); err != nil {
+		return apperror.WrapInternal("деактивация ссылок файла", err)
 	}
 
 	return nil
@@ -463,6 +461,9 @@ func (s *Service) Restore(ctx context.Context, userID, fileID string) error {
 	}
 	if err := s.repo.IncrementFilesCount(ctx, s.db, file.DirectoryID, +1); err != nil {
 		return apperror.WrapInternal("обновление счётчика файлов", err)
+	}
+	if err := s.shareLinkRepo.SetActiveByFileIDs(ctx, s.db, []string{fileID}, true); err != nil {
+		return apperror.WrapInternal("активация ссылок файла", err)
 	}
 	return nil
 }

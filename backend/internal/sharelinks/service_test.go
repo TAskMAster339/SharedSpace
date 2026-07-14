@@ -137,6 +137,12 @@ func (m *mockRepo) DecrementShareLinksCounts(_ context.Context, _ dbTX, counts m
 	}
 	return nil
 }
+func (m *mockRepo) SetActiveByFileIDs(_ context.Context, _ dbTX, _ []string, _ bool) error {
+	return nil
+}
+func (m *mockRepo) SetActiveByDirectoryIDs(_ context.Context, _ dbTX, _ []string, _ bool) error {
+	return nil
+}
 
 type mockStorage struct {
 	presignedURL string
@@ -211,6 +217,7 @@ func existingLink() shareLinkRecord {
 		ID: "link-1", FileID: &fileID, Token: "tok-1",
 		AccessType: "public", CreatedBy: "user-1",
 		ExpiresAt: nil, PasswordHash: nil,
+		IsActive:  true,
 		CreatedAt: time.Unix(100, 0).UTC(),
 	}
 }
@@ -666,6 +673,155 @@ func TestServiceResolve_CorrectPassword(t *testing.T) {
 	})
 
 	_, err := svc.Resolve(context.Background(), "tok-1", "correct-password", false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestServiceResolve_Inactive(t *testing.T) {
+	svc := newTestService(&mockRepo{
+		findByTokenFn: func(_ string) (shareLinkRecord, error) {
+			l := existingLink()
+			l.IsActive = false
+			return l, nil
+		},
+	})
+
+	_, err := svc.Resolve(context.Background(), "tok-1", "", false)
+	appErr, ok := apperror.From(err)
+	if !ok || appErr.Code() != apperror.CodeNotFound {
+		t.Fatalf("expected not_found, got %v", err)
+	}
+}
+
+func existingDirLink() shareLinkRecord {
+	dirID := "dir-1"
+	return shareLinkRecord{
+		ID: "link-2", DirectoryID: &dirID, Token: "tok-2",
+		AccessType: "public", CreatedBy: "user-1",
+		ExpiresAt: nil, PasswordHash: nil,
+		IsActive:  true,
+		CreatedAt: time.Unix(100, 0).UTC(),
+	}
+}
+
+func TestServiceResolveDirectory_Success(t *testing.T) {
+	svc := newTestService(&mockRepo{
+		findByTokenFn: func(_ string) (shareLinkRecord, error) { return existingDirLink(), nil },
+		getDirectoryByIDFn: func(_ string) (directoryRecord, error) {
+			return directoryRecord{ID: "dir-1", Name: "test", OwnerID: "user-1"}, nil
+		},
+		getDirSubdirsFn: func(_ string) ([]dirSubdirRecord, error) { return nil, nil },
+		getDirFilesFn:   func(_ string) ([]dirFileRecord, error) { return nil, nil },
+	})
+
+	resp, err := svc.ResolveDirectory(context.Background(), "tok-2", "", false, ResolveDirectoryParams{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.ID != "dir-1" {
+		t.Fatalf("expected dir-1, got %s", resp.ID)
+	}
+}
+
+func TestServiceResolveDirectory_Inactive(t *testing.T) {
+	svc := newTestService(&mockRepo{
+		findByTokenFn: func(_ string) (shareLinkRecord, error) {
+			l := existingDirLink()
+			l.IsActive = false
+			return l, nil
+		},
+	})
+
+	_, err := svc.ResolveDirectory(context.Background(), "tok-2", "", false, ResolveDirectoryParams{})
+	appErr, ok := apperror.From(err)
+	if !ok || appErr.Code() != apperror.CodeNotFound {
+		t.Fatalf("expected not_found, got %v", err)
+	}
+}
+
+func TestServiceResolveDirectory_TokenNotFound(t *testing.T) {
+	svc := newTestService(&mockRepo{
+		findByTokenFn: func(_ string) (shareLinkRecord, error) {
+			return shareLinkRecord{}, pgx.ErrNoRows
+		},
+	})
+
+	_, err := svc.ResolveDirectory(context.Background(), "invalid-token", "", false, ResolveDirectoryParams{})
+	appErr, ok := apperror.From(err)
+	if !ok || appErr.Code() != apperror.CodeNotFound {
+		t.Fatalf("expected not_found, got %v", err)
+	}
+}
+
+func TestServiceResolveDirectory_Expired(t *testing.T) {
+	past := time.Now().Add(-1 * time.Hour)
+	svc := newTestService(&mockRepo{
+		findByTokenFn: func(_ string) (shareLinkRecord, error) {
+			l := existingDirLink()
+			l.ExpiresAt = &past
+			return l, nil
+		},
+	})
+
+	_, err := svc.ResolveDirectory(context.Background(), "tok-2", "", false, ResolveDirectoryParams{})
+	appErr, ok := apperror.From(err)
+	if !ok || appErr.Code() != apperror.CodeNotFound {
+		t.Fatalf("expected not_found, got %v", err)
+	}
+}
+
+func TestServiceResolveDirectory_AuthenticatedWithoutJWT(t *testing.T) {
+	svc := newTestService(&mockRepo{
+		findByTokenFn: func(_ string) (shareLinkRecord, error) {
+			l := existingDirLink()
+			l.AccessType = "authenticated"
+			return l, nil
+		},
+	})
+
+	_, err := svc.ResolveDirectory(context.Background(), "tok-2", "", false, ResolveDirectoryParams{})
+	appErr, ok := apperror.From(err)
+	if !ok || appErr.Code() != apperror.CodeUnauthorized {
+		t.Fatalf("expected unauthorized, got %v", err)
+	}
+}
+
+func TestServiceResolveDirectory_WrongPassword(t *testing.T) {
+	hashBytes, _ := bcrypt.GenerateFromPassword([]byte("correct-password"), bcrypt.DefaultCost)
+	hash := string(hashBytes)
+	svc := newTestService(&mockRepo{
+		findByTokenFn: func(_ string) (shareLinkRecord, error) {
+			l := existingDirLink()
+			l.PasswordHash = &hash
+			return l, nil
+		},
+	})
+
+	_, err := svc.ResolveDirectory(context.Background(), "tok-2", "wrong-password", false, ResolveDirectoryParams{})
+	appErr, ok := apperror.From(err)
+	if !ok || appErr.Code() != apperror.CodeForbidden {
+		t.Fatalf("expected forbidden, got %v", err)
+	}
+}
+
+func TestServiceResolveDirectory_CorrectPassword(t *testing.T) {
+	hashBytes, _ := bcrypt.GenerateFromPassword([]byte("correct-password"), bcrypt.DefaultCost)
+	hash := string(hashBytes)
+	svc := newTestService(&mockRepo{
+		findByTokenFn: func(_ string) (shareLinkRecord, error) {
+			l := existingDirLink()
+			l.PasswordHash = &hash
+			return l, nil
+		},
+		getDirectoryByIDFn: func(_ string) (directoryRecord, error) {
+			return directoryRecord{ID: "dir-1", Name: "test", OwnerID: "user-1"}, nil
+		},
+		getDirSubdirsFn: func(_ string) ([]dirSubdirRecord, error) { return nil, nil },
+		getDirFilesFn:   func(_ string) ([]dirFileRecord, error) { return nil, nil },
+	})
+
+	_, err := svc.ResolveDirectory(context.Background(), "tok-2", "correct-password", false, ResolveDirectoryParams{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

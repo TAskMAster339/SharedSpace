@@ -11,6 +11,7 @@ export interface ShareLink {
   expires_at: string | null;
   created_at: string;
   has_password: boolean;
+  is_active: boolean;
 }
 
 export interface ShareLinkResolveResult {

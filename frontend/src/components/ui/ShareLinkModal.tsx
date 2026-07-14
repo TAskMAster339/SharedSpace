@@ -400,11 +400,11 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
           return (
             <div
               key={link.id}
-              onClick={() => handleEditLink(link)}
+              onClick={() => (!link.is_active || expired ? undefined : handleEditLink(link))}
               onContextMenu={(e) => handleCopyAndClose(e, link)}
               className={cn(
                 'flex items-start gap-3 p-3 rounded-theme-md border transition-colors cursor-pointer',
-                expired
+                !link.is_active || expired
                   ? 'border-theme bg-theme-tertiary opacity-60'
                   : 'border-theme bg-theme-secondary hover:border-brand/30 hover:bg-brand-light',
               )}
@@ -433,6 +433,11 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
                       Пароль
                     </span>
                   )}
+                  {!link.is_active && (
+                    <span className="text-xs text-theme-muted bg-theme-hover px-1.5 py-0.5 rounded">
+                      Файл удалён
+                    </span>
+                  )}
                   {expired && (
                     <span className="text-xs text-danger bg-danger-light px-1.5 py-0.5 rounded">
                       Истекла
@@ -447,7 +452,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
               </div>
 
               <div className="flex items-center gap-1 shrink-0">
-                {!expired && (
+                {!expired && link.is_active && (
                   <button
                     onClick={(e) => handleCopy(e, link)}
                     title="Скопировать ссылку"

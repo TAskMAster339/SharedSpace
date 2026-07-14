@@ -152,20 +152,22 @@ type mockRepo struct {
 
 	findByIDCallCount int
 
-	findByIDAnyStateResult directoryRecord
-	findByIDAnyStateErr    error
-	findSubtreeIDsResult   []string
-	findSubtreeIDsErr      error
-	findFilesInDirsResult  []fileRecord
-	findFilesInDirsErr     error
-	findDeletedFilesResult []fileRecord
-	findDeletedFilesErr    error
-	softDeleteSubtreeErr   error
-	softDeleteFilesErr     error
-	restoreSubtreeErr      error
-	restoreFilesErr        error
-	hardDeleteSubtreeErr   error
-	addUserStorageUsedErr  error
+	findByIDAnyStateCallCount int
+	findByIDAnyStateResult    directoryRecord
+	findByIDAnyStateResult2   directoryRecord
+	findByIDAnyStateErr       error
+	findSubtreeIDsResult      []string
+	findSubtreeIDsErr         error
+	findFilesInDirsResult     []fileRecord
+	findFilesInDirsErr        error
+	findDeletedFilesResult    []fileRecord
+	findDeletedFilesErr       error
+	softDeleteSubtreeErr      error
+	softDeleteFilesErr        error
+	restoreSubtreeErr         error
+	restoreFilesErr           error
+	hardDeleteSubtreeErr      error
+	addUserStorageUsedErr     error
 
 	sharedDirsCount    int
 	sharedDirsQuota    int
@@ -228,6 +230,10 @@ func (m *mockRepo) UpdateNameAndParent(_ context.Context, _ dbTX, id string, nam
 }
 
 func (m *mockRepo) FindByIDAnyState(_ context.Context, _ dbTX, _ string) (directoryRecord, error) {
+	m.findByIDAnyStateCallCount++
+	if m.findByIDAnyStateCallCount == 2 {
+		return m.findByIDAnyStateResult2, m.findByIDAnyStateErr
+	}
 	return m.findByIDAnyStateResult, m.findByIDAnyStateErr
 }
 
@@ -968,6 +974,86 @@ func TestServicePermanentDelete(t *testing.T) {
 		}
 		appErr, ok := apperror.From(err)
 		if !ok || appErr.Code() != apperror.CodeForbidden {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+}
+
+func TestServiceRestore(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		now := time.Now()
+		deletedAt := now.Add(-time.Hour)
+		parentID := "parent-1"
+		repo := &mockRepo{
+			findByIDAnyStateResult:  directoryRecord{ID: "dir-1", Name: "mydir", OwnerID: "user-1", Type: "regular", ParentID: &parentID, DeletedAt: &deletedAt, CreatedAt: now, UpdatedAt: now},
+			findByIDAnyStateResult2: directoryRecord{ID: "parent-1", OwnerID: "user-1"},
+			findByNameErr:           pgx.ErrNoRows,
+			findSubtreeIDsResult:    []string{"dir-1", "sub-1"},
+			findDeletedFilesResult:  []fileRecord{},
+		}
+		service, tx := newTestService(repo)
+
+		err := service.Restore(context.Background(), "user-1", "dir-1")
+		if err != nil {
+			t.Fatalf("Restore returned error: %v", err)
+		}
+		if tx.commitCount != 1 {
+			t.Fatalf("commit count = %d, want 1", tx.commitCount)
+		}
+	})
+
+	t.Run("not in trash", func(t *testing.T) {
+		now := time.Now()
+		repo := &mockRepo{
+			findByIDAnyStateResult: directoryRecord{ID: "dir-1", Name: "mydir", OwnerID: "user-1", Type: "regular", CreatedAt: now, UpdatedAt: now},
+		}
+		service, _ := newTestService(repo)
+
+		err := service.Restore(context.Background(), "user-1", "dir-1")
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeValidation {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("forbidden", func(t *testing.T) {
+		now := time.Now()
+		deletedAt := now.Add(-time.Hour)
+		repo := &mockRepo{
+			findByIDAnyStateResult: directoryRecord{ID: "dir-1", Name: "mydir", OwnerID: "user-1", Type: "regular", DeletedAt: &deletedAt, CreatedAt: now, UpdatedAt: now},
+		}
+		service, _ := newTestService(repo)
+		service.accessChecker = &mockAccessChecker{canFn: func(_ context.Context, _, _ string, _ access.Action) (bool, error) { return false, nil }}
+
+		err := service.Restore(context.Background(), "user-1", "dir-1")
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeForbidden {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("parent deleted", func(t *testing.T) {
+		now := time.Now()
+		deletedAt := now.Add(-time.Hour)
+		parentID := "parent-1"
+		repo := &mockRepo{
+			findByIDAnyStateResult:  directoryRecord{ID: "dir-1", Name: "mydir", OwnerID: "user-1", Type: "regular", ParentID: &parentID, DeletedAt: &deletedAt, CreatedAt: now, UpdatedAt: now},
+			findByIDAnyStateResult2: directoryRecord{ID: "parent-1", OwnerID: "user-1", DeletedAt: &deletedAt},
+		}
+		service, _ := newTestService(repo)
+
+		err := service.Restore(context.Background(), "user-1", "dir-1")
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		appErr, ok := apperror.From(err)
+		if !ok || appErr.Code() != apperror.CodeConflict {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})

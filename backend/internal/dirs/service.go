@@ -568,17 +568,11 @@ func (s *Service) SoftDelete(ctx context.Context, userID, dirID string) error {
 		aliveFileIDs = append(aliveFileIDs, f.ID)
 	}
 
-	fileCounts, err := s.shareLinkRepo.DeleteByFileIDs(ctx, tx, aliveFileIDs)
-	if err != nil {
-		return apperror.WrapInternal("удаление ссылок файлов", err)
+	if err := s.shareLinkRepo.SetActiveByFileIDs(ctx, tx, aliveFileIDs, false); err != nil {
+		return apperror.WrapInternal("деактивация ссылок файлов", err)
 	}
-	dirCounts, err := s.shareLinkRepo.DeleteByDirectoryIDs(ctx, tx, ids)
-	if err != nil {
-		return apperror.WrapInternal("удаление ссылок директорий", err)
-	}
-	mergeCounts(fileCounts, dirCounts)
-	if err := s.shareLinkRepo.DecrementShareLinksCounts(ctx, tx, fileCounts); err != nil {
-		return apperror.WrapInternal("обновление счётчика ссылок", err)
+	if err := s.shareLinkRepo.SetActiveByDirectoryIDs(ctx, tx, ids, false); err != nil {
+		return apperror.WrapInternal("деактивация ссылок директорий", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -674,6 +668,17 @@ func (s *Service) Restore(ctx context.Context, userID, dirID string) error {
 
 	if err := s.repo.RecalcSharedDirsCount(ctx, tx, dir.OwnerID); err != nil {
 		return apperror.WrapInternal("обновление счётчика общих директорий", err)
+	}
+
+	restoredFileIDs := make([]string, 0, len(restoredFiles))
+	for _, f := range restoredFiles {
+		restoredFileIDs = append(restoredFileIDs, f.ID)
+	}
+	if err := s.shareLinkRepo.SetActiveByFileIDs(ctx, tx, restoredFileIDs, true); err != nil {
+		return apperror.WrapInternal("активация ссылок файлов", err)
+	}
+	if err := s.shareLinkRepo.SetActiveByDirectoryIDs(ctx, tx, ids, true); err != nil {
+		return apperror.WrapInternal("активация ссылок директорий", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
