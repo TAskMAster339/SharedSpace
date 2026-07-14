@@ -369,7 +369,7 @@ const FileViewPage: React.FC = () => {
         <p className="text-sm">{subMessage || 'Файл не может быть отображён в браузере'}</p>
         <button
           onClick={downloadFile}
-          className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-brand text-theme-on-brand hover:bg-brand-hover rounded-theme-md transition-colors text-sm font-medium"
+          className="mt-4 inline-flex items-center gap-2 px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium"
         >
           <Download size={16} />
           Скачать файл
@@ -563,7 +563,21 @@ const FileViewPage: React.FC = () => {
         {/* Левая часть: предпросмотр (2/3) */}
         <div className="lg:col-span-2">
           <div className="bg-theme-secondary border border-theme rounded-theme-lg p-4 shadow-theme-card">
-            <h2 className="text-sm font-medium text-theme-secondary mb-3">Предпросмотр</h2>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h2 className="text-sm font-medium text-theme-secondary">Предпросмотр</h2>
+              <button
+                onClick={downloadFile}
+                aria-label="Скачать файл"
+                title="Скачать файл"
+                className="group inline-flex h-9 w-9 items-center justify-center gap-2 rounded-theme-md border border-brand/30 bg-brand-light text-brand transition-colors hover:bg-brand hover:text-theme-on-brand sm:w-auto sm:px-3 sm:text-sm sm:font-medium"
+              >
+                <Download
+                  size={16}
+                  className="group-hover:[animation:ss-bounce-up_0.4s_ease-in-out]"
+                />
+                <span className="hidden sm:inline">Скачать</span>
+              </button>
+            </div>
             {renderPreview()}
           </div>
         </div>
@@ -633,17 +647,6 @@ const FileViewPage: React.FC = () => {
           <div className="bg-theme-secondary border border-theme rounded-theme-lg p-5 shadow-theme-card">
             <h3 className="font-medium text-theme-primary mb-3">Действия</h3>
             <div className="space-y-2">
-              <button
-                onClick={downloadFile}
-                className="group w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-brand text-theme-on-brand hover:bg-brand-hover rounded-theme-md transition-colors text-sm font-medium"
-              >
-                <Download
-                  size={16}
-                  className="group-hover:[animation:ss-bounce-up_0.4s_ease-in-out]"
-                />
-                Скачать
-              </button>
-
               <button
                 onClick={() => setIsShareModalOpen(true)}
                 className="group w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium"

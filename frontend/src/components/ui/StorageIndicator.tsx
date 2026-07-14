@@ -21,24 +21,28 @@ function formatBytes(gb: number): string {
   return `${value.toFixed(decimals)} ${units[unitIndex]}`;
 }
 
+function formatGbValue(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
 export const StorageIndicator: React.FC<StorageIndicatorProps> = ({ used, total, className }) => {
   const percentage = total > 0 ? Math.min((used / total) * 100, 100) : 0;
 
   return (
     <div className={cn('w-full select-none', className)}>
-      <div className="flex items-center justify-between text-xs text-theme-secondary mb-3">
+      <div className="flex items-center justify-between gap-2 text-theme-secondary mb-3">
         <span className="flex items-center gap-1.5 text-sm font-medium">
           <HardDrive
             size={14}
-            className="text-theme-muted group-hover:text-brand transition-colors"
+            className="shrink-0 text-theme-muted group-hover:text-brand transition-colors"
           />{' '}
           Хранилище
         </span>
         <span
-          className="text-sm font-semibold"
+          className="shrink-0 whitespace-nowrap text-xs font-semibold tabular-nums"
           title={`${formatBytes(used)} из ${formatBytes(total)}`}
         >
-          {used.toFixed(1)} ГБ из {total} ГБ
+          {used.toFixed(1)} ГБ / {formatGbValue(total)} ГБ
         </span>
       </div>
       <div className="w-full h-1.5 bg-theme-border rounded-full overflow-hidden">
