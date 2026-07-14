@@ -23,6 +23,7 @@ type ShareLinkResponse struct {
 	CreatedBy   string    `json:"created_by"`
 	ExpiresAt   *string   `json:"expires_at"`
 	HasPassword bool      `json:"has_password"`
+	IsActive    bool      `json:"is_active"`
 	CreatedAt   time.Time `json:"created_at"`
 }
 
@@ -80,6 +81,7 @@ type shareLinkRecord struct {
 	CreatedBy    string
 	ExpiresAt    *time.Time
 	PasswordHash *string
+	IsActive     bool
 	CreatedAt    time.Time
 }
 

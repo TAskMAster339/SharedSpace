@@ -17,6 +17,7 @@ import (
 
 	"sharedspace/internal/access"
 	"sharedspace/internal/apperror"
+	"sharedspace/internal/sharelinks"
 )
 
 const maxFileSize = 100 * 1024 * 1024 // 100 MB
@@ -28,9 +29,10 @@ type Service struct {
 	storage       StorageClient
 	tmpStorage    StorageClient
 	accessChecker access.AccessChecker
+	shareLinkRepo *sharelinks.Repository
 }
 
-func NewService(pool *pgxpool.Pool, repo RepositoryInterface, storage, tmpStorage StorageClient, accessChecker access.AccessChecker) *Service {
+func NewService(pool *pgxpool.Pool, repo RepositoryInterface, storage, tmpStorage StorageClient, accessChecker access.AccessChecker, shareLinkRepo *sharelinks.Repository) *Service {
 	beginTx := func(ctx context.Context, opts pgx.TxOptions) (transaction, error) {
 		tx, err := pool.BeginTx(ctx, opts)
 		if err != nil {
@@ -38,7 +40,7 @@ func NewService(pool *pgxpool.Pool, repo RepositoryInterface, storage, tmpStorag
 		}
 		return txWrapper{Tx: tx}, nil
 	}
-	return &Service{beginTx: beginTx, db: pool, repo: repo, storage: storage, tmpStorage: tmpStorage, accessChecker: accessChecker}
+	return &Service{beginTx: beginTx, db: pool, repo: repo, storage: storage, tmpStorage: tmpStorage, accessChecker: accessChecker, shareLinkRepo: shareLinkRepo}
 }
 
 func (s *Service) Upload(ctx context.Context, userID, directoryID string, uploads []FileUpload) (UploadFilesResponse, error) {
@@ -416,6 +418,11 @@ func (s *Service) SoftDelete(ctx context.Context, userID, fileID string) error {
 	if err := s.repo.IncrementFilesCount(ctx, s.db, file.DirectoryID, -1); err != nil {
 		return apperror.WrapInternal("обновление счётчика файлов", err)
 	}
+
+	if err := s.shareLinkRepo.SetActiveByFileIDs(ctx, s.db, []string{fileID}, false); err != nil {
+		return apperror.WrapInternal("деактивация ссылок файла", err)
+	}
+
 	return nil
 }
 
@@ -455,6 +462,9 @@ func (s *Service) Restore(ctx context.Context, userID, fileID string) error {
 	if err := s.repo.IncrementFilesCount(ctx, s.db, file.DirectoryID, +1); err != nil {
 		return apperror.WrapInternal("обновление счётчика файлов", err)
 	}
+	if err := s.shareLinkRepo.SetActiveByFileIDs(ctx, s.db, []string{fileID}, true); err != nil {
+		return apperror.WrapInternal("активация ссылок файла", err)
+	}
 	return nil
 }
 
@@ -480,6 +490,12 @@ func (s *Service) PermanentDelete(ctx context.Context, userID, fileID string) er
 	}
 	defer tx.Rollback(ctx)
 
+	if counts, err := s.shareLinkRepo.DeleteByFileIDs(ctx, tx, []string{fileID}); err != nil {
+		return apperror.WrapInternal("удаление ссылок файла", err)
+	} else if err := s.shareLinkRepo.DecrementShareLinksCounts(ctx, tx, counts); err != nil {
+		return apperror.WrapInternal("обновление счётчика ссылок", err)
+	}
+
 	if err := s.repo.HardDeleteFile(ctx, tx, fileID); err != nil {
 		return apperror.WrapInternal("удаление метаданных файла", err)
 	}
@@ -491,6 +507,7 @@ func (s *Service) PermanentDelete(ctx context.Context, userID, fileID string) er
 			return apperror.WrapInternal("обновление счётчика файлов", err)
 		}
 	}
+
 	if err := s.storage.Delete(ctx, file.ObjectKey); err != nil {
 		return apperror.WrapInternal("удаление объекта из хранилища", err)
 	}

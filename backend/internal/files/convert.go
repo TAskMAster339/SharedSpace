@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -66,11 +65,6 @@ var mimeMap = map[string]string{
 	"flac": "audio/flac",
 	"ogg":  "audio/ogg",
 	"aac":  "audio/aac",
-}
-
-func ffmpegAvailable() bool {
-	_, err := exec.LookPath("ffmpeg")
-	return err == nil
 }
 
 func convertImageData(data []byte, target string, fileExt string) (out []byte, sourceFormat, mimeType, ext string, err error) {

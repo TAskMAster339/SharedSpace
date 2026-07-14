@@ -254,7 +254,7 @@ func (r *Repository) HasShareLinks(ctx context.Context, db dbTX, fileIDs []strin
 		return make(map[string]bool), nil
 	}
 
-	rows, err := db.Query(ctx, `SELECT DISTINCT file_id FROM share_links WHERE file_id = ANY($1)`, fileIDs)
+	rows, err := db.Query(ctx, `SELECT DISTINCT file_id FROM share_links WHERE file_id = ANY($1) AND is_active = true`, fileIDs)
 	if err != nil {
 		return nil, err
 	}

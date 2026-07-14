@@ -115,10 +115,10 @@ const TrashPage: React.FC = () => {
     try {
       if (item.type === 'directory') {
         await restoreDirectory(accessToken, item.id);
-        refreshUser();
       } else {
         await restoreFile(accessToken, item.id);
       }
+      refreshUser();
       setItems((prev) => prev.filter((i) => i.id !== item.id));
       const label = item.type === 'directory' ? 'Папка' : 'Файл';
       const restored = item.type === 'directory' ? 'восстановлена' : 'восстановлен';
@@ -143,6 +143,7 @@ const TrashPage: React.FC = () => {
         await permanentDeleteFile(accessToken, itemToDelete.id);
       }
       setItems((prev) => prev.filter((i) => i.id !== itemToDelete.id));
+      refreshUser();
       const label = itemToDelete.type === 'directory' ? 'Папка' : 'Файл';
       const deleted = itemToDelete.type === 'directory' ? 'удалена' : 'удален';
       showToast(`${label} «${itemToDelete.name}» ${deleted}`, 'success');
@@ -169,6 +170,7 @@ const TrashPage: React.FC = () => {
     try {
       await clearAllTrash(accessToken);
       setItems([]);
+      refreshUser();
       setIsClearAllOpen(false);
       showToast('Корзина очищена', 'success');
     } catch (err) {

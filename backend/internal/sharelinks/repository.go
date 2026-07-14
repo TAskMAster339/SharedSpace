@@ -16,9 +16,9 @@ func (r *Repository) Create(ctx context.Context, db dbTX, link shareLinkRecord) 
 	err := db.QueryRow(ctx, `
 		INSERT INTO share_links (file_id, directory_id, token, access_type, created_by, expires_at, password_hash)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		RETURNING id, file_id, directory_id, token, access_type, created_by, expires_at, password_hash, created_at
+		RETURNING id, file_id, directory_id, token, access_type, created_by, expires_at, password_hash, is_active, created_at
 	`, link.FileID, link.DirectoryID, link.Token, link.AccessType, link.CreatedBy, link.ExpiresAt, link.PasswordHash).Scan(
-		&l.ID, &l.FileID, &l.DirectoryID, &l.Token, &l.AccessType, &l.CreatedBy, &l.ExpiresAt, &l.PasswordHash, &l.CreatedAt,
+		&l.ID, &l.FileID, &l.DirectoryID, &l.Token, &l.AccessType, &l.CreatedBy, &l.ExpiresAt, &l.PasswordHash, &l.IsActive, &l.CreatedAt,
 	)
 	return l, err
 }
@@ -26,24 +26,24 @@ func (r *Repository) Create(ctx context.Context, db dbTX, link shareLinkRecord) 
 func (r *Repository) FindByID(ctx context.Context, db dbTX, id string) (shareLinkRecord, error) {
 	var l shareLinkRecord
 	err := db.QueryRow(ctx, `
-		SELECT id, file_id, directory_id, token, access_type, created_by, expires_at, password_hash, created_at
+		SELECT id, file_id, directory_id, token, access_type, created_by, expires_at, password_hash, is_active, created_at
 		FROM share_links WHERE id = $1
-	`, id).Scan(&l.ID, &l.FileID, &l.DirectoryID, &l.Token, &l.AccessType, &l.CreatedBy, &l.ExpiresAt, &l.PasswordHash, &l.CreatedAt)
+	`, id).Scan(&l.ID, &l.FileID, &l.DirectoryID, &l.Token, &l.AccessType, &l.CreatedBy, &l.ExpiresAt, &l.PasswordHash, &l.IsActive, &l.CreatedAt)
 	return l, err
 }
 
 func (r *Repository) FindByToken(ctx context.Context, db dbTX, token string) (shareLinkRecord, error) {
 	var l shareLinkRecord
 	err := db.QueryRow(ctx, `
-		SELECT id, file_id, directory_id, token, access_type, created_by, expires_at, password_hash, created_at
+		SELECT id, file_id, directory_id, token, access_type, created_by, expires_at, password_hash, is_active, created_at
 		FROM share_links WHERE token = $1
-	`, token).Scan(&l.ID, &l.FileID, &l.DirectoryID, &l.Token, &l.AccessType, &l.CreatedBy, &l.ExpiresAt, &l.PasswordHash, &l.CreatedAt)
+	`, token).Scan(&l.ID, &l.FileID, &l.DirectoryID, &l.Token, &l.AccessType, &l.CreatedBy, &l.ExpiresAt, &l.PasswordHash, &l.IsActive, &l.CreatedAt)
 	return l, err
 }
 
 func (r *Repository) FindByFileID(ctx context.Context, db dbTX, fileID string, limit int) ([]shareLinkRecord, error) {
 	query := `
-		SELECT id, file_id, directory_id, token, access_type, created_by, expires_at, password_hash, created_at
+		SELECT id, file_id, directory_id, token, access_type, created_by, expires_at, password_hash, is_active, created_at
 		FROM share_links WHERE file_id = $1
 		ORDER BY created_at DESC`
 	args := []any{fileID}
@@ -62,7 +62,7 @@ func (r *Repository) FindByFileID(ctx context.Context, db dbTX, fileID string, l
 	var links []shareLinkRecord
 	for rows.Next() {
 		var l shareLinkRecord
-		if err := rows.Scan(&l.ID, &l.FileID, &l.DirectoryID, &l.Token, &l.AccessType, &l.CreatedBy, &l.ExpiresAt, &l.PasswordHash, &l.CreatedAt); err != nil {
+		if err := rows.Scan(&l.ID, &l.FileID, &l.DirectoryID, &l.Token, &l.AccessType, &l.CreatedBy, &l.ExpiresAt, &l.PasswordHash, &l.IsActive, &l.CreatedAt); err != nil {
 			return nil, err
 		}
 		links = append(links, l)
@@ -72,7 +72,7 @@ func (r *Repository) FindByFileID(ctx context.Context, db dbTX, fileID string, l
 
 func (r *Repository) FindByDirectoryID(ctx context.Context, db dbTX, dirID string, limit int) ([]shareLinkRecord, error) {
 	query := `
-		SELECT id, file_id, directory_id, token, access_type, created_by, expires_at, password_hash, created_at
+		SELECT id, file_id, directory_id, token, access_type, created_by, expires_at, password_hash, is_active, created_at
 		FROM share_links WHERE directory_id = $1
 		ORDER BY created_at DESC`
 	args := []any{dirID}
@@ -91,7 +91,7 @@ func (r *Repository) FindByDirectoryID(ctx context.Context, db dbTX, dirID strin
 	var links []shareLinkRecord
 	for rows.Next() {
 		var l shareLinkRecord
-		if err := rows.Scan(&l.ID, &l.FileID, &l.DirectoryID, &l.Token, &l.AccessType, &l.CreatedBy, &l.ExpiresAt, &l.PasswordHash, &l.CreatedAt); err != nil {
+		if err := rows.Scan(&l.ID, &l.FileID, &l.DirectoryID, &l.Token, &l.AccessType, &l.CreatedBy, &l.ExpiresAt, &l.PasswordHash, &l.IsActive, &l.CreatedAt); err != nil {
 			return nil, err
 		}
 		links = append(links, l)
@@ -107,9 +107,9 @@ func (r *Repository) Update(ctx context.Context, db dbTX, id string, link shareL
 			expires_at = $3,
 			password_hash = $4
 		WHERE id = $1
-		RETURNING id, file_id, directory_id, token, access_type, created_by, expires_at, password_hash, created_at
+		RETURNING id, file_id, directory_id, token, access_type, created_by, expires_at, password_hash, is_active, created_at
 	`, id, link.AccessType, link.ExpiresAt, link.PasswordHash).Scan(
-		&l.ID, &l.FileID, &l.DirectoryID, &l.Token, &l.AccessType, &l.CreatedBy, &l.ExpiresAt, &l.PasswordHash, &l.CreatedAt,
+		&l.ID, &l.FileID, &l.DirectoryID, &l.Token, &l.AccessType, &l.CreatedBy, &l.ExpiresAt, &l.PasswordHash, &l.IsActive, &l.CreatedAt,
 	)
 	return l, err
 }
@@ -302,6 +302,88 @@ func (r *Repository) GetDirectoryFilesAfterCursor(ctx context.Context, db dbTX, 
 	return files, hasMore, nextCursor, nil
 }
 
+func (r *Repository) DeleteByFileIDs(ctx context.Context, db dbTX, fileIDs []string) (map[string]int, error) {
+	if len(fileIDs) == 0 {
+		return nil, nil
+	}
+
+	rows, err := db.Query(ctx, `DELETE FROM share_links WHERE file_id = ANY($1) RETURNING created_by`, fileIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	counts := make(map[string]int)
+	for rows.Next() {
+		var createdBy string
+		if err := rows.Scan(&createdBy); err != nil {
+			return nil, err
+		}
+		counts[createdBy]++
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return counts, nil
+}
+
+func (r *Repository) DeleteByDirectoryIDs(ctx context.Context, db dbTX, dirIDs []string) (map[string]int, error) {
+	if len(dirIDs) == 0 {
+		return nil, nil
+	}
+
+	rows, err := db.Query(ctx, `DELETE FROM share_links WHERE directory_id = ANY($1) RETURNING created_by`, dirIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	counts := make(map[string]int)
+	for rows.Next() {
+		var createdBy string
+		if err := rows.Scan(&createdBy); err != nil {
+			return nil, err
+		}
+		counts[createdBy]++
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return counts, nil
+}
+
+func (r *Repository) DecrementShareLinksCounts(ctx context.Context, db dbTX, counts map[string]int) error {
+	for userID, n := range counts {
+		if n <= 0 {
+			continue
+		}
+		if _, err := db.Exec(ctx, `
+			UPDATE users SET share_links_count = GREATEST(share_links_count - $1, 0), updated_at = now() WHERE id = $2
+		`, n, userID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *Repository) SetActiveByFileIDs(ctx context.Context, db dbTX, fileIDs []string, active bool) error {
+	if len(fileIDs) == 0 {
+		return nil
+	}
+	_, err := db.Exec(ctx, `UPDATE share_links SET is_active = $1 WHERE file_id = ANY($2)`, active, fileIDs)
+	return err
+}
+
+func (r *Repository) SetActiveByDirectoryIDs(ctx context.Context, db dbTX, dirIDs []string, active bool) error {
+	if len(dirIDs) == 0 {
+		return nil
+	}
+	_, err := db.Exec(ctx, `UPDATE share_links SET is_active = $1 WHERE directory_id = ANY($2)`, active, dirIDs)
+	return err
+}
+
 func (r *Repository) ListPublicShareLinks(ctx context.Context, db dbTX) ([]sitemapEntry, error) {
 	rows, err := db.Query(ctx, `
 		SELECT token,
@@ -309,6 +391,7 @@ func (r *Repository) ListPublicShareLinks(ctx context.Context, db dbTX) ([]sitem
 		       created_at
 		FROM share_links
 		WHERE access_type = 'public'
+		  AND is_active = true
 		  AND (expires_at IS NULL OR expires_at > NOW())
 		ORDER BY created_at DESC
 	`)

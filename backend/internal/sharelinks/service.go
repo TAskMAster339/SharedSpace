@@ -351,6 +351,10 @@ func (s *Service) Resolve(ctx context.Context, token, password string, authentic
 		return FileContentResponse{}, apperror.WrapInternal("поиск ссылки", err)
 	}
 
+	if !link.IsActive {
+		return FileContentResponse{}, apperror.NotFound("файл недоступен")
+	}
+
 	if link.FileID == nil {
 		return FileContentResponse{}, apperror.NotFound("неверный тип ссылки")
 	}
@@ -396,6 +400,10 @@ func (s *Service) ResolveDirectory(ctx context.Context, token, password string, 
 			return DirectoryContentResponse{}, apperror.NotFound("ссылка не найдена")
 		}
 		return DirectoryContentResponse{}, apperror.WrapInternal("поиск ссылки", err)
+	}
+
+	if !link.IsActive {
+		return DirectoryContentResponse{}, apperror.NotFound("директория недоступна")
 	}
 
 	if link.DirectoryID == nil {
@@ -589,6 +597,7 @@ func toResponse(l shareLinkRecord) ShareLinkResponse {
 		CreatedBy:   l.CreatedBy,
 		ExpiresAt:   expiresAt,
 		HasPassword: l.PasswordHash != nil && *l.PasswordHash != "",
+		IsActive:    l.IsActive,
 		CreatedAt:   l.CreatedAt,
 	}
 }

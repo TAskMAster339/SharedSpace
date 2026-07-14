@@ -3850,6 +3850,9 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "is_active": {
+                    "type": "boolean"
+                },
                 "token": {
                     "type": "string"
                 }

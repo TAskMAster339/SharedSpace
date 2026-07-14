@@ -33,6 +33,11 @@ type RepositoryInterface interface {
 	GetShareLinksStats(ctx context.Context, db dbTX, userID string) (count, quota int, err error)
 	IncrementShareLinksCount(ctx context.Context, db dbTX, userID string) error
 	DecrementShareLinksCount(ctx context.Context, db dbTX, userID string) error
+	SetActiveByFileIDs(ctx context.Context, db dbTX, fileIDs []string, active bool) error
+	SetActiveByDirectoryIDs(ctx context.Context, db dbTX, dirIDs []string, active bool) error
+	DeleteByFileIDs(ctx context.Context, db dbTX, fileIDs []string) (map[string]int, error)
+	DeleteByDirectoryIDs(ctx context.Context, db dbTX, dirIDs []string) (map[string]int, error)
+	DecrementShareLinksCounts(ctx context.Context, db dbTX, counts map[string]int) error
 	GetFileByID(ctx context.Context, db dbTX, fileID string) (fileRecord, error)
 	GetUsernameByID(ctx context.Context, db dbTX, userID string) (string, error)
 	GetDirectoryByID(ctx context.Context, db dbTX, dirID string) (directoryRecord, error)
