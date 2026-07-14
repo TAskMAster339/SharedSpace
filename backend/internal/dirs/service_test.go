@@ -140,12 +140,15 @@ type mockRepo struct {
 	updateResult      directoryRecord
 	updateErr         error
 
-	createName     string
-	createOwnerID  string
-	createParentID string
-	updateID       string
-	updateName     *string
-	updateParentID *string
+	createName        string
+	createOwnerID     string
+	createParentID    string
+	updateID          string
+	updateName        *string
+	updateParentID    *string
+	findByNameName    string
+	findByNameParent  string
+	findByNameOwnerID string
 
 	findByIDCallCount int
 
@@ -202,7 +205,10 @@ func (m *mockRepo) FindFiles(_ context.Context, _ dbTX, _ string) ([]fileRecord,
 	return m.files, m.filesErr
 }
 
-func (m *mockRepo) FindByNameAndParent(_ context.Context, _ dbTX, _, _, _ string) (directoryRecord, error) {
+func (m *mockRepo) FindByNameAndParent(_ context.Context, _ dbTX, name, parentID, ownerID string) (directoryRecord, error) {
+	m.findByNameName = name
+	m.findByNameParent = parentID
+	m.findByNameOwnerID = ownerID
 	return m.findByNameResult, m.findByNameErr
 }
 
@@ -679,15 +685,14 @@ func TestServiceUpdate(t *testing.T) {
 	t.Run("rename only", func(t *testing.T) {
 		now := time.Now()
 		repo := &mockRepo{
-			findByIDResult:  directoryRecord{ID: "dir-1", Name: "oldname", OwnerID: "user-1", ParentID: strPtr("parent-1"), Type: "regular", CreatedAt: now, UpdatedAt: now},
-			findByIDResult2: directoryRecord{ID: "parent-1", OwnerID: "user-1"},
-			findByNameErr:   pgx.ErrNoRows,
-			updateResult:    directoryRecord{ID: "dir-1", Name: "newname", OwnerID: "user-1", ParentID: strPtr("parent-1"), Type: "regular", CreatedAt: now, UpdatedAt: now},
+			findByIDResult: directoryRecord{ID: "dir-1", Name: "oldname", OwnerID: "owner-1", ParentID: strPtr("parent-1"), Type: "regular", CreatedAt: now, UpdatedAt: now},
+			findByNameErr:  pgx.ErrNoRows,
+			updateResult:   directoryRecord{ID: "dir-1", Name: "newname", OwnerID: "owner-1", ParentID: strPtr("parent-1"), Type: "regular", CreatedAt: now, UpdatedAt: now},
 		}
 		service, tx := newTestService(repo)
 
 		newName := "newname"
-		resp, err := service.Update(context.Background(), "user-1", "dir-1", UpdateDirectoryRequest{Name: &newName})
+		resp, err := service.Update(context.Background(), "admin-1", "dir-1", UpdateDirectoryRequest{Name: &newName})
 		if err != nil {
 			t.Fatalf("Update returned error: %v", err)
 		}
@@ -696,6 +701,12 @@ func TestServiceUpdate(t *testing.T) {
 		}
 		if repo.updateID != "dir-1" || repo.updateName == nil || *repo.updateName != "newname" {
 			t.Fatalf("unexpected update args: %+v", repo)
+		}
+		if repo.findByIDCallCount != 1 {
+			t.Fatalf("rename-only should not load parent directory, FindByID calls = %d", repo.findByIDCallCount)
+		}
+		if repo.findByNameOwnerID != "owner-1" {
+			t.Fatalf("duplicate check owner = %q, want owner-1", repo.findByNameOwnerID)
 		}
 		if tx.commitCount != 1 {
 			t.Fatalf("commit count = %d, want 1", tx.commitCount)
