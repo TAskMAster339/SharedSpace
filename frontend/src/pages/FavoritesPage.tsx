@@ -269,7 +269,13 @@ const FavoritesPage: React.FC = () => {
         />
       ) : (
         <div className="space-y-6">
-          <ItemGroup title="Файлы" viewMode={viewMode} hasMore={hasMore} isLoadingMore={isLoadingMore} sentinelRef={sentinelRef}>
+          <ItemGroup
+            title="Файлы"
+            viewMode={viewMode}
+            hasMore={hasMore}
+            isLoadingMore={isLoadingMore}
+            sentinelRef={sentinelRef}
+          >
             {files.map((file) =>
               viewMode === 'grid' ? (
                 <FileGridItem

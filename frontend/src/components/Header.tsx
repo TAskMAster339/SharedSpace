@@ -156,9 +156,7 @@ export const Header: React.FC = () => {
             </span>
           </Link>
         )}
-        {isAuthenticated && (
-          <NavArrows onBack={handleBack} onForward={handleForward} />
-        )}
+        {isAuthenticated && <NavArrows onBack={handleBack} onForward={handleForward} />}
 
         {!isAuthenticated && (
           <nav className="hidden md:flex items-center gap-6">

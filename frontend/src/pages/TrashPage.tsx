@@ -293,7 +293,9 @@ const TrashPage: React.FC = () => {
                         <Folder size={20} />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm text-theme-primary font-medium truncate">{item.name}</p>
+                        <p className="text-sm text-theme-primary font-medium truncate">
+                          {item.name}
+                        </p>
                         <p className="text-xs text-theme-muted">
                           Удалено {formatDate(item.deleted_at)} · {formatFileSize(item.size)}
                         </p>
@@ -353,7 +355,9 @@ const TrashPage: React.FC = () => {
                         <FileIconLucide size={20} />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm text-theme-primary font-medium truncate">{item.name}</p>
+                        <p className="text-sm text-theme-primary font-medium truncate">
+                          {item.name}
+                        </p>
                         <p className="text-xs text-theme-muted">
                           Удалено {formatDate(item.deleted_at)} · {formatFileSize(item.size)}
                         </p>
