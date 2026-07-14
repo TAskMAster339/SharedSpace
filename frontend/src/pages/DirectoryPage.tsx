@@ -912,6 +912,7 @@ const DirectoryPage: React.FC = () => {
   }
 
   const isEmpty = filteredSubdirectories.length === 0 && allFiles.length === 0;
+  const isSharedRootDirectory = isDirectlyShared;
 
   return (
     <div className="space-y-6 pb-10">
@@ -981,14 +982,24 @@ const DirectoryPage: React.FC = () => {
       </div>
 
       {/* Настройки директории / участники */}
-      {isSharedDirectory && (
+      {!isPersonal && (
         <div className="flex justify-end">
           <button
-            onClick={() => navigate(`/shared/${actualId}/settings`)}
+            onClick={() =>
+              navigate(
+                isSharedRootDirectory
+                  ? `/shared/${actualId}/settings`
+                  : `/directories/${actualId}/settings`,
+              )
+            }
             className="inline-flex items-center gap-2 px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium"
           >
             <Settings size={16} />
-            {perms?.invite ? 'Настройки директории' : 'Участники'}
+            {isSharedRootDirectory
+              ? perms?.invite
+                ? 'Настройки директории'
+                : 'Участники'
+              : 'Настройки папки'}
           </button>
         </div>
       )}

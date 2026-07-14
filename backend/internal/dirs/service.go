@@ -331,7 +331,7 @@ func (s *Service) Update(ctx context.Context, userID, dirID string, req UpdateDi
 		targetName = *req.Name
 	}
 
-	if targetParent != nil {
+	if req.ParentID != nil && targetParent != nil {
 		_, err := s.repo.FindByID(ctx, s.db, *targetParent)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
@@ -359,7 +359,7 @@ func (s *Service) Update(ctx context.Context, userID, dirID string, req UpdateDi
 		}
 	}
 
-	if _, err := s.repo.FindByNameAndParent(ctx, s.db, targetName, *targetParent, userID); err == nil {
+	if _, err := s.repo.FindByNameAndParent(ctx, s.db, targetName, *targetParent, dir.OwnerID); err == nil {
 		return DirectoryResponse{}, apperror.Conflict("директория с таким названием уже существует в целевом расположении")
 	} else if !errors.Is(err, pgx.ErrNoRows) {
 		return DirectoryResponse{}, apperror.WrapInternal("ошибка проверки дубликата имени", err)

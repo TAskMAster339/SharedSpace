@@ -14,6 +14,7 @@ import SharedDirListPage from './pages/SharedDirListPage';
 import DirectoryPage from './pages/DirectoryPage';
 import FileViewPage from './pages/FileViewPage';
 import SharedSettingsPage from './pages/SharedSettingsPage';
+import FolderSettingsPage from './pages/FolderSettingsPage';
 import InvitationsPage from './pages/InvitationsPage';
 import FavoritesPage from './pages/FavoritesPage';
 import TrashPage from './pages/TrashPage';
@@ -112,6 +113,7 @@ const App: React.FC = () => {
           {/* Страницы без DropZone */}
           <Route path="/settings" element={<ProfileSettingsPage />} />
           <Route path="/directories" element={<SharedDirListPage />} />
+          <Route path="/directories/:id/settings" element={<FolderSettingsPage />} />
           <Route path="/files/:id" element={<FileViewPage />} />
           <Route path="/shared/:id/settings" element={<SharedSettingsPage />} />
           <Route path="/invitations" element={<InvitationsPage />} />

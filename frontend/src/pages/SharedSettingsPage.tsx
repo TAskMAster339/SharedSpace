@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, UserPlus, Trash2, Users } from 'lucide-react';
+import { ArrowLeft, UserPlus, Trash2, Users, Pencil } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import {
   getSharedWithMeStats,
@@ -11,13 +11,14 @@ import {
   Member,
   SharingRole,
 } from '../api/sharing';
-import { softDeleteDirectory } from '../api/directories';
+import { renameDirectory, softDeleteDirectory } from '../api/directories';
 import { ApiError } from '../api/client';
 import { Card, CardHeader, CardTitle } from '../components/ui/Card';
 import { Avatar } from '../components/ui/Avatar';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
+import { RenameModal } from '../components/ui/RenameModal';
 import { EmptyState } from '../components/ui/EmptyState';
 import { useToastStore } from '../hooks/useToast';
 import { formatDateLong } from '../utils/format';
@@ -51,6 +52,9 @@ const SharedSettingsPage: React.FC = () => {
   const [inviteUsername, setInviteUsername] = useState('');
   const [isInviting, setIsInviting] = useState(false);
   const [inviteError, setInviteError] = useState('');
+
+  // Переименование директории
+  const [isRenameOpen, setIsRenameOpen] = useState(false);
 
   // Удаление директории
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -146,6 +150,15 @@ const SharedSettingsPage: React.FC = () => {
     }
   };
 
+  const handleRenameDirectory = async (newName: string) => {
+    if (!accessToken || !directoryId) return;
+
+    const oldName = dirName;
+    const updated = await renameDirectory(accessToken, directoryId, newName);
+    setDirName(updated.name);
+    showToast(`Директория «${oldName}» переименована в «${updated.name}»`, 'success');
+  };
+
   const handleDeleteDirectory = async () => {
     if (!accessToken || !directoryId) return;
 
@@ -217,6 +230,29 @@ const SharedSettingsPage: React.FC = () => {
           </button>
         )}
       </div>
+
+      {canManage && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Действия</CardTitle>
+          </CardHeader>
+          <button
+            type="button"
+            onClick={() => setIsRenameOpen(true)}
+            className="flex w-full items-center justify-between gap-4 py-1 text-left group"
+          >
+            <span>
+              <span className="block text-sm font-medium text-theme-primary">
+                Переименовать директорию
+              </span>
+              <span className="block text-xs text-theme-muted">
+                Изменить название общей директории.
+              </span>
+            </span>
+            <Pencil size={18} className="shrink-0 text-theme-muted group-hover:text-brand" />
+          </button>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
@@ -372,6 +408,14 @@ const SharedSettingsPage: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      <RenameModal
+        isOpen={isRenameOpen}
+        onClose={() => setIsRenameOpen(false)}
+        currentName={dirName}
+        type="directory"
+        onRename={handleRenameDirectory}
+      />
 
       {/* Подтверждение удаления директории */}
       <ConfirmModal
