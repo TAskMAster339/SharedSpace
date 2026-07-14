@@ -7,6 +7,15 @@ import { ApiError } from '../api/client';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 
+const AuthFieldError: React.FC<{ message?: string; reserve?: boolean }> = ({
+  message,
+  reserve = true,
+}) => (
+  <p className={`${reserve ? 'min-h-5 ' : ''}pt-1 pl-3 text-sm leading-4 text-danger`}>
+    {message || (reserve ? '\u00A0' : '')}
+  </p>
+);
+
 const MIN_PASSWORD_LENGTH = 8;
 
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
@@ -93,7 +102,7 @@ const RegisterPage: React.FC = () => {
       />
       <Card className="w-full max-w-md">
         <h2 className="text-xl font-semibold text-theme-primary mb-4 text-center">Регистрация</h2>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3" noValidate>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-2" noValidate>
           <div>
             <input
               type="text"
@@ -102,12 +111,10 @@ const RegisterPage: React.FC = () => {
               onChange={(e) => setUsername(e.target.value)}
               className="w-full px-3 py-2 rounded-theme-md border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
             />
-            {fieldErrors.username && (
-              <p className="text-danger text-sm mt-1 pl-3">{fieldErrors.username}</p>
-            )}
+            <AuthFieldError message={fieldErrors.username} />
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
             <div className="flex-1">
               <input
                 type="text"
@@ -136,54 +143,56 @@ const RegisterPage: React.FC = () => {
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-3 py-2 rounded-theme-md border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
             />
-            {fieldErrors.email && (
-              <p className="text-danger text-sm mt-1 pl-3">{fieldErrors.email}</p>
-            )}
+            <AuthFieldError message={fieldErrors.email} />
           </div>
 
-          <div className="relative">
-            <input
-              type={showPassword ? 'text' : 'password'}
-              placeholder="Пароль"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 pr-10 rounded-theme-md border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              tabIndex={-1}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-theme-muted hover:text-brand transition-colors"
-            >
-              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
-            {fieldErrors.password && (
-              <p className="text-danger text-sm mt-1 pl-3">{fieldErrors.password}</p>
-            )}
+          <div>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Пароль"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-3 py-2 pr-10 rounded-theme-md border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                tabIndex={-1}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-theme-muted hover:text-brand transition-colors"
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+            <AuthFieldError message={fieldErrors.password} />
           </div>
 
-          <div className="relative">
-            <input
-              type={showConfirmPassword ? 'text' : 'password'}
-              placeholder="Повторите пароль"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full px-3 py-2 pr-10 rounded-theme-md border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
-            />
-            <button
-              type="button"
-              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              tabIndex={-1}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-theme-muted hover:text-brand transition-colors"
-            >
-              {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
-            {fieldErrors.confirmPassword && (
-              <p className="text-danger text-sm mt-1 pl-3">{fieldErrors.confirmPassword}</p>
-            )}
+          <div>
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                placeholder="Повторите пароль"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full px-3 py-2 pr-10 rounded-theme-md border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                tabIndex={-1}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-theme-muted hover:text-brand transition-colors"
+              >
+                {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+            <AuthFieldError message={fieldErrors.confirmPassword} />
           </div>
 
-          {formError && <p className="text-danger text-sm">{formError}</p>}
+          {formError && (
+            <p className="rounded-theme-md border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
+              {formError}
+            </p>
+          )}
 
           <div>
             <label className="flex items-start gap-2 ml-3 text-sm text-theme-secondary cursor-pointer select-none">
@@ -205,9 +214,7 @@ const RegisterPage: React.FC = () => {
                 </a>
               </span>
             </label>
-            {fieldErrors.policy && (
-              <p className="text-danger text-sm mt-1 pl-3">{fieldErrors.policy}</p>
-            )}
+            <AuthFieldError message={fieldErrors.policy} reserve={Boolean(fieldErrors.policy)} />
           </div>
 
           <Button type="submit" disabled={isSubmitting || !policyAccepted} className="mt-1 w-full">
