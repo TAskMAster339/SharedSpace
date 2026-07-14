@@ -7,6 +7,10 @@ import { ApiError } from '../api/client';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 
+const AuthFieldError: React.FC<{ message?: string }> = ({ message }) => (
+  <p className="min-h-5 pt-1 pl-3 text-sm leading-4 text-danger">{message || '\u00A0'}</p>
+);
+
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -18,6 +22,7 @@ const LoginPage: React.FC = () => {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const passwordError = fieldErrors.password || formError;
 
   const validate = (): boolean => {
     const errors: Record<string, string> = {};
@@ -66,7 +71,7 @@ const LoginPage: React.FC = () => {
       />
       <Card className="w-full max-w-md">
         <h2 className="text-xl font-semibold text-theme-primary mb-4 text-center">Авторизация</h2>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3" noValidate>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-2" noValidate>
           <div>
             <input
               type="email"
@@ -75,33 +80,29 @@ const LoginPage: React.FC = () => {
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-3 py-2 rounded-theme-md border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
             />
-            {fieldErrors.email && (
-              <p className="text-danger text-sm mt-1 pl-3">{fieldErrors.email}</p>
-            )}
+            <AuthFieldError message={fieldErrors.email} />
           </div>
 
-          <div className="relative">
-            <input
-              type={showPassword ? 'text' : 'password'}
-              placeholder="Пароль"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 pr-10 rounded-theme-md border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              tabIndex={-1}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-theme-muted hover:text-brand transition-colors"
-            >
-              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
-            {fieldErrors.password && (
-              <p className="text-danger text-sm mt-1 pl-3">{fieldErrors.password}</p>
-            )}
+          <div>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Пароль"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-3 py-2 pr-10 rounded-theme-md border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                tabIndex={-1}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-theme-muted hover:text-brand transition-colors"
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+            <AuthFieldError message={passwordError} />
           </div>
-
-          {formError && <p className="text-danger text-sm">{formError}</p>}
 
           <Button type="submit" disabled={isSubmitting} className="mt-1 w-full">
             {isSubmitting ? 'Вход...' : 'Войти'}
