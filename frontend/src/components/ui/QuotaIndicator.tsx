@@ -33,7 +33,7 @@ export const QuotaIndicator: React.FC<QuotaIndicatorProps> = ({
           <Icon size={14} className="text-theme-muted group-hover:text-brand transition-colors" />
           {label}
         </span>
-        <span className="text-sm font-semibold tabular-nums">
+        <span className="shrink-0 whitespace-nowrap text-xs font-semibold tabular-nums">
           <span
             className={cn('transition-colors', atLimit ? 'text-danger' : 'group-hover:text-brand')}
           >
