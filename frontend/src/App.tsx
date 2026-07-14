@@ -16,6 +16,7 @@ import FileViewPage from './pages/FileViewPage';
 import SharedSettingsPage from './pages/SharedSettingsPage';
 import InvitationsPage from './pages/InvitationsPage';
 import FavoritesPage from './pages/FavoritesPage';
+import MyLinksPage from './pages/MyLinksPage';
 import TrashPage from './pages/TrashPage';
 import SharePage from './pages/SharePage';
 import SharedDirectoryPage from './pages/SharedDirectoryPage';
@@ -105,6 +106,14 @@ const App: React.FC = () => {
             element={
               <DropZoneWrapper>
                 <FavoritesPage />
+              </DropZoneWrapper>
+            }
+          />
+          <Route
+            path="/links"
+            element={
+              <DropZoneWrapper>
+                <MyLinksPage />
               </DropZoneWrapper>
             }
           />

@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'react';
-import { LayoutDashboard, Folder, Users, Star, Mail, Trash2 } from 'lucide-react';
+import { LayoutDashboard, Folder, Users, Star, Mail, Trash2, Link2 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useDirectoryStore, DirectorySection } from '../store/directoryStore';
 
@@ -54,6 +54,7 @@ export const useSidebarMenu = () => {
       { label: 'Общие директории', icon: Users, path: '/directories' },
       { label: 'Приглашения', icon: Mail, path: '/invitations' },
       { label: 'Избранное', icon: Star, path: '/favorites' },
+      { label: 'Мои ссылки', icon: Link2, path: '/links' },
       { label: 'Корзина', icon: Trash2, path: '/trash' },
     ],
     [personalStorageId],
