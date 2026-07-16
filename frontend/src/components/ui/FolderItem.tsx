@@ -10,6 +10,8 @@ interface FolderItemProps {
   to: string;
   className?: string;
   hasShareLinks?: boolean;
+  onClick?: (id: string) => void;
+  onContextMenu?: (e: React.MouseEvent, id: string) => void;
   onRename?: (id: string) => void;
   onMove?: (id: string) => void;
   onDelete?: (id: string) => void;
@@ -24,6 +26,8 @@ export const FolderItem: React.FC<FolderItemProps> = ({
   to,
   className,
   hasShareLinks = false,
+  onClick,
+  onContextMenu,
   onRename,
   onMove,
   onDelete,
@@ -80,10 +84,20 @@ export const FolderItem: React.FC<FolderItemProps> = ({
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
+      onClick={(e) => {
+        if (onClick) {
+          e.preventDefault();
+          onClick(id);
+        }
+      }}
       onContextMenu={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setContextMenuOpen({ x: e.clientX, y: e.clientY });
+        if (onContextMenu) {
+          onContextMenu(e, id);
+        } else {
+          e.preventDefault();
+          e.stopPropagation();
+          setContextMenuOpen({ x: e.clientX, y: e.clientY });
+        }
       }}
       className={cn(
         'group flex items-center justify-between gap-3 p-3 rounded-theme-md transition-colors cursor-pointer',

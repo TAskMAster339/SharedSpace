@@ -856,7 +856,7 @@ const DirectoryPage: React.FC = () => {
     }
 
     return (
-      <nav className="flex items-center gap-1 text-sm flex-wrap" aria-label="Breadcrumb">
+      <nav className="flex items-center gap-1 text-sm min-w-0 flex-wrap" aria-label="Breadcrumb">
         {breadcrumbs.map((crumb, index) => {
           const isLast = index === breadcrumbs.length - 1;
           const isFirst = index === 0;
@@ -865,36 +865,38 @@ const DirectoryPage: React.FC = () => {
             <React.Fragment key={crumb.id}>
               {!isFirst && <ChevronRight size={14} className="text-theme-muted shrink-0" />}
               {isLast ? (
-                <span className="text-theme-primary font-medium">
+                <span className={crumb.isRoot || crumb.isShared ? 'min-w-0' : ''}>
                   {crumb.isRoot ? (
-                    <span className="flex items-center gap-1">
-                      <Home size={14} />
-                      {crumb.name}
+                    <span className="flex items-center gap-1 truncate max-w-[120px] sm:max-w-[200px]">
+                      <Home size={14} className="shrink-0" />
+                      <span className="truncate">{crumb.name}</span>
                     </span>
                   ) : crumb.isShared ? (
-                    <span className="flex items-center gap-1">
-                      <Users size={14} className="text-brand" />
-                      {crumb.name}
+                    <span className="flex items-center gap-1 truncate max-w-[120px] sm:max-w-[200px]">
+                      <Users size={14} className="text-brand shrink-0" />
+                      <span className="truncate">{crumb.name}</span>
                     </span>
                   ) : (
-                    crumb.name
+                    <span className="text-theme-primary font-medium truncate max-w-[120px] sm:max-w-[200px] block">
+                      {crumb.name}
+                    </span>
                   )}
                 </span>
               ) : (
                 <button
                   onClick={() => handleBreadcrumbClick(crumb.id)}
                   disabled={isLoading}
-                  className={`text-theme-secondary transition-colors ${isLoading ? 'cursor-not-allowed opacity-50' : 'hover:text-brand cursor-pointer'}`}
+                  className={`text-theme-secondary transition-colors truncate max-w-[100px] sm:max-w-[150px] ${isLoading ? 'cursor-not-allowed opacity-50' : 'hover:text-brand cursor-pointer'}`}
                 >
                   {crumb.isRoot ? (
-                    <span className="flex items-center gap-1">
-                      <Home size={14} />
-                      {crumb.name}
+                    <span className="flex items-center gap-1 min-w-0">
+                      <Home size={14} className="shrink-0" />
+                      <span className="truncate">{crumb.name}</span>
                     </span>
                   ) : crumb.isShared ? (
-                    <span className="flex items-center gap-1">
-                      <Users size={14} />
-                      {crumb.name}
+                    <span className="flex items-center gap-1 min-w-0">
+                      <Users size={14} className="shrink-0" />
+                      <span className="truncate">{crumb.name}</span>
                     </span>
                   ) : (
                     crumb.name
@@ -946,11 +948,13 @@ const DirectoryPage: React.FC = () => {
         )}
 
         {/* Заголовок и кнопки действий */}
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold text-theme-primary flex items-center gap-2">
+        <div className="flex flex-col md:flex-row md:flex-wrap md:items-start justify-between gap-4">
+          <div className="min-w-0 w-full md:flex-1 md:min-w-[250px]">
+            <h1 className="text-2xl font-semibold text-theme-primary flex items-center gap-2 min-w-0">
               <Folder size={28} className="text-brand shrink-0" />
-              {isPersonal ? 'Личное хранилище' : directoryContents.name}
+              <span className="truncate min-w-0">
+                {isPersonal ? 'Личное хранилище' : directoryContents.name}
+              </span>
               {isSharedDirectory && (
                 <span className="text-xs font-medium px-2 py-0.5 bg-brand/10 text-brand rounded-full">
                   Общая
@@ -970,7 +974,7 @@ const DirectoryPage: React.FC = () => {
             </p>
             <div className="mt-2">{renderBreadcrumbs()}</div>
           </div>
-          <div className="flex items-center gap-2 mt-1 flex-wrap sm:flex-nowrap justify-end sm:justify-start">
+          <div className="flex items-center gap-2 mt-1 flex-wrap justify-end md:justify-start md:shrink-0">
             <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} />
             {perms?.upload && (
               <button

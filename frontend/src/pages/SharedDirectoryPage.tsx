@@ -9,7 +9,6 @@ import {
   EyeOff,
   Home,
   ChevronRight,
-  MoreVertical,
   Link as LinkIcon,
 } from 'lucide-react';
 import {
@@ -22,11 +21,16 @@ import { useAuthStore } from '../store/authStore';
 import SEOHead from '../components/SEOHead';
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 import { FileIcon } from '../components/ui/FileIcon';
+import { EmptyState } from '../components/ui/EmptyState';
 import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
 import { ItemGroup } from '../components/ui/ItemGroup';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { ContextMenu } from '../components/ui/ContextMenu';
+import { FolderGridItem } from '../components/ui/FolderGridItem';
+import { FolderItem } from '../components/ui/FolderItem';
+import { FileGridItem } from '../components/ui/FileGridItem';
+import { FileItem } from '../components/ui/FileItem';
 import { resolveFileIconType, getFileTypeDisplay } from '../utils/fileType';
 import { formatFileSize, formatDate } from '../utils/format';
 import { useToastStore } from '../hooks/useToast';
@@ -332,22 +336,6 @@ const SharedDirectoryPage: React.FC = () => {
     setContextMenuPos({ x: e.clientX, y: e.clientY });
   }, []);
 
-  const handleThreeDotsClick = useCallback(
-    (e: React.MouseEvent, id: string, type: 'file' | 'dir') => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (contextMenuItem?.id === id) {
-        setContextMenuItem(null);
-        setContextMenuPos(null);
-        return;
-      }
-      setContextMenuItem({ id, type });
-      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-      setContextMenuPos({ x: rect.right - 200, y: rect.bottom + 4 });
-    },
-    [contextMenuItem],
-  );
-
   const handlePasswordSubmit = async () => {
     if (!token || !password) return;
     setIsSubmittingPassword(true);
@@ -622,17 +610,31 @@ const SharedDirectoryPage: React.FC = () => {
         <div>
           <button
             onClick={handleGoBack}
-            className="inline-flex items-center gap-2 text-sm text-theme-secondary hover:text-theme-primary transition-colors"
+            className="inline-flex items-center gap-2 text-sm text-theme-secondary hover:text-theme-primary transition-colors max-w-full"
           >
-            <ArrowLeft size={16} />
-            Вернуться в {data.name}
+            <ArrowLeft size={16} className="shrink-0" />
+            <span className="truncate">Вернуться в {data.name}</span>
           </button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
             <div className="bg-theme-secondary border border-theme rounded-theme-lg p-4 shadow-theme-card">
-              <h2 className="text-sm font-medium text-theme-secondary mb-3">Предпросмотр</h2>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h2 className="text-sm font-medium text-theme-secondary">Предпросмотр</h2>
+                <button
+                  onClick={() => handleDownload(previewFile.url, previewFile.filename)}
+                  aria-label="Скачать файл"
+                  title="Скачать файл"
+                  className="group inline-flex h-9 w-9 items-center justify-center gap-2 rounded-theme-md border border-brand/30 bg-brand-light text-brand transition-colors hover:bg-brand hover:text-theme-on-brand sm:w-auto sm:px-3 sm:text-sm sm:font-medium"
+                >
+                  <Download
+                    size={16}
+                    className="group-hover:[animation:ss-bounce-up_0.4s_ease-in-out]"
+                  />
+                  <span className="hidden sm:inline">Скачать</span>
+                </button>
+              </div>
               {renderPreview()}
             </div>
           </div>
@@ -676,16 +678,6 @@ const SharedDirectoryPage: React.FC = () => {
                 </div>
               </div>
             </div>
-            <div className="bg-theme-secondary border border-theme rounded-theme-lg p-5 shadow-theme-card">
-              <h3 className="font-medium text-theme-primary mb-3">Действия</h3>
-              <button
-                onClick={() => handleDownload(previewFile.url, previewFile.filename)}
-                className="group w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-brand text-theme-on-brand hover:bg-brand-hover rounded-theme-md transition-colors text-sm font-medium"
-              >
-                <Download size={16} />
-                Скачать
-              </button>
-            </div>
           </div>
         </div>
       </div>
@@ -706,16 +698,16 @@ const SharedDirectoryPage: React.FC = () => {
       />
       {/* Title */}
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold text-theme-primary flex items-center gap-2">
+        <h1 className="text-2xl font-semibold text-theme-primary flex items-center gap-2 min-w-0">
           <Folder size={28} className="text-brand shrink-0" />
-          {data.name}
+          <span className="truncate">{data.name}</span>
         </h1>
         <p className="text-sm text-theme-muted mt-0.5">Директория, полученная по ссылке</p>
       </div>
 
       {/* Breadcrumbs */}
-      <nav className="flex items-center gap-1 text-sm flex-wrap" aria-label="Breadcrumb">
-        <div className="flex items-center gap-1 flex-wrap">
+      <nav className="flex items-center gap-1 text-sm min-w-0 flex-wrap" aria-label="Breadcrumb">
+        <div className="flex items-center gap-1 min-w-0 flex-wrap">
           <Link
             to={accessToken ? '/dashboard' : '/'}
             className="text-theme-secondary hover:text-brand transition-colors shrink-0"
@@ -752,10 +744,7 @@ const SharedDirectoryPage: React.FC = () => {
 
       {/* Empty state */}
       {allSubdirs.length === 0 && allFiles.length === 0 && (
-        <div className="text-center py-16 text-theme-muted">
-          <Folder size={48} className="mx-auto mb-3 opacity-40" />
-          <p className="text-sm">Директория пуста</p>
-        </div>
+        <EmptyState icon={<Folder size={24} />} description="Директория пуста" />
       )}
 
       {allSubdirs.length > 0 && (
@@ -768,51 +757,25 @@ const SharedDirectoryPage: React.FC = () => {
         >
           {allSubdirs.map((subdir) =>
             viewMode === 'grid' ? (
-              <div
+              <FolderGridItem
                 key={subdir.id}
-                onClick={() => handleNavigate(subdir.id)}
-                onContextMenu={(e) => handleContextMenu(e, subdir.id, 'dir')}
-                className="group relative flex flex-col items-center p-3 rounded-theme-md transition-colors cursor-pointer bg-theme-tertiary hover:bg-theme-hover border border-theme"
-              >
-                <div className="w-16 h-16 flex items-center justify-center text-theme-muted group-hover:text-brand transition-colors">
-                  <Folder size={40} strokeWidth={1.5} />
-                </div>
-                <p className="text-sm text-theme-primary font-medium text-center mt-2 truncate w-full max-w-[120px]">
-                  {subdir.name}
-                </p>
-                <button
-                  type="button"
-                  onClick={(e) => handleThreeDotsClick(e, subdir.id, 'dir')}
-                  className="absolute top-2 right-2 p-1.5 rounded-theme-sm text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors"
-                >
-                  <MoreVertical size={16} />
-                </button>
-              </div>
+                id={subdir.id}
+                name={subdir.name}
+                to="#"
+                onClick={handleNavigate}
+                onContextMenu={(e, id) => handleContextMenu(e, id, 'dir')}
+                onShare={(id) => handleCopyLink(id, 'dir')}
+              />
             ) : (
-              <div
+              <FolderItem
                 key={subdir.id}
-                onClick={() => handleNavigate(subdir.id)}
-                onContextMenu={(e) => handleContextMenu(e, subdir.id, 'dir')}
-                className="group flex items-center gap-3 w-full p-3 rounded-theme-md transition-colors cursor-pointer bg-theme-tertiary hover:bg-theme-hover border border-theme text-left"
-              >
-                <div className="p-2 bg-theme-secondary rounded-theme-sm shrink-0">
-                  <Folder
-                    size={20}
-                    className="text-theme-muted group-hover:text-brand transition-colors"
-                  />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm text-theme-primary font-medium truncate">{subdir.name}</p>
-                  <p className="text-xs text-theme-muted">Папка</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={(e) => handleThreeDotsClick(e, subdir.id, 'dir')}
-                  className="p-1.5 rounded-theme-sm text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors shrink-0"
-                >
-                  <MoreVertical size={18} />
-                </button>
-              </div>
+                id={subdir.id}
+                name={subdir.name}
+                to="#"
+                onClick={handleNavigate}
+                onContextMenu={(e, id) => handleContextMenu(e, id, 'dir')}
+                onShare={(id) => handleCopyLink(id, 'dir')}
+              />
             ),
           )}
         </ItemGroup>
@@ -829,57 +792,43 @@ const SharedDirectoryPage: React.FC = () => {
           {allFiles.map((file) => {
             const iconType = resolveFileIconType(file.mime_type, file.extension);
             return viewMode === 'grid' ? (
-              <div
+              <FileGridItem
                 key={file.id}
-                onClick={() => handleFileClick(file)}
-                onContextMenu={(e) => handleContextMenu(e, file.id, 'file')}
-                className="group relative flex flex-col items-center p-3 rounded-theme-md transition-colors cursor-pointer bg-theme-tertiary hover:bg-theme-hover border border-theme"
-              >
-                <div className="w-16 h-16 flex items-center justify-center transition-colors">
-                  <FileIcon
-                    type={iconType}
-                    size={40}
-                    className="group-hover:text-brand transition-colors"
-                  />
-                </div>
-                <p className="text-sm text-theme-primary font-medium text-center mt-2 truncate w-full max-w-[120px]">
-                  {file.filename}
-                </p>
-                <p className="text-xs text-theme-muted mt-0.5">{formatFileSize(file.size)}</p>
-                <button
-                  type="button"
-                  onClick={(e) => handleThreeDotsClick(e, file.id, 'file')}
-                  className="absolute top-2 right-2 p-1.5 rounded-theme-sm text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors"
-                >
-                  <MoreVertical size={16} />
-                </button>
-              </div>
+                id={file.id}
+                name={file.filename}
+                type={iconType}
+                to="#"
+                onClick={(id) => {
+                  const f = allFiles.find((x) => x.id === id);
+                  if (f) handleFileClick(f);
+                }}
+                onContextMenu={(e, id) => handleContextMenu(e, id, 'file')}
+                onShare={(id) => handleCopyLink(id, 'file')}
+                onDownload={(id) => {
+                  const f = allFiles.find((x) => x.id === id);
+                  if (f) handleDownload(f.url, f.filename);
+                }}
+              />
             ) : (
-              <div
+              <FileItem
                 key={file.id}
-                onClick={() => handleFileClick(file)}
-                onContextMenu={(e) => handleContextMenu(e, file.id, 'file')}
-                className="group flex items-center gap-3 w-full p-3 rounded-theme-md transition-colors cursor-pointer bg-theme-tertiary hover:bg-theme-hover border border-theme text-left"
-              >
-                <div className="p-2 bg-theme-secondary rounded-theme-sm shrink-0">
-                  <FileIcon
-                    type={iconType}
-                    size={20}
-                    className="text-theme-muted group-hover:text-brand transition-colors"
-                  />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm text-theme-primary font-medium truncate">{file.filename}</p>
-                  <p className="text-xs text-theme-muted">{formatFileSize(file.size)}</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={(e) => handleThreeDotsClick(e, file.id, 'file')}
-                  className="p-1.5 rounded-theme-sm text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors shrink-0"
-                >
-                  <MoreVertical size={18} />
-                </button>
-              </div>
+                id={file.id}
+                name={file.filename}
+                type={iconType}
+                date={formatDate(file.created_at)}
+                size={formatFileSize(file.size)}
+                to="#"
+                onClick={(id) => {
+                  const f = allFiles.find((x) => x.id === id);
+                  if (f) handleFileClick(f);
+                }}
+                onContextMenu={(e, id) => handleContextMenu(e, id, 'file')}
+                onShare={(id) => handleCopyLink(id, 'file')}
+                onDownload={(id) => {
+                  const f = allFiles.find((x) => x.id === id);
+                  if (f) handleDownload(f.url, f.filename);
+                }}
+              />
             );
           })}
         </ItemGroup>

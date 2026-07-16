@@ -16,6 +16,8 @@ interface FileItemProps {
   className?: string;
   isFavorite?: boolean;
   hasShareLinks?: boolean;
+  onClick?: (id: string) => void;
+  onContextMenu?: (e: React.MouseEvent, id: string) => void;
   onToggleFavorite?: (id: string) => void;
   onRename?: (id: string) => void;
   onDelete?: (id: string) => void;
@@ -36,6 +38,8 @@ export const FileItem: React.FC<FileItemProps> = ({
   className,
   isFavorite = false,
   hasShareLinks = false,
+  onClick,
+  onContextMenu,
   onToggleFavorite,
   onRename,
   onDelete,
@@ -53,10 +57,20 @@ export const FileItem: React.FC<FileItemProps> = ({
       to={to}
       draggable={!!onDragStart}
       onDragStart={(e) => onDragStart?.(e, id, name)}
+      onClick={(e) => {
+        if (onClick) {
+          e.preventDefault();
+          onClick(id);
+        }
+      }}
       onContextMenu={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setContextMenuOpen({ x: e.clientX, y: e.clientY });
+        if (onContextMenu) {
+          onContextMenu(e, id);
+        } else {
+          e.preventDefault();
+          e.stopPropagation();
+          setContextMenuOpen({ x: e.clientX, y: e.clientY });
+        }
       }}
       className={cn(
         'group flex items-center justify-between p-3 rounded-theme-md transition-colors cursor-pointer',

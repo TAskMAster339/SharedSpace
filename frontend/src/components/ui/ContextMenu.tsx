@@ -104,7 +104,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
           onClick={(e) => e.stopPropagation()}
           className="fixed inset-x-0 bottom-0 z-[61] w-full rounded-t-theme-xl border-t border-theme bg-theme-secondary shadow-theme-dropdown overflow-hidden pb-[env(safe-area-inset-bottom)]"
         >
-          <div className="flex justify-center py-2">
+          <div className="flex justify-center pt-1 pb-0.5">
             <span className="h-1 w-10 rounded-full bg-theme-muted/40" />
           </div>
           {children}

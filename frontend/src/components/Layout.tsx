@@ -13,6 +13,7 @@ import { cn } from '../utils/cn';
 
 const GITHUB_URL = 'https://github.com/TAskMAster339/SharedSpace';
 const PRIVACY_POLICY_URL = 'https://ifbest.org/politika-konfidentsialnosti';
+const CURRENT_YEAR = new Date().getFullYear();
 
 interface LayoutProps {
   children?: React.ReactNode;
@@ -40,13 +41,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             <div
               className={cn(
                 'max-w-6xl mx-auto',
-                isOnLandingPage ? 'p-0' : 'p-4 sm:p-6 pb-20 md:pb-6',
+                isOnLandingPage ? 'p-0' : 'p-4 sm:p-6 pb-24 md:pb-6',
               )}
             >
               {children ? children : <Outlet />}
               <div className="md:hidden mt-8 pt-4 border-t border-theme text-center">
                 <p className="text-xs text-theme-muted">
-                  &copy; {new Date().getFullYear()} SharedSpace. Учебный проект.
+                  &copy; {CURRENT_YEAR} SharedSpace. Учебный проект.
                 </p>
                 <div className="flex items-center justify-center gap-4 mt-2">
                   <a
