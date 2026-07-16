@@ -1,17 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import {
-  Folder,
-  Star,
-  LayoutDashboard,
-  Trash2,
-  MoreHorizontal,
-  Link2,
-  X,
-  Users,
-  Mail,
-  Share2,
-} from 'lucide-react';
+import { Folder, Star, LayoutDashboard, Trash2, MoreHorizontal, Link2, X } from 'lucide-react';
 import { StorageIndicator } from './ui/StorageIndicator';
 import { QuotaIndicator } from './ui/QuotaIndicator';
 import { cn } from '../utils/cn';
@@ -40,6 +29,20 @@ export const MobileBottomNav: React.FC = () => {
   const moreRef = useRef<HTMLDivElement>(null);
   const moreBtnRef = useRef<HTMLButtonElement>(null);
 
+  const moreItems = menuItems.filter((m) =>
+    ['Общие директории', 'Приглашения', 'Мои ссылки'].includes(m.label),
+  );
+
+  const isOnMorePage = moreItems.some((item) =>
+    isSidebarItemActive(item.path, currentPath, currentSection),
+  );
+
+  const activeMoreItem = moreItems.find((item) =>
+    isSidebarItemActive(item.path, currentPath, currentSection),
+  );
+
+  const isMoreActive = moreOpen || isOnMorePage;
+
   const findPath = (key: string): string => {
     const map: Record<string, string> = {
       storage: `/directories/${
@@ -56,13 +59,10 @@ export const MobileBottomNav: React.FC = () => {
   };
 
   const isTabActive = (key: string): boolean => {
+    if (isMoreActive) return false;
     const path = findPath(key);
     return isSidebarItemActive(path, currentPath, currentSection);
   };
-
-  const moreItems = menuItems.filter((m) =>
-    ['Общие директории', 'Приглашения', 'Мои ссылки'].includes(m.label),
-  );
 
   const closeMore = useCallback(() => setMoreOpen(false), []);
 
@@ -78,9 +78,11 @@ export const MobileBottomNav: React.FC = () => {
     return () => document.removeEventListener('mousedown', handlePointerDown);
   }, [moreOpen, closeMore]);
 
+  const MoreIcon = moreOpen ? X : activeMoreItem?.icon || MoreHorizontal;
+
   return (
     <>
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-theme-secondary border-t border-theme md:hidden">
+      <nav className="fixed bottom-4 left-4 right-4 z-40 bg-theme-secondary rounded-theme-xl shadow-theme-dropdown border border-theme md:hidden">
         <div className="flex items-center px-1 py-1">
           {MAIN_TABS.map((tab) => {
             const active = isTabActive(tab.key);
@@ -89,7 +91,7 @@ export const MobileBottomNav: React.FC = () => {
                 key={tab.key}
                 to={findPath(tab.key)}
                 className={cn(
-                  'flex-1 flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-theme-xl transition-colors min-w-0',
+                  'flex-1 flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-theme-xl transition-all duration-200 min-w-0',
                   active
                     ? `bg-theme-hover ${TAB_ACTIVE_COLORS[tab.key] || 'text-brand'}`
                     : 'text-theme-muted hover:text-theme-secondary hover:bg-theme-hover',
@@ -106,13 +108,13 @@ export const MobileBottomNav: React.FC = () => {
             ref={moreBtnRef}
             onClick={() => setMoreOpen((o) => !o)}
             className={cn(
-              'flex-1 flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-theme-xl transition-colors',
-              moreOpen
+              'flex-1 flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-theme-xl transition-all duration-200',
+              isMoreActive
                 ? 'text-brand bg-theme-hover'
                 : 'text-theme-muted hover:text-theme-secondary hover:bg-theme-hover',
             )}
           >
-            {moreOpen ? <X size={22} /> : <MoreHorizontal size={22} />}
+            <MoreIcon size={22} />
             <span className="text-[10px] font-medium leading-tight">Ещё</span>
           </button>
         </div>
@@ -127,7 +129,7 @@ export const MobileBottomNav: React.FC = () => {
       {moreOpen && (
         <div
           ref={moreRef}
-          className="fixed bottom-16 left-2 right-2 z-50 max-h-[60vh] overflow-y-auto bg-theme-secondary rounded-theme-xl shadow-theme-dropdown border border-theme py-3 md:hidden"
+          className="fixed bottom-20 left-2 right-2 z-50 max-h-[60vh] overflow-y-auto bg-theme-secondary rounded-theme-xl shadow-theme-dropdown border border-theme py-3 md:hidden"
         >
           {isLoading ? (
             <div className="flex items-center justify-center py-6">

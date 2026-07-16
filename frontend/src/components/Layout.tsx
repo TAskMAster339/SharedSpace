@@ -40,7 +40,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             <div
               className={cn(
                 'max-w-6xl mx-auto',
-                isOnLandingPage ? 'p-0' : 'p-4 sm:p-6 pb-16 md:pb-6',
+                isOnLandingPage ? 'p-0' : 'p-4 sm:p-6 pb-20 md:pb-6',
               )}
             >
               {children ? children : <Outlet />}
