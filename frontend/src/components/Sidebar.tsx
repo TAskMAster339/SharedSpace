@@ -73,7 +73,10 @@ export const Sidebar: React.FC = () => {
 
       {/* Индикаторы лимитов внизу */}
       <div className="mt-auto mb-6 pt-6 border-t border-theme space-y-3">
-        <div className="group bg-theme-tertiary hover:bg-theme-hover rounded-theme-xl px-4 py-2.5 shadow-theme-card border border-theme/50 transition-colors cursor-default">
+        <Link
+          to="/links"
+          className="group bg-theme-tertiary hover:bg-theme-hover rounded-theme-xl px-4 py-2.5 shadow-theme-card border border-theme/50 transition-colors cursor-pointer block"
+        >
           <QuotaIndicator
             fullWidth
             icon={Share2}
@@ -81,7 +84,7 @@ export const Sidebar: React.FC = () => {
             used={shareLinksUsed}
             total={shareLinksQuota}
           />
-        </div>
+        </Link>
         <div className="group bg-theme-tertiary hover:bg-theme-hover rounded-theme-xl p-4 shadow-theme-card border border-theme/50 transition-colors cursor-default">
           <StorageIndicator used={storageUsed} total={storageQuota} />
         </div>

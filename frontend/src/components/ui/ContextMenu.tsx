@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 interface ContextMenuProps {
@@ -21,6 +21,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
 }) => {
   const [isMobile, setIsMobile] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const [adjustedY, setAdjustedY] = useState<number | null>(null);
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 639px)');
@@ -55,10 +56,36 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
     };
   }, [isOpen, isMobile, onClose]);
 
+  useLayoutEffect(() => {
+    if (!isOpen || !position || isMobile || !menuRef.current) {
+      setAdjustedY(null);
+      return;
+    }
+
+    const menuHeight = menuRef.current.offsetHeight;
+    if (menuHeight === 0) return;
+
+    const spaceBelow = window.innerHeight - position.y - EDGE;
+
+    let y = position.y;
+
+    if (spaceBelow < menuHeight) {
+      const spaceAbove = position.y - EDGE;
+      if (spaceAbove >= menuHeight) {
+        y = position.y - menuHeight;
+      } else {
+        y = Math.max(EDGE, window.innerHeight - menuHeight - EDGE);
+      }
+    }
+
+    y = Math.max(EDGE, y);
+    setAdjustedY(y);
+  }, [isOpen, position, isMobile]);
+
   if (!isOpen || !position) return null;
 
-  const clampedX = Math.min(position.x, window.innerWidth - width - EDGE);
-  const clampedY = Math.min(position.y, window.innerHeight - EDGE);
+  const clampedX = Math.max(EDGE, Math.min(position.x, window.innerWidth - width - EDGE));
+  const displayY = adjustedY !== null ? adjustedY : Math.min(position.y, window.innerHeight - EDGE);
 
   return createPortal(
     isMobile ? (
@@ -90,7 +117,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
         onClick={(e) => e.stopPropagation()}
         style={{
           position: 'fixed',
-          top: clampedY,
+          top: displayY,
           left: clampedX,
           width,
           zIndex: 61,

@@ -50,7 +50,11 @@ export const MobileNavMenu: React.FC<MobileNavMenuProps> = ({ onNavigate }) => {
           })}
 
           <div className="mt-2 pt-3 px-1 border-t border-theme space-y-3">
-            <div className="group bg-theme-tertiary hover:bg-theme-hover rounded-theme-xl px-4 py-2.5 shadow-theme-card border border-theme/50 transition-colors">
+            <Link
+              to="/links"
+              onClick={onNavigate}
+              className="group bg-theme-tertiary hover:bg-theme-hover rounded-theme-xl px-4 py-2.5 shadow-theme-card border border-theme/50 transition-colors cursor-pointer block"
+            >
               <QuotaIndicator
                 fullWidth
                 icon={Link2}
@@ -58,7 +62,7 @@ export const MobileNavMenu: React.FC<MobileNavMenuProps> = ({ onNavigate }) => {
                 used={shareLinksUsed}
                 total={shareLinksQuota}
               />
-            </div>
+            </Link>
             <div className="group bg-theme-tertiary hover:bg-theme-hover rounded-theme-xl p-4 shadow-theme-card border border-theme/50 transition-colors">
               <StorageIndicator used={storageUsed} total={storageQuota} />
             </div>
