@@ -1,11 +1,10 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Settings, LogOut, ChevronDown, MoonStar, Menu, X, Search } from 'lucide-react';
+import { Settings, LogOut, ChevronDown, MoonStar, Search, X } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { useNavigationStore } from '../store/navigationStore';
 import { UserSearch } from './UserSearch';
-import { MobileNavMenu } from './MobileNavMenu';
 import { Avatar } from './ui/Avatar';
 import { NavArrows } from './ui/NavArrows';
 
@@ -18,13 +17,10 @@ export const Header: React.FC = () => {
   const location = useLocation();
   const isOnLandingPage = location.pathname === '/';
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const lastNameInitial = lastName ? lastName.charAt(0).toUpperCase() + '.' : '';
 
   const profileRef = useRef<HTMLDivElement>(null);
-  const mobileNavRef = useRef<HTMLDivElement>(null);
-  const mobileNavBtnRef = useRef<HTMLButtonElement>(null);
   const mobileSearchRef = useRef<HTMLDivElement>(null);
   const mobileSearchBtnRef = useRef<HTMLButtonElement>(null);
   const skipNextRef = useRef(false);
@@ -32,20 +28,13 @@ export const Header: React.FC = () => {
 
   // Закрытие выпадающих элементов по клику в любом месте вне их самих и их триггеров
   useEffect(() => {
-    if (!dropdownOpen && !mobileNavOpen && !mobileSearchOpen) return;
+    if (!dropdownOpen && !mobileSearchOpen) return;
 
     const handlePointerDown = (e: MouseEvent) => {
       const target = e.target as Node;
 
       if (dropdownOpen && !profileRef.current?.contains(target)) {
         setDropdownOpen(false);
-      }
-      if (
-        mobileNavOpen &&
-        !mobileNavRef.current?.contains(target) &&
-        !mobileNavBtnRef.current?.contains(target)
-      ) {
-        setMobileNavOpen(false);
       }
       if (
         mobileSearchOpen &&
@@ -58,7 +47,7 @@ export const Header: React.FC = () => {
 
     document.addEventListener('mousedown', handlePointerDown);
     return () => document.removeEventListener('mousedown', handlePointerDown);
-  }, [dropdownOpen, mobileNavOpen, mobileSearchOpen]);
+  }, [dropdownOpen, mobileSearchOpen]);
 
   // Track navigation history
   useEffect(() => {
@@ -87,13 +76,7 @@ export const Header: React.FC = () => {
     }
   }, [navigate]);
 
-  const toggleMobileNav = () => {
-    setMobileSearchOpen(false);
-    setMobileNavOpen((open) => !open);
-  };
-
   const toggleMobileSearch = () => {
-    setMobileNavOpen(false);
     setMobileSearchOpen((open) => !open);
   };
 
@@ -114,20 +97,6 @@ export const Header: React.FC = () => {
   return (
     <header className="h-16 bg-theme-secondary border-b border-theme flex items-center justify-between px-4 sm:px-6 sticky top-0 z-50 w-full shrink-0">
       <div className="flex items-center gap-2 sm:gap-8 min-w-0">
-        {isAuthenticated && (
-          <button
-            ref={mobileNavBtnRef}
-            onClick={toggleMobileNav}
-            className="p-2 -ml-2 rounded-theme-full hover:bg-theme-hover transition-colors shrink-0 md:hidden"
-            aria-label="Открыть меню"
-          >
-            {mobileNavOpen ? (
-              <X size={20} className="text-theme-secondary" />
-            ) : (
-              <Menu size={20} className="text-theme-secondary" />
-            )}
-          </button>
-        )}
         {isOnLandingPage ? (
           <div className="flex items-center gap-2 shrink-0">
             <img
@@ -251,12 +220,6 @@ export const Header: React.FC = () => {
               )}
             </div>
           </div>
-
-          {mobileNavOpen && (
-            <div ref={mobileNavRef} className="contents">
-              <MobileNavMenu onNavigate={() => setMobileNavOpen(false)} />
-            </div>
-          )}
 
           {mobileSearchOpen && (
             <div
