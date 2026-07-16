@@ -35,6 +35,13 @@ function buildLinksQuery(params?: LinksPaginationParams): string {
   return parts.length ? `?${parts.join('&')}` : '';
 }
 
+export function deleteAllLinks(accessToken: string): Promise<void> {
+  return apiRequest<void>('/links', {
+    method: 'DELETE',
+    token: accessToken,
+  });
+}
+
 export function getLinks(
   accessToken: string,
   pagination?: LinksPaginationParams,

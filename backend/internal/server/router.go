@@ -141,6 +141,7 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 			}
 
 			if shareLinksHandler != nil {
+				r.Delete("/links", middleware.AppError(shareLinksHandler.DeleteAll))
 				r.Patch("/share-links/{id}", middleware.AppError(shareLinksHandler.Update))
 				r.Delete("/share-links/{id}", middleware.AppError(shareLinksHandler.Delete))
 			}

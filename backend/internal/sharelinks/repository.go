@@ -354,6 +354,14 @@ func (r *Repository) DeleteByDirectoryIDs(ctx context.Context, db dbTX, dirIDs [
 	return counts, nil
 }
 
+func (r *Repository) DeleteByUserID(ctx context.Context, db dbTX, userID string) (int, error) {
+	tag, err := db.Exec(ctx, `DELETE FROM share_links WHERE created_by = $1`, userID)
+	if err != nil {
+		return 0, err
+	}
+	return int(tag.RowsAffected()), nil
+}
+
 func (r *Repository) DecrementShareLinksCounts(ctx context.Context, db dbTX, counts map[string]int) error {
 	for userID, n := range counts {
 		if n <= 0 {

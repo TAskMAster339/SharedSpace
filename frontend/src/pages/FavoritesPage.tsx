@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Star } from 'lucide-react';
+import { Star, List, LayoutGrid } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useDragDropStore } from '../store/dragDropStore';
 import { useFavorites } from '../hooks/useFavorites';
@@ -12,6 +12,7 @@ import { ItemGroup } from '../components/ui/ItemGroup';
 import { FileItem } from '../components/ui/FileItem';
 import { FileGridItem } from '../components/ui/FileGridItem';
 import { EmptyState } from '../components/ui/EmptyState';
+import { ContextMenu } from '../components/ui/ContextMenu';
 import { ConvertModal } from '../components/ui/ConvertModal';
 import { RenameModal } from '../components/ui/RenameModal';
 import { ShareLinkModal } from '../components/ui/ShareLinkModal';
@@ -58,6 +59,7 @@ const FavoritesPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     return (localStorage.getItem('directoryViewMode') as ViewMode) || 'grid';
   });
+  const [pageMenuPos, setPageMenuPos] = useState<{ x: number; y: number } | null>(null);
 
   const loadFavorites = useCallback(async () => {
     if (!accessToken) return;
@@ -115,6 +117,16 @@ const FavoritesPage: React.FC = () => {
 
   const handleViewModeChange = useCallback((mode: ViewMode) => {
     setViewMode(mode);
+  }, []);
+
+  const handlePageContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setPageMenuPos({ x: e.clientX, y: e.clientY });
+  }, []);
+
+  const closePageMenu = useCallback(() => {
+    setPageMenuPos(null);
   }, []);
 
   const handleToggleFavorite = async (fileId: string) => {
@@ -246,7 +258,10 @@ const FavoritesPage: React.FC = () => {
   );
 
   return (
-    <div className="space-y-6 pb-10">
+    <div
+      className="flex flex-col min-h-[calc(100vh-12rem)] space-y-6 pb-10"
+      onContextMenu={handlePageContextMenu}
+    >
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-theme-primary mb-1 flex items-center gap-2">
@@ -340,6 +355,32 @@ const FavoritesPage: React.FC = () => {
           </ItemGroup>
         </div>
       )}
+
+      <div className="flex-1" />
+
+      <ContextMenu isOpen={!!pageMenuPos} onClose={closePageMenu} position={pageMenuPos}>
+        <div>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              handleViewModeChange(viewMode === 'grid' ? 'list' : 'grid');
+              closePageMenu();
+            }}
+            className="group flex items-center gap-3 w-full px-4 py-3.5 text-base text-theme-secondary hover:bg-theme-hover transition-colors sm:px-3 sm:py-2 sm:text-sm"
+          >
+            {viewMode === 'grid' ? (
+              <List size={18} className="group-hover:text-brand transition-colors sm:size-4" />
+            ) : (
+              <LayoutGrid
+                size={18}
+                className="group-hover:text-brand transition-colors sm:size-4"
+              />
+            )}
+            Сменить вид
+          </button>
+        </div>
+      </ContextMenu>
 
       {convertFileData && (
         <ConvertModal

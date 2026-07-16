@@ -15,14 +15,22 @@ import (
 )
 
 type mockService struct {
-	createFn     func(string, string, CreateShareLinkRequest) (ShareLinkResponse, error)
-	createDirFn  func(string, string, CreateShareLinkRequest) (ShareLinkResponse, error)
-	listByFileFn func(string, string, int) ([]ShareLinkResponse, error)
-	listByDirFn  func(string, string, int) ([]ShareLinkResponse, error)
-	updateFn     func(string, string, UpdateShareLinkRequest) (ShareLinkResponse, error)
-	deleteFn     func(string, string) error
-	resolveFn    func(string, string, bool) (FileContentResponse, error)
-	resolveDirFn func(string, string, bool, ResolveDirectoryParams) (DirectoryContentResponse, error)
+	createFn          func(string, string, CreateShareLinkRequest) (ShareLinkResponse, error)
+	createDirFn       func(string, string, CreateShareLinkRequest) (ShareLinkResponse, error)
+	listByFileFn      func(string, string, int) ([]ShareLinkResponse, error)
+	listByDirFn       func(string, string, int) ([]ShareLinkResponse, error)
+	updateFn          func(string, string, UpdateShareLinkRequest) (ShareLinkResponse, error)
+	deleteFn          func(string, string) error
+	deleteAllByUserFn func(string) error
+	resolveFn         func(string, string, bool) (FileContentResponse, error)
+	resolveDirFn      func(string, string, bool, ResolveDirectoryParams) (DirectoryContentResponse, error)
+}
+
+func (m *mockService) DeleteAllByUser(_ context.Context, userID string) error {
+	if m.deleteAllByUserFn != nil {
+		return m.deleteAllByUserFn(userID)
+	}
+	return nil
 }
 
 func (m *mockService) Create(_ context.Context, userID, fileID string, req CreateShareLinkRequest) (ShareLinkResponse, error) {

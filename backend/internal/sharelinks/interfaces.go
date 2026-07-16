@@ -17,6 +17,7 @@ type ServiceInterface interface {
 	ListByDirectory(ctx context.Context, userID, dirID string, limit int) ([]ShareLinkResponse, error)
 	Update(ctx context.Context, userID, linkID string, req UpdateShareLinkRequest) (ShareLinkResponse, error)
 	Delete(ctx context.Context, userID, linkID string) error
+	DeleteAllByUser(ctx context.Context, userID string) error
 	Resolve(ctx context.Context, token, password string, authenticated bool) (FileContentResponse, error)
 	ResolveDirectory(ctx context.Context, token, password string, authenticated bool, params ResolveDirectoryParams) (DirectoryContentResponse, error)
 	ListPublicShareLinks(ctx context.Context) ([]sitemapEntry, error)
@@ -37,6 +38,7 @@ type RepositoryInterface interface {
 	SetActiveByDirectoryIDs(ctx context.Context, db dbTX, dirIDs []string, active bool) error
 	DeleteByFileIDs(ctx context.Context, db dbTX, fileIDs []string) (map[string]int, error)
 	DeleteByDirectoryIDs(ctx context.Context, db dbTX, dirIDs []string) (map[string]int, error)
+	DeleteByUserID(ctx context.Context, db dbTX, userID string) (int, error)
 	DecrementShareLinksCounts(ctx context.Context, db dbTX, counts map[string]int) error
 	GetFileByID(ctx context.Context, db dbTX, fileID string) (fileRecord, error)
 	GetUsernameByID(ctx context.Context, db dbTX, userID string) (string, error)

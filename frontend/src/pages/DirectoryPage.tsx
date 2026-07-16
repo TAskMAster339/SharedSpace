@@ -970,7 +970,7 @@ const DirectoryPage: React.FC = () => {
             </p>
             <div className="mt-2">{renderBreadcrumbs()}</div>
           </div>
-          <div className="flex items-center gap-2 shrink-0 mt-1 flex-wrap">
+          <div className="flex items-center gap-2 mt-1 flex-wrap sm:flex-nowrap justify-end sm:justify-start">
             <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} />
             {perms?.upload && (
               <button
@@ -981,7 +981,7 @@ const DirectoryPage: React.FC = () => {
                 className="inline-flex items-center gap-2 px-4 py-2 bg-brand text-theme-on-brand rounded-theme-md hover:bg-brand-hover transition-colors text-sm font-medium"
               >
                 <Upload size={16} />
-                Загрузить
+                <span className="hidden sm:inline">Загрузить</span>
               </button>
             )}
             {perms?.create_folder && (
@@ -990,7 +990,7 @@ const DirectoryPage: React.FC = () => {
                 className="inline-flex items-center gap-2 px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium"
               >
                 <FolderPlus size={16} />
-                Новая папка
+                <span className="hidden sm:inline">Новая папка</span>
               </button>
             )}
             {!isPersonal && (
@@ -1002,14 +1002,16 @@ const DirectoryPage: React.FC = () => {
                       : `/directories/${actualId}/settings`,
                   )
                 }
-                className="inline-flex items-center gap-2 px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium ml-auto"
+                className="inline-flex items-center gap-2 px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium"
               >
                 <Settings size={16} />
-                {isSharedRootDirectory
-                  ? perms?.invite
-                    ? 'Настройки папки'
-                    : 'Участники'
-                  : 'Настройки папки'}
+                <span className="hidden sm:inline">
+                  {isSharedRootDirectory
+                    ? perms?.invite
+                      ? 'Настройки папки'
+                      : 'Участники'
+                    : 'Настройки папки'}
+                </span>
               </button>
             )}
           </div>

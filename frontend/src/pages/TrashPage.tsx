@@ -1,12 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import {
-  Trash2,
-  Folder,
-  File as FileIconLucide,
-  RotateCcw,
-  MoreVertical,
-  Trash as TrashIcon,
-} from 'lucide-react';
+import { Trash2, Folder, File, RotateCcw, MoreVertical, List, LayoutGrid } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 import { getTrashList, clearAllTrash, TrashItem, TrashPaginationParams } from '../api/trash';
@@ -54,6 +47,7 @@ const TrashPage: React.FC = () => {
 
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
+  const [pageMenuPos, setPageMenuPos] = useState<{ x: number; y: number } | null>(null);
 
   const loadTrash = useCallback(
     async (pagination?: TrashPaginationParams, append = false) => {
@@ -174,6 +168,18 @@ const TrashPage: React.FC = () => {
     setMenuPosition(null);
   }, []);
 
+  const handlePageContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setActiveMenuId(null);
+    setMenuPosition(null);
+    setPageMenuPos({ x: e.clientX, y: e.clientY });
+  }, []);
+
+  const closePageMenu = useCallback(() => {
+    setPageMenuPos(null);
+  }, []);
+
   const handleClearAll = async () => {
     if (!accessToken) return;
 
@@ -221,7 +227,10 @@ const TrashPage: React.FC = () => {
   const activeItem = activeMenuId ? items.find((i) => i.id === activeMenuId) : null;
 
   return (
-    <div className="space-y-6 pb-10">
+    <div
+      className="flex flex-col min-h-[calc(100vh-12rem)] space-y-6 pb-10"
+      onContextMenu={handlePageContextMenu}
+    >
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-theme-primary mb-1 flex items-center gap-2">
@@ -230,7 +239,7 @@ const TrashPage: React.FC = () => {
           </h1>
           <p className="text-sm text-theme-muted">Удалённые файлы и папки</p>
         </div>
-        <div className="flex items-center gap-2 shrink-0 mt-1">
+        <div className="flex items-center gap-2 mt-1 flex-wrap sm:flex-nowrap justify-end sm:justify-start">
           <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} />
           {items.length > 0 && (
             <Button
@@ -241,7 +250,8 @@ const TrashPage: React.FC = () => {
               }}
               className="flex items-center gap-1.5 !bg-danger !text-white hover:brightness-110 transition-all duration-200"
             >
-              <TrashIcon size={16} /> Очистить корзину
+              <Trash2 size={16} />
+              <span className="hidden sm:inline">Очистить корзину</span>
             </Button>
           )}
         </div>
@@ -327,7 +337,7 @@ const TrashPage: React.FC = () => {
                     className="group flex flex-col items-center p-3 rounded-theme-md transition-colors cursor-pointer relative min-w-0 bg-theme-tertiary hover:bg-theme-hover border border-theme"
                   >
                     <div className="w-16 h-16 flex items-center justify-center text-theme-muted group-hover:text-brand transition-colors">
-                      <FileIconLucide size={40} strokeWidth={1.5} />
+                      <File size={40} strokeWidth={1.5} />
                     </div>
                     <p className="text-sm text-theme-primary font-medium text-center mt-2 truncate w-full max-w-[120px]">
                       {item.name}
@@ -352,7 +362,7 @@ const TrashPage: React.FC = () => {
                   >
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card shrink-0 text-theme-muted group-hover:text-brand transition-colors">
-                        <FileIconLucide size={20} />
+                        <File size={20} />
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm text-theme-primary font-medium truncate">
@@ -390,6 +400,8 @@ const TrashPage: React.FC = () => {
           )}
         </div>
       )}
+
+      <div className="flex-1" />
 
       <ContextMenu
         isOpen={activeMenuId !== null && menuPosition !== null}
@@ -430,6 +442,45 @@ const TrashPage: React.FC = () => {
             </button>
           </div>
         )}
+      </ContextMenu>
+
+      <ContextMenu isOpen={!!pageMenuPos} onClose={closePageMenu} position={pageMenuPos}>
+        <div>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              handleViewModeChange(viewMode === 'grid' ? 'list' : 'grid');
+              closePageMenu();
+            }}
+            className="group flex items-center gap-3 w-full px-4 py-3.5 text-base text-theme-secondary hover:bg-theme-hover transition-colors sm:px-3 sm:py-2 sm:text-sm"
+          >
+            {viewMode === 'grid' ? (
+              <List size={18} className="group-hover:text-brand transition-colors sm:size-4" />
+            ) : (
+              <LayoutGrid
+                size={18}
+                className="group-hover:text-brand transition-colors sm:size-4"
+              />
+            )}
+            Сменить вид
+          </button>
+          {items.length > 0 && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                closePageMenu();
+                setClearAllError('');
+                setIsClearAllOpen(true);
+              }}
+              className="group flex items-center gap-3 w-full px-4 py-3.5 text-base text-theme-secondary hover:bg-theme-hover transition-colors sm:px-3 sm:py-2 sm:text-sm"
+            >
+              <Trash2 size={18} className="group-hover:text-red-500 transition-colors" />
+              Очистить корзину
+            </button>
+          )}
+        </div>
       </ContextMenu>
 
       <ConfirmModal

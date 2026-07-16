@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Share2 } from 'lucide-react';
+import { Share2, Trash2, List, LayoutGrid } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useFavorites } from '../hooks/useFavorites';
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
-import { getLinks, LinkItem } from '../api/mylinks';
+import { getLinks, deleteAllLinks, LinkItem } from '../api/mylinks';
 import { softDeleteFile, restoreFile, renameFile, getFileContentUrl } from '../api/files';
 import { softDeleteDirectory, restoreDirectory, renameDirectory } from '../api/directories';
 import { ApiError } from '../api/client';
@@ -14,6 +14,8 @@ import { FolderGridItem } from '../components/ui/FolderGridItem';
 import { FileItem } from '../components/ui/FileItem';
 import { FileGridItem } from '../components/ui/FileGridItem';
 import { EmptyState } from '../components/ui/EmptyState';
+import { Button } from '../components/ui/Button';
+import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { RenameModal } from '../components/ui/RenameModal';
 import { ShareLinkModal } from '../components/ui/ShareLinkModal';
 import { ConvertModal } from '../components/ui/ConvertModal';
@@ -21,6 +23,7 @@ import { useFileConversion } from '../hooks/useFileConversion';
 import { formatFileSize, formatDate } from '../utils/format';
 import { useToastStore } from '../hooks/useToast';
 import { resolveFileIconType } from '../utils/fileType';
+import { ContextMenu } from '../components/ui/ContextMenu';
 
 const PAGE_LIMIT = 20;
 
@@ -60,6 +63,10 @@ const MyLinksPage: React.FC = () => {
     extension?: string;
     type: 'file' | 'directory';
   } | null>(null);
+
+  const [isDeleteAllModalOpen, setIsDeleteAllModalOpen] = useState(false);
+  const [isDeletingAll, setIsDeletingAll] = useState(false);
+  const [pageMenuPos, setPageMenuPos] = useState<{ x: number; y: number } | null>(null);
 
   const loadLinks = useCallback(async () => {
     if (!accessToken) return;
@@ -260,8 +267,37 @@ const MyLinksPage: React.FC = () => {
     [accessToken, renameState, showToast, loadLinks],
   );
 
+  const handleDeleteAllLinks = useCallback(async () => {
+    if (!accessToken) return;
+    setIsDeletingAll(true);
+    try {
+      await deleteAllLinks(accessToken);
+      refreshUser();
+      await loadLinks();
+      showToast('Все ссылки удалены', 'success');
+    } catch {
+      showToast('Не удалось удалить ссылки', 'error');
+    } finally {
+      setIsDeletingAll(false);
+      setIsDeleteAllModalOpen(false);
+    }
+  }, [accessToken, refreshUser, loadLinks, showToast]);
+
+  const handlePageContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setPageMenuPos({ x: e.clientX, y: e.clientY });
+  }, []);
+
+  const closePageMenu = useCallback(() => {
+    setPageMenuPos(null);
+  }, []);
+
   return (
-    <div className="space-y-6 pb-10">
+    <div
+      className="flex flex-col min-h-[calc(100vh-12rem)] space-y-6 pb-10"
+      onContextMenu={handlePageContextMenu}
+    >
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-theme-primary mb-1 flex items-center gap-2">
@@ -270,7 +306,19 @@ const MyLinksPage: React.FC = () => {
           </h1>
           <p className="text-sm text-theme-muted">Файлы и папки, на которые созданы ссылки</p>
         </div>
-        <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} className="mt-1" />
+        <div className="flex items-center gap-2 mt-1 flex-wrap sm:flex-nowrap justify-end sm:justify-start">
+          <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} />
+          {items.length > 0 && (
+            <Button
+              variant="danger"
+              onClick={() => setIsDeleteAllModalOpen(true)}
+              className="flex items-center gap-1.5 !bg-danger !text-white hover:brightness-110 transition-all duration-200"
+            >
+              <Trash2 size={16} />
+              <span className="hidden sm:inline">Удалить все ссылки</span>
+            </Button>
+          )}
+        </div>
       </div>
 
       {isLoading ? (
@@ -436,6 +484,61 @@ const MyLinksPage: React.FC = () => {
           onRename={handleRename}
         />
       )}
+
+      <div className="flex-1" />
+
+      <ContextMenu isOpen={!!pageMenuPos} onClose={closePageMenu} position={pageMenuPos}>
+        <div>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              handleViewModeChange(viewMode === 'grid' ? 'list' : 'grid');
+              closePageMenu();
+            }}
+            className="group flex items-center gap-3 w-full px-4 py-3.5 text-base text-theme-secondary hover:bg-theme-hover transition-colors sm:px-3 sm:py-2 sm:text-sm"
+          >
+            {viewMode === 'grid' ? (
+              <List size={18} className="group-hover:text-brand transition-colors sm:size-4" />
+            ) : (
+              <LayoutGrid
+                size={18}
+                className="group-hover:text-brand transition-colors sm:size-4"
+              />
+            )}
+            Сменить вид
+          </button>
+          {items.length > 0 && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                closePageMenu();
+                setIsDeleteAllModalOpen(true);
+              }}
+              className="group flex items-center gap-3 w-full px-4 py-3.5 text-base text-theme-secondary hover:bg-theme-hover transition-colors sm:px-3 sm:py-2 sm:text-sm"
+            >
+              <Trash2 size={18} className="group-hover:text-red-500 transition-colors" />
+              Удалить все ссылки
+            </button>
+          )}
+        </div>
+      </ContextMenu>
+
+      <ConfirmModal
+        isOpen={isDeleteAllModalOpen}
+        onClose={() => !isDeletingAll && setIsDeleteAllModalOpen(false)}
+        onConfirm={handleDeleteAllLinks}
+        variant="danger"
+        confirmLabel="Удалить все"
+        isConfirming={isDeletingAll}
+        title={<h3 className="font-medium text-theme-primary">Удалить все ссылки?</h3>}
+        description={
+          <p className="text-sm text-theme-secondary">
+            Все ваши ссылки будут безвозвратно удалены. Файлы и папки останутся нетронутыми.
+          </p>
+        }
+      />
 
       {shareModalState && accessToken && (
         <ShareLinkModal
