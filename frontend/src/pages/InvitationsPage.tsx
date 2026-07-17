@@ -5,6 +5,7 @@ import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 import { getMyInvitations, acceptInvitation, declineInvitation, Invitation } from '../api/sharing';
 import { ApiError } from '../api/client';
 import { EmptyState } from '../components/ui/EmptyState';
+import SEOHead from '../components/SEOHead';
 import { Button } from '../components/ui/Button';
 import { Avatar } from '../components/ui/Avatar';
 
@@ -91,6 +92,10 @@ const InvitationsPage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-10">
+      <SEOHead
+        title="Приглашения"
+        description="Принимайте или отклоняйте приглашения к совместной работе."
+      />
       <div>
         <h1 className="text-2xl font-semibold text-theme-primary mb-1 flex items-center gap-2">
           <Mail size={28} className="text-brand shrink-0" />

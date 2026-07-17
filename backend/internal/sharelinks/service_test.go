@@ -33,6 +33,7 @@ type mockRepo struct {
 	deleteByFileIDsFn      func([]string) (map[string]int, error)
 	deleteByDirectoryIDsFn func([]string) (map[string]int, error)
 	decrementCountsFn      func(map[string]int) error
+	deleteByUserIDFn       func(string) (int, error)
 }
 
 func (m *mockRepo) Create(_ context.Context, _ dbTX, link shareLinkRecord) (shareLinkRecord, error) {
@@ -136,6 +137,12 @@ func (m *mockRepo) DecrementShareLinksCounts(_ context.Context, _ dbTX, counts m
 		return m.decrementCountsFn(counts)
 	}
 	return nil
+}
+func (m *mockRepo) DeleteByUserID(_ context.Context, _ dbTX, userID string) (int, error) {
+	if m.deleteByUserIDFn != nil {
+		return m.deleteByUserIDFn(userID)
+	}
+	return 0, nil
 }
 func (m *mockRepo) SetActiveByFileIDs(_ context.Context, _ dbTX, _ []string, _ bool) error {
 	return nil

@@ -11,6 +11,7 @@ import (
 	"sharedspace/internal/favorites"
 	"sharedspace/internal/files"
 	"sharedspace/internal/middleware"
+	"sharedspace/internal/mylinks"
 	"sharedspace/internal/sharelinks"
 	"sharedspace/internal/sharing"
 	"sharedspace/internal/swagger"
@@ -27,7 +28,7 @@ func healthHandler(w http.ResponseWriter, _ *http.Request) {
 	json.NewEncoder(w).Encode(HealthResponse{Status: "ok"})
 }
 
-func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHandler *users.Handler, dirsHandler *dirs.Handler, filesHandler *files.Handler, sharingHandler *sharing.Handler, favoritesHandler *favorites.Handler, trashHandler *trash.Handler, shareLinksHandler *sharelinks.Handler) http.Handler {
+func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHandler *users.Handler, dirsHandler *dirs.Handler, filesHandler *files.Handler, sharingHandler *sharing.Handler, favoritesHandler *favorites.Handler, trashHandler *trash.Handler, shareLinksHandler *sharelinks.Handler, mylinksHandler *mylinks.Handler) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Recover)
@@ -135,7 +136,12 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 				})
 			}
 
+			if mylinksHandler != nil {
+				r.Get("/links", middleware.AppError(mylinksHandler.List))
+			}
+
 			if shareLinksHandler != nil {
+				r.Delete("/links", middleware.AppError(shareLinksHandler.DeleteAll))
 				r.Patch("/share-links/{id}", middleware.AppError(shareLinksHandler.Update))
 				r.Delete("/share-links/{id}", middleware.AppError(shareLinksHandler.Delete))
 			}

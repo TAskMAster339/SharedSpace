@@ -19,6 +19,7 @@ import { Button } from '../components/ui/Button';
 import { Card, CardHeader, CardTitle } from '../components/ui/Card';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { Avatar } from '../components/ui/Avatar';
+import SEOHead from '../components/SEOHead';
 import { cn } from '../utils/cn';
 
 const MIN_PASSWORD_LENGTH = 8;
@@ -271,6 +272,10 @@ const ProfileSettingsPage: React.FC = () => {
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-0 space-y-5 pb-10">
+      <SEOHead
+        title={user?.username ? `Настройки — ${user.username}` : 'Настройки профиля'}
+        description="Редактирование личных данных, смена пароля и управление аккаунтом."
+      />
       {/* Hero-блок профиля */}
       <Card className="relative overflow-hidden p-0">
         <div className="h-20 sm:h-24 bg-gradient-to-r from-brand to-brand-dark" />

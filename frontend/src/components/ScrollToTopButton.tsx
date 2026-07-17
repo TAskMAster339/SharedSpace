@@ -33,7 +33,7 @@ export const ScrollToTopButton: React.FC = () => {
       onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
       aria-label="Наверх"
       className={cn(
-        'fixed right-6 z-40 w-11 h-11 flex items-center justify-center rounded-theme-full bg-brand text-theme-on-brand shadow-theme-dropdown hover:bg-brand-hover transition-all duration-200 animate-in fade-in',
+        'fixed right-6 z-40 w-11 h-11 flex items-center justify-center rounded-theme-full bg-brand text-theme-on-brand shadow-theme-dropdown hover:bg-brand-hover transition-all duration-200 animate-in fade-in hidden md:flex',
         nearBottom ? 'bottom-24' : 'bottom-6',
       )}
     >

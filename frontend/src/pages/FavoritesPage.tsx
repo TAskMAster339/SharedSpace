@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Star } from 'lucide-react';
+import { Star, List, LayoutGrid } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useDragDropStore } from '../store/dragDropStore';
 import { useFavorites } from '../hooks/useFavorites';
@@ -7,15 +7,19 @@ import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 import { getFavorites, FavoriteFile } from '../api/favorites';
 import { softDeleteFile, restoreFile, renameFile, getFileContentUrl } from '../api/files';
 import { ApiError } from '../api/client';
-import { Card, CardHeader, CardTitle } from '../components/ui/Card';
+import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
+import { ItemGroup } from '../components/ui/ItemGroup';
 import { FileItem } from '../components/ui/FileItem';
+import { FileGridItem } from '../components/ui/FileGridItem';
 import { EmptyState } from '../components/ui/EmptyState';
+import { ContextMenu } from '../components/ui/ContextMenu';
 import { ConvertModal } from '../components/ui/ConvertModal';
 import { RenameModal } from '../components/ui/RenameModal';
 import { ShareLinkModal } from '../components/ui/ShareLinkModal';
 import { useFileConversion } from '../hooks/useFileConversion';
 import { formatFileSize, formatDate } from '../utils/format';
 import { useToastStore } from '../hooks/useToast';
+import SEOHead from '../components/SEOHead';
 import { resolveFileIconType } from '../utils/fileType';
 
 const PAGE_LIMIT = 20;
@@ -53,6 +57,10 @@ const FavoritesPage: React.FC = () => {
   const [cursor, setCursor] = useState<string | undefined>();
   const [hasMore, setHasMore] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    return (localStorage.getItem('directoryViewMode') as ViewMode) || 'grid';
+  });
+  const [pageMenuPos, setPageMenuPos] = useState<{ x: number; y: number } | null>(null);
 
   const loadFavorites = useCallback(async () => {
     if (!accessToken) return;
@@ -103,6 +111,24 @@ const FavoritesPage: React.FC = () => {
   }, [accessToken, cursor, isLoadingMore]);
 
   const { sentinelRef } = useInfiniteScroll(loadMore, hasMore && !isLoadingMore);
+
+  useEffect(() => {
+    localStorage.setItem('directoryViewMode', viewMode);
+  }, [viewMode]);
+
+  const handleViewModeChange = useCallback((mode: ViewMode) => {
+    setViewMode(mode);
+  }, []);
+
+  const handlePageContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setPageMenuPos({ x: e.clientX, y: e.clientY });
+  }, []);
+
+  const closePageMenu = useCallback(() => {
+    setPageMenuPos(null);
+  }, []);
 
   const handleToggleFavorite = async (fileId: string) => {
     if (!accessToken) return;
@@ -233,74 +259,130 @@ const FavoritesPage: React.FC = () => {
   );
 
   return (
-    <div className="space-y-6 pb-10">
-      <div>
-        <h1 className="text-2xl font-semibold text-theme-primary mb-1 flex items-center gap-2">
-          <Star size={28} className="text-yellow-400 shrink-0" />
-          Избранное
-        </h1>
-        <p className="text-sm text-theme-muted">Файлы, отмеченные звёздочкой</p>
+    <div
+      className="flex flex-col min-h-[calc(100vh-12rem)] space-y-6 pb-10"
+      onContextMenu={handlePageContextMenu}
+    >
+      <SEOHead title="Избранное" description="Файлы, отмеченные звёздочкой для быстрого доступа." />
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-theme-primary mb-1 flex items-center gap-2">
+            <Star size={28} className="text-yellow-400 shrink-0" />
+            Избранное
+          </h1>
+          <p className="text-sm text-theme-muted">Файлы, отмеченные звёздочкой</p>
+        </div>
+        <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} className="mt-1" />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Файлы</CardTitle>
-        </CardHeader>
-
-        {isLoading ? (
-          <p className="text-sm text-theme-muted py-8 text-center">Загрузка...</p>
-        ) : error ? (
-          <p className="text-danger text-sm py-8 text-center">{error}</p>
-        ) : files.length === 0 ? (
-          <EmptyState
-            icon={<Star size={24} />}
-            description="Здесь появятся файлы, отмеченные звёздочкой."
-          />
-        ) : (
-          <div className="space-y-4">
-            {files.map((file) => (
-              <FileItem
-                key={file.id}
-                id={file.id}
-                name={file.filename}
-                date={formatDate(file.favorited_at)}
-                size={formatFileSize(file.size)}
-                type={resolveFileIconType(file.mime_type, file.extension)}
-                to={`/files/${file.id}`}
-                isFavorite={true}
-                hasShareLinks={itemsWithLinks.has(file.id)}
-                onToggleFavorite={handleToggleFavorite}
-                onRename={(id) => {
-                  const f = files.find((d) => d.id === id);
-                  if (f)
-                    setRenameState({
-                      id: f.id,
-                      name: f.filename,
-                      extension: f.extension,
-                      type: 'file',
-                    });
-                }}
-                onDelete={handleDeleteFile}
-                onDownload={handleDownload}
-                onConvert={handleConvert}
-                onShare={(id) => {
-                  const f = files.find((d) => d.id === id);
-                  if (f) setShareModalState({ itemId: f.id, itemName: f.filename });
-                }}
-              />
-            ))}
-            {hasMore && (
-              <div className="flex items-center justify-center py-2">
-                {isLoadingMore ? (
-                  <div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <div ref={sentinelRef} className="h-1" />
-                )}
-              </div>
+      {isLoading ? (
+        <p className="text-sm text-theme-muted py-8 text-center">Загрузка...</p>
+      ) : error ? (
+        <p className="text-danger text-sm py-8 text-center">{error}</p>
+      ) : files.length === 0 ? (
+        <EmptyState
+          icon={<Star size={24} />}
+          description="Здесь появятся файлы, отмеченные звёздочкой."
+        />
+      ) : (
+        <div className="space-y-6">
+          <ItemGroup
+            title="Файлы"
+            viewMode={viewMode}
+            hasMore={hasMore}
+            isLoadingMore={isLoadingMore}
+            sentinelRef={sentinelRef}
+          >
+            {files.map((file) =>
+              viewMode === 'grid' ? (
+                <FileGridItem
+                  key={file.id}
+                  id={file.id}
+                  name={file.filename}
+                  type={resolveFileIconType(file.mime_type, file.extension)}
+                  to={`/files/${file.id}`}
+                  isFavorite={true}
+                  hasShareLinks={itemsWithLinks.has(file.id)}
+                  onToggleFavorite={handleToggleFavorite}
+                  onRename={(id) => {
+                    const f = files.find((d) => d.id === id);
+                    if (f)
+                      setRenameState({
+                        id: f.id,
+                        name: f.filename,
+                        extension: f.extension,
+                        type: 'file',
+                      });
+                  }}
+                  onDelete={handleDeleteFile}
+                  onDownload={handleDownload}
+                  onConvert={handleConvert}
+                  onShare={(id) => {
+                    const f = files.find((d) => d.id === id);
+                    if (f) setShareModalState({ itemId: f.id, itemName: f.filename });
+                  }}
+                />
+              ) : (
+                <FileItem
+                  key={file.id}
+                  id={file.id}
+                  name={file.filename}
+                  date={formatDate(file.favorited_at)}
+                  size={formatFileSize(file.size)}
+                  type={resolveFileIconType(file.mime_type, file.extension)}
+                  to={`/files/${file.id}`}
+                  isFavorite={true}
+                  hasShareLinks={itemsWithLinks.has(file.id)}
+                  onToggleFavorite={handleToggleFavorite}
+                  onRename={(id) => {
+                    const f = files.find((d) => d.id === id);
+                    if (f)
+                      setRenameState({
+                        id: f.id,
+                        name: f.filename,
+                        extension: f.extension,
+                        type: 'file',
+                      });
+                  }}
+                  onDelete={handleDeleteFile}
+                  onDownload={handleDownload}
+                  onConvert={handleConvert}
+                  onShare={(id) => {
+                    const f = files.find((d) => d.id === id);
+                    if (f) setShareModalState({ itemId: f.id, itemName: f.filename });
+                  }}
+                />
+              ),
             )}
-          </div>
-        )}
-      </Card>
+          </ItemGroup>
+        </div>
+      )}
+
+      <div className="flex-1" />
+
+      <ContextMenu isOpen={!!pageMenuPos} onClose={closePageMenu} position={pageMenuPos}>
+        <div>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              handleViewModeChange(viewMode === 'grid' ? 'list' : 'grid');
+              closePageMenu();
+            }}
+            className="group flex items-center gap-3 w-full px-4 py-3.5 text-base text-theme-secondary hover:bg-theme-hover transition-colors sm:px-3 sm:py-2 sm:text-sm"
+          >
+            {viewMode === 'grid' ? (
+              <List size={18} className="group-hover:text-brand transition-colors sm:size-4" />
+            ) : (
+              <LayoutGrid
+                size={18}
+                className="group-hover:text-brand transition-colors sm:size-4"
+              />
+            )}
+            Сменить вид
+          </button>
+        </div>
+      </ContextMenu>
 
       {convertFileData && (
         <ConvertModal

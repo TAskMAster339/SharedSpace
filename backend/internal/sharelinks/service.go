@@ -342,6 +342,30 @@ func (s *Service) Delete(ctx context.Context, userID, linkID string) error {
 	return nil
 }
 
+func (s *Service) DeleteAllByUser(ctx context.Context, userID string) error {
+	tx, err := s.beginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return apperror.WrapInternal("начало транзакции", err)
+	}
+	defer tx.Rollback(ctx)
+
+	count, err := s.repo.DeleteByUserID(ctx, tx, userID)
+	if err != nil {
+		return apperror.WrapInternal("удаление всех ссылок", err)
+	}
+
+	if count > 0 {
+		if err := s.repo.DecrementShareLinksCounts(ctx, tx, map[string]int{userID: count}); err != nil {
+			return apperror.WrapInternal("обновление счётчика ссылок", err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return apperror.WrapInternal("сохранение", err)
+	}
+	return nil
+}
+
 func (s *Service) Resolve(ctx context.Context, token, password string, authenticated bool) (FileContentResponse, error) {
 	link, err := s.repo.FindByToken(ctx, s.db, token)
 	if err != nil {

@@ -17,6 +17,7 @@ import SharedSettingsPage from './pages/SharedSettingsPage';
 import FolderSettingsPage from './pages/FolderSettingsPage';
 import InvitationsPage from './pages/InvitationsPage';
 import FavoritesPage from './pages/FavoritesPage';
+import MyLinksPage from './pages/MyLinksPage';
 import TrashPage from './pages/TrashPage';
 import SharePage from './pages/SharePage';
 import SharedDirectoryPage from './pages/SharedDirectoryPage';
@@ -116,6 +117,7 @@ const App: React.FC = () => {
           <Route path="/directories/:id/settings" element={<FolderSettingsPage />} />
           <Route path="/files/:id" element={<FileViewPage />} />
           <Route path="/shared/:id/settings" element={<SharedSettingsPage />} />
+          <Route path="/links" element={<MyLinksPage />} />
           <Route path="/invitations" element={<InvitationsPage />} />
           <Route path="/trash" element={<TrashPage />} />
         </Route>

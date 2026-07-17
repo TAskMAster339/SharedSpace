@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Star, Trash2, Link2 } from 'lucide-react';
+import { Star, Trash2, Share2 } from 'lucide-react';
 import { StorageIndicator } from './ui/StorageIndicator';
 import { QuotaIndicator } from './ui/QuotaIndicator';
 import { cn } from '../utils/cn';
@@ -52,13 +52,17 @@ export const Sidebar: React.FC = () => {
                     ? 'text-yellow-400'
                     : isActive && item.icon === Trash2
                       ? 'text-red-500'
-                      : isActive
-                        ? 'text-brand'
-                        : item.icon === Star
-                          ? 'text-theme-muted group-hover:text-yellow-400'
-                          : item.icon === Trash2
-                            ? 'text-theme-muted group-hover:text-red-500'
-                            : 'text-theme-muted group-hover:text-brand',
+                      : isActive && item.icon === Share2
+                        ? 'text-green-500'
+                        : isActive
+                          ? 'text-brand'
+                          : item.icon === Star
+                            ? 'text-theme-muted group-hover:text-yellow-400'
+                            : item.icon === Trash2
+                              ? 'text-theme-muted group-hover:text-red-500'
+                              : item.icon === Share2
+                                ? 'text-theme-muted group-hover:text-green-500'
+                                : 'text-theme-muted group-hover:text-brand',
                 )}
               />
               {item.label}
@@ -69,15 +73,18 @@ export const Sidebar: React.FC = () => {
 
       {/* Индикаторы лимитов внизу */}
       <div className="mt-auto mb-6 pt-6 border-t border-theme space-y-3">
-        <div className="group bg-theme-tertiary hover:bg-theme-hover rounded-theme-xl px-4 py-2.5 shadow-theme-card border border-theme/50 transition-colors cursor-default">
+        <Link
+          to="/links"
+          className="group bg-theme-tertiary hover:bg-theme-hover rounded-theme-xl px-4 py-2.5 shadow-theme-card border border-theme/50 transition-colors cursor-pointer block"
+        >
           <QuotaIndicator
             fullWidth
-            icon={Link2}
+            icon={Share2}
             label="Ссылки"
             used={shareLinksUsed}
             total={shareLinksQuota}
           />
-        </div>
+        </Link>
         <div className="group bg-theme-tertiary hover:bg-theme-hover rounded-theme-xl p-4 shadow-theme-card border border-theme/50 transition-colors cursor-default">
           <StorageIndicator used={storageUsed} total={storageQuota} />
         </div>

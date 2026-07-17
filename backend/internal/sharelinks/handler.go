@@ -246,6 +246,26 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) error {
 	return writeJSON(w, http.StatusOK, map[string]string{"message": "ссылка удалена"})
 }
 
+// DeleteAll удаляет все ссылки текущего пользователя.
+// @Summary Delete all share links
+// @Tags share-links
+// @Security BearerAuth
+// @Success 200 {object} map[string]string
+// @Failure 401 {object} apperror.Response
+// @Router /api/v1/links [delete]
+func (h *Handler) DeleteAll(w http.ResponseWriter, r *http.Request) error {
+	claims, err := h.extractClaims(r)
+	if err != nil {
+		return err
+	}
+
+	if err := h.service.DeleteAllByUser(r.Context(), claims.UserID); err != nil {
+		return err
+	}
+
+	return writeJSON(w, http.StatusOK, map[string]string{"message": "все ссылки удалены"})
+}
+
 // Resolve opens a file via a share link token.
 // @Summary Open file by share link
 // @Tags share-links

@@ -18,6 +18,7 @@ import { ContextMenu } from '../components/ui/ContextMenu';
 import { QuotaIndicator } from '../components/ui/QuotaIndicator';
 import { RenameModal } from '../components/ui/RenameModal';
 import { useToastStore } from '../hooks/useToast';
+import SEOHead from '../components/SEOHead';
 import { useSharedDirectoriesStore } from '../store/sharedDirectoriesStore';
 
 interface DirectoryCardData extends SharedDirectoryWithStats {
@@ -185,6 +186,10 @@ const SharedDirListPage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-10">
+      <SEOHead
+        title="Общие директории"
+        description="Совместные пространства для работы с командой."
+      />
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-theme-primary mb-1 flex items-center gap-2">

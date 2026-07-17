@@ -294,20 +294,20 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
                 <React.Fragment key={crumb.id}>
                   {!isFirst && <ChevronRight size={14} className="text-theme-muted shrink-0" />}
                   {isLast ? (
-                    <span className="text-theme-primary font-medium">
-                      <span className="flex items-center gap-1">
+                    <span className="text-theme-primary font-medium truncate">
+                      <span className="flex items-center gap-1 min-w-0">
                         <FolderIcon isRoot={crumb.isRoot} isShared={crumb.isShared} />
-                        {crumb.name}
+                        <span className="truncate">{crumb.name}</span>
                       </span>
                     </span>
                   ) : (
                     <button
                       onClick={() => navigateTo(crumb.id)}
-                      className="text-theme-secondary hover:text-brand transition-colors hover:underline cursor-pointer"
+                      className="text-theme-secondary hover:text-brand transition-colors hover:underline cursor-pointer truncate"
                     >
-                      <span className="flex items-center gap-1">
+                      <span className="flex items-center gap-1 min-w-0">
                         <FolderIcon isRoot={crumb.isRoot} isShared={crumb.isShared} />
-                        {crumb.name}
+                        <span className="truncate">{crumb.name}</span>
                       </span>
                     </button>
                   )}
@@ -390,7 +390,7 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
                       )}
                     >
                       <FolderIcon isRoot={dir.isRoot} isShared={dir.isShared} />
-                      <span className="flex-1 text-sm font-medium">
+                      <span className="flex-1 text-sm font-medium truncate">
                         {dir.name}
                         {isCurrent && ' (текущая)'}
                       </span>
@@ -435,7 +435,7 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
                         size={18}
                         className={isSelected ? 'text-brand' : 'text-theme-muted'}
                       />
-                      <span className="flex-1 text-sm font-medium">
+                      <span className="flex-1 text-sm font-medium truncate">
                         {folder.name}
                         {isCurrent && ' (текущая)'}
                       </span>
