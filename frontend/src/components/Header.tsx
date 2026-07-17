@@ -224,7 +224,7 @@ export const Header: React.FC = () => {
           {mobileSearchOpen && (
             <div
               ref={mobileSearchRef}
-              className="absolute left-0 right-0 top-16 mx-3 z-40 md:hidden"
+              className="absolute left-0 right-0 top-20 mx-3 z-40 md:hidden"
             >
               <UserSearch className="w-full ring-2 ring-brand/50 rounded-theme-full" />
             </div>

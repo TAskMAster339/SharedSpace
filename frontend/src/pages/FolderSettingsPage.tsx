@@ -14,6 +14,7 @@ import { RenameModal } from '../components/ui/RenameModal';
 import { ShareLinkModal } from '../components/ui/ShareLinkModal';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { useToastStore } from '../hooks/useToast';
+import SEOHead from '../components/SEOHead';
 
 const FolderSettingsPage: React.FC = () => {
   const { id: directoryId } = useParams<{ id: string }>();
@@ -92,6 +93,7 @@ const FolderSettingsPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
+        <SEOHead title="Настройки папки" description="Загрузка..." />
         <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -100,6 +102,7 @@ const FolderSettingsPage: React.FC = () => {
   if (error || !directory) {
     return (
       <div className="space-y-6 pb-10">
+        <SEOHead title="Настройки папки" description={error || 'Папка не найдена.'} />
         <button
           onClick={() => navigate(-1)}
           className="inline-flex items-center gap-2 text-sm text-theme-secondary hover:text-theme-primary transition-colors"
@@ -119,6 +122,10 @@ const FolderSettingsPage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-10">
+      <SEOHead
+        title={directory?.name ? `Настройки — ${directory.name}` : 'Настройки папки'}
+        description={`Управление настройками папки — ${directory?.name || 'папка'}.`}
+      />
       <button
         onClick={() => navigate(`/directories/${directory.id}`)}
         className="inline-flex items-center gap-2 text-sm text-theme-secondary hover:text-theme-primary transition-colors"

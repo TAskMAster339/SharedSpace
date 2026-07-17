@@ -22,6 +22,7 @@ import { ConvertModal } from '../components/ui/ConvertModal';
 import { useFileConversion } from '../hooks/useFileConversion';
 import { formatFileSize, formatDate } from '../utils/format';
 import { useToastStore } from '../hooks/useToast';
+import SEOHead from '../components/SEOHead';
 import { resolveFileIconType } from '../utils/fileType';
 import { ContextMenu } from '../components/ui/ContextMenu';
 
@@ -298,6 +299,10 @@ const MyLinksPage: React.FC = () => {
       className="flex flex-col min-h-[calc(100vh-12rem)] space-y-6 pb-10"
       onContextMenu={handlePageContextMenu}
     >
+      <SEOHead
+        title="Мои ссылки"
+        description="Файлы и папки, на которые созданы публичные ссылки."
+      />
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-theme-primary mb-1 flex items-center gap-2">

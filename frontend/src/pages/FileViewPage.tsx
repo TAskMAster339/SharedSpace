@@ -24,6 +24,7 @@ import { ShareLinkModal } from '../components/ui/ShareLinkModal';
 import { resolveFileIconType, getFileTypeDisplay } from '../utils/fileType';
 import { formatFileSize, formatDate } from '../utils/format';
 import { useToastStore } from '../hooks/useToast';
+import SEOHead from '../components/SEOHead';
 import { cn } from '../utils/cn';
 
 // Определяем типы файлов для предпросмотра
@@ -526,6 +527,7 @@ const FileViewPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
+        <SEOHead title="Загрузка..." description="Загрузка информации о файле..." />
         <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -534,6 +536,7 @@ const FileViewPage: React.FC = () => {
   if (error || !file) {
     return (
       <div className="py-12 text-center">
+        <SEOHead title="Файл недоступен" description={error || 'Файл не найден'} />
         <p className="text-theme-secondary">{error || 'Файл не найден'}</p>
         <Button variant="secondary" onClick={() => navigate('/dashboard')} className="mt-4">
           Вернуться на дашборд
@@ -547,6 +550,11 @@ const FileViewPage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-10">
+      <SEOHead
+        title={file.filename}
+        description={`Файл · ${formatFileSize(file.size)} · ${file.mime_type}`}
+        canonical={`https://shared-space.ru/files/${file.id}`}
+      />
       {/* Навигация назад */}
       <div>
         <button

@@ -23,6 +23,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { Link as UILink } from '../components/ui/Link';
 import { useFileConversion } from '../hooks/useFileConversion';
 import { useToastStore } from '../hooks/useToast';
+import SEOHead from '../components/SEOHead';
 import { formatFileSize, formatDate } from '../utils/format';
 import { resolveFileIconType } from '../utils/fileType';
 
@@ -261,13 +262,19 @@ const DashboardPage: React.FC = () => {
   if (isStorageLoading || isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
+        <SEOHead title="Панель управления" description="Загрузка..." />
         <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   if (error) {
-    return <p className="text-danger text-sm py-8 text-center">{error}</p>;
+    return (
+      <>
+        <SEOHead title="Панель управления" description="Ошибка загрузки." />
+        <p className="text-danger text-sm py-8 text-center">{error}</p>
+      </>
+    );
   }
 
   const handleUploadClick = () => {
@@ -310,6 +317,10 @@ const DashboardPage: React.FC = () => {
 
   return (
     <div className="space-y-8 pb-10">
+      <SEOHead
+        title="Панель управления"
+        description="Быстрый доступ к недавним файлам, избранному и общим директориям."
+      />
       {/* Приветствие */}
       <div>
         <h1 className="text-2xl font-semibold text-theme-primary mb-1">

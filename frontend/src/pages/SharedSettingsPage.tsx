@@ -21,6 +21,7 @@ import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { RenameModal } from '../components/ui/RenameModal';
 import { EmptyState } from '../components/ui/EmptyState';
 import { useToastStore } from '../hooks/useToast';
+import SEOHead from '../components/SEOHead';
 import { formatDateLong } from '../utils/format';
 
 const ROLE_LABELS: Record<SharingRole, string> = {
@@ -178,6 +179,7 @@ const SharedSettingsPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
+        <SEOHead title="Настройки общей директории" description="Загрузка..." />
         <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -186,6 +188,7 @@ const SharedSettingsPage: React.FC = () => {
   if (error) {
     return (
       <div className="space-y-6 pb-10">
+        <SEOHead title="Настройки общей директории" description={error} />
         <button
           onClick={() => navigate(-1)}
           className="inline-flex items-center gap-2 text-sm text-theme-secondary hover:text-theme-primary transition-colors"
@@ -200,6 +203,10 @@ const SharedSettingsPage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-10">
+      <SEOHead
+        title={data?.name ? `Настройки — ${data.name}` : 'Настройки общей директории'}
+        description={`Управление участниками и настройками общей директории — ${data?.name || 'общая директория'}.`}
+      />
       <button
         onClick={() => navigate(`/directories/${directoryId}`)}
         className="inline-flex items-center gap-2 text-sm text-theme-secondary hover:text-theme-primary transition-colors"

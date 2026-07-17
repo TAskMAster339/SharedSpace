@@ -58,6 +58,7 @@ import { createShareLink, createDirectoryShareLink } from '../api/sharelinks';
 import { formatFileSize, formatDate } from '../utils/format';
 import { useFavorites } from '../hooks/useFavorites';
 import { useToastStore } from '../hooks/useToast';
+import SEOHead from '../components/SEOHead';
 import { buildUploadSuccessMessage, buildUploadErrorMessage } from '../utils/uploadMessage';
 import { resolveFileIconType } from '../utils/fileType';
 
@@ -914,6 +915,7 @@ const DirectoryPage: React.FC = () => {
   if (isLoading || isLoadingShared) {
     return (
       <div className="flex items-center justify-center py-20">
+        <SEOHead title="Загрузка..." description="Загрузка содержимого директории..." />
         <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -922,6 +924,7 @@ const DirectoryPage: React.FC = () => {
   if (error || !directoryContents) {
     return (
       <div className="py-12 text-center">
+        <SEOHead title="Директория не найдена" description={error || 'Директория не найдена'} />
         <p className="text-theme-secondary">{error || 'Директория не найдена'}</p>
         <Button variant="secondary" onClick={() => navigate('/dashboard')} className="mt-4">
           Вернуться на дашборд
@@ -933,8 +936,18 @@ const DirectoryPage: React.FC = () => {
   const isEmpty = filteredSubdirectories.length === 0 && allFiles.length === 0;
   const isSharedRootDirectory = isDirectlyShared;
 
+  const titleName = isPersonal ? 'Личное хранилище' : directoryContents.name;
+
   return (
     <div className="flex flex-col min-h-[calc(100vh-12rem)]" onContextMenu={handleContextMenu}>
+      <SEOHead
+        title={titleName}
+        description={
+          isPersonal
+            ? 'Ваши личные файлы и папки'
+            : `Директория · ${filteredSubdirectories.length + allFiles.length} элементов`
+        }
+      />
       <div className="space-y-6 pb-10">
         {/* Назад к списку общих директорий */}
         {isSharedDirectory && (
@@ -952,9 +965,7 @@ const DirectoryPage: React.FC = () => {
           <div className="min-w-0 w-full md:flex-1 md:min-w-[250px]">
             <h1 className="text-2xl font-semibold text-theme-primary flex items-center gap-2 min-w-0">
               <Folder size={28} className="text-brand shrink-0" />
-              <span className="truncate min-w-0">
-                {isPersonal ? 'Личное хранилище' : directoryContents.name}
-              </span>
+              <span className="truncate min-w-0">{titleName}</span>
               {isSharedDirectory && (
                 <span className="text-xs font-medium px-2 py-0.5 bg-brand/10 text-brand rounded-full">
                   Общая

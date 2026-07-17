@@ -13,6 +13,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
 import { ItemGroup } from '../components/ui/ItemGroup';
 import { useToastStore } from '../hooks/useToast';
+import SEOHead from '../components/SEOHead';
 import { formatFileSize, formatDate } from '../utils/format';
 
 const PAGE_LIMIT = 20;
@@ -231,6 +232,7 @@ const TrashPage: React.FC = () => {
       className="flex flex-col min-h-[calc(100vh-12rem)] space-y-6 pb-10"
       onContextMenu={handlePageContextMenu}
     >
+      <SEOHead title="Корзина" description="Удалённые файлы и папки." />
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-theme-primary mb-1 flex items-center gap-2">
