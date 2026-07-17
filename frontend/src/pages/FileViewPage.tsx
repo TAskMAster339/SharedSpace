@@ -554,7 +554,7 @@ const FileViewPage: React.FC = () => {
           className="inline-flex items-center gap-2 text-sm text-theme-secondary hover:text-theme-primary transition-colors"
         >
           <ArrowLeft size={16} />
-          Вернуться к файлам
+          Вернуться к папке
         </button>
       </div>
 

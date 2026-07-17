@@ -6,6 +6,7 @@ import { QuotaIndicator } from './ui/QuotaIndicator';
 import { cn } from '../utils/cn';
 import { useSidebarMenu, isSidebarItemActive } from '../hooks/useSidebarMenu';
 import { useDirectoryStore } from '../store/directoryStore';
+import { useToastStore } from '../hooks/useToast';
 
 const MAIN_TABS = [
   { label: 'Хранилище', icon: Folder, key: 'storage' },
@@ -84,7 +85,20 @@ export const MobileBottomNav: React.FC = () => {
     return isSidebarItemActive(path, currentPath, currentSection);
   };
 
+  const setMobileMoreOpen = useToastStore((s) => s.setMobileMoreOpen);
+  const setToastMobileBottomPx = useToastStore((s) => s.setToastMobileBottomPx);
   const closeMore = useCallback(() => setMoreOpen(false), []);
+
+  useLayoutEffect(() => {
+    if (moreOpen && moreRef.current) {
+      const popupHeight = moreRef.current.getBoundingClientRect().height;
+      const offset = 80 + popupHeight + 8;
+      setToastMobileBottomPx(offset);
+    } else {
+      setToastMobileBottomPx(80);
+    }
+    setMobileMoreOpen(moreOpen);
+  }, [moreOpen, setMobileMoreOpen, setToastMobileBottomPx]);
 
   useEffect(() => {
     if (!moreOpen) return;
@@ -188,7 +202,7 @@ export const MobileBottomNav: React.FC = () => {
       {moreOpen && (
         <div
           ref={moreRef}
-          className="fixed bottom-20 left-2 right-2 z-[52] max-h-[60vh] overflow-y-auto bg-theme-secondary rounded-theme-xl shadow-theme-dropdown border border-theme py-3 md:hidden"
+          className="fixed bottom-20 left-4 right-4 z-[52] max-h-[60vh] overflow-y-auto bg-theme-secondary rounded-theme-xl shadow-theme-dropdown border border-theme py-3 md:hidden"
         >
           {isLoading ? (
             <div className="flex items-center justify-center py-6">

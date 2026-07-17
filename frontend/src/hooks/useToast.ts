@@ -11,6 +11,10 @@ interface ToastStore {
     onAction?: () => void,
   ) => void;
   removeToast: (id: string) => void;
+  mobileMoreOpen: boolean;
+  setMobileMoreOpen: (open: boolean) => void;
+  toastMobileBottomPx: number;
+  setToastMobileBottomPx: (px: number) => void;
 }
 
 export const useToastStore = create<ToastStore>((set) => ({
@@ -26,4 +30,8 @@ export const useToastStore = create<ToastStore>((set) => ({
       toasts: state.toasts.filter((toast) => toast.id !== id),
     }));
   },
+  mobileMoreOpen: false,
+  setMobileMoreOpen: (open) => set({ mobileMoreOpen: open }),
+  toastMobileBottomPx: 80,
+  setToastMobileBottomPx: (px) => set({ toastMobileBottomPx: px }),
 }));

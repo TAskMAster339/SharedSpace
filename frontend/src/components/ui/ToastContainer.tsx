@@ -1,5 +1,6 @@
 import React from 'react';
 import { Toast, ToastVariant } from './Toast';
+import { useToastStore } from '../../hooks/useToast';
 
 export type { ToastVariant };
 
@@ -16,11 +17,31 @@ interface ToastContainerProps {
   onRemove: (id: string) => void;
 }
 
+const useIsMobile = () => {
+  const [mobile, setMobile] = React.useState(
+    typeof window !== 'undefined' ? window.innerWidth < 640 : true,
+  );
+  React.useEffect(() => {
+    const mq = window.matchMedia('(max-width: 639px)');
+    const handler = (e: MediaQueryListEvent) => setMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  return mobile;
+};
+
 export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onRemove }) => {
+  const mobileMoreOpen = useToastStore((s) => s.mobileMoreOpen);
+  const toastMobileBottomPx = useToastStore((s) => s.toastMobileBottomPx);
+  const isMobile = useIsMobile();
+
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 left-4 sm:left-auto z-[60] flex flex-col gap-2 sm:w-96">
+    <div
+      className="fixed right-4 left-4 sm:left-auto z-[60] flex flex-col gap-2 sm:w-96 transition-all duration-300 sm:bottom-4"
+      style={{ bottom: isMobile ? toastMobileBottomPx : undefined }}
+    >
       {toasts.map((toast) => (
         <Toast
           key={toast.id}
