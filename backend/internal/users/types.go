@@ -3,7 +3,6 @@ package users
 import "time"
 
 type UpdateProfileRequest struct {
-	Email      *string `json:"email"`
 	Username   *string `json:"username"`
 	FirstName  *string `json:"first_name"`
 	SecondName *string `json:"second_name"`
@@ -27,6 +26,7 @@ type UserResponse struct {
 	SharedDirsQuota int       `json:"shared_dirs_quota"`
 	ShareLinksCount int       `json:"share_links_count"`
 	ShareLinksQuota int       `json:"share_links_quota"`
+	Activated       bool      `json:"activated"`
 	CreatedAt       time.Time `json:"created_at"`
 }
 

@@ -12,6 +12,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"sharedspace/internal/apperror"
+	"sharedspace/internal/mailer"
 )
 
 type mockRow struct {
@@ -84,6 +85,8 @@ type mockRepo struct {
 	userByIdentifierErr error
 	userByID            authUser
 	userByIDErr         error
+	userByEmail         authUser
+	userByEmailErr      error
 	refreshRecord       refreshTokenRecord
 	refreshRecordErr    error
 	storeRefreshErr     error
@@ -100,7 +103,33 @@ type mockRepo struct {
 	revokeToken           string
 	findIdentifier        string
 	findUserID            string
+	findEmail             string
 	loadToken             string
+
+	// email-token bookkeeping
+	createEmailTokenCalls       int
+	createEmailTokenUserID      string
+	createEmailTokenHash        string
+	createEmailTokenType        string
+	createEmailTokenExpiresAt   time.Time
+	createEmailTokenErr         error
+	emailTokenByHash            emailTokenRecord
+	emailTokenByHashErr         error
+	markEmailTokenUsedCalls     int
+	markEmailTokenUsedID        string
+	markEmailTokenUsedErr       error
+	invalidateEmailTokensCalls  int
+	invalidateEmailTokensUserID string
+	invalidateEmailTokensType   string
+	invalidateEmailTokensErr    error
+	setUserActivatedID          string
+	setUserActivatedValue       bool
+	setUserActivatedErr         error
+	updateUserPasswordID        string
+	updateUserPasswordHash      string
+	updateUserPasswordErr       error
+	revokeAllRefreshUserID      string
+	revokeAllRefreshErr         error
 }
 
 func (m *mockRepo) EmailExists(_ context.Context, _ dbTX, _ string) (bool, error) {
@@ -132,6 +161,11 @@ func (m *mockRepo) FindUserByID(_ context.Context, _ dbTX, userID string) (authU
 	return m.userByID, m.userByIDErr
 }
 
+func (m *mockRepo) FindUserByEmail(_ context.Context, _ dbTX, email string) (authUser, error) {
+	m.findEmail = email
+	return m.userByEmail, m.userByEmailErr
+}
+
 func (m *mockRepo) StoreRefreshToken(_ context.Context, _ dbTX, userID, rawToken, userAgent, ipAddress string, expiresAt time.Time) error {
 	m.storeRefreshUserID = userID
 	m.storedRefreshTokenRaw = rawToken
@@ -151,16 +185,63 @@ func (m *mockRepo) RevokeRefreshToken(_ context.Context, _ dbTX, rawToken string
 	return m.revokeRefreshErr
 }
 
+func (m *mockRepo) RevokeAllRefreshTokensForUser(_ context.Context, _ dbTX, userID string) error {
+	m.revokeAllRefreshUserID = userID
+	return m.revokeAllRefreshErr
+}
+
+func (m *mockRepo) CreateEmailToken(_ context.Context, _ dbTX, userID, tokenHash, tokenType string, expiresAt time.Time) error {
+	m.createEmailTokenCalls++
+	m.createEmailTokenUserID = userID
+	m.createEmailTokenHash = tokenHash
+	m.createEmailTokenType = tokenType
+	m.createEmailTokenExpiresAt = expiresAt
+	return m.createEmailTokenErr
+}
+
+func (m *mockRepo) FindEmailTokenByHash(_ context.Context, _ dbTX, _ string) (emailTokenRecord, error) {
+	return m.emailTokenByHash, m.emailTokenByHashErr
+}
+
+func (m *mockRepo) MarkEmailTokenUsed(_ context.Context, _ dbTX, tokenID string) error {
+	m.markEmailTokenUsedCalls++
+	m.markEmailTokenUsedID = tokenID
+	return m.markEmailTokenUsedErr
+}
+
+func (m *mockRepo) InvalidateEmailTokensForUser(_ context.Context, _ dbTX, userID, tokenType string) error {
+	m.invalidateEmailTokensCalls++
+	m.invalidateEmailTokensUserID = userID
+	m.invalidateEmailTokensType = tokenType
+	return m.invalidateEmailTokensErr
+}
+
+func (m *mockRepo) SetUserActivated(_ context.Context, _ dbTX, userID string, activated bool) error {
+	m.setUserActivatedID = userID
+	m.setUserActivatedValue = activated
+	return m.setUserActivatedErr
+}
+
+func (m *mockRepo) UpdateUserPassword(_ context.Context, _ dbTX, userID, passwordHash string) error {
+	m.updateUserPasswordID = userID
+	m.updateUserPasswordHash = passwordHash
+	return m.updateUserPasswordErr
+}
+
 func newTestService(repo AuthRepository) (*Service, *mockTx) {
 	tx := &mockTx{}
 	service := &Service{
-		beginTx:      func(context.Context, pgx.TxOptions) (transaction, error) { return tx, nil },
-		db:           tx,
-		repo:         repo,
-		jwtSecret:    []byte("secret-key"),
-		accessTTL:    time.Hour,
-		refreshTTL:   24 * time.Hour,
-		storageQuota: defaultStorageQuota,
+		beginTx:          func(context.Context, pgx.TxOptions) (transaction, error) { return tx, nil },
+		db:               tx,
+		repo:             repo,
+		jwtSecret:        []byte("secret-key"),
+		accessTTL:        time.Hour,
+		refreshTTL:       24 * time.Hour,
+		storageQuota:     defaultStorageQuota,
+		mailer:           mailer.NewSMTPMailer("", 0, "", "", "", "", false, nil),
+		appURL:           "http://localhost:3000",
+		verifyEmailTTL:   24 * time.Hour,
+		resetPasswordTTL: time.Hour,
 	}
 	return service, tx
 }

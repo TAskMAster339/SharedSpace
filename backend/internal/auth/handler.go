@@ -120,6 +120,108 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) error {
 	return writeJSON(w, http.StatusOK, resp)
 }
 
+// VerifyEmail handles email confirmation via a single-use token.
+// @Summary Confirm user email
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body VerifyEmailRequest true "Verification token"
+// @Success 200 {object} VerifyEmailResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 409 {object} ErrorResponse
+// @Router /api/v1/auth/verify-email [post]
+func (h *Handler) VerifyEmail(w http.ResponseWriter, r *http.Request) error {
+	var req VerifyEmailRequest
+	if err := decodeJSON(r.Body, &req); err != nil {
+		return err
+	}
+
+	resp, err := h.service.VerifyEmail(r.Context(), req.Token)
+	if err != nil {
+		return err
+	}
+
+	return writeJSON(w, http.StatusOK, resp)
+}
+
+// ResendVerification re-issues and emails a verification token for the
+// authenticated caller.
+// @Summary Resend email verification message
+// @Tags auth
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} MessageResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 409 {object} ErrorResponse
+// @Router /api/v1/auth/resend-verification/me [post]
+func (h *Handler) ResendVerification(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := claimsFromRequest(r)
+	if !ok || claims.UserID == "" {
+		return apperror.Unauthorized("требуется access токен")
+	}
+
+	if err := h.service.ResendVerification(r.Context(), claims.UserID); err != nil {
+		return err
+	}
+
+	return writeJSON(w, http.StatusOK, MessageResponse{Message: "письмо подтверждения отправлено"})
+}
+
+// ForgotPassword triggers a password-reset email if the address belongs to an
+// activated user. Always returns 200 to avoid leaking registered emails.
+// @Summary Request password reset email
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body ForgotPasswordRequest true "Account email"
+// @Success 200 {object} MessageResponse
+// @Failure 400 {object} ErrorResponse
+// @Router /api/v1/auth/forgot-password [post]
+func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) error {
+	var req ForgotPasswordRequest
+	if err := decodeJSON(r.Body, &req); err != nil {
+		return err
+	}
+
+	if err := h.service.RequestPasswordReset(r.Context(), req.Email); err != nil {
+		return err
+	}
+
+	return writeJSON(w, http.StatusOK, MessageResponse{Message: "если аккаунт существует и подтверждён, письмо отправлено"})
+}
+
+// ResetPassword completes a password reset using a single-use token.
+// @Summary Reset password with token
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body ResetPasswordRequest true "Reset token and new password"
+// @Success 200 {object} MessageResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 409 {object} ErrorResponse
+// @Router /api/v1/auth/reset-password [post]
+func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) error {
+	var req ResetPasswordRequest
+	if err := decodeJSON(r.Body, &req); err != nil {
+		return err
+	}
+
+	if err := h.service.ResetPassword(r.Context(), req.Token, req.NewPassword); err != nil {
+		return err
+	}
+
+	return writeJSON(w, http.StatusOK, MessageResponse{Message: "пароль успешно изменён"})
+}
+
+// claimsFromRequest pulls the JWT claims previously attached by JWTAuth middleware.
+func claimsFromRequest(r *http.Request) (*Claims, bool) {
+	return ClaimsFromCtx(r.Context())
+}
+
 func decodeJSON(body io.ReadCloser, dst any) error {
 	defer body.Close()
 	dec := json.NewDecoder(body)

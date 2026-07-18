@@ -15,10 +15,10 @@ func NewRepository() *Repository {
 func (r *Repository) FindUserByID(ctx context.Context, db dbTX, userID string) (record, error) {
 	var user record
 	err := db.QueryRow(ctx, `
-		SELECT id, username, first_name, second_name, email, password_hash, storage_quota, storage_used, shared_dirs_count, shared_dirs_quota, share_links_count, share_links_quota, created_at
+		SELECT id, username, first_name, second_name, email, password_hash, storage_quota, storage_used, shared_dirs_count, shared_dirs_quota, share_links_count, share_links_quota, activated, created_at
 		FROM users
 		WHERE id = $1
-	`, userID).Scan(&user.ID, &user.Username, &user.FirstName, &user.SecondName, &user.Email, &user.PasswordHash, &user.StorageQuota, &user.StorageUsed, &user.SharedDirsCount, &user.SharedDirsQuota, &user.ShareLinksCount, &user.ShareLinksQuota, &user.CreatedAt)
+	`, userID).Scan(&user.ID, &user.Username, &user.FirstName, &user.SecondName, &user.Email, &user.PasswordHash, &user.StorageQuota, &user.StorageUsed, &user.SharedDirsCount, &user.SharedDirsQuota, &user.ShareLinksCount, &user.ShareLinksQuota, &user.Activated, &user.CreatedAt)
 	if err != nil {
 		return record{}, err
 	}
@@ -28,11 +28,11 @@ func (r *Repository) FindUserByID(ctx context.Context, db dbTX, userID string) (
 func (r *Repository) FindUserByEmail(ctx context.Context, db dbTX, email string) (record, error) {
 	var user record
 	err := db.QueryRow(ctx, `
-		SELECT id, username, first_name, second_name, email, password_hash, storage_quota, storage_used, shared_dirs_count, shared_dirs_quota, share_links_count, share_links_quota, created_at
+		SELECT id, username, first_name, second_name, email, password_hash, storage_quota, storage_used, shared_dirs_count, shared_dirs_quota, share_links_count, share_links_quota, activated, created_at
 		FROM users
 		WHERE email = $1
 		LIMIT 1
-	`, email).Scan(&user.ID, &user.Username, &user.FirstName, &user.SecondName, &user.Email, &user.PasswordHash, &user.StorageQuota, &user.StorageUsed, &user.SharedDirsCount, &user.SharedDirsQuota, &user.ShareLinksCount, &user.ShareLinksQuota, &user.CreatedAt)
+	`, email).Scan(&user.ID, &user.Username, &user.FirstName, &user.SecondName, &user.Email, &user.PasswordHash, &user.StorageQuota, &user.StorageUsed, &user.SharedDirsCount, &user.SharedDirsQuota, &user.ShareLinksCount, &user.ShareLinksQuota, &user.Activated, &user.CreatedAt)
 	if err != nil {
 		return record{}, err
 	}
@@ -42,11 +42,11 @@ func (r *Repository) FindUserByEmail(ctx context.Context, db dbTX, email string)
 func (r *Repository) FindUserByUsername(ctx context.Context, db dbTX, username string) (record, error) {
 	var user record
 	err := db.QueryRow(ctx, `
-		SELECT id, username, first_name, second_name, email, password_hash, storage_quota, storage_used, shared_dirs_count, shared_dirs_quota, share_links_count, share_links_quota, created_at
+		SELECT id, username, first_name, second_name, email, password_hash, storage_quota, storage_used, shared_dirs_count, shared_dirs_quota, share_links_count, share_links_quota, activated, created_at
 		FROM users
 		WHERE username = $1
 		LIMIT 1
-	`, username).Scan(&user.ID, &user.Username, &user.FirstName, &user.SecondName, &user.Email, &user.PasswordHash, &user.StorageQuota, &user.StorageUsed, &user.SharedDirsCount, &user.SharedDirsQuota, &user.ShareLinksCount, &user.ShareLinksQuota, &user.CreatedAt)
+	`, username).Scan(&user.ID, &user.Username, &user.FirstName, &user.SecondName, &user.Email, &user.PasswordHash, &user.StorageQuota, &user.StorageUsed, &user.SharedDirsCount, &user.SharedDirsQuota, &user.ShareLinksCount, &user.ShareLinksQuota, &user.Activated, &user.CreatedAt)
 	if err != nil {
 		return record{}, err
 	}
@@ -58,15 +58,14 @@ func (r *Repository) UpdateUserProfile(ctx context.Context, db dbTX, userID stri
 	err := db.QueryRow(ctx, `
 		UPDATE users
 		SET
-			email = CASE WHEN $2::text IS NULL THEN email ELSE $2 END,
-			username = CASE WHEN $3::text IS NULL THEN username ELSE $3 END,
-			first_name = CASE WHEN $4::text IS NULL THEN first_name ELSE $4 END,
-			second_name = CASE WHEN $5::text IS NULL THEN second_name ELSE $5 END,
+			username = CASE WHEN $2::text IS NULL THEN username ELSE $2 END,
+			first_name = CASE WHEN $3::text IS NULL THEN first_name ELSE $3 END,
+			second_name = CASE WHEN $4::text IS NULL THEN second_name ELSE $4 END,
 			updated_at = now()
 		WHERE id = $1
-		RETURNING id, username, first_name, second_name, email, password_hash, storage_quota, storage_used, shared_dirs_count, shared_dirs_quota, share_links_count, share_links_quota, created_at
-	`, userID, input.Email, input.Username, input.FirstName, input.SecondName).Scan(
-		&user.ID, &user.Username, &user.FirstName, &user.SecondName, &user.Email, &user.PasswordHash, &user.StorageQuota, &user.StorageUsed, &user.SharedDirsCount, &user.SharedDirsQuota, &user.ShareLinksCount, &user.ShareLinksQuota, &user.CreatedAt,
+		RETURNING id, username, first_name, second_name, email, password_hash, storage_quota, storage_used, shared_dirs_count, shared_dirs_quota, share_links_count, share_links_quota, activated, created_at
+	`, userID, input.Username, input.FirstName, input.SecondName).Scan(
+		&user.ID, &user.Username, &user.FirstName, &user.SecondName, &user.Email, &user.PasswordHash, &user.StorageQuota, &user.StorageUsed, &user.SharedDirsCount, &user.SharedDirsQuota, &user.ShareLinksCount, &user.ShareLinksQuota, &user.Activated, &user.CreatedAt,
 	)
 	if err != nil {
 		return record{}, err
@@ -104,7 +103,7 @@ func (r *Repository) RevokeAllRefreshTokensExcept(ctx context.Context, db dbTX, 
 
 func (r *Repository) SearchUsers(ctx context.Context, db dbTX, requesterID, query string, limit int) ([]record, error) {
 	rows, err := db.Query(ctx, `
-		SELECT id, username, first_name, second_name, email, password_hash, storage_quota, storage_used, shared_dirs_count, shared_dirs_quota, share_links_count, share_links_quota, created_at
+		SELECT id, username, first_name, second_name, email, password_hash, storage_quota, storage_used, shared_dirs_count, shared_dirs_quota, share_links_count, share_links_quota, activated, created_at
 		FROM users
 		WHERE id <> $1
 		  AND (username ILIKE '%' || $2 || '%' OR email ILIKE '%' || $2 || '%')
@@ -119,7 +118,7 @@ func (r *Repository) SearchUsers(ctx context.Context, db dbTX, requesterID, quer
 	users := make([]record, 0, limit)
 	for rows.Next() {
 		var user record
-		if err := rows.Scan(&user.ID, &user.Username, &user.FirstName, &user.SecondName, &user.Email, &user.PasswordHash, &user.StorageQuota, &user.StorageUsed, &user.SharedDirsCount, &user.SharedDirsQuota, &user.ShareLinksCount, &user.ShareLinksQuota, &user.CreatedAt); err != nil {
+		if err := rows.Scan(&user.ID, &user.Username, &user.FirstName, &user.SecondName, &user.Email, &user.PasswordHash, &user.StorageQuota, &user.StorageUsed, &user.SharedDirsCount, &user.SharedDirsQuota, &user.ShareLinksCount, &user.ShareLinksQuota, &user.Activated, &user.CreatedAt); err != nil {
 			return nil, err
 		}
 		users = append(users, user)

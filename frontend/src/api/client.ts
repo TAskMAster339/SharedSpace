@@ -35,7 +35,18 @@ export function setAuthHandlers(handlers: {
 }
 
 // Эндпоинты самой авторизации не должны провоцировать повторный refresh.
-const NO_RETRY_PATHS = ['/auth/login', '/auth/register', '/auth/refresh', '/auth/logout'];
+// Сюда же попадают публичные эндпоинты подтверждения почты и сброса пароля —
+// у них нет access-токена, и попытка refresh-услуг ничего не даст.
+const NO_RETRY_PATHS = [
+  '/auth/login',
+  '/auth/register',
+  '/auth/refresh',
+  '/auth/logout',
+  '/auth/verify-email',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+  '/auth/resend-verification/me',
+];
 
 interface RawResult<T> {
   response: Response;

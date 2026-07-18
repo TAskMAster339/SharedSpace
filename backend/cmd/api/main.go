@@ -12,6 +12,7 @@ import (
 	"sharedspace/internal/dirs"
 	"sharedspace/internal/favorites"
 	"sharedspace/internal/files"
+	"sharedspace/internal/mailer"
 	"sharedspace/internal/mylinks"
 	"sharedspace/internal/server"
 	"sharedspace/internal/sharelinks"
@@ -64,7 +65,14 @@ func main() {
 
 	// auth
 	authRepository := auth.NewRepository()
-	authService := auth.NewService(pool, authRepository, cfg.JWTSecret, cfg.JWTTTL, cfg.RefreshJWTTTL)
+	mailSvc := mailer.NewSMTPMailer(
+		cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPassword,
+		cfg.SMTPFrom, cfg.SMTPFromName, cfg.SMTPUseTLS, mailer.LogoBytes(),
+	)
+	authService := auth.NewService(
+		pool, authRepository, cfg.JWTSecret, cfg.JWTTTL, cfg.RefreshJWTTTL,
+		mailSvc, cfg.AppURL, cfg.VerifyEmailTTL, cfg.ResetPasswordTTL,
+	)
 	authHandler := auth.NewHandler(authService)
 	// users
 	usersRepository := users.NewRepository()

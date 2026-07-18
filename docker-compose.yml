@@ -31,6 +31,17 @@ services:
       MINIO_REGION: ${MINIO_REGION}
       JWT_SECRET: ${JWT_SECRET}
       JWT_TTL: ${JWT_TTL}
+      REFRESH_JWT_TTL: ${REFRESH_JWT_TTL}
+      VERIFY_EMAIL_TTL_HOURS: ${VERIFY_EMAIL_TTL_HOURS:-24}
+      RESET_PASSWORD_TTL_HOURS: ${RESET_PASSWORD_TTL_HOURS:-1}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-noreply@shared-space.ru}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-SharedSpace}
+      SMTP_USE_TLS: ${SMTP_USE_TLS:-true}
+      APP_URL: ${APP_URL:-http://localhost:3000}
     depends_on:
       postgres:
         condition: service_healthy

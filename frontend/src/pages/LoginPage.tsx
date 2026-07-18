@@ -108,12 +108,20 @@ const LoginPage: React.FC = () => {
             {isSubmitting ? 'Вход...' : 'Войти'}
           </Button>
         </form>
-        <p className="mt-4 text-center text-theme-secondary text-sm">
-          Нет аккаунта?{' '}
-          <Link to="/register" className="text-brand hover:text-brand-hover font-medium">
-            Регистрация
+        <div className="mt-4 flex flex-col items-center gap-2 text-sm">
+          <Link
+            to="/forgot-password"
+            className="text-theme-secondary hover:text-brand transition-colors"
+          >
+            Забыли пароль?
           </Link>
-        </p>
+          <p className="text-theme-secondary">
+            Нет аккаунта?{' '}
+            <Link to="/register" className="text-brand hover:text-brand-hover font-medium">
+              Регистрация
+            </Link>
+          </p>
+        </div>
       </Card>
     </div>
   );

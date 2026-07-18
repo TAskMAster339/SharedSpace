@@ -41,6 +41,13 @@ func newError(message, code string, status int, cause error) error {
 	return &Error{message: message, code: code, status: status, cause: cause}
 }
 
+// New constructs an Error with a custom code and HTTP status. Use this when
+// none of the typed helpers (NotFound, Forbidden, etc.) fit because a
+// bespoke code is needed for client-side branching.
+func New(message, code string, status int) error {
+	return newError(message, code, status, nil)
+}
+
 func NotFound(message string) error {
 	return newError(message, CodeNotFound, http.StatusNotFound, nil)
 }

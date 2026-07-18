@@ -14,6 +14,10 @@ type AuthService interface {
 	UserIDFromAccessToken(context.Context, string) (string, error)
 	Logout(context.Context, string) error
 	ParseAccessToken(string) (*Claims, error)
+	VerifyEmail(context.Context, string) (VerifyEmailResponse, error)
+	ResendVerification(context.Context, string) error
+	RequestPasswordReset(context.Context, string) error
+	ResetPassword(context.Context, string, string) error
 }
 
 type AuthRepository interface {
@@ -23,9 +27,17 @@ type AuthRepository interface {
 	CreateRootDirectory(context.Context, dbTX, string, string) (string, error)
 	FindUserByIdentifier(context.Context, dbTX, string) (authUser, error)
 	FindUserByID(context.Context, dbTX, string) (authUser, error)
+	FindUserByEmail(context.Context, dbTX, string) (authUser, error)
 	StoreRefreshToken(context.Context, dbTX, string, string, string, string, time.Time) error
 	LoadRefreshToken(context.Context, dbTX, string) (refreshTokenRecord, error)
 	RevokeRefreshToken(context.Context, dbTX, string) error
+	RevokeAllRefreshTokensForUser(context.Context, dbTX, string) error
+	CreateEmailToken(context.Context, dbTX, string, string, string, time.Time) error
+	FindEmailTokenByHash(context.Context, dbTX, string) (emailTokenRecord, error)
+	MarkEmailTokenUsed(context.Context, dbTX, string) error
+	InvalidateEmailTokensForUser(context.Context, dbTX, string, string) error
+	SetUserActivated(context.Context, dbTX, string, bool) error
+	UpdateUserPassword(context.Context, dbTX, string, string) error
 }
 
 type beginTxFunc func(context.Context, pgx.TxOptions) (transaction, error)

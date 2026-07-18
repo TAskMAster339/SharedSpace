@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -42,6 +43,18 @@ type Config struct {
 	JWTTTL        time.Duration
 	RefreshJWTTTL time.Duration
 
+	SMTPHost     string
+	SMTPPort     int
+	SMTPUser     string
+	SMTPPassword string
+	SMTPFrom     string
+	SMTPFromName string
+	SMTPUseTLS   bool
+
+	AppURL           string
+	VerifyEmailTTL   time.Duration
+	ResetPasswordTTL time.Duration
+
 	Port string
 }
 
@@ -69,6 +82,26 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("JWT_SECRET is required")
 	}
 
+	smtpPort, err := strconv.Atoi(getEnv("SMTP_PORT", "587"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid SMTP_PORT: %w", err)
+	}
+
+	verifyHours, err := strconv.Atoi(getEnv("VERIFY_EMAIL_TTL_HOURS", "24"))
+	if err != nil || verifyHours <= 0 {
+		return nil, fmt.Errorf("invalid VERIFY_EMAIL_TTL_HOURS: %w", err)
+	}
+
+	resetHours, err := strconv.Atoi(getEnv("RESET_PASSWORD_TTL_HOURS", "1"))
+	if err != nil || resetHours <= 0 {
+		return nil, fmt.Errorf("invalid RESET_PASSWORD_TTL_HOURS: %w", err)
+	}
+
+	appURL := strings.TrimRight(getEnv("APP_URL", ""), "/")
+	if appURL == "" {
+		return nil, fmt.Errorf("APP_URL is required")
+	}
+
 	return &Config{
 		DBDSN: dsn,
 
@@ -85,6 +118,18 @@ func Load() (*Config, error) {
 		JWTSecret:     secret,
 		JWTTTL:        time.Duration(ttl) * time.Second,
 		RefreshJWTTTL: time.Duration(refreshTTL) * time.Second,
+
+		SMTPHost:     getEnv("SMTP_HOST", ""),
+		SMTPPort:     smtpPort,
+		SMTPUser:     getEnv("SMTP_USER", ""),
+		SMTPPassword: getEnv("SMTP_PASSWORD", ""),
+		SMTPFrom:     getEnv("SMTP_FROM", ""),
+		SMTPFromName: getEnv("SMTP_FROM_NAME", "SharedSpace"),
+		SMTPUseTLS:   getEnv("SMTP_USE_TLS", "true") == "true",
+
+		AppURL:           appURL,
+		VerifyEmailTTL:   time.Duration(verifyHours) * time.Hour,
+		ResetPasswordTTL: time.Duration(resetHours) * time.Hour,
 
 		Port: getEnv("PORT", "8080"),
 	}, nil
