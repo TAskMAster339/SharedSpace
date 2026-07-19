@@ -8,6 +8,7 @@ type Claims struct {
 	Username   string
 	FirstName  string
 	SecondName string
+	Activated  bool
 }
 
 type contextKey string

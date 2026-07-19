@@ -9,7 +9,6 @@ export function getMe(accessToken: string): Promise<AuthUser> {
 }
 
 export interface UpdateProfilePayload {
-  email?: string;
   username?: string;
   first_name?: string;
   second_name?: string;

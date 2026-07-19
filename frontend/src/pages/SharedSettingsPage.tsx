@@ -187,7 +187,7 @@ const SharedSettingsPage: React.FC = () => {
 
   if (error) {
     return (
-      <div className="space-y-6 pb-10">
+      <div className="space-y-6">
         <SEOHead title="Настройки общей директории" description={error} />
         <button
           onClick={() => navigate(-1)}
@@ -202,10 +202,10 @@ const SharedSettingsPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-6">
       <SEOHead
-        title={data?.name ? `Настройки — ${data.name}` : 'Настройки общей директории'}
-        description={`Управление участниками и настройками общей директории — ${data?.name || 'общая директория'}.`}
+        title={dirName ? `Настройки — ${dirName}` : 'Настройки общей директории'}
+        description={`Управление участниками и настройками общей директории — ${dirName || 'общая директория'}.`}
       />
       <button
         onClick={() => navigate(`/directories/${directoryId}`)}

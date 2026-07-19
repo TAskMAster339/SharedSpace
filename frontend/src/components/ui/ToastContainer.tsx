@@ -19,10 +19,10 @@ interface ToastContainerProps {
 
 const useIsMobile = () => {
   const [mobile, setMobile] = React.useState(
-    typeof window !== 'undefined' ? window.innerWidth < 640 : true,
+    typeof window !== 'undefined' ? window.innerWidth < 768 : true,
   );
   React.useEffect(() => {
-    const mq = window.matchMedia('(max-width: 639px)');
+    const mq = window.matchMedia('(max-width: 767px)');
     const handler = (e: MediaQueryListEvent) => setMobile(e.matches);
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);
@@ -39,7 +39,7 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onRemove
 
   return (
     <div
-      className="fixed right-4 left-4 sm:left-auto z-[60] flex flex-col gap-2 sm:w-96 transition-all duration-300 sm:bottom-4"
+      className="fixed right-4 left-4 md:left-auto z-[60] flex flex-col gap-2 md:w-96 transition-all duration-300 md:bottom-4"
       style={{ bottom: isMobile ? toastMobileBottomPx : undefined }}
     >
       {toasts.map((toast) => (

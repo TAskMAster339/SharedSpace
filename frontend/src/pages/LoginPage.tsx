@@ -52,7 +52,7 @@ const LoginPage: React.FC = () => {
       navigate('/dashboard');
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
-        setFormError('Неверный email или пароль');
+        setFormError('Неверный email/логин или пароль');
       } else if (err instanceof ApiError) {
         setFormError(err.message);
       } else {
@@ -64,7 +64,7 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-[80vh] px-4">
+    <div className="flex items-center justify-center h-full px-4">
       <SEOHead
         title="Вход"
         description="Войдите в SharedSpace, чтобы получить доступ к вашим файлам и общим папкам."
@@ -108,12 +108,20 @@ const LoginPage: React.FC = () => {
             {isSubmitting ? 'Вход...' : 'Войти'}
           </Button>
         </form>
-        <p className="mt-4 text-center text-theme-secondary text-sm">
-          Нет аккаунта?{' '}
-          <Link to="/register" className="text-brand hover:text-brand-hover font-medium">
-            Регистрация
+        <div className="mt-4 flex flex-col items-center gap-2 text-sm">
+          <Link
+            to="/forgot-password"
+            className="text-brand hover:text-brand-hover transition-colors"
+          >
+            Забыли пароль?
           </Link>
-        </p>
+          <p className="text-theme-secondary">
+            Нет аккаунта?{' '}
+            <Link to="/register" className="text-brand hover:text-brand-hover font-medium">
+              Регистрация
+            </Link>
+          </p>
+        </div>
       </Card>
     </div>
   );

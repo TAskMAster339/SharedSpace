@@ -135,7 +135,7 @@ func TestHandlerGetMe(t *testing.T) {
 func TestHandlerUpdateMe(t *testing.T) {
 	svc := &mockService{
 		updateMeFn: func(userID string, req UpdateProfileRequest) (UserResponse, error) {
-			return UserResponse{ID: userID, Email: *req.Email, Username: "test"}, nil
+			return UserResponse{ID: userID, Email: "test@example.com", Username: *req.Username}, nil
 		},
 	}
 	authn := &mockAuthIdentity{
@@ -143,7 +143,7 @@ func TestHandlerUpdateMe(t *testing.T) {
 	}
 	handler := NewHandler(svc, authn)
 
-	body := bytes.NewBufferString(`{"email":"new@example.com"}`)
+	body := bytes.NewBufferString(`{"username":"newuser"}`)
 	req := httptest.NewRequest(http.MethodPatch, "/api/v1/users/me", body)
 	req.Header.Set("Authorization", "Bearer access-token")
 	req.Header.Set("Content-Type", "application/json")
@@ -155,7 +155,7 @@ func TestHandlerUpdateMe(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("unexpected status: %d", rec.Code)
 	}
-	if svc.updateUserID != "user-1" || svc.updateReq.Email == nil || *svc.updateReq.Email != "new@example.com" {
+	if svc.updateUserID != "user-1" || svc.updateReq.Username == nil || *svc.updateReq.Username != "newuser" {
 		t.Fatalf("unexpected request captured: %+v", svc.updateReq)
 	}
 }

@@ -24,6 +24,33 @@ type RefreshRequest struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
+// VerifyEmailRequest is the payload for confirming a registration email.
+type VerifyEmailRequest struct {
+	Token string `json:"token"`
+}
+
+// ForgotPasswordRequest triggers a password reset email.
+type ForgotPasswordRequest struct {
+	Email string `json:"email"`
+}
+
+// ResetPasswordRequest completes a password reset using a single-use token.
+type ResetPasswordRequest struct {
+	Token       string `json:"token"`
+	NewPassword string `json:"new_password"`
+}
+
+// VerifyEmailResponse is returned after successful email verification.
+type VerifyEmailResponse struct {
+	Success bool   `json:"success"`
+	UserID  string `json:"user_id,omitempty"`
+}
+
+// MessageResponse is a generic envelope for simple status responses.
+type MessageResponse struct {
+	Message string `json:"message"`
+}
+
 // ErrorResponse mirrors the standard API error payload.
 type ErrorResponse struct {
 	Error string `json:"error"`
@@ -43,6 +70,7 @@ type UserResponse struct {
 	SharedDirsQuota int       `json:"shared_dirs_quota"`
 	ShareLinksCount int       `json:"share_links_count"`
 	ShareLinksQuota int       `json:"share_links_quota"`
+	Activated       bool      `json:"activated"`
 	CreatedAt       time.Time `json:"created_at"`
 }
 
@@ -85,6 +113,7 @@ type authUser struct {
 	SharedDirsQuota int
 	ShareLinksCount int
 	ShareLinksQuota int
+	Activated       bool
 	CreatedAt       time.Time
 }
 

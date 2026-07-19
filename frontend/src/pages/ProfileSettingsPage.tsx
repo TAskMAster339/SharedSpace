@@ -11,9 +11,11 @@ import {
   Trash2,
   Eye,
   EyeOff,
+  ShieldAlert,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useToastStore } from '../hooks/useToast';
 import { ApiError } from '../api/client';
 import { Button } from '../components/ui/Button';
 import { Card, CardHeader, CardTitle } from '../components/ui/Card';
@@ -100,18 +102,20 @@ const InfoRow: React.FC<InfoRowProps> = ({ icon, label, value }) => (
 );
 
 const ProfileSettingsPage: React.FC = () => {
-  const { user, updateProfile, changePassword, deleteAccount } = useAuth();
+  const { user, isActivated, updateProfile, changePassword, deleteAccount, resendVerification } =
+    useAuth();
   const navigate = useNavigate();
+  const showToast = useToastStore((s) => s.showToast);
 
   const [isEditing, setIsEditing] = useState(false);
   const [username, setUsername] = useState(user?.username ?? '');
   const [firstName, setFirstName] = useState(user?.first_name ?? '');
   const [lastName, setLastName] = useState(user?.second_name ?? '');
-  const [email, setEmail] = useState(user?.email ?? '');
 
   const [profileErrors, setProfileErrors] = useState<Record<string, string>>({});
   const [profileFormError, setProfileFormError] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isResending, setIsResending] = useState(false);
 
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [oldPassword, setOldPassword] = useState('');
@@ -129,7 +133,6 @@ const ProfileSettingsPage: React.FC = () => {
     setUsername(user?.username ?? '');
     setFirstName(user?.first_name ?? '');
     setLastName(user?.second_name ?? '');
-    setEmail(user?.email ?? '');
     setProfileErrors({});
     setProfileFormError('');
     setIsEditing(true);
@@ -146,9 +149,6 @@ const ProfileSettingsPage: React.FC = () => {
     if (!username.trim()) {
       errors.username = 'Введите имя пользователя';
     }
-    if (!email.trim()) {
-      errors.email = 'Введите email';
-    }
     setProfileErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -163,13 +163,11 @@ const ProfileSettingsPage: React.FC = () => {
 
     setIsSavingProfile(true);
     try {
-      await updateProfile({ email, username, firstName, lastName });
+      await updateProfile({ username, firstName, lastName });
       setIsEditing(false);
     } catch (err) {
       if (err instanceof ApiError) {
-        if (err.code === 'conflict' && err.message.toLowerCase().includes('email')) {
-          setProfileErrors((prev) => ({ ...prev, email: 'Этот email уже занят' }));
-        } else if (err.code === 'conflict' && err.message.toLowerCase().includes('username')) {
+        if (err.code === 'conflict' && err.message.toLowerCase().includes('username')) {
           setProfileErrors((prev) => ({ ...prev, username: 'Это имя пользователя уже занято' }));
         } else {
           setProfileFormError(err.message);
@@ -179,6 +177,21 @@ const ProfileSettingsPage: React.FC = () => {
       }
     } finally {
       setIsSavingProfile(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (isResending) return;
+    setIsResending(true);
+    try {
+      await resendVerification();
+      showToast('Письмо подтверждения отправлено', 'success');
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Не удалось отправить письмо. Попробуйте позже.';
+      showToast(message, 'error');
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -271,11 +284,32 @@ const ProfileSettingsPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-0 space-y-5 pb-10">
+    <div className="max-w-3xl mx-auto px-4 sm:px-0 space-y-5">
       <SEOHead
         title={user?.username ? `Настройки — ${user.username}` : 'Настройки профиля'}
         description="Редактирование личных данных, смена пароля и управление аккаунтом."
       />
+      {/* Предупреждение о неподтверждённой почте */}
+      {!isActivated && (
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-theme-md border border-warning/30 bg-warning/10 p-4">
+          <ShieldAlert size={20} className="text-warning shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-theme-primary">Email не подтверждён</p>
+            <p className="text-xs text-theme-secondary mt-0.5">
+              Подтвердите адрес {user.email}, чтобы получить доступ ко всем функциям.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={handleResendVerification}
+            disabled={isResending}
+            className="shrink-0"
+          >
+            {isResending ? 'Отправка...' : 'Отправить письмо'}
+          </Button>
+        </div>
+      )}
       {/* Hero-блок профиля */}
       <Card className="relative overflow-hidden p-0">
         <div className="h-20 sm:h-24 bg-gradient-to-r from-brand to-brand-dark" />
@@ -344,14 +378,12 @@ const ProfileSettingsPage: React.FC = () => {
               error={profileErrors.username}
             />
 
-            <Field
-              label="Email"
-              icon={<Mail size={16} />}
-              type="email"
-              value={email}
-              onChange={setEmail}
-              error={profileErrors.email}
-            />
+            {/* Email — неизменяемый идентификатор. Показываем как InfoRow,
+                чтобы пользователь видел свой адрес, но не мог его редактировать. */}
+            <InfoRow icon={<Mail size={16} />} label="Email" value={user.email} />
+            <p className="-mt-2 pl-1 text-xs text-theme-muted">
+              Email является вашим идентификатором и не может быть изменён.
+            </p>
 
             {profileFormError && <p className="text-danger text-sm">{profileFormError}</p>}
 

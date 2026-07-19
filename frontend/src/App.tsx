@@ -5,9 +5,13 @@ import { Layout } from './components/Layout';
 import { DropZoneWrapper } from './components/DropZoneWrapper';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicRoute from './components/PublicRoute';
+import EmailVerificationModal from './components/EmailVerificationModal';
 import MainPage from './pages/MainPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import VerifyEmailPage from './pages/VerifyEmailPage';
 import DashboardPage from './pages/DashboardPage';
 import ProfileSettingsPage from './pages/ProfileSettingsPage';
 import SharedDirListPage from './pages/SharedDirListPage';
@@ -64,6 +68,25 @@ const App: React.FC = () => {
             </Layout>
           }
         />
+        {/* Подтверждение почты и сброс пароля — публичные, открываются по
+            ссылке из письма. Не обёрнуты в PublicRoute, чтобы работать и для
+            залогиненных, и для незалогиненных пользователей. */}
+        <Route
+          path="/verify-email/:token"
+          element={
+            <Layout>
+              <VerifyEmailPage />
+            </Layout>
+          }
+        />
+        <Route
+          path="/reset-password/:token"
+          element={
+            <Layout>
+              <ResetPasswordPage />
+            </Layout>
+          }
+        />
 
         {/* Только гостевые маршруты */}
         <Route
@@ -75,6 +98,7 @@ const App: React.FC = () => {
         >
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         </Route>
 
         {/* Защищённые маршруты */}
@@ -132,6 +156,13 @@ const App: React.FC = () => {
           }
         />
       </Routes>
+
+      {/* Глобальный модал подтверждения почты. Рендерится поверх всего UI
+          для аутентифицированных, но не активированных пользователей.
+          Не-dismissable — блокирует взаимодействие с приложением до тех пор,
+          пока пользователь не подтвердит почту (по ссылке из письма) или не
+          выйдет из аккаунта. */}
+      <EmailVerificationModal />
     </Router>
   );
 };

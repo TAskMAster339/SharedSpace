@@ -91,7 +91,7 @@ const InvitationsPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-6">
       <SEOHead
         title="Приглашения"
         description="Принимайте или отклоняйте приглашения к совместной работе."

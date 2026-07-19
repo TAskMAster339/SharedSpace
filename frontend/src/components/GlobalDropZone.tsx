@@ -174,7 +174,7 @@ export const GlobalDropZone: React.FC<GlobalDropZoneProps> = ({
   }, [handleDragEnter, handleDragOver, handleDragLeave, handleDrop]);
 
   return (
-    <div ref={dropZoneRef} className="relative w-full h-full">
+    <div ref={dropZoneRef} className="relative w-full h-full flex flex-col">
       {children}
 
       {/* Оверлей загрузки (показывается пока файлы загружаются) */}

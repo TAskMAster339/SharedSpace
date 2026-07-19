@@ -2,7 +2,10 @@ package auth
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
+	"log"
 	"regexp"
 	"strings"
 	"time"
@@ -13,28 +16,58 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"sharedspace/internal/apperror"
+	"sharedspace/internal/mailer"
 )
 
 const defaultStorageQuota int64 = 5 * 1024 * 1024 * 1024
 
+const (
+	emailTokenVerifyEmail   = "verify_email"
+	emailTokenResetPassword = "reset_password"
+
+	verifyEmailPath   = "/verify-email/"
+	resetPasswordPath = "/reset-password/"
+)
+
 var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 
 type Service struct {
-	beginTx      beginTxFunc
-	db           dbTX
-	repo         AuthRepository
-	jwtSecret    []byte
-	accessTTL    time.Duration
-	refreshTTL   time.Duration
-	storageQuota int64
+	beginTx          beginTxFunc
+	db               dbTX
+	repo             AuthRepository
+	jwtSecret        []byte
+	accessTTL        time.Duration
+	refreshTTL       time.Duration
+	storageQuota     int64
+	mailer           mailer.Mailer
+	appURL           string
+	verifyEmailTTL   time.Duration
+	resetPasswordTTL time.Duration
 }
 
-func NewService(pool *pgxpool.Pool, repo AuthRepository, jwtSecret string, accessTTL, refreshTTL time.Duration) *Service {
+func NewService(
+	pool *pgxpool.Pool,
+	repo AuthRepository,
+	jwtSecret string,
+	accessTTL, refreshTTL time.Duration,
+	m mailer.Mailer,
+	appURL string,
+	verifyEmailTTL, resetPasswordTTL time.Duration,
+) *Service {
 	if accessTTL <= 0 {
 		accessTTL = time.Hour
 	}
 	if refreshTTL <= 0 {
 		refreshTTL = 30 * 24 * time.Hour
+	}
+	if verifyEmailTTL <= 0 {
+		verifyEmailTTL = 24 * time.Hour
+	}
+	if resetPasswordTTL <= 0 {
+		resetPasswordTTL = time.Hour
+	}
+	if m == nil {
+		m = mailer.NewSMTPMailer("", 0, "", "", "", "", false, nil)
 	}
 	beginTx := func(ctx context.Context, opts pgx.TxOptions) (transaction, error) {
 		tx, err := pool.BeginTx(ctx, opts)
@@ -44,13 +77,17 @@ func NewService(pool *pgxpool.Pool, repo AuthRepository, jwtSecret string, acces
 		return txWrapper{Tx: tx}, nil
 	}
 	return &Service{
-		beginTx:      beginTx,
-		db:           pool,
-		repo:         repo,
-		jwtSecret:    []byte(jwtSecret),
-		accessTTL:    accessTTL,
-		refreshTTL:   refreshTTL,
-		storageQuota: defaultStorageQuota,
+		beginTx:          beginTx,
+		db:               pool,
+		repo:             repo,
+		jwtSecret:        []byte(jwtSecret),
+		accessTTL:        accessTTL,
+		refreshTTL:       refreshTTL,
+		storageQuota:     defaultStorageQuota,
+		mailer:           m,
+		appURL:           strings.TrimRight(appURL, "/"),
+		verifyEmailTTL:   verifyEmailTTL,
+		resetPasswordTTL: resetPasswordTTL,
 	}
 }
 
@@ -101,8 +138,29 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest) (RegisterRe
 		return RegisterResponse{}, apperror.WrapInternal("ошибка создания корневой директории", err)
 	}
 
+	// Issue the verification token within the same transaction as the user
+	// creation. If token persistence fails, the entire registration rolls
+	// back — we don't want users in the DB without a pending verification
+	// token (they'd be stuck unable to verify, and unable to re-trigger
+	// the flow until they call /resend-verification, which requires a
+	// login they can't complete because they're not activated).
+	rawVerifyToken, err := s.issueEmailToken(ctx, tx, user.ID, emailTokenVerifyEmail, s.verifyEmailTTL)
+	if err != nil {
+		return RegisterResponse{}, err
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		return RegisterResponse{}, apperror.WrapInternal("ошибка сохранения регистрации", err)
+	}
+
+	// Send verification email. Best-effort: failure here does NOT fail
+	// registration. The token is already persisted and the user can
+	// request a resend from the in-app modal.
+	verifyURL := s.appURL + verifyEmailPath + rawVerifyToken
+	if err := s.mailer.SendVerificationEmail(ctx, user.Email, verifyURL); err != nil {
+		log.Printf("auth: failed to send verification email to %s: %v", user.Email, err)
+	} else {
+		log.Printf("auth: verification email sent to %s", user.Email)
 	}
 
 	return RegisterResponse{
@@ -118,6 +176,7 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest) (RegisterRe
 			SharedDirsQuota: user.SharedDirsQuota,
 			ShareLinksCount: user.ShareLinksCount,
 			ShareLinksQuota: user.ShareLinksQuota,
+			Activated:       user.Activated,
 			CreatedAt:       user.CreatedAt,
 		},
 		RootDirectoryID: rootDirectoryID,
@@ -162,6 +221,7 @@ func (s *Service) Login(ctx context.Context, req LoginRequest, meta loginMeta) (
 			SharedDirsQuota: user.SharedDirsQuota,
 			ShareLinksCount: user.ShareLinksCount,
 			ShareLinksQuota: user.ShareLinksQuota,
+			Activated:       user.Activated,
 			CreatedAt:       user.CreatedAt,
 		},
 		Tokens: tokens,
@@ -256,6 +316,238 @@ func (s *Service) Logout(ctx context.Context, rawRefreshToken string) error {
 	}
 
 	return nil
+}
+
+// VerifyEmail confirms a user's email address using a single-use token from
+// the verification email. The token is hash-compared against email_tokens.
+func (s *Service) VerifyEmail(ctx context.Context, rawToken string) (VerifyEmailResponse, error) {
+	rawToken = strings.TrimSpace(rawToken)
+	if rawToken == "" {
+		return VerifyEmailResponse{}, apperror.Validation("требуется токен подтверждения")
+	}
+
+	tokenHash := hashToken(rawToken)
+
+	tx, err := s.beginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return VerifyEmailResponse{}, apperror.WrapInternal("ошибка начала транзакции", err)
+	}
+	defer tx.Rollback(ctx)
+
+	rec, err := s.repo.FindEmailTokenByHash(ctx, tx, tokenHash)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return VerifyEmailResponse{}, apperror.NotFound("ссылка подтверждения недействительна или истекла")
+		}
+		return VerifyEmailResponse{}, apperror.WrapInternal("ошибка поиска токена подтверждения", err)
+	}
+	if rec.Type != emailTokenVerifyEmail {
+		return VerifyEmailResponse{}, apperror.NotFound("ссылка подтверждения недействительна или истекла")
+	}
+	if rec.UsedAt != nil {
+		return VerifyEmailResponse{}, apperror.Conflict("ссылка уже использована")
+	}
+	if time.Now().UTC().After(rec.ExpiresAt) {
+		return VerifyEmailResponse{}, apperror.NotFound("срок действия ссылки истёк")
+	}
+
+	if err := s.repo.SetUserActivated(ctx, tx, rec.UserID, true); err != nil {
+		return VerifyEmailResponse{}, apperror.WrapInternal("ошибка активации аккаунта", err)
+	}
+	if err := s.repo.MarkEmailTokenUsed(ctx, tx, rec.ID); err != nil {
+		return VerifyEmailResponse{}, apperror.WrapInternal("ошибка пометки токена использованным", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return VerifyEmailResponse{}, apperror.WrapInternal("ошибка сохранения подтверждения", err)
+	}
+
+	return VerifyEmailResponse{Success: true, UserID: rec.UserID}, nil
+}
+
+// ResendVerification issues a fresh verify-email token for the calling user
+// (authenticated via JWT). Old unused tokens of the same type are invalidated.
+// Returns Conflict if the user is already activated.
+func (s *Service) ResendVerification(ctx context.Context, userID string) error {
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return apperror.Unauthorized("некорректный access токен")
+	}
+
+	user, err := s.repo.FindUserByID(ctx, s.db, userID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperror.NotFound("пользователь не найден")
+		}
+		return apperror.WrapInternal("ошибка поиска пользователя", err)
+	}
+	if user.Activated {
+		return apperror.Conflict("почта уже подтверждена")
+	}
+
+	tx, err := s.beginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return apperror.WrapInternal("ошибка начала транзакции", err)
+	}
+	defer tx.Rollback(ctx)
+
+	if err := s.repo.InvalidateEmailTokensForUser(ctx, tx, userID, emailTokenVerifyEmail); err != nil {
+		return apperror.WrapInternal("ошибка инвалидации старых токенов", err)
+	}
+
+	rawToken, err := s.issueEmailToken(ctx, tx, userID, emailTokenVerifyEmail, s.verifyEmailTTL)
+	if err != nil {
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return apperror.WrapInternal("ошибка сохранения токена", err)
+	}
+
+	verifyURL := s.appURL + verifyEmailPath + rawToken
+	if err := s.mailer.SendVerificationEmail(ctx, user.Email, verifyURL); err != nil {
+		log.Printf("auth: failed to resend verification email to %s: %v", user.Email, err)
+		return apperror.WrapInternal("не удалось отправить письмо подтверждения", err)
+	}
+	log.Printf("auth: verification email resent to %s", user.Email)
+	return nil
+}
+
+// RequestPasswordReset looks up a user by email. If the user exists AND has
+// activated their account, a reset-password token is issued and emailed.
+// For non-existent or non-activated accounts this is a silent no-op — the
+// caller still returns success to avoid leaking which emails are registered.
+func (s *Service) RequestPasswordReset(ctx context.Context, email string) error {
+	email = strings.ToLower(strings.TrimSpace(email))
+	if email == "" {
+		return apperror.Validation("email обязателен")
+	}
+	if !emailRegex.MatchString(email) {
+		return apperror.Validation("некорректный формат email")
+	}
+
+	user, err := s.repo.FindUserByEmail(ctx, s.db, email)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			// Intentionally silent: do not leak registered emails.
+			return nil
+		}
+		return apperror.WrapInternal("ошибка поиска пользователя по email", err)
+	}
+	if !user.Activated {
+		// Per the spec, password reset is only available for activated users.
+		return nil
+	}
+
+	tx, err := s.beginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return apperror.WrapInternal("ошибка начала транзакции", err)
+	}
+	defer tx.Rollback(ctx)
+
+	if err := s.repo.InvalidateEmailTokensForUser(ctx, tx, user.ID, emailTokenResetPassword); err != nil {
+		return apperror.WrapInternal("ошибка инвалидации старых токенов", err)
+	}
+
+	rawToken, err := s.issueEmailToken(ctx, tx, user.ID, emailTokenResetPassword, s.resetPasswordTTL)
+	if err != nil {
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return apperror.WrapInternal("ошибка сохранения токена", err)
+	}
+
+	resetURL := s.appURL + resetPasswordPath + rawToken
+	if err := s.mailer.SendPasswordResetEmail(ctx, user.Email, resetURL); err != nil {
+		log.Printf("auth: failed to send password reset email to %s: %v", user.Email, err)
+		return apperror.WrapInternal("не удалось отправить письмо для сброса пароля", err)
+	}
+	log.Printf("auth: password reset email sent to %s", user.Email)
+	return nil
+}
+
+// ResetPassword completes a password reset: validates the single-use token,
+// sets the new password, marks the token used, and revokes ALL refresh tokens
+// for the user (forcing re-login on every device).
+func (s *Service) ResetPassword(ctx context.Context, rawToken, newPassword string) error {
+	rawToken = strings.TrimSpace(rawToken)
+	if rawToken == "" {
+		return apperror.Validation("требуется токен сброса пароля")
+	}
+	if err := validatePassword(newPassword); err != nil {
+		return err
+	}
+
+	tokenHash := hashToken(rawToken)
+
+	tx, err := s.beginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return apperror.WrapInternal("ошибка начала транзакции", err)
+	}
+	defer tx.Rollback(ctx)
+
+	rec, err := s.repo.FindEmailTokenByHash(ctx, tx, tokenHash)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperror.NotFound("ссылка сброса пароля недействительна или истекла")
+		}
+		return apperror.WrapInternal("ошибка поиска токена сброса", err)
+	}
+	if rec.Type != emailTokenResetPassword {
+		return apperror.NotFound("ссылка сброса пароля недействительна или истекла")
+	}
+	if rec.UsedAt != nil {
+		return apperror.Conflict("ссылка уже использована")
+	}
+	if time.Now().UTC().After(rec.ExpiresAt) {
+		return apperror.NotFound("срок действия ссылки истёк")
+	}
+
+	newHash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return apperror.WrapInternal("ошибка хеширования пароля", err)
+	}
+
+	if err := s.repo.UpdateUserPassword(ctx, tx, rec.UserID, string(newHash)); err != nil {
+		return apperror.WrapInternal("ошибка обновления пароля", err)
+	}
+	if err := s.repo.MarkEmailTokenUsed(ctx, tx, rec.ID); err != nil {
+		return apperror.WrapInternal("ошибка пометки токена использованным", err)
+	}
+	if err := s.repo.RevokeAllRefreshTokensForUser(ctx, tx, rec.UserID); err != nil {
+		return apperror.WrapInternal("ошибка отзыва refresh токенов", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return apperror.WrapInternal("ошибка сохранения нового пароля", err)
+	}
+
+	return nil
+}
+
+// issueEmailToken generates a cryptographically random token, hashes it,
+// persists the hash, and returns the raw token to the caller.
+func (s *Service) issueEmailToken(ctx context.Context, tx transaction, userID, tokenType string, ttl time.Duration) (string, error) {
+	rawToken, err := newEmailToken()
+	if err != nil {
+		return "", apperror.WrapInternal("ошибка генерации токена", err)
+	}
+	tokenHash := hashToken(rawToken)
+	expiresAt := time.Now().UTC().Add(ttl)
+	if err := s.repo.CreateEmailToken(ctx, tx, userID, tokenHash, tokenType, expiresAt); err != nil {
+		return "", apperror.WrapInternal("ошибка сохранения токена", err)
+	}
+	return rawToken, nil
+}
+
+// newEmailToken returns 32 random bytes URL-safe base64-encoded.
+func newEmailToken() (string, error) {
+	var buf [32]byte
+	if _, err := rand.Read(buf[:]); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(buf[:]), nil
 }
 
 func normalizeRegisterRequest(req RegisterRequest) (RegisterRequest, error) {

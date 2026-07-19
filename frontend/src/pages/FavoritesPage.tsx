@@ -259,10 +259,7 @@ const FavoritesPage: React.FC = () => {
   );
 
   return (
-    <div
-      className="flex flex-col min-h-[calc(100vh-12rem)] space-y-6 pb-10"
-      onContextMenu={handlePageContextMenu}
-    >
+    <div className="flex flex-col flex-1 space-y-6" onContextMenu={handlePageContextMenu}>
       <SEOHead title="Избранное" description="Файлы, отмеченные звёздочкой для быстрого доступа." />
       <div className="flex items-start justify-between gap-4">
         <div>

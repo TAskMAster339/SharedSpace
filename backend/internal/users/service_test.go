@@ -199,33 +199,32 @@ func TestServiceGetMe(t *testing.T) {
 func TestServiceUpdateMe(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		repo := &mockRepo{
-			findUserByEmailErr:    pgx.ErrNoRows,
 			findUserByUsernameErr: pgx.ErrNoRows,
-			updatedProfileUser:    record{ID: "user-1", Username: "ivan", Email: "new@example.com", FirstName: "Ivan", SharedDirsQuota: 5, CreatedAt: time.Unix(100, 0).UTC()},
+			updatedProfileUser:    record{ID: "user-1", Username: "ivan", Email: "ivan@example.com", FirstName: "Ivan", SharedDirsQuota: 5, CreatedAt: time.Unix(100, 0).UTC()},
 		}
 		service, tx := newTestService(repo)
 
-		email := "new@example.com"
-		resp, err := service.UpdateMe(context.Background(), "user-1", UpdateProfileRequest{Email: &email})
+		firstName := "Ivan"
+		resp, err := service.UpdateMe(context.Background(), "user-1", UpdateProfileRequest{FirstName: &firstName})
 		if err != nil {
 			t.Fatalf("UpdateMe returned error: %v", err)
 		}
-		if resp.Email != "new@example.com" {
-			t.Fatalf("unexpected email: %q", resp.Email)
+		if resp.FirstName != "Ivan" {
+			t.Fatalf("unexpected first_name: %q", resp.FirstName)
 		}
 		if tx.commitCount != 1 {
 			t.Fatalf("commit count = %d, want 1", tx.commitCount)
 		}
 	})
 
-	t.Run("email conflict", func(t *testing.T) {
+	t.Run("username conflict", func(t *testing.T) {
 		repo := &mockRepo{
-			findUserByEmailResult: record{ID: "other-user", Username: "other", Email: "taken@example.com"},
+			findUserByUsernameResult: record{ID: "other-user", Username: "taken", Email: "taken@example.com"},
 		}
 		service, _ := newTestService(repo)
 
-		email := "taken@example.com"
-		_, err := service.UpdateMe(context.Background(), "user-1", UpdateProfileRequest{Email: &email})
+		username := "taken"
+		_, err := service.UpdateMe(context.Background(), "user-1", UpdateProfileRequest{Username: &username})
 		if err == nil {
 			t.Fatal("expected error")
 		}

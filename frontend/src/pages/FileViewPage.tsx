@@ -549,7 +549,7 @@ const FileViewPage: React.FC = () => {
   const isFav = isFavorite(file.id);
 
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-6">
       <SEOHead
         title={file.filename}
         description={`Файл · ${formatFileSize(file.size)} · ${file.mime_type}`}

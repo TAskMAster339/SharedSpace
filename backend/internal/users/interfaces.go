@@ -51,7 +51,6 @@ type transaction interface {
 type txWrapper struct{ pgx.Tx }
 
 type UpdateProfileInput struct {
-	Email      *string
 	Username   *string
 	FirstName  *string
 	SecondName *string
@@ -70,6 +69,7 @@ type record struct {
 	SharedDirsQuota int
 	ShareLinksCount int
 	ShareLinksQuota int
+	Activated       bool
 	CreatedAt       time.Time
 }
 

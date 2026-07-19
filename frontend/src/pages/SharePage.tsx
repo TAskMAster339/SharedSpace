@@ -408,7 +408,7 @@ const SharePage: React.FC = () => {
   const fileIconType = resolveFileIconType(file.mime_type, file.extension);
 
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-6">
       <SEOHead
         title={ogTitle}
         description={ogDescription}

@@ -14,6 +14,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - sharedspace-net
 
   minio:
     image: minio/minio:latest
@@ -32,6 +34,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - sharedspace-net
 
   backend:
     build:
@@ -50,11 +54,24 @@ services:
       MINIO_BUCKET: ${MINIO_BUCKET}
       JWT_SECRET: ${JWT_SECRET}
       JWT_TTL: ${JWT_TTL}
+      REFRESH_JWT_TTL: ${REFRESH_JWT_TTL:-2592000}
+      VERIFY_EMAIL_TTL_HOURS: ${VERIFY_EMAIL_TTL_HOURS:-24}
+      RESET_PASSWORD_TTL_HOURS: ${RESET_PASSWORD_TTL_HOURS:-1}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-SharedSpace}
+      SMTP_USE_TLS: ${SMTP_USE_TLS:-true}
+      APP_URL: ${APP_URL:-http://localhost:3000}
     depends_on:
       postgres:
         condition: service_healthy
       minio:
         condition: service_healthy
+    networks:
+      - sharedspace-net
 
   frontend:
     build:
@@ -66,6 +83,8 @@ services:
       - "3000:80"
     depends_on:
       - backend
+    networks:
+      - sharedspace-net
 
   nginx:
     image: nginx:alpine
@@ -77,7 +96,15 @@ services:
       - backend
       - frontend
       - minio
+    networks:
+      - sharedspace-net
 
 volumes:
   pgdata:
   miniodata:
+
+networks:
+  sharedspace-net:
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: "1280"

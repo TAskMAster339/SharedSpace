@@ -3,7 +3,6 @@ package users
 import (
 	"context"
 	"errors"
-	"regexp"
 	"strings"
 	"time"
 	"unicode"
@@ -17,8 +16,6 @@ import (
 )
 
 const minSearchQueryLength = 2
-
-var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 
 type Service struct {
 	beginTx beginTxFunc
@@ -79,16 +76,6 @@ func (s *Service) UpdateMe(ctx context.Context, userID string, req UpdateProfile
 		return UserResponse{}, apperror.WrapInternal("ошибка начала транзакции", err)
 	}
 	defer tx.Rollback(ctx)
-
-	if input.Email != nil {
-		existing, findErr := s.repo.FindUserByEmail(ctx, tx, *input.Email)
-		switch {
-		case findErr == nil && existing.ID != userID:
-			return UserResponse{}, apperror.Conflict("email уже используется")
-		case findErr != nil && !errors.Is(findErr, pgx.ErrNoRows):
-			return UserResponse{}, apperror.WrapInternal("ошибка поиска пользователя по email", findErr)
-		}
-	}
 
 	if input.Username != nil {
 		existing, findErr := s.repo.FindUserByUsername(ctx, tx, *input.Username)
@@ -237,28 +224,22 @@ func toUserResponse(user record) UserResponse {
 		SharedDirsQuota: user.SharedDirsQuota,
 		ShareLinksCount: user.ShareLinksCount,
 		ShareLinksQuota: user.ShareLinksQuota,
+		Activated:       user.Activated,
 		CreatedAt:       user.CreatedAt,
 	}
 }
 
 func normalizeUpdateProfileRequest(req UpdateProfileRequest) (UpdateProfileInput, error) {
 	input := UpdateProfileInput{
-		Email:      normalizeOptionalEmail(req.Email),
 		Username:   normalizeOptionalText(req.Username),
 		FirstName:  normalizeOptionalText(req.FirstName),
 		SecondName: normalizeOptionalText(req.SecondName),
 	}
 
-	if input.Email == nil && input.Username == nil && input.FirstName == nil && input.SecondName == nil {
+	if input.Username == nil && input.FirstName == nil && input.SecondName == nil {
 		return UpdateProfileInput{}, apperror.Validation("требуется хотя бы одно поле профиля")
 	}
 
-	if input.Email != nil && *input.Email == "" {
-		return UpdateProfileInput{}, apperror.Validation("email не может быть пустым")
-	}
-	if err := validateOptionalEmail(input.Email); err != nil {
-		return UpdateProfileInput{}, err
-	}
 	if input.Username != nil && *input.Username == "" {
 		return UpdateProfileInput{}, apperror.Validation("имя пользователя не может быть пустым")
 	}
@@ -272,24 +253,6 @@ func normalizeOptionalText(v *string) *string {
 	}
 	trimmed := strings.TrimSpace(*v)
 	return &trimmed
-}
-
-func normalizeOptionalEmail(v *string) *string {
-	if v == nil {
-		return nil
-	}
-	normalized := strings.ToLower(strings.TrimSpace(*v))
-	return &normalized
-}
-
-func validateOptionalEmail(v *string) error {
-	if v == nil || *v == "" {
-		return nil
-	}
-	if !emailRegex.MatchString(*v) {
-		return apperror.Validation("некорректный формат email")
-	}
-	return nil
 }
 
 func isUniqueViolation(err error) bool {

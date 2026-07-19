@@ -12,11 +12,15 @@ import (
 )
 
 type mockService struct {
-	registerFn func(RegisterRequest) (RegisterResponse, error)
-	loginFn    func(LoginRequest, loginMeta) (LoginResponse, error)
-	refreshFn  func(string, loginMeta) (RefreshResponse, error)
-	userIDFn   func(string) (string, error)
-	logoutFn   func(string) error
+	registerFn  func(RegisterRequest) (RegisterResponse, error)
+	loginFn     func(LoginRequest, loginMeta) (LoginResponse, error)
+	refreshFn   func(string, loginMeta) (RefreshResponse, error)
+	userIDFn    func(string) (string, error)
+	logoutFn    func(string) error
+	verifyFn    func(string) (VerifyEmailResponse, error)
+	resendFn    func(string) error
+	forgotFn    func(string) error
+	resetPassFn func(string, string) error
 
 	registerReq    RegisterRequest
 	loginReq       LoginRequest
@@ -25,6 +29,11 @@ type mockService struct {
 	refreshMeta    loginMeta
 	rawAccessToken string
 	logoutToken    string
+	verifyToken    string
+	resendUserID   string
+	forgotEmail    string
+	resetToken     string
+	resetPassword  string
 }
 
 func (m *mockService) Register(_ context.Context, req RegisterRequest) (RegisterResponse, error) {
@@ -71,6 +80,39 @@ func (m *mockService) Logout(_ context.Context, token string) error {
 
 func (m *mockService) ParseAccessToken(_ string) (*Claims, error) {
 	return nil, nil
+}
+
+func (m *mockService) VerifyEmail(_ context.Context, token string) (VerifyEmailResponse, error) {
+	m.verifyToken = token
+	if m.verifyFn != nil {
+		return m.verifyFn(token)
+	}
+	return VerifyEmailResponse{Success: true}, nil
+}
+
+func (m *mockService) ResendVerification(_ context.Context, userID string) error {
+	m.resendUserID = userID
+	if m.resendFn != nil {
+		return m.resendFn(userID)
+	}
+	return nil
+}
+
+func (m *mockService) RequestPasswordReset(_ context.Context, email string) error {
+	m.forgotEmail = email
+	if m.forgotFn != nil {
+		return m.forgotFn(email)
+	}
+	return nil
+}
+
+func (m *mockService) ResetPassword(_ context.Context, token, newPassword string) error {
+	m.resetToken = token
+	m.resetPassword = newPassword
+	if m.resetPassFn != nil {
+		return m.resetPassFn(token, newPassword)
+	}
+	return nil
 }
 
 func TestHandlerLogout(t *testing.T) {

@@ -82,7 +82,7 @@ export const Toast: React.FC<ToastProps> = ({
   return (
     <div
       className={cn(
-        'relative overflow-hidden flex items-center gap-3 px-4 py-3 rounded-theme-lg border border-theme shadow-theme-dropdown max-w-sm w-full',
+        'relative overflow-hidden flex items-center gap-3 px-4 py-3 rounded-theme-lg border border-theme shadow-theme-dropdown w-full',
         'bg-theme-secondary',
         'transition-all duration-300 transform',
         isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0',

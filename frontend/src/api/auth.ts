@@ -12,6 +12,7 @@ export interface AuthUser {
   shared_dirs_quota: number;
   share_links_count: number;
   share_links_quota: number;
+  activated: boolean;
   created_at: string;
 }
 
@@ -75,5 +76,40 @@ export function logout(refreshToken: string): Promise<void> {
   return apiRequest<void>('/auth/logout', {
     method: 'POST',
     body: JSON.stringify({ refresh_token: refreshToken }),
+  });
+}
+
+// --- Email verification & password reset ---
+
+export interface VerifyEmailResult {
+  success: boolean;
+  user_id?: string;
+}
+
+export function verifyEmail(token: string): Promise<VerifyEmailResult> {
+  return apiRequest<VerifyEmailResult>('/auth/verify-email', {
+    method: 'POST',
+    body: JSON.stringify({ token }),
+  });
+}
+
+export function resendVerificationEmail(accessToken: string): Promise<void> {
+  return apiRequest<void>('/auth/resend-verification/me', {
+    method: 'POST',
+    token: accessToken,
+  });
+}
+
+export function requestPasswordReset(email: string): Promise<void> {
+  return apiRequest<void>('/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+export function resetPassword(token: string, newPassword: string): Promise<void> {
+  return apiRequest<void>('/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify({ token, new_password: newPassword }),
   });
 }

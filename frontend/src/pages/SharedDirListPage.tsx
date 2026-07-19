@@ -185,7 +185,7 @@ const SharedDirListPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-6">
       <SEOHead
         title="Общие директории"
         description="Совместные пространства для работы с командой."

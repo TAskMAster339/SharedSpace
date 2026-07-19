@@ -15,7 +15,7 @@ export const Button: React.FC<ButtonProps> = ({
   ...props
 }) => {
   const baseStyles =
-    'font-medium rounded-theme-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
+    'font-medium rounded-theme-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed';
 
   const variants = {
     primary: 'bg-brand text-theme-on-brand hover:bg-brand-hover',

@@ -23,6 +23,7 @@ type tokenClaims struct {
 	Username   string `json:"username,omitempty"`
 	FirstName  string `json:"first_name,omitempty"`
 	SecondName string `json:"second_name,omitempty"`
+	Activated  bool   `json:"activated"`
 	jwt.RegisteredClaims
 }
 
@@ -37,6 +38,7 @@ func (s *Service) issueTokenPair(user authUser) (TokenPair, error) {
 		Username:   user.Username,
 		FirstName:  user.FirstName,
 		SecondName: user.SecondName,
+		Activated:  user.Activated,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   user.ID,
 			IssuedAt:  jwt.NewNumericDate(issuedAt),
@@ -60,6 +62,7 @@ func (s *Service) issueTokenPair(user authUser) (TokenPair, error) {
 		Username:   user.Username,
 		FirstName:  user.FirstName,
 		SecondName: user.SecondName,
+		Activated:  user.Activated,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   user.ID,
 			ID:        refreshJTI,
@@ -111,6 +114,7 @@ func (s *Service) ParseAccessToken(raw string) (*Claims, error) {
 		Username:   tc.Username,
 		FirstName:  tc.FirstName,
 		SecondName: tc.SecondName,
+		Activated:  tc.Activated,
 	}, nil
 }
 
