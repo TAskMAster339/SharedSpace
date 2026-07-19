@@ -284,7 +284,7 @@ const ProfileSettingsPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-0 space-y-5 pb-10">
+    <div className="max-w-3xl mx-auto px-4 sm:px-0 space-y-5">
       <SEOHead
         title={user?.username ? `Настройки — ${user.username}` : 'Настройки профиля'}
         description="Редактирование личных данных, смена пароля и управление аккаунтом."

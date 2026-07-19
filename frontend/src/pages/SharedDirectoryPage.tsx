@@ -600,7 +600,7 @@ const SharedDirectoryPage: React.FC = () => {
     };
 
     return (
-      <div className="space-y-6 pb-10">
+      <div className="space-y-6">
         <SEOHead
           title={previewFile.filename}
           description={`Файл · ${formatFileSize(previewFile.size)} · Общая папка ${data.name}`}
@@ -690,7 +690,7 @@ const SharedDirectoryPage: React.FC = () => {
   const fileCount = allFiles.length + allSubdirs.length;
 
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-6">
       <SEOHead
         title={data.name + ' — общая папка'}
         description={`Общая папка · ${fileCount} элементов · Владелец: ${data.owner_username}`}

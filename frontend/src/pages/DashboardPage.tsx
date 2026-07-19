@@ -316,7 +316,7 @@ const DashboardPage: React.FC = () => {
   const favoritesFullWidth = recentFiles.length > 0 && displayFavorites.length > 0;
 
   return (
-    <div className="space-y-8 pb-10">
+    <div className="space-y-8">
       <SEOHead
         title="Панель управления"
         description="Быстрый доступ к недавним файлам, избранному и общим директориям."

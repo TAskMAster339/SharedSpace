@@ -40,7 +40,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           <div className="flex-1 min-w-0 overflow-y-auto overflow-x-clip flex flex-col">
             <div
               className={cn(
-                'self-center w-full max-w-6xl flex-1',
+                'self-center w-full max-w-6xl flex-1 flex flex-col',
                 isOnLandingPage ? 'p-0' : 'p-4 sm:p-6',
                 isAuthenticated && !isOnLandingPage && 'pb-24 md:pb-6',
               )}
@@ -48,7 +48,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               {children ? children : <Outlet />}
             </div>
           </div>
-          <div className={`md:hidden shrink-0 border-t border-theme px-4 py-3 text-center${isAuthenticated ? ' pb-20' : ''}`}>
+          <div
+            className={`md:hidden shrink-0 border-t border-theme px-4 py-3 text-center${isAuthenticated ? ' pb-20' : ''}`}
+          >
             <p className="text-xs text-theme-muted">
               &copy; {CURRENT_YEAR} SharedSpace. Учебный проект.
             </p>

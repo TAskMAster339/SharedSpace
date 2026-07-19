@@ -939,7 +939,7 @@ const DirectoryPage: React.FC = () => {
   const titleName = isPersonal ? 'Личное хранилище' : directoryContents.name;
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-12rem)]" onContextMenu={handleContextMenu}>
+    <div className="flex flex-col flex-1" onContextMenu={handleContextMenu}>
       <SEOHead
         title={titleName}
         description={
@@ -948,7 +948,7 @@ const DirectoryPage: React.FC = () => {
             : `Директория · ${filteredSubdirectories.length + allFiles.length} элементов`
         }
       />
-      <div className="space-y-6 pb-10">
+      <div className="space-y-6">
         {/* Назад к списку общих директорий */}
         {isSharedDirectory && (
           <button

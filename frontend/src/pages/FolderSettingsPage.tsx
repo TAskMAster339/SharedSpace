@@ -101,7 +101,7 @@ const FolderSettingsPage: React.FC = () => {
 
   if (error || !directory) {
     return (
-      <div className="space-y-6 pb-10">
+      <div className="space-y-6">
         <SEOHead title="Настройки папки" description={error || 'Папка не найдена.'} />
         <button
           onClick={() => navigate(-1)}
@@ -121,7 +121,7 @@ const FolderSettingsPage: React.FC = () => {
   );
 
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-6">
       <SEOHead
         title={directory?.name ? `Настройки — ${directory.name}` : 'Настройки папки'}
         description={`Управление настройками папки — ${directory?.name || 'папка'}.`}
