@@ -222,6 +222,6 @@ func (m *SMTPMailer) SendPasswordResetEmail(ctx context.Context, to, resetURL st
 // noopMailer is a no-op Mailer used when SMTP_HOST is not configured.
 type noopMailer struct{}
 
-func (noopMailer) Send(_ context.Context, _, _, _, _ string) error            { return nil }
+func (noopMailer) Send(_ context.Context, _, _, _, _ string) error             { return nil }
 func (noopMailer) SendVerificationEmail(_ context.Context, _, _ string) error  { return nil }
 func (noopMailer) SendPasswordResetEmail(_ context.Context, _, _ string) error { return nil }

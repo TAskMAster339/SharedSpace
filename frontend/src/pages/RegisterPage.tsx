@@ -95,7 +95,7 @@ const RegisterPage: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-[80vh] px-4">
+    <div className="flex items-center justify-center h-full px-4">
       <SEOHead
         title="Регистрация"
         description="Зарегистрируйтесь в SharedSpace и получите бесплатное облачное хранилище для файлов и совместной работы."

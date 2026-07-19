@@ -51,7 +51,7 @@ const ForgotPasswordPage: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-[80vh] px-4">
+    <div className="flex items-center justify-center h-full px-4">
       <SEOHead
         title="Восстановление пароля"
         description="Сбросьте пароль от аккаунта SharedSpace, если вы его забыли."

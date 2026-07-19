@@ -59,7 +59,7 @@ export const Modal: React.FC<ModalProps> = ({
           className,
         )}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-theme shrink-0">
+        <div className={`flex items-center px-6 py-4 border-b border-theme shrink-0 ${showCloseButton ? 'justify-between' : 'justify-center'}`}>
           <h2 className="text-lg font-semibold text-theme-primary">{title}</h2>
           {showCloseButton && (
             <button

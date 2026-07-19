@@ -38,7 +38,7 @@ const VerifyEmailPage: React.FC = () => {
   }, [token]);
 
   return (
-    <div className="flex items-center justify-center min-h-[80vh] px-4">
+    <div className="flex items-center justify-center h-full px-4">
       <SEOHead
         title="Подтверждение почты"
         description="Подтверждение адреса электронной почты для аккаунта SharedSpace."

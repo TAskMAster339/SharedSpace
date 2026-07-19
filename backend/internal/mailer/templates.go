@@ -4,6 +4,7 @@ import (
 	"embed"
 	"fmt"
 	"strings"
+	"time"
 )
 
 //go:embed icons/logo.png
@@ -19,6 +20,8 @@ func LogoBytes() []byte {
 	return logoData
 }
 
+var currentYear = time.Now().Year()
+
 func emailLayout(title, bodyHTML string) string {
 	return fmt.Sprintf(`<!DOCTYPE html>
 <html lang="ru">
@@ -26,6 +29,9 @@ func emailLayout(title, bodyHTML string) string {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>%s</title>
+  <style>
+    .btn-primary:hover { background-color:#2563eb !important; }
+  </style>
 </head>
 <body style="margin:0;padding:0;background-color:#f6f6f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
   <table width="100%%" cellpadding="0" cellspacing="0" style="padding:24px 16px;">
@@ -43,18 +49,18 @@ func emailLayout(title, bodyHTML string) string {
             </tr>
           </table>
         </td></tr>
-        <tr><td style="background:#ffffff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06),0 1px 2px rgba(0,0,0,0.04);overflow:hidden;">
+        <tr><td style="background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 2px 10px -3px rgba(0,0,0,0.05);overflow:hidden;">
           %s
         </td></tr>
         <tr><td style="padding-top:20px;text-align:center;">
           <p style="margin:0 0 4px;font-size:12px;color:#9ca3af;">SharedSpace — просторный как космос</p>
-          <p style="margin:0;font-size:11px;color:#b0b7c0;">&copy; %s SharedSpace</p>
+          <p style="margin:0;font-size:11px;color:#b0b7c0;">&copy; %d SharedSpace</p>
         </td></tr>
       </table>
     </td></tr>
   </table>
 </body>
-</html>`, title, bodyHTML, "2025")
+</html>`, title, bodyHTML, currentYear)
 }
 
 func verificationEmailBody(verifyURL string) (html, text string) {
@@ -75,12 +81,12 @@ func verificationEmailBody(verifyURL string) (html, text string) {
 	body := fmt.Sprintf(`
         <div style="padding:32px 32px 28px;">
           <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;text-align:center;">Подтвердите почту</h1>
-          <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#4b5563;text-align:center;">
+          <p style="margin:0;font-size:15px;line-height:1.6;color:#4b5563;text-align:center;">
             Спасибо за регистрацию в SharedSpace! Чтобы завершить создание аккаунта, подтвердите ваш адрес электронной почты.
           </p>
-          <table cellpadding="0" cellspacing="0" style="margin:0 auto 20px;">
+          <table cellpadding="0" cellspacing="0" style="margin:36px auto;">
             <tr><td style="background:#3b82f6;border-radius:8px;text-align:center;">
-              <a href="%s" style="display:inline-block;color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;padding:13px 36px;letter-spacing:0.2px;border-radius:8px;">Подтвердить почту</a>
+              <a href="%s" class="btn-primary" style="display:inline-block;color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;padding:13px 36px;letter-spacing:0.2px;border-radius:8px;">Подтвердить почту</a>
             </td></tr>
           </table>
           <table cellpadding="0" cellspacing="0" style="margin:0 auto 16px;background:#f9fafb;border-radius:8px;width:100%%;">
@@ -118,12 +124,12 @@ func passwordResetEmailBody(resetURL string) (html, text string) {
 	body := fmt.Sprintf(`
         <div style="padding:32px 32px 28px;">
           <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;text-align:center;">Восстановление пароля</h1>
-          <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#4b5563;text-align:center;">
+          <p style="margin:0;font-size:15px;line-height:1.6;color:#4b5563;text-align:center;">
             Мы получили запрос на сброс пароля для вашего аккаунта SharedSpace. Нажмите кнопку ниже, чтобы задать новый пароль.
           </p>
-          <table cellpadding="0" cellspacing="0" style="margin:0 auto 20px;">
+          <table cellpadding="0" cellspacing="0" style="margin:48px auto;">
             <tr><td style="background:#3b82f6;border-radius:8px;text-align:center;">
-              <a href="%s" style="display:inline-block;color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;padding:13px 36px;letter-spacing:0.2px;border-radius:8px;">Сбросить пароль</a>
+              <a href="%s" class="btn-primary" style="display:inline-block;color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;padding:13px 36px;letter-spacing:0.2px;border-radius:8px;">Сбросить пароль</a>
             </td></tr>
           </table>
           <table cellpadding="0" cellspacing="0" style="margin:0 auto 16px;background:#f9fafb;border-radius:8px;width:100%%;">
