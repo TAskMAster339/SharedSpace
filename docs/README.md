@@ -92,7 +92,7 @@ npm run build             # Сборка для продакшена
 | Сервис | Образ | Порт(ы) | Назначение |
 |--------|-------|---------|------------|
 | `postgres` | postgres:17-alpine | 5432 | База данных |
-| `minio` | minio/minio:latest | 9000 (API), 9001 (Console) | S3-совместимое хранилище |
+| `minio` | dappros/minio:RELEASE.2025-09-07T16-13-09Z | 9000 (API), 9001 (Console) | S3-совместимое хранилище |
 | `nginx-minio` | nginx:alpine | 9002 | Прокси для публичных ссылок MinIO |
 | `backend` | сборка из `backend/Dockerfile` | 8080 | Go REST API |
 | `frontend` | сборка из `frontend/Dockerfile` | 80 | React SPA через nginx |
