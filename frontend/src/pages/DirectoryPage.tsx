@@ -1095,6 +1095,7 @@ const DirectoryPage: React.FC = () => {
                       showProperties
                       key={folder.id}
                       id={folder.id}
+                      sizeBytes={folder.size_bytes}
                       name={folder.name}
                       to={`/directories/${folder.id}`}
                       hasShareLinks={folder.has_share_links}

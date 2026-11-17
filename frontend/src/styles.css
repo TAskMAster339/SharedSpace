@@ -393,3 +393,15 @@
     animation: none;
   }
 }
+
+@layer utilities {
+  .storage-usage-row:hover,
+  .storage-usage-row:focus-within {
+    background-color: var(--brand-light);
+  }
+
+  .storage-usage-row-trash:hover,
+  .storage-usage-row-trash:focus-within {
+    background-color: var(--danger-light);
+  }
+}

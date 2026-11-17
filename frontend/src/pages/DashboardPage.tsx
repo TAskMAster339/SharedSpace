@@ -419,6 +419,7 @@ const DashboardPage: React.FC = () => {
                 <DirectoryItem
                   key={dir.id}
                   id={dir.id}
+                  sizeBytes={dir.size_bytes}
                   name={dir.name}
                   to={`/directories/${dir.directory_id}`}
                   onContextMenu={(e) => handleDirContextMenu(e, dir)}

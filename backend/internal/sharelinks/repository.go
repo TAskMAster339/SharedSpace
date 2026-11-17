@@ -165,7 +165,7 @@ func (r *Repository) GetDirectoryByID(ctx context.Context, db dbTX, dirID string
 
 func (r *Repository) GetDirectorySubdirs(ctx context.Context, db dbTX, dirID string) ([]dirSubdirRecord, error) {
 	rows, err := db.Query(ctx, `
-		SELECT id, name FROM directories WHERE parent_id = $1 AND deleted_at IS NULL AND type = 'regular'
+		SELECT id, name, size_bytes FROM directories WHERE parent_id = $1 AND deleted_at IS NULL AND type = 'regular'
 		ORDER BY name ASC
 	`, dirID)
 	if err != nil {
@@ -176,7 +176,7 @@ func (r *Repository) GetDirectorySubdirs(ctx context.Context, db dbTX, dirID str
 	var subdirs []dirSubdirRecord
 	for rows.Next() {
 		var sd dirSubdirRecord
-		if err := rows.Scan(&sd.ID, &sd.Name); err != nil {
+		if err := rows.Scan(&sd.ID, &sd.Name, &sd.SizeBytes); err != nil {
 			return nil, err
 		}
 		subdirs = append(subdirs, sd)
@@ -186,7 +186,7 @@ func (r *Repository) GetDirectorySubdirs(ctx context.Context, db dbTX, dirID str
 
 func (r *Repository) GetDirectorySubdirsAfterCursor(ctx context.Context, db dbTX, dirID string, cursorName string, cursorID string, limit int) ([]dirSubdirRecord, bool, string, error) {
 	query := `
-		SELECT id, name FROM directories
+		SELECT id, name, size_bytes FROM directories
 		WHERE parent_id = $1 AND deleted_at IS NULL AND type = 'regular'`
 	args := []any{dirID}
 
@@ -209,7 +209,7 @@ func (r *Repository) GetDirectorySubdirsAfterCursor(ctx context.Context, db dbTX
 	var subdirs []dirSubdirRecord
 	for rows.Next() {
 		var sd dirSubdirRecord
-		if err := rows.Scan(&sd.ID, &sd.Name); err != nil {
+		if err := rows.Scan(&sd.ID, &sd.Name, &sd.SizeBytes); err != nil {
 			return nil, false, "", err
 		}
 		subdirs = append(subdirs, sd)

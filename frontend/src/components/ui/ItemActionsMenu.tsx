@@ -16,7 +16,7 @@ interface ItemActionsMenuProps {
   properties?: PropertiesTarget;
   className?: string;
   iconSize?: number;
-  triggerClassName?: string;
+  contextAnchor?: React.RefObject<HTMLAnchorElement>;
   openMenu?: boolean;
   onCloseMenu?: () => void;
   menuPosition?: { x: number; y: number } | null;
@@ -37,7 +37,7 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
   properties,
   className,
   iconSize = 18,
-  triggerClassName,
+  contextAnchor,
   openMenu,
   onCloseMenu,
   menuPosition,
@@ -45,6 +45,7 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const getTrigger = () => contextAnchor?.current ?? triggerRef.current;
 
   useEffect(() => {
     if (!openMenu) return;
@@ -176,7 +177,7 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
         <ItemPropertiesAction
           target={properties}
           separated={!!hasOtherActions}
-          focusTarget={() => triggerRef.current}
+          focusTarget={getTrigger}
           onSelect={handleClose}
         />
       )}
@@ -185,32 +186,34 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
 
   return (
     <div className={cn('relative inline-flex', className)}>
-      <button
-        ref={triggerRef}
-        type="button"
-        aria-label="Открыть меню действий"
-        aria-haspopup="menu"
-        aria-expanded={isOpen}
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          if (!menuPosition) updatePosition();
-          setIsOpen((prev) => !prev);
-        }}
-        className={cn(
-          'p-2 -m-1 rounded-theme-sm text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors',
-          triggerClassName,
-        )}
-      >
-        <MoreVertical size={iconSize} />
-      </button>
+      {!contextAnchor && (
+        <button
+          ref={triggerRef}
+          type="button"
+          aria-label="Открыть меню действий"
+          aria-haspopup="menu"
+          aria-expanded={isOpen}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!menuPosition) updatePosition();
+            setIsOpen((prev) => !prev);
+          }}
+          className={cn(
+            'p-2 -m-1 rounded-theme-sm text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors',
+            contextAnchor,
+          )}
+        >
+          <MoreVertical size={iconSize} />
+        </button>
+      )}
 
       <ContextMenu
         isOpen={isOpen}
         onClose={handleClose}
         position={position}
         width={MENU_WIDTH}
-        trigger={properties ? triggerRef.current : null}
+        trigger={contextAnchor || properties ? getTrigger() : null}
       >
         {menuItems}
       </ContextMenu>

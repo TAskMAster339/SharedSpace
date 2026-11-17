@@ -239,6 +239,7 @@ const SharedDirListPage: React.FC = () => {
             <DirectoryCard
               key={dir.id}
               id={dir.id}
+              sizeBytes={dir.size_bytes}
               name={dir.name}
               role={roleLabel(dir, userId)}
               memberCount={dir.member_count}

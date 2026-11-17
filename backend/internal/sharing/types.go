@@ -31,6 +31,7 @@ type SharedDirectoryResponse struct {
 	Role              Role      `json:"role"`
 	CreatedAt         time.Time `json:"created_at"`
 	UpdatedAt         time.Time `json:"updated_at"`
+	SizeBytes         int64     `json:"size_bytes"`
 }
 
 // SharedDirectoriesListResponse wraps shared dirs with optional pagination cursor.
@@ -49,6 +50,7 @@ type SharedDirectoryWithStatsResponse struct {
 	MemberCount int       `json:"member_count"`
 	FileCount   int       `json:"file_count"`
 	CreatedAt   time.Time `json:"created_at"`
+	SizeBytes   int64     `json:"size_bytes"`
 }
 
 type MemberResponse struct {
@@ -98,6 +100,7 @@ type sharedDirectoryRecord struct {
 	OwnerName   string
 	Role        string
 	CreatedAt   time.Time
+	SizeBytes   int64
 }
 
 type sharedDirectoryWithStatsRecord struct {
@@ -110,6 +113,7 @@ type sharedDirectoryWithStatsRecord struct {
 	MemberCount int
 	FileCount   int
 	CreatedAt   time.Time
+	SizeBytes   int64
 }
 
 type memberRecord struct {

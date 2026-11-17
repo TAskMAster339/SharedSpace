@@ -4,11 +4,12 @@ import { Folder, MoreVertical } from 'lucide-react';
 import { Badge } from './Badge';
 import { AvatarStack } from './AvatarStack';
 import { cn } from '../../utils/cn';
-import { formatCount, formatCountWord } from '../../utils/format';
+import { formatCount, formatCountWord, formatFileSize } from '../../utils/format';
 
 interface DirectoryCardProps {
   id: string;
   name: string;
+  sizeBytes?: number;
   role: string;
   memberCount: number;
   fileCount: number;
@@ -22,6 +23,7 @@ interface DirectoryCardProps {
 export const DirectoryCard: React.FC<DirectoryCardProps> = ({
   id,
   name,
+  sizeBytes,
   role,
   memberCount,
   fileCount,
@@ -60,6 +62,11 @@ export const DirectoryCard: React.FC<DirectoryCardProps> = ({
         </span>
       </p>
 
+      {sizeBytes !== undefined && (
+        <p className="mb-3 text-xs tabular-nums text-theme-secondary">
+          {formatFileSize(sizeBytes)}
+        </p>
+      )}
       <AvatarStack usernames={memberUsernames} />
     </Link>
     {onMoreClick && (

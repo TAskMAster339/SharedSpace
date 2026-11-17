@@ -760,6 +760,7 @@ const SharedDirectoryPage: React.FC = () => {
               <FolderGridItem
                 key={subdir.id}
                 id={subdir.id}
+                sizeBytes={subdir.size_bytes}
                 name={subdir.name}
                 to="#"
                 onClick={handleNavigate}
@@ -770,6 +771,7 @@ const SharedDirectoryPage: React.FC = () => {
               <FolderItem
                 key={subdir.id}
                 id={subdir.id}
+                sizeBytes={subdir.size_bytes}
                 name={subdir.name}
                 to="#"
                 onClick={handleNavigate}

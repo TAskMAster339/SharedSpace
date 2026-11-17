@@ -1,11 +1,13 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Folder, MoreVertical } from 'lucide-react';
+import { formatFileSize } from '../../utils/format';
 import { cn } from '../../utils/cn';
 
 interface DirectoryItemProps {
   id: string;
   name: string;
+  sizeBytes?: number;
   members?: number;
   to: string;
   className?: string;
@@ -16,6 +18,7 @@ interface DirectoryItemProps {
 export const DirectoryItem: React.FC<DirectoryItemProps> = ({
   id,
   name,
+  sizeBytes,
   members,
   to,
   className,
@@ -40,6 +43,11 @@ export const DirectoryItem: React.FC<DirectoryItemProps> = ({
         <p className="text-sm text-theme-primary font-medium truncate">{name}</p>
         {members !== undefined && <p className="text-xs text-theme-muted">{members} участников</p>}
       </div>
+      {sizeBytes !== undefined && (
+        <span className="shrink-0 tabular-nums text-xs text-theme-secondary">
+          {formatFileSize(sizeBytes)}
+        </span>
+      )}
       {onMoreClick && (
         <button
           type="button"

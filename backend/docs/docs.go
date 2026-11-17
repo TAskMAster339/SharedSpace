@@ -4261,6 +4261,9 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string"
+                },
+                "size_bytes": {
+                    "type": "integer"
                 }
             }
         },
@@ -4479,6 +4482,9 @@ const docTemplate = `{
                 "shared_directory_id": {
                     "type": "string"
                 },
+                "size_bytes": {
+                    "type": "integer"
+                },
                 "type": {
                     "type": "string"
                 },
@@ -4516,6 +4522,9 @@ const docTemplate = `{
                 },
                 "role": {
                     "$ref": "#/definitions/internal_sharing.Role"
+                },
+                "size_bytes": {
+                    "type": "integer"
                 }
             }
         },

@@ -494,7 +494,7 @@ func (s *Service) ResolveDirectory(ctx context.Context, token, password string, 
 		_ = dirsHasMore
 		subdirItems = make([]DirectorySubdir, 0, len(subdirs))
 		for _, sd := range subdirs {
-			subdirItems = append(subdirItems, DirectorySubdir{ID: sd.ID, Name: sd.Name})
+			subdirItems = append(subdirItems, DirectorySubdir{ID: sd.ID, Name: sd.Name, SizeBytes: sd.SizeBytes})
 		}
 	} else {
 		var subdirs []dirSubdirRecord
@@ -506,7 +506,7 @@ func (s *Service) ResolveDirectory(ctx context.Context, token, password string, 
 		}
 		subdirItems = make([]DirectorySubdir, 0, len(subdirs))
 		for _, sd := range subdirs {
-			subdirItems = append(subdirItems, DirectorySubdir{ID: sd.ID, Name: sd.Name})
+			subdirItems = append(subdirItems, DirectorySubdir{ID: sd.ID, Name: sd.Name, SizeBytes: sd.SizeBytes})
 		}
 		if dirsHasMore {
 			nextDirsCursor = dirsNextCursor

@@ -339,8 +339,10 @@ const MyLinksPage: React.FC = () => {
               {directories.map((item) =>
                 viewMode === 'grid' ? (
                   <FolderGridItem
+                    showProperties
                     key={item.id}
                     id={item.id}
+                    sizeBytes={item.size}
                     name={item.filename}
                     to={`/directories/${item.id}`}
                     hasShareLinks={itemsWithLinks.has(item.id)}
@@ -358,8 +360,10 @@ const MyLinksPage: React.FC = () => {
                   />
                 ) : (
                   <FolderItem
+                    showProperties
                     key={item.id}
                     id={item.id}
+                    sizeBytes={item.size}
                     name={item.filename}
                     to={`/directories/${item.id}`}
                     hasShareLinks={itemsWithLinks.has(item.id)}
@@ -385,6 +389,7 @@ const MyLinksPage: React.FC = () => {
               {files.map((item) =>
                 viewMode === 'grid' ? (
                   <FileGridItem
+                    showProperties
                     key={item.id}
                     id={item.id}
                     name={item.filename}
@@ -415,6 +420,7 @@ const MyLinksPage: React.FC = () => {
                   />
                 ) : (
                   <FileItem
+                    showProperties
                     key={item.id}
                     id={item.id}
                     name={item.filename}

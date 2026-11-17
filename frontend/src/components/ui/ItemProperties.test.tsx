@@ -9,6 +9,9 @@ import { FileItem } from './FileItem';
 import { FolderGridItem } from './FolderGridItem';
 import { ItemPropertiesProvider } from './ItemProperties';
 
+type MockReact = typeof React;
+type MockLinkProps = React.AnchorHTMLAttributes<HTMLAnchorElement> & { to: string };
+
 jest.mock('../../api/directories', () => ({ getDirectoryById: jest.fn() }));
 jest.mock('../../api/files', () => ({ getFileMetadata: jest.fn() }));
 jest.mock('../../store/authStore', () => ({
@@ -19,15 +22,13 @@ jest.mock('./FilePreview', () => ({ FilePreview: () => null }));
 jest.mock(
   'react-router-dom',
   () => ({
-    Link: ({
-      to,
-      children,
-      ...props
-    }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { to: string }) => (
-      <a href={to} {...props}>
-        {children}
-      </a>
-    ),
+    Link: jest
+      .requireActual<MockReact>('react')
+      .forwardRef<HTMLAnchorElement, MockLinkProps>(({ to, children, ...props }, ref) => (
+        <a ref={ref} href={to} {...props}>
+          {children}
+        </a>
+      )),
     useLocation: () => ({ key: 'view' }),
   }),
   { virtual: true },
@@ -115,7 +116,7 @@ test('opens by the three-dot menu and shows file metadata in read-only view', as
   expect(loadFile).toHaveBeenCalledWith('token', 'file', expect.any(AbortSignal));
 });
 
-test('opens a folder by right click and discards a response received after closing', async () => {
+test('opens a folder from the keyboard and discards a response received after closing', async () => {
   let finishFile = (_result: FileMetadata) => {};
   loadFile.mockReturnValue(new Promise((resolve) => (finishFile = resolve)));
   loadDirectory.mockResolvedValue({
@@ -133,7 +134,11 @@ test('opens a folder by right click and discards a response received after closi
   selectProperties();
   fireEvent.click(screen.getByRole('button', { name: 'Закрыть' }));
   expect(loadFile.mock.calls[0][2]?.aborted).toBe(true);
-  fireEvent.contextMenu(screen.getByRole('link', { name: /Пустая папка/ }));
+  const folder = screen.getByRole('link', { name: /Пустая папка/ });
+  expect(
+    within(folder).queryByRole('button', { name: 'Открыть меню действий' }),
+  ).not.toBeInTheDocument();
+  fireEvent.keyDown(folder, { key: 'F10', shiftKey: true });
   selectProperties();
   await act(async () => finishFile(file));
   expect(await screen.findByText('Архив')).toBeVisible();

@@ -4,6 +4,7 @@ import { Link } from './Link';
 import { getStorageUsage, StorageUsage } from '../../api/users';
 import { useAuthStore } from '../../store/authStore';
 import { useStorageUsageStore } from '../../store/storageUsageStore';
+import { cn } from '../../utils/cn';
 import { formatFileSize } from '../../utils/format';
 import { Modal } from './Modal';
 import { Button } from './Button';
@@ -94,7 +95,13 @@ export const StorageUsageModal: React.FC = () => {
           </div>
           <ul aria-label="Содержимое хранилища">
             {rows.map(({ name, bytes, to, icon: Icon }) => (
-              <li key={to} className="flex items-center gap-3 border-t border-theme py-3 last:pb-0">
+              <li
+                key={to}
+                className={cn(
+                  'storage-usage-row flex items-center gap-3 rounded-theme-md border-t border-theme px-2 py-3 transition-colors',
+                  to === '/trash' && 'storage-usage-row-trash',
+                )}
+              >
                 <Icon aria-hidden="true" size={18} className="shrink-0 text-theme-secondary" />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-theme-primary">{name}</p>

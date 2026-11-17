@@ -102,6 +102,7 @@ export interface DirectoryShareLinkFile {
 export interface DirectoryShareLinkSubdir {
   id: string;
   name: string;
+  size_bytes?: number;
 }
 
 export interface DirectoryShareLinkResolveResult {

@@ -4257,6 +4257,9 @@
                 },
                 "name": {
                     "type": "string"
+                },
+                "size_bytes": {
+                    "type": "integer"
                 }
             }
         },
@@ -4475,6 +4478,9 @@
                 "shared_directory_id": {
                     "type": "string"
                 },
+                "size_bytes": {
+                    "type": "integer"
+                },
                 "type": {
                     "type": "string"
                 },
@@ -4512,6 +4518,9 @@
                 },
                 "role": {
                     "$ref": "#/definitions/internal_sharing.Role"
+                },
+                "size_bytes": {
+                    "type": "integer"
                 }
             }
         },

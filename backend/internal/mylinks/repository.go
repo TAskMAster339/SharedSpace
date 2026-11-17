@@ -28,7 +28,7 @@ func (r *Repository) queryAll(ctx context.Context, db dbTX, userID string, curso
 		UNION ALL
 		SELECT sl.id AS link_id, 'directory' AS item_type,
 		       d.id, d.name AS filename, '' AS extension, '' AS mime_type,
-		       0 AS size, d.id AS directory_id, d.owner_id,
+		       d.size_bytes AS size, d.id AS directory_id, d.owner_id,
 		       d.created_at, d.updated_at,
 		       sl.token AS link_token, sl.is_active, sl.created_at AS link_created_at
 		FROM share_links sl
