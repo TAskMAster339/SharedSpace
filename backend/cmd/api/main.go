@@ -36,6 +36,18 @@ func main() {
 		log.Fatalf("config: %v", err)
 	}
 
+	previewDir := os.Getenv("PREVIEW_TMP_DIR")
+	if previewDir == "" {
+		previewDir, err = os.MkdirTemp("", "sharedspace-previews-")
+		if err != nil {
+			log.Fatalf("preview directory: %v", err)
+		}
+		defer os.RemoveAll(previewDir)
+	}
+	if err := files.PreparePreviewTempDir(previewDir); err != nil {
+		log.Fatalf("preview directory: %v", err)
+	}
+
 	ctx := context.Background()
 
 	pool, err := database.NewPool(ctx, cfg.DBDSN)
@@ -95,7 +107,7 @@ func main() {
 	dirsHandler := dirs.NewHandler(dirsService)
 	// file
 	filesRepository := files.NewRepository()
-	filesService := files.NewService(pool, filesRepository, store, tmpStore, accessChecker, shareLinksRepository)
+	filesService := files.NewService(pool, filesRepository, store, tmpStore, accessChecker, shareLinksRepository, previewDir)
 	filesService.StartCleanupWorker(ctx)
 	filesHandler := files.NewHandler(filesService)
 	// sharing

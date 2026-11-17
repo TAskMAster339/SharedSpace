@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -17,7 +18,10 @@ import (
 	"sharedspace/internal/apperror"
 )
 
-const previewPrefix = "previews/v1/"
+const (
+	previewPrefix       = "previews/v1/"
+	previewSourcePrefix = "preview-source-"
+)
 
 // Bound concurrent decoders and temporary source files, including across requests.
 var previewSlots = make(chan struct{}, 2)
@@ -69,7 +73,7 @@ func (s *Service) GetPreviewURL(ctx context.Context, userID, fileID string) (Fil
 		if err != nil {
 			return FileContentResponse{}, apperror.WrapInternal("чтение файла для превью", err)
 		}
-		data, renderErr := renderPreview(ctx, source)
+		data, renderErr := renderPreview(ctx, s.previewDir, source)
 		source.Close()
 		if renderErr != nil {
 			return FileContentResponse{}, apperror.WrapInternal("генерация превью", renderErr)
@@ -116,8 +120,28 @@ func (s *Service) checkPreviewAccess(ctx context.Context, userID string, file fi
 	return nil
 }
 
-func renderPreview(ctx context.Context, source io.Reader) ([]byte, error) {
-	input, err := os.CreateTemp("", "preview-source-*")
+// PreparePreviewTempDir runs before any previews can be rendered. The directory
+// must belong to one backend instance and must not be mounted on a shared volume.
+func PreparePreviewTempDir(dir string) error {
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return err
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		if entry.Type().IsRegular() && strings.HasPrefix(entry.Name(), previewSourcePrefix) {
+			if err := os.Remove(filepath.Join(dir, entry.Name())); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func renderPreview(ctx context.Context, dir string, source io.Reader) ([]byte, error) {
+	input, err := os.CreateTemp(dir, previewSourcePrefix+"*")
 	if err != nil {
 		return nil, err
 	}

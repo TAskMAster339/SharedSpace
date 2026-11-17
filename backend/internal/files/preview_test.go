@@ -230,6 +230,26 @@ func requireFFmpeg(t *testing.T) {
 	}
 }
 
+func TestPreparePreviewTempDirRemovesStaleSources(t *testing.T) {
+	dir := t.TempDir()
+	stale := filepath.Join(dir, previewSourcePrefix+"stale")
+	unrelated := filepath.Join(dir, "unrelated")
+	for _, path := range []string{stale, unrelated} {
+		if err := os.WriteFile(path, []byte("data"), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := PreparePreviewTempDir(dir); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(stale); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("stale source still present: %v", err)
+	}
+	if _, err := os.Stat(unrelated); err != nil {
+		t.Fatalf("unrelated file was removed: %v", err)
+	}
+}
+
 func previewPNG(t *testing.T, w, h int) []byte {
 	t.Helper()
 	img := image.NewRGBA(image.Rect(0, 0, w, h))
@@ -256,7 +276,7 @@ func TestRenderPreview(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
-			data, err := renderPreview(ctx, bytes.NewReader(previewPNG(t, tc.w, tc.h)))
+			data, err := renderPreview(ctx, t.TempDir(), bytes.NewReader(previewPNG(t, tc.w, tc.h)))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -273,7 +293,7 @@ func TestRenderPreview(t *testing.T) {
 		})
 	}
 	t.Run("corrupt", func(t *testing.T) {
-		if _, err := renderPreview(context.Background(), bytes.NewReader([]byte("not an image"))); err == nil {
+		if _, err := renderPreview(context.Background(), t.TempDir(), bytes.NewReader([]byte("not an image"))); err == nil {
 			t.Fatal("invalid media accepted")
 		}
 	})
@@ -288,7 +308,7 @@ func TestRenderPreview(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer file.Close()
-		data, err := renderPreview(context.Background(), file)
+		data, err := renderPreview(context.Background(), t.TempDir(), file)
 		if err != nil {
 			t.Fatal(err)
 		}

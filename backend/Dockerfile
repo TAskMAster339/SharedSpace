@@ -10,5 +10,6 @@ RUN apk --no-cache add ca-certificates ffmpeg
 WORKDIR /app
 COPY --from=builder /app/api /app/api
 COPY --from=builder /app/internal/database/migrations /app/migrations
+ENV PREVIEW_TMP_DIR=/app/preview-tmp
 EXPOSE 8080
 CMD ["/app/api"]
