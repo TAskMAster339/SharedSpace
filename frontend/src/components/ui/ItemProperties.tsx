@@ -56,28 +56,33 @@ export function ItemPropertiesAction({
   target,
   focusTarget,
   onSelect,
+  separated = false,
 }: {
   target: PropertiesTarget;
   focusTarget: () => HTMLElement | null;
   onSelect: () => void;
+  separated?: boolean;
 }) {
   const open = useContext(OpenProperties);
   return (
-    <button
-      type="button"
-      role="menuitem"
-      onClick={(event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        focusTarget()?.focus({ preventScroll: true });
-        onSelect();
-        open(target);
-      }}
-      className="group flex w-full items-center gap-3 px-4 py-3.5 text-base text-theme-secondary transition-colors hover:bg-theme-hover sm:px-3 sm:py-2 sm:text-sm"
-    >
-      <Info size={18} className="transition-colors group-hover:text-brand" />
-      Свойства
-    </button>
+    <>
+      {separated && <div role="separator" className="my-1 border-t border-theme" />}
+      <button
+        type="button"
+        role="menuitem"
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          focusTarget()?.focus({ preventScroll: true });
+          onSelect();
+          open(target);
+        }}
+        className="group flex w-full items-center gap-3 px-4 py-3.5 text-base text-theme-secondary transition-colors hover:bg-theme-hover sm:px-3 sm:py-2 sm:text-sm"
+      >
+        <Info size={18} className="transition-colors group-hover:text-brand" />
+        Свойства
+      </button>
+    </>
   );
 }
 

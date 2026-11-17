@@ -537,6 +537,7 @@ const DashboardPage: React.FC = () => {
         </button>
         {contextMenuDir && (
           <ItemPropertiesAction
+            separated
             target={{ kind: 'directory', id: contextMenuDir.directoryId }}
             focusTarget={() => contextMenuDir.trigger}
             onSelect={closeContextMenu}

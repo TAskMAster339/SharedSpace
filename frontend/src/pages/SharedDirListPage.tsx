@@ -327,6 +327,7 @@ const SharedDirListPage: React.FC = () => {
         </button>
         {contextMenuDir && (
           <ItemPropertiesAction
+            separated
             target={{ kind: 'directory', id: contextMenuDir.id }}
             focusTarget={() => contextMenuDir.trigger}
             onSelect={closeContextMenu}

@@ -388,6 +388,7 @@ const MyLinksPage: React.FC = () => {
                     key={item.id}
                     id={item.id}
                     name={item.filename}
+                    size={formatFileSize(item.size)}
                     type={resolveFileIconType(item.mime_type, item.extension)}
                     to={`/files/${item.id}`}
                     isFavorite={false}

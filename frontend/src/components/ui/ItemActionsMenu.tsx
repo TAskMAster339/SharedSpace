@@ -16,6 +16,7 @@ interface ItemActionsMenuProps {
   properties?: PropertiesTarget;
   className?: string;
   iconSize?: number;
+  triggerClassName?: string;
   openMenu?: boolean;
   onCloseMenu?: () => void;
   menuPosition?: { x: number; y: number } | null;
@@ -36,6 +37,7 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
   properties,
   className,
   iconSize = 18,
+  triggerClassName,
   openMenu,
   onCloseMenu,
   menuPosition,
@@ -68,17 +70,9 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
     }
   }, [menuPosition, isOpen]);
 
-  if (
-    !onToggleFavorite &&
-    !onRename &&
-    !onDelete &&
-    !onMove &&
-    !onShare &&
-    !onDownload &&
-    !onConvert &&
-    !properties
-  )
-    return null;
+  const hasOtherActions =
+    onToggleFavorite || onRename || onDelete || onMove || onShare || onDownload || onConvert;
+  if (!hasOtherActions && !properties) return null;
 
   const handleSelect = (e: React.MouseEvent, action: () => void) => {
     e.preventDefault();
@@ -167,13 +161,6 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
           {isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'}
         </button>
       )}
-      {properties && (
-        <ItemPropertiesAction
-          target={properties}
-          focusTarget={() => triggerRef.current}
-          onSelect={handleClose}
-        />
-      )}
       {onDelete && (
         <button
           type="button"
@@ -182,8 +169,16 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
           className="group flex items-center gap-3 w-full px-4 py-3.5 text-base text-theme-secondary hover:bg-theme-hover transition-colors sm:px-3 sm:py-2 sm:text-sm"
         >
           <Trash2 size={18} className="group-hover:text-red-500 transition-colors" />
-          Переместить в корзину
+          <span className="whitespace-nowrap">Удалить</span>
         </button>
+      )}
+      {properties && (
+        <ItemPropertiesAction
+          target={properties}
+          separated={!!hasOtherActions}
+          focusTarget={() => triggerRef.current}
+          onSelect={handleClose}
+        />
       )}
     </div>
   );
@@ -202,7 +197,10 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
           if (!menuPosition) updatePosition();
           setIsOpen((prev) => !prev);
         }}
-        className="p-2 -m-1 rounded-theme-sm text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors"
+        className={cn(
+          'p-2 -m-1 rounded-theme-sm text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors',
+          triggerClassName,
+        )}
       >
         <MoreVertical size={iconSize} />
       </button>

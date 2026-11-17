@@ -297,6 +297,7 @@ const FavoritesPage: React.FC = () => {
                   key={file.id}
                   id={file.id}
                   name={file.filename}
+                  size={formatFileSize(file.size)}
                   type={resolveFileIconType(file.mime_type, file.extension)}
                   to={`/files/${file.id}`}
                   isFavorite={true}

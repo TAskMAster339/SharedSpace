@@ -796,6 +796,7 @@ const SharedDirectoryPage: React.FC = () => {
                 key={file.id}
                 id={file.id}
                 name={file.filename}
+                size={formatFileSize(file.size)}
                 type={iconType}
                 to="#"
                 onClick={(id) => {

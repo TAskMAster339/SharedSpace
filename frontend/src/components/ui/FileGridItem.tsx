@@ -9,6 +9,7 @@ import { FileIconType } from '../../utils/fileType';
 interface FileGridItemProps {
   id: string;
   name: string;
+  size: string;
   type: FileIconType | string;
   to: string;
   className?: string;
@@ -30,6 +31,7 @@ interface FileGridItemProps {
 export const FileGridItem: React.FC<FileGridItemProps> = ({
   id,
   name,
+  size,
   type,
   to,
   className,
@@ -83,28 +85,40 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
           fill
           className="group-hover:text-brand transition-colors"
         />
-        <div className="absolute top-0 left-0 flex items-center gap-1 pointer-events-none">
-          {isFavorite && (
-            <span
-              className="flex items-center justify-center rounded-full bg-theme-tertiary border border-theme p-0.5 shadow-theme-card"
-              aria-label="В избранном"
-              title="В избранном"
-            >
-              <Star size={12} className="text-yellow-400" fill="currentColor" />
-            </span>
-          )}
-          {hasShareLinks && (
-            <span
-              className="flex items-center justify-center rounded-full bg-theme-tertiary border border-theme p-0.5 shadow-theme-card"
-              aria-label="Есть ссылки общего доступа"
-              title="Есть ссылки общего доступа"
-            >
-              <Share2 size={12} className="text-green-500" />
-            </span>
-          )}
-        </div>
       </div>
-      <p className="text-sm text-theme-primary font-medium text-center mt-2 truncate w-full max-w-[120px]">
+      <div className="absolute left-2 top-2 flex items-center gap-1 pointer-events-none">
+        {isFavorite && (
+          <span
+            className="grid size-6 place-items-center rounded-theme-sm border border-theme bg-theme-secondary shadow-theme-card"
+            role="img"
+            aria-label="В избранном"
+            title="В избранном"
+          >
+            <Star
+              aria-hidden="true"
+              size={14}
+              className="text-amber-700 dark:text-amber-300"
+              fill="currentColor"
+            />
+          </span>
+        )}
+        {hasShareLinks && (
+          <span
+            className="grid size-6 place-items-center rounded-theme-sm border border-theme bg-theme-secondary shadow-theme-card"
+            role="img"
+            aria-label="Есть ссылки общего доступа"
+            title="Есть ссылки общего доступа"
+          >
+            <Share2
+              aria-hidden="true"
+              size={14}
+              className="text-emerald-700 dark:text-emerald-300"
+            />
+          </span>
+        )}
+      </div>
+      <p className="mt-2 text-xs tabular-nums text-theme-secondary">{size}</p>
+      <p className="text-sm text-theme-primary font-medium text-center truncate w-full max-w-[120px]">
         {name}
       </p>
 
@@ -120,6 +134,7 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
           onDownload={onDownload ? () => onDownload(id) : undefined}
           onConvert={onConvert ? () => onConvert(id) : undefined}
           iconSize={16}
+          triggerClassName="m-0 grid size-8 place-items-center border border-theme bg-theme-secondary p-0 text-theme-secondary shadow-theme-card hover:bg-theme-secondary hover:text-brand"
           openMenu={!!contextMenuOpen}
           menuPosition={contextMenuOpen}
           onCloseMenu={() => setContextMenuOpen(null)}

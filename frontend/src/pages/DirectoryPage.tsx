@@ -1187,6 +1187,7 @@ const DirectoryPage: React.FC = () => {
                       key={file.id}
                       id={file.id}
                       name={file.name}
+                      size={file.size}
                       type={file.type}
                       to={`/files/${file.id}`}
                       isFavorite={file.isFavorite}

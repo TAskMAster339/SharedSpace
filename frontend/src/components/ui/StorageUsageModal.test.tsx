@@ -1,7 +1,7 @@
 /// <reference types="jest" />
 import React from 'react';
 import '@testing-library/jest-dom';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { getStorageUsage, StorageUsage } from '../../api/users';
 import { useStorageUsageStore } from '../../store/storageUsageStore';
 import { StorageUsageModal } from './StorageUsageModal';
@@ -56,46 +56,40 @@ beforeEach(() => {
   useStorageUsageStore.setState({ isOpen: true });
 });
 
-test('includes trash in the total and opens a folder from the breakdown', async () => {
-  loadUsage.mockResolvedValue(usage);
+test('shows three destinations and includes personal folders omitted from the API list', async () => {
+  loadUsage.mockResolvedValue({ ...usage, folder_count: 101, folders: [] });
   render(<StorageUsageModal />);
   await screen.findByText(/Занято 1000.0 Б из 2.0 КБ/);
   expect(screen.getByRole('progressbar', { name: 'Занятое хранилище' })).toHaveAttribute(
     'aria-valuenow',
     '50',
   );
-  expect(screen.getByText('Корзина')).toBeVisible();
-  const openFolder = screen.getByRole('link', { name: 'Открыть «Фотографии»' });
-  expect(openFolder).toHaveAttribute('href', '/directories/photos');
-  fireEvent.click(openFolder);
+  const rows = screen.getAllByRole('listitem');
+  expect(rows).toHaveLength(3);
+  for (const [index, name, size, path] of [
+    [0, 'Личное хранилище', '400.0 Б', '/directories/root'],
+    [1, 'Общие директории', '200.0 Б', '/directories'],
+    [2, 'Корзина', '400.0 Б', '/trash'],
+  ] as const) {
+    expect(within(rows[index]).getByText(size)).toBeVisible();
+    expect(within(rows[index]).getByRole('link', { name: `Открыть «${name}»` })).toHaveAttribute(
+      'href',
+      path,
+    );
+  }
+  expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('link', { name: 'Открыть «Личное хранилище»' }));
   expect(useStorageUsageStore.getState().isOpen).toBe(false);
 });
 
-test('sorts folders, trash and file groups by size and by name', async () => {
-  loadUsage.mockResolvedValue({
-    ...usage,
-    folders: [
-      { id: 'january', name: 'Январь', size_bytes: 300 },
-      { id: 'archive', name: 'Архив', size_bytes: 700 },
-    ],
-    folder_count: 2,
-  });
+test('keeps navigation available for empty categories', async () => {
+  loadUsage.mockResolvedValue({ ...usage, used_bytes: 0, trash_bytes: 0, other_files_bytes: 0 });
   render(<StorageUsageModal />);
-  await screen.findByText(/Занято/);
-  const bySize = ['Архив', 'Корзина', 'Январь', 'Ваши файлы в других папках', 'Файлы в корне'];
+  await screen.findByRole('list', { name: 'Содержимое хранилища' });
+  expect(screen.getAllByRole('listitem')).toHaveLength(3);
   screen
     .getAllByRole('listitem')
-    .forEach((row, index) => expect(row).toHaveTextContent(bySize[index]));
-  fireEvent.change(screen.getByRole('combobox', { name: 'Сортировка содержимого' }), {
-    target: { value: 'name' },
-  });
-  const byName = ['Архив', 'Ваши файлы в других папках', 'Корзина', 'Файлы в корне', 'Январь'];
-  screen
-    .getAllByRole('listitem')
-    .forEach((row, index) => expect(row).toHaveTextContent(byName[index]));
-  await waitFor(() =>
-    expect(loadUsage).toHaveBeenLastCalledWith('token', 'name', expect.anything()),
-  );
+    .forEach((row) => expect(within(row).getByText('0 Б')).toBeVisible());
 });
 
 test('allows retry after a failed request', async () => {

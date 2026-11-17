@@ -69,7 +69,16 @@ beforeEach(() => {
 function view() {
   render(
     <ItemPropertiesProvider>
-      <FileItem id="file" name="Файл" date="" size="" type="text" to="/file" showProperties />
+      <FileItem
+        id="file"
+        name="Файл"
+        date=""
+        size=""
+        type="text"
+        to="/file"
+        onDelete={() => {}}
+        showProperties
+      />
       <FolderGridItem id="dir" name="Пустая папка" to="/dir" showProperties />
     </ItemPropertiesProvider>,
   );
@@ -83,6 +92,13 @@ test('opens by the three-dot menu and shows file metadata in read-only view', as
   loadFile.mockResolvedValue(file);
   view();
   fireEvent.click(screen.getAllByRole('button', { name: 'Открыть меню действий' })[0]);
+  const menu = screen.getByRole('menu');
+  expect(within(menu).getByRole('separator')).toBeVisible();
+  expect(
+    within(menu)
+      .getAllByRole('menuitem')
+      .map((item) => item.textContent),
+  ).toEqual(['Удалить', 'Свойства']);
   selectProperties();
   const dialog = screen.getByRole('dialog', { name: 'Свойства' });
   expect(within(dialog).getByRole('status')).toBeVisible();
