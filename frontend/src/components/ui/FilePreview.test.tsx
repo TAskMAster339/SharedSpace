@@ -1,6 +1,6 @@
 /// <reference types="jest" />
 import React from 'react';
-import { fireEvent, render, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { getFilePreviewUrl } from '../../api/files';
 import { FilePreview } from './FilePreview';
 
@@ -12,20 +12,18 @@ beforeEach(() => getPreview.mockReset());
 
 test('loads a media preview and falls back to the icon if the image fails', async () => {
   getPreview.mockResolvedValue({ url: 'https://storage.example/preview.jpg' });
-  const { container } = render(<FilePreview fileId="photo" type="img" />);
-  await waitFor(() => expect(container.querySelector('img')).not.toBeNull());
+  render(<FilePreview fileId="photo" type="img" />);
+  const preview = await screen.findByAltText('');
   expect(getPreview).toHaveBeenCalledWith('access-token', 'photo');
-  fireEvent.error(container.querySelector('img')!);
-  expect(container.querySelector('img')).toBeNull();
-  expect(container.querySelector('svg')).not.toBeNull();
+  fireEvent.error(preview);
+  expect(screen.queryByAltText('')).toBeNull();
 });
 
 test('keeps the icon when preview access is denied', async () => {
   getPreview.mockRejectedValue(new Error('forbidden'));
-  const { container } = render(<FilePreview fileId="video" type="video" />);
+  render(<FilePreview fileId="video" type="video" />);
   await waitFor(() => expect(getPreview).toHaveBeenCalledTimes(1));
-  expect(container.querySelector('img')).toBeNull();
-  expect(container.querySelector('svg')).not.toBeNull();
+  expect(screen.queryByAltText('')).toBeNull();
 });
 
 test('does not request previews for documents', () => {
