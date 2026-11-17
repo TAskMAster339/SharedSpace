@@ -180,7 +180,7 @@ const SharedSettingsPage: React.FC = () => {
     return (
       <div className="flex items-center justify-center py-20">
         <SEOHead title="Настройки общей директории" description="Загрузка..." />
-        <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-[50%] animate-spin" />
       </div>
     );
   }
@@ -230,7 +230,7 @@ const SharedSettingsPage: React.FC = () => {
               setInviteUsername('');
               setIsInviteOpen(true);
             }}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-brand text-theme-on-brand rounded-theme-md hover:bg-brand-hover transition-colors text-sm font-medium shrink-0"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-brand text-theme-on-brand rounded-theme hover:bg-brand-hover transition-colors text-sm font-medium shrink-0"
           >
             <UserPlus size={16} />
             Пригласить человека
@@ -283,7 +283,7 @@ const SharedSettingsPage: React.FC = () => {
               return (
                 <div
                   key={member.user_id}
-                  className="flex flex-col gap-3 p-3 rounded-theme-md bg-theme-tertiary border border-theme sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-3 p-3 rounded-theme bg-theme-tertiary border border-theme sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <Avatar username={member.username} className="w-10 h-10 shrink-0" />
@@ -307,7 +307,7 @@ const SharedSettingsPage: React.FC = () => {
                         value={member.role}
                         disabled={isPending}
                         onChange={(e) => handleChangeRole(member, e.target.value as SharingRole)}
-                        className="flex-1 sm:flex-none text-sm rounded-theme-md border border-theme bg-theme-secondary text-theme-primary px-2 py-1.5 outline-none focus:border-brand transition-colors disabled:opacity-50"
+                        className="flex-1 sm:flex-none text-sm rounded-theme border border-theme bg-theme-secondary text-theme-primary px-2 py-1.5 outline-none focus:border-brand transition-colors disabled:opacity-50"
                       >
                         {ROLE_OPTIONS.map((role) => (
                           <option key={role} value={role}>
@@ -326,7 +326,7 @@ const SharedSettingsPage: React.FC = () => {
                         disabled={isPending}
                         aria-label="Удалить участника"
                         title="Удалить участника"
-                        className="p-2 rounded-theme-md text-theme-muted hover:text-danger hover:bg-danger-light transition-colors disabled:opacity-50"
+                        className="p-2 rounded-theme text-theme-muted hover:text-danger hover:bg-danger-light transition-colors disabled:opacity-50"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -356,7 +356,7 @@ const SharedSettingsPage: React.FC = () => {
                 setDeleteError('');
                 setIsDeleteOpen(true);
               }}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-danger hover:bg-danger-hover rounded-theme-md transition-colors shrink-0"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-danger hover:bg-danger-hover rounded-theme transition-colors shrink-0"
             >
               <Trash2 size={16} />
               Удалить директорию
@@ -386,7 +386,7 @@ const SharedSettingsPage: React.FC = () => {
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleInvite();
               }}
-              className="w-full px-3 py-2.5 rounded-theme-md border-2 border-theme-hover bg-theme-tertiary text-theme-primary placeholder:text-theme-muted outline-none focus:border-brand transition-colors text-sm"
+              className="w-full px-3 py-2.5 rounded-theme border-2 border-theme-hover bg-theme-tertiary text-theme-primary placeholder:text-theme-muted outline-none focus:border-brand transition-colors text-sm"
             />
           </div>
 
@@ -401,14 +401,14 @@ const SharedSettingsPage: React.FC = () => {
             <button
               onClick={() => setIsInviteOpen(false)}
               disabled={isInviting}
-              className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium disabled:opacity-50"
+              className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme transition-colors text-sm font-medium disabled:opacity-50"
             >
               Отмена
             </button>
             <button
               onClick={handleInvite}
               disabled={!inviteUsername.trim() || isInviting}
-              className="flex-1 inline-flex items-center justify-center px-4 py-2 bg-brand text-theme-on-brand hover:bg-brand-hover rounded-theme-md transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 inline-flex items-center justify-center px-4 py-2 bg-brand text-theme-on-brand hover:bg-brand-hover rounded-theme transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isInviting ? 'Отправка...' : 'Пригласить'}
             </button>

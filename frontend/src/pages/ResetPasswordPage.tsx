@@ -93,7 +93,7 @@ const ResetPasswordPage: React.FC = () => {
       <Card className="w-full max-w-md">
         {status === 'success' ? (
           <div className="flex flex-col items-center text-center py-4">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-brand-light text-brand">
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-theme bg-brand-light text-brand">
               <CheckCircle2 size={28} />
             </div>
             <h2 className="text-xl font-semibold text-theme-primary mb-2">Пароль изменён</h2>
@@ -107,7 +107,7 @@ const ResetPasswordPage: React.FC = () => {
           </div>
         ) : status === 'expired' ? (
           <div className="flex flex-col items-center text-center py-4">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-danger-light text-danger">
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-theme bg-danger-light text-danger">
               <AlertCircle size={28} />
             </div>
             <h2 className="text-xl font-semibold text-theme-primary mb-2">Срок ссылки истёк</h2>
@@ -123,7 +123,7 @@ const ResetPasswordPage: React.FC = () => {
           </div>
         ) : status === 'invalid' ? (
           <div className="flex flex-col items-center text-center py-4">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-danger-light text-danger">
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-theme bg-danger-light text-danger">
               <AlertCircle size={28} />
             </div>
             <h2 className="text-xl font-semibold text-theme-primary mb-2">
@@ -155,7 +155,7 @@ const ResetPasswordPage: React.FC = () => {
                     placeholder="Новый пароль"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-3 py-2 pr-10 rounded-theme-md border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
+                    className="w-full px-3 py-2 pr-10 rounded-theme border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
                     autoComplete="new-password"
                   />
                   <button
@@ -175,7 +175,7 @@ const ResetPasswordPage: React.FC = () => {
                     placeholder="Повторите пароль"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full px-3 py-2 pr-10 rounded-theme-md border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
+                    className="w-full px-3 py-2 pr-10 rounded-theme border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
                     autoComplete="new-password"
                   />
                   <button

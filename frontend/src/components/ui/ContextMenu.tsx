@@ -136,10 +136,10 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
           role="menu"
           onKeyDown={handleKeys}
           onClick={(e) => e.stopPropagation()}
-          className="fixed inset-x-0 bottom-0 z-[61] w-full rounded-t-theme-xl border-t border-theme bg-theme-secondary shadow-theme-dropdown max-h-[90dvh] overflow-y-auto pb-[env(safe-area-inset-bottom)]"
+          className="fixed inset-x-0 bottom-0 z-[61] w-full rounded-t-theme border-t border-theme bg-theme-secondary shadow-theme-dropdown max-h-[90dvh] overflow-y-auto pb-[env(safe-area-inset-bottom)]"
         >
           <div className="flex justify-center pt-1 pb-0.5">
-            <span className="h-1 w-10 rounded-full bg-theme-muted/40" />
+            <span className="h-1 w-10 rounded-theme bg-theme-muted/40" />
           </div>
           {children}
         </div>
@@ -157,7 +157,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
           width,
           zIndex: 61,
         }}
-        className="rounded-theme-md border border-theme bg-theme-secondary shadow-theme-dropdown max-h-[calc(100dvh_-_1rem)] overflow-y-auto"
+        className="rounded-theme border border-theme bg-theme-secondary shadow-theme-dropdown max-h-[calc(100dvh_-_1rem)] overflow-y-auto"
       >
         {children}
       </div>

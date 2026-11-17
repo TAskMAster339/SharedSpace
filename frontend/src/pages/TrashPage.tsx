@@ -273,7 +273,7 @@ const TrashPage: React.FC = () => {
                   <div
                     key={item.id}
                     onContextMenu={(e) => handleContextMenu(e, item.id)}
-                    className="group flex flex-col items-center p-3 rounded-theme-md transition-colors cursor-pointer relative min-w-0 bg-theme-tertiary hover:bg-theme-hover border border-theme"
+                    className="group flex flex-col items-center p-3 rounded-theme transition-colors cursor-pointer relative min-w-0 bg-theme-tertiary hover:bg-theme-hover border border-theme"
                   >
                     <div className="w-16 h-16 flex items-center justify-center text-theme-muted group-hover:text-brand transition-colors">
                       <Folder size={40} strokeWidth={1.5} />
@@ -287,7 +287,7 @@ const TrashPage: React.FC = () => {
                       aria-haspopup="menu"
                       aria-expanded={activeMenuId === item.id}
                       onClick={(e) => handleMenuClick(e, item.id)}
-                      className="absolute top-2 right-2 p-1 rounded-theme-sm text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors "
+                      className="absolute top-2 right-2 p-1 rounded-theme text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors "
                     >
                       <MoreVertical size={16} />
                     </button>
@@ -297,10 +297,10 @@ const TrashPage: React.FC = () => {
                     key={item.id}
                     onClick={(e) => handleItemClick(e, item.id)}
                     onContextMenu={(e) => handleContextMenu(e, item.id)}
-                    className="group flex items-center gap-3 p-3 rounded-theme-md bg-theme-tertiary border border-theme hover:bg-theme-hover transition-colors cursor-pointer"
+                    className="group flex items-center gap-3 p-3 rounded-theme bg-theme-tertiary border border-theme hover:bg-theme-hover transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card shrink-0 text-theme-muted group-hover:text-brand transition-colors">
+                      <div className="p-2 bg-theme-secondary rounded-theme shadow-theme-card shrink-0 text-theme-muted group-hover:text-brand transition-colors">
                         <Folder size={20} />
                       </div>
                       <div className="min-w-0">
@@ -318,7 +318,7 @@ const TrashPage: React.FC = () => {
                       aria-haspopup="menu"
                       aria-expanded={activeMenuId === item.id}
                       onClick={(e) => handleMenuClick(e, item.id)}
-                      className="p-2 -m-1 rounded-theme-sm text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors shrink-0"
+                      className="p-2 -m-1 rounded-theme text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors shrink-0"
                     >
                       <MoreVertical size={18} />
                     </button>
@@ -335,7 +335,7 @@ const TrashPage: React.FC = () => {
                   <div
                     key={item.id}
                     onContextMenu={(e) => handleContextMenu(e, item.id)}
-                    className="group flex flex-col items-center p-3 rounded-theme-md transition-colors cursor-pointer relative min-w-0 bg-theme-tertiary hover:bg-theme-hover border border-theme"
+                    className="group flex flex-col items-center p-3 rounded-theme transition-colors cursor-pointer relative min-w-0 bg-theme-tertiary hover:bg-theme-hover border border-theme"
                   >
                     <div className="w-full aspect-square max-w-[160px] flex items-center justify-center text-theme-muted group-hover:text-brand transition-colors">
                       <FilePreview
@@ -357,7 +357,7 @@ const TrashPage: React.FC = () => {
                       aria-haspopup="menu"
                       aria-expanded={activeMenuId === item.id}
                       onClick={(e) => handleMenuClick(e, item.id)}
-                      className="absolute top-2 right-2 p-1 rounded-theme-sm text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors "
+                      className="absolute top-2 right-2 p-1 rounded-theme text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors "
                     >
                       <MoreVertical size={16} />
                     </button>
@@ -367,7 +367,7 @@ const TrashPage: React.FC = () => {
                     key={item.id}
                     onClick={(e) => handleItemClick(e, item.id)}
                     onContextMenu={(e) => handleContextMenu(e, item.id)}
-                    className="group flex items-center gap-3 p-3 rounded-theme-md bg-theme-tertiary border border-theme hover:bg-theme-hover transition-colors cursor-pointer"
+                    className="group flex items-center gap-3 p-3 rounded-theme bg-theme-tertiary border border-theme hover:bg-theme-hover transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       <div className="w-12 h-12 flex items-center justify-center bg-theme-secondary shadow-theme-card shrink-0 text-theme-muted group-hover:text-brand transition-colors">
@@ -396,7 +396,7 @@ const TrashPage: React.FC = () => {
                       aria-haspopup="menu"
                       aria-expanded={activeMenuId === item.id}
                       onClick={(e) => handleMenuClick(e, item.id)}
-                      className="p-2 -m-1 rounded-theme-sm text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors shrink-0"
+                      className="p-2 -m-1 rounded-theme text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors shrink-0"
                     >
                       <MoreVertical size={18} />
                     </button>
@@ -409,7 +409,7 @@ const TrashPage: React.FC = () => {
           {(hasMoreFiles || hasMoreDirs) && (
             <div className="flex items-center justify-center py-2">
               {isLoadingMore ? (
-                <div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+                <div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-[50%] animate-spin" />
               ) : (
                 <div ref={sentinelRef} className="h-2" />
               )}

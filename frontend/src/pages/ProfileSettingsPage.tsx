@@ -61,7 +61,7 @@ const Field: React.FC<FieldProps> = ({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className={cn(
-            'w-full py-2.5 rounded-theme-md border-2 outline-none transition-colors text-sm',
+            'w-full py-2.5 rounded-theme border-2 outline-none transition-colors text-sm',
             'bg-theme-tertiary text-theme-primary placeholder:text-theme-muted',
             error ? 'border-danger' : 'border-theme-hover focus:border-brand',
             isPassword ? 'pl-10 pr-10' : 'pl-10 pr-3',
@@ -91,7 +91,7 @@ interface InfoRowProps {
 
 const InfoRow: React.FC<InfoRowProps> = ({ icon, label, value }) => (
   <div className="group flex items-center gap-3 py-3 border-b border-theme last:border-b-0">
-    <span className="flex items-center justify-center w-9 h-9 rounded-theme-full bg-theme-tertiary text-theme-muted group-hover:text-brand transition-colors shrink-0">
+    <span className="flex items-center justify-center w-9 h-9 rounded-theme bg-theme-tertiary text-theme-muted group-hover:text-brand transition-colors shrink-0">
       {icon}
     </span>
     <div className="min-w-0">
@@ -291,7 +291,7 @@ const ProfileSettingsPage: React.FC = () => {
       />
       {/* Предупреждение о неподтверждённой почте */}
       {!isActivated && (
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-theme-md border border-warning/30 bg-warning/10 p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-theme border border-warning/30 bg-warning/10 p-4">
           <ShieldAlert size={20} className="text-warning shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-theme-primary">Email не подтверждён</p>
@@ -493,7 +493,7 @@ const ProfileSettingsPage: React.FC = () => {
             <Trash2 size={14} /> Удалить аккаунт
           </Button>
         </CardHeader>
-        <div className="border border-danger/20 rounded-theme-md p-4 bg-danger-light/10 mx-4 sm:mx-6 mb-5 sm:mb-6">
+        <div className="border border-danger/20 rounded-theme p-4 bg-danger-light/10 mx-4 sm:mx-6 mb-5 sm:mb-6">
           <p className="text-sm text-theme-secondary">
             Удаление аккаунта приведёт к безвозвратному удалению всех ваших файлов, директорий и
             данных.

@@ -117,7 +117,7 @@ const InvitationsPage: React.FC = () => {
           {invitations.map((inv) => (
             <div
               key={inv.id}
-              className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-theme-lg bg-theme-secondary border border-theme shadow-theme-card"
+              className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-theme bg-theme-secondary border border-theme shadow-theme-card"
             >
               <Avatar
                 username={inv.invited_by_username}
@@ -158,7 +158,7 @@ const InvitationsPage: React.FC = () => {
           {hasMore && (
             <div className="flex items-center justify-center py-2">
               {isLoadingMore ? (
-                <div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+                <div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-[50%] animate-spin" />
               ) : (
                 <div ref={sentinelRef} className="h-2" />
               )}

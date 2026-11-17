@@ -106,15 +106,15 @@ export const FolderItem: React.FC<FolderItemProps> = ({
         }
       }}
       className={cn(
-        'group flex items-center justify-between gap-3 p-3 rounded-theme-md transition-colors cursor-pointer',
+        'group flex items-center justify-between gap-3 p-3 rounded-theme transition-colors cursor-pointer',
         'bg-theme-tertiary hover:bg-theme-hover border border-theme',
         isDragOver && '!border-brand !bg-brand/20 !shadow-lg !ring-2 !ring-brand/40',
         className,
       )}
     >
       <div className="flex items-center gap-3 min-w-0">
-        <div className="relative shrink-0 [--badge-preview-width:2.25rem]">
-          <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card shrink-0">
+        <div className="relative shrink-0 [--badge-preview-width:3rem]">
+          <div className="item-list-thumbnail bg-theme-secondary shadow-theme-card">
             <Folder
               size={20}
               className="text-theme-muted group-hover:text-brand transition-colors"

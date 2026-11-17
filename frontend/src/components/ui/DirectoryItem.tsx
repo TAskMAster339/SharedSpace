@@ -31,12 +31,12 @@ export const DirectoryItem: React.FC<DirectoryItemProps> = ({
       to={to}
       onContextMenu={onContextMenu}
       className={cn(
-        'flex items-center gap-3 p-3 rounded-theme-md transition-colors cursor-pointer',
+        'flex items-center gap-3 p-3 rounded-theme transition-colors cursor-pointer',
         'bg-theme-tertiary hover:bg-theme-hover border border-theme',
         className,
       )}
     >
-      <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card shrink-0">
+      <div className="item-list-thumbnail bg-theme-secondary shadow-theme-card">
         <Folder size={20} className="text-theme-muted group-hover:text-brand transition-colors" />
       </div>
       <div className="flex-1 min-w-0">
@@ -58,7 +58,7 @@ export const DirectoryItem: React.FC<DirectoryItemProps> = ({
             e.stopPropagation();
             onMoreClick(e);
           }}
-          className="p-2 -m-1 rounded-theme-sm text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors shrink-0"
+          className="p-2 -m-1 rounded-theme text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors shrink-0"
         >
           <MoreVertical size={16} />
         </button>

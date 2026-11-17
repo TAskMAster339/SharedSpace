@@ -275,7 +275,7 @@ const DashboardPage: React.FC = () => {
     return (
       <div className="flex items-center justify-center py-20">
         <SEOHead title="Панель управления" description="Загрузка..." />
-        <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-[50%] animate-spin" />
       </div>
     );
   }
@@ -566,7 +566,7 @@ const DashboardPage: React.FC = () => {
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleInvite();
               }}
-              className="w-full px-3 py-2.5 rounded-theme-md border-2 border-theme-hover bg-theme-tertiary text-theme-primary placeholder:text-theme-muted outline-none focus:border-brand transition-colors text-sm"
+              className="w-full px-3 py-2.5 rounded-theme border-2 border-theme-hover bg-theme-tertiary text-theme-primary placeholder:text-theme-muted outline-none focus:border-brand transition-colors text-sm"
             />
           </div>
 
@@ -581,14 +581,14 @@ const DashboardPage: React.FC = () => {
             <button
               onClick={() => setInviteDir(null)}
               disabled={isInviting}
-              className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium disabled:opacity-50"
+              className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme transition-colors text-sm font-medium disabled:opacity-50"
             >
               Отмена
             </button>
             <button
               onClick={handleInvite}
               disabled={!inviteUsername.trim() || isInviting}
-              className="flex-1 inline-flex items-center justify-center px-4 py-2 bg-brand text-theme-on-brand hover:bg-brand-hover rounded-theme-md transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 inline-flex items-center justify-center px-4 py-2 bg-brand text-theme-on-brand hover:bg-brand-hover rounded-theme transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isInviting ? 'Отправка...' : 'Пригласить'}
             </button>

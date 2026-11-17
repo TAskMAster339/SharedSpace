@@ -70,7 +70,7 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
       ref={menu.anchor}
       {...menu.handlers}
       className={cn(
-        'group flex flex-col items-center p-3 rounded-theme-md transition-colors cursor-pointer relative min-w-0 [-webkit-touch-callout:none]',
+        'group flex flex-col items-center p-3 rounded-theme transition-colors cursor-pointer relative min-w-0 [-webkit-touch-callout:none]',
         'bg-theme-tertiary hover:bg-theme-hover border border-theme',
         className,
       )}
@@ -79,7 +79,7 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
         <FilePreview
           fileId={id}
           type={type}
-          size={40}
+          size={64}
           fill
           className="group-hover:text-brand transition-colors"
         />

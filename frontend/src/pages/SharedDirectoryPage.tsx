@@ -413,7 +413,7 @@ const SharedDirectoryPage: React.FC = () => {
         />
         <Card className="w-full max-w-md">
           <div className="text-center space-y-1 mb-6">
-            <div className="w-12 h-12 mx-auto flex items-center justify-center bg-brand/10 rounded-full mb-3">
+            <div className="w-12 h-12 mx-auto flex items-center justify-center bg-brand/10 rounded-theme mb-3">
               <KeyRound size={22} className="text-brand" />
             </div>
             <h2 className="text-xl font-semibold text-theme-primary">
@@ -435,7 +435,7 @@ const SharedDirectoryPage: React.FC = () => {
                 placeholder="Пароль"
                 autoComplete="new-password"
                 autoFocus
-                className="w-full pl-9 pr-10 py-2 rounded-theme-md border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
+                className="w-full pl-9 pr-10 py-2 rounded-theme border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
               />
               <button
                 type="button"
@@ -471,7 +471,7 @@ const SharedDirectoryPage: React.FC = () => {
     return (
       <div className="min-h-[80vh] flex items-center justify-center bg-theme-primary">
         <SEOHead title="Загрузка..." description="Загрузка содержимого директории..." />
-        <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-[50%] animate-spin" />
       </div>
     );
   }
@@ -481,14 +481,14 @@ const SharedDirectoryPage: React.FC = () => {
       <div className="min-h-[80vh] flex items-center justify-center bg-theme-primary px-4">
         <SEOHead title="Директория недоступна" description={error || 'Директория не найдена'} />
         <div className="text-center space-y-4 max-w-sm">
-          <div className="w-16 h-16 mx-auto flex items-center justify-center bg-danger-light rounded-full">
+          <div className="w-16 h-16 mx-auto flex items-center justify-center bg-danger-light rounded-theme">
             <FileIcon type="unknown" size={28} />
           </div>
           <h1 className="text-xl font-semibold text-theme-primary">Директория недоступна</h1>
           <p className="text-sm text-theme-secondary">{error || 'Директория не найдена'}</p>
           <Link
             to={accessToken ? '/dashboard' : '/'}
-            className="inline-flex items-center px-4 py-2 bg-brand text-theme-on-brand hover:bg-brand-hover rounded-theme-md text-sm font-medium transition-colors"
+            className="inline-flex items-center px-4 py-2 bg-brand text-theme-on-brand hover:bg-brand-hover rounded-theme text-sm font-medium transition-colors"
           >
             На главную
           </Link>
@@ -507,7 +507,7 @@ const SharedDirectoryPage: React.FC = () => {
     const renderPreview = () => {
       if (!canPreview || iframeError) {
         return (
-          <div className="bg-theme-tertiary rounded-theme-lg py-16 flex flex-col items-center gap-4 text-theme-muted group">
+          <div className="bg-theme-tertiary rounded-theme py-16 flex flex-col items-center gap-4 text-theme-muted group">
             <EyeOff
               size={64}
               className="text-theme-muted group-hover:text-brand transition-colors"
@@ -516,7 +516,7 @@ const SharedDirectoryPage: React.FC = () => {
             <p className="text-sm">Файл не может быть отображён в браузере</p>
             <button
               onClick={() => handleDownload(previewFile.url, previewFile.filename)}
-              className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-brand text-theme-on-brand hover:bg-brand-hover rounded-theme-md transition-colors text-sm font-medium"
+              className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-brand text-theme-on-brand hover:bg-brand-hover rounded-theme transition-colors text-sm font-medium"
             >
               <Download size={16} />
               Скачать файл
@@ -527,7 +527,7 @@ const SharedDirectoryPage: React.FC = () => {
       switch (previewType) {
         case 'image':
           return (
-            <div className="flex items-center justify-center bg-theme-tertiary rounded-theme-lg overflow-hidden min-h-[400px]">
+            <div className="flex items-center justify-center bg-theme-tertiary rounded-theme overflow-hidden min-h-[400px]">
               <img
                 src={previewFile.url}
                 alt={previewFile.filename}
@@ -538,7 +538,7 @@ const SharedDirectoryPage: React.FC = () => {
           );
         case 'video':
           return (
-            <div className="bg-theme-tertiary rounded-theme-lg overflow-hidden">
+            <div className="bg-theme-tertiary rounded-theme overflow-hidden">
               <video
                 src={previewFile.url}
                 controls
@@ -549,9 +549,9 @@ const SharedDirectoryPage: React.FC = () => {
           );
         case 'audio':
           return (
-            <div className="bg-theme-tertiary rounded-theme-lg p-8">
+            <div className="bg-theme-tertiary rounded-theme p-8">
               <div className="flex flex-col items-center gap-6 group">
-                <div className="w-24 h-24 rounded-full bg-brand-light flex items-center justify-center text-brand group-hover:text-brand-hover transition-colors">
+                <div className="w-24 h-24 rounded-theme bg-brand-light flex items-center justify-center text-brand group-hover:text-brand-hover transition-colors">
                   <FileIcon type="audio" size={40} />
                 </div>
                 <p className="text-lg font-medium text-theme-primary">{previewFile.filename}</p>
@@ -566,7 +566,7 @@ const SharedDirectoryPage: React.FC = () => {
           );
         case 'pdf':
           return (
-            <div className="bg-theme-tertiary rounded-theme-lg overflow-hidden min-h-[500px]">
+            <div className="bg-theme-tertiary rounded-theme overflow-hidden min-h-[500px]">
               <object
                 data={previewFile.url}
                 type="application/pdf"
@@ -583,7 +583,7 @@ const SharedDirectoryPage: React.FC = () => {
         case 'text':
         case 'code':
           return (
-            <div className="bg-theme-tertiary rounded-theme-lg overflow-hidden min-h-[400px]">
+            <div className="bg-theme-tertiary rounded-theme overflow-hidden min-h-[400px]">
               <iframe
                 ref={iframeRef}
                 src={previewFile.url}
@@ -619,14 +619,14 @@ const SharedDirectoryPage: React.FC = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
-            <div className="bg-theme-secondary border border-theme rounded-theme-lg p-4 shadow-theme-card">
+            <div className="bg-theme-secondary border border-theme rounded-theme p-4 shadow-theme-card">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <h2 className="text-sm font-medium text-theme-secondary">Предпросмотр</h2>
                 <button
                   onClick={() => handleDownload(previewFile.url, previewFile.filename)}
                   aria-label="Скачать файл"
                   title="Скачать файл"
-                  className="group inline-flex h-9 w-9 items-center justify-center gap-2 rounded-theme-md border border-brand/30 bg-brand-light text-brand transition-colors hover:bg-brand hover:text-theme-on-brand sm:w-auto sm:px-3 sm:text-sm sm:font-medium"
+                  className="group inline-flex h-9 w-9 items-center justify-center gap-2 rounded-theme border border-brand/30 bg-brand-light text-brand transition-colors hover:bg-brand hover:text-theme-on-brand sm:w-auto sm:px-3 sm:text-sm sm:font-medium"
                 >
                   <Download
                     size={16}
@@ -639,10 +639,10 @@ const SharedDirectoryPage: React.FC = () => {
             </div>
           </div>
           <div className="space-y-4">
-            <div className="bg-theme-secondary border border-theme rounded-theme-lg p-5 shadow-theme-card">
+            <div className="bg-theme-secondary border border-theme rounded-theme p-5 shadow-theme-card">
               <h3 className="font-medium text-theme-primary mb-3">Информация о файле</h3>
-              <div className="flex items-center gap-3 p-3 bg-theme-tertiary rounded-theme-md border border-theme">
-                <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card shrink-0">
+              <div className="flex items-center gap-3 p-3 bg-theme-tertiary rounded-theme border border-theme">
+                <div className="p-2 bg-theme-secondary rounded-theme shadow-theme-card shrink-0">
                   <FileIcon type={fileIconType} size={20} />
                 </div>
                 <div className="min-w-0 flex-1">

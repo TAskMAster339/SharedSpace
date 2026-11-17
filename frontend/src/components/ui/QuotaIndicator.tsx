@@ -48,7 +48,7 @@ export const QuotaIndicator: React.FC<QuotaIndicatorProps> = ({
   return (
     <span
       className={cn(
-        'group inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border border-theme select-none',
+        'group inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-theme border border-theme select-none',
         atLimit ? 'bg-danger-light text-danger' : 'bg-theme-tertiary text-theme-secondary',
         className,
       )}

@@ -45,9 +45,9 @@ export const StorageIndicator: React.FC<StorageIndicatorProps> = ({ used, total,
           {used.toFixed(1)} ГБ / {formatGbValue(total)} ГБ
         </span>
       </div>
-      <div className="w-full h-1.5 bg-theme-border rounded-full overflow-hidden">
+      <div className="w-full h-1.5 bg-theme-border rounded-theme overflow-hidden">
         <div
-          className="h-full bg-brand rounded-full transition-all duration-300"
+          className="h-full bg-brand rounded-theme transition-all duration-300"
           style={{ width: `${percentage}%`, minWidth: '12px' }}
         />
       </div>

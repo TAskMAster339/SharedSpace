@@ -458,7 +458,7 @@ const MyLinksPage: React.FC = () => {
           {hasMore && (
             <div className="flex items-center justify-center py-2">
               {isLoadingMore ? (
-                <div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+                <div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-[50%] animate-spin" />
               ) : (
                 <div ref={sentinelRef} className="h-1" />
               )}

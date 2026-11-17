@@ -19,7 +19,7 @@ export const Sidebar: React.FC = () => {
   if (isLoading) {
     return (
       <div className="w-64 h-[calc(100vh-4rem)] flex flex-col bg-theme-secondary border-r border-theme sticky top-0 shrink-0 px-4 py-2 hidden md:flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+        <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-[50%] animate-spin" />
       </div>
     );
   }
@@ -40,7 +40,7 @@ export const Sidebar: React.FC = () => {
               key={item.path}
               to={item.path}
               className={cn(
-                'group flex items-center gap-3 px-3 py-2.5 rounded-theme-xl text-sm font-medium transition-colors relative',
+                'group flex items-center gap-3 px-3 py-2.5 rounded-theme text-sm font-medium transition-colors relative',
                 isActive
                   ? 'bg-brand-light text-brand dark:bg-brand-light'
                   : 'text-theme-secondary hover:bg-theme-hover',
@@ -77,7 +77,7 @@ export const Sidebar: React.FC = () => {
       <div className="mt-auto mb-6 pt-6 border-t border-theme space-y-3">
         <Link
           to="/links"
-          className="group bg-theme-tertiary hover:bg-theme-hover rounded-theme-xl px-4 py-2.5 shadow-theme-card border border-theme/50 transition-colors cursor-pointer block"
+          className="group bg-theme-tertiary hover:bg-theme-hover rounded-theme px-4 py-2.5 shadow-theme-card border border-theme/50 transition-colors cursor-pointer block"
         >
           <QuotaIndicator
             fullWidth
@@ -91,7 +91,7 @@ export const Sidebar: React.FC = () => {
           type="button"
           onClick={openStorage}
           aria-label="Использование хранилища"
-          className="group w-full text-left bg-theme-tertiary hover:bg-theme-hover rounded-theme-xl p-4 shadow-theme-card border border-theme/50 transition-colors"
+          className="group w-full text-left bg-theme-tertiary hover:bg-theme-hover rounded-theme p-4 shadow-theme-card border border-theme/50 transition-colors"
         >
           <StorageIndicator used={storageUsed} total={storageQuota} />
         </button>

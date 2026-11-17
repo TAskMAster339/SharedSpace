@@ -39,13 +39,13 @@ export const DirectoryCard: React.FC<DirectoryCardProps> = ({
       to={to}
       onContextMenu={onContextMenu}
       className={cn(
-        'block p-5 rounded-theme-lg bg-theme-secondary border border-theme shadow-theme-card group',
+        'block p-5 rounded-theme bg-theme-secondary border border-theme shadow-theme-card group',
         'hover:bg-brand-light transition-colors',
         className,
       )}
     >
       <div className="flex items-start justify-between mb-4">
-        <div className="w-12 h-12 rounded-theme-md bg-brand-light group-hover:bg-theme-secondary flex items-center justify-center text-brand transition-colors">
+        <div className="w-12 h-12 rounded-theme bg-brand-light group-hover:bg-theme-secondary flex items-center justify-center text-brand transition-colors">
           <Folder size={22} />
         </div>
         <div className={onMoreClick ? 'mr-8' : undefined}>
@@ -75,7 +75,7 @@ export const DirectoryCard: React.FC<DirectoryCardProps> = ({
         aria-label="Открыть меню действий"
         aria-haspopup="menu"
         onClick={onMoreClick}
-        className="absolute right-4 top-4 rounded-theme-sm p-2 text-theme-muted transition-colors hover:bg-theme-hover hover:text-theme-primary"
+        className="absolute right-4 top-4 rounded-theme p-2 text-theme-muted transition-colors hover:bg-theme-hover hover:text-theme-primary"
       >
         <MoreVertical size={18} />
       </button>

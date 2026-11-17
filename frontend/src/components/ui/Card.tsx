@@ -22,7 +22,7 @@ export const Card: React.FC<CardProps> = ({
 
   return (
     <div
-      className={cn('rounded-theme-lg p-5', variants[variant], className)}
+      className={cn('rounded-theme p-5', variants[variant], className)}
       onContextMenu={onContextMenu}
     >
       {children}

@@ -54,7 +54,7 @@ const VerifyEmailPage: React.FC = () => {
 
         {status === 'success' && (
           <div className="flex flex-col items-center text-center py-4">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-brand-light text-brand">
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-theme bg-brand-light text-brand">
               <CheckCircle2 size={28} />
             </div>
             <h2 className="text-xl font-semibold text-theme-primary mb-2">Почта подтверждена</h2>
@@ -75,7 +75,7 @@ const VerifyEmailPage: React.FC = () => {
 
         {status === 'already_activated' && (
           <div className="flex flex-col items-center text-center py-4">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-brand-light text-brand">
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-theme bg-brand-light text-brand">
               <MailCheck size={28} />
             </div>
             <h2 className="text-xl font-semibold text-theme-primary mb-2">
@@ -92,7 +92,7 @@ const VerifyEmailPage: React.FC = () => {
 
         {(status === 'invalid' || status === 'expired') && (
           <div className="flex flex-col items-center text-center py-4">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-danger-light text-danger">
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-theme bg-danger-light text-danger">
               <AlertCircle size={28} />
             </div>
             <h2 className="text-xl font-semibold text-theme-primary mb-2">

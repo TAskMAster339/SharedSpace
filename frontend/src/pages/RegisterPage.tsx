@@ -109,7 +109,7 @@ const RegisterPage: React.FC = () => {
               placeholder="Имя пользователя"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-3 py-2 rounded-theme-md border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
+              className="w-full px-3 py-2 rounded-theme border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
             />
             <AuthFieldError message={fieldErrors.username} />
           </div>
@@ -121,7 +121,7 @@ const RegisterPage: React.FC = () => {
                 placeholder="Имя"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
-                className="w-full px-3 py-2 rounded-theme-md border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
+                className="w-full px-3 py-2 rounded-theme border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
               />
             </div>
             <div className="flex-1">
@@ -130,7 +130,7 @@ const RegisterPage: React.FC = () => {
                 placeholder="Фамилия"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
-                className="w-full px-3 py-2 rounded-theme-md border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
+                className="w-full px-3 py-2 rounded-theme border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
               />
             </div>
           </div>
@@ -141,7 +141,7 @@ const RegisterPage: React.FC = () => {
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 rounded-theme-md border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
+              className="w-full px-3 py-2 rounded-theme border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
             />
             <AuthFieldError message={fieldErrors.email} />
           </div>
@@ -153,7 +153,7 @@ const RegisterPage: React.FC = () => {
                 placeholder="Пароль"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 pr-10 rounded-theme-md border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
+                className="w-full px-3 py-2 pr-10 rounded-theme border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
               />
               <button
                 type="button"
@@ -174,7 +174,7 @@ const RegisterPage: React.FC = () => {
                 placeholder="Повторите пароль"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-3 py-2 pr-10 rounded-theme-md border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
+                className="w-full px-3 py-2 pr-10 rounded-theme border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
               />
               <button
                 type="button"
@@ -189,7 +189,7 @@ const RegisterPage: React.FC = () => {
           </div>
 
           {formError && (
-            <p className="rounded-theme-md border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
+            <p className="rounded-theme border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
               {formError}
             </p>
           )}

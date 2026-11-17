@@ -320,7 +320,7 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
           {canWrite && (
             <button
               onClick={() => setShowCreateFolder(!showCreateFolder)}
-              className="p-1.5 rounded-theme-sm text-theme-muted hover:text-brand hover:bg-theme-hover transition-colors"
+              className="p-1.5 rounded-theme text-theme-muted hover:text-brand hover:bg-theme-hover transition-colors"
               title="Создать папку"
             >
               <FolderPlus size={18} />
@@ -330,13 +330,13 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
 
         {/* Создание папки */}
         {showCreateFolder && canWrite && (
-          <div className="flex items-center gap-2 bg-theme-tertiary rounded-theme-md p-2">
+          <div className="flex items-center gap-2 bg-theme-tertiary rounded-theme p-2">
             <input
               type="text"
               value={newFolderName}
               onChange={(e) => setNewFolderName(e.target.value)}
               placeholder="Название папки..."
-              className="flex-1 px-3 py-1.5 rounded-theme-sm border border-theme bg-theme-secondary text-sm text-theme-primary placeholder:text-theme-muted outline-none focus:border-brand transition-colors"
+              className="flex-1 px-3 py-1.5 rounded-theme border border-theme bg-theme-secondary text-sm text-theme-primary placeholder:text-theme-muted outline-none focus:border-brand transition-colors"
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleCreateFolder();
@@ -346,7 +346,7 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
             <button
               onClick={handleCreateFolder}
               disabled={!newFolderName.trim() || isCreatingFolder}
-              className="px-3 py-1.5 bg-brand text-theme-on-brand rounded-theme-sm hover:bg-brand-hover transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1.5 bg-brand text-theme-on-brand rounded-theme hover:bg-brand-hover transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isCreatingFolder ? <Loader2 size={16} className="animate-spin" /> : 'Создать'}
             </button>
@@ -362,7 +362,7 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
         {/* Список папок */}
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
-            <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-[50%] animate-spin" />
           </div>
         ) : (
           <div className="space-y-1 max-h-[400px] overflow-y-auto">
@@ -382,7 +382,7 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
                         navigateTo(dir.id);
                       }}
                       className={cn(
-                        'w-full flex items-center gap-3 px-3 py-2.5 rounded-theme-md transition-colors text-left',
+                        'w-full flex items-center gap-3 px-3 py-2.5 rounded-theme transition-colors text-left',
                         selectedDirectoryId === dir.id
                           ? 'bg-brand-light text-brand'
                           : 'hover:bg-theme-hover text-theme-primary',
@@ -424,7 +424,7 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
                         navigateTo(folder.id);
                       }}
                       className={cn(
-                        'w-full flex items-center gap-3 px-3 py-2.5 rounded-theme-md transition-colors text-left',
+                        'w-full flex items-center gap-3 px-3 py-2.5 rounded-theme transition-colors text-left',
                         isSelected
                           ? 'bg-brand-light text-brand'
                           : 'hover:bg-theme-hover text-theme-primary',
@@ -440,7 +440,7 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
                         {isCurrent && ' (текущая)'}
                       </span>
                       {isShared && (
-                        <span className="text-xs px-1.5 py-0.5 bg-brand/10 text-brand rounded-full">
+                        <span className="text-xs px-1.5 py-0.5 bg-brand/10 text-brand rounded-theme">
                           Общая
                         </span>
                       )}

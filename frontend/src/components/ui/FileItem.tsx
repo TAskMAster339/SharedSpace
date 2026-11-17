@@ -75,14 +75,14 @@ export const FileItem: React.FC<FileItemProps> = ({
         }
       }}
       className={cn(
-        'group flex items-center justify-between p-3 rounded-theme-md transition-colors cursor-pointer',
+        'group flex items-center justify-between p-3 rounded-theme transition-colors cursor-pointer',
         'bg-theme-tertiary hover:bg-theme-hover border border-theme',
         className,
       )}
     >
       <div className="flex items-center gap-3 min-w-0">
         <div className="relative shrink-0 [--badge-preview-width:3rem]">
-          <div className="w-12 h-12 flex items-center justify-center bg-theme-secondary shadow-theme-card">
+          <div className="item-list-thumbnail bg-theme-secondary shadow-theme-card">
             <FilePreview
               fileId={id}
               type={type}

@@ -239,7 +239,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Ссылки общего доступа" maxWidth="lg">
-      <div className="flex items-center gap-2 mb-5 p-3 bg-theme-tertiary rounded-theme-md border border-theme">
+      <div className="flex items-center gap-2 mb-5 p-3 bg-theme-tertiary rounded-theme border border-theme">
         {isFile ? (
           <Link2 size={16} className="text-theme-muted shrink-0" />
         ) : (
@@ -251,13 +251,13 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
 
       {!showCreateForm &&
         (atLinksLimit ? (
-          <div className="mb-5 px-4 py-2.5 rounded-theme-md bg-danger-light text-danger text-xs text-center">
+          <div className="mb-5 px-4 py-2.5 rounded-theme bg-danger-light text-danger text-xs text-center">
             Достигнут лимит ссылок ({shareLinksUsed}/{shareLinksQuota})
           </div>
         ) : (
           <button
             onClick={() => setShowCreateForm(true)}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-dashed border-theme hover:border-brand hover:text-brand rounded-theme-md text-sm text-theme-secondary transition-colors mb-5"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-dashed border-theme hover:border-brand hover:text-brand rounded-theme text-sm text-theme-secondary transition-colors mb-5"
           >
             <Plus size={16} />
             Создать новую ссылку
@@ -265,7 +265,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
         ))}
 
       {showCreateForm && (
-        <div className="mb-5 p-4 bg-theme-tertiary border border-theme rounded-theme-md space-y-4">
+        <div className="mb-5 p-4 bg-theme-tertiary border border-theme rounded-theme space-y-4">
           <p className="text-sm font-medium text-theme-primary">Новая ссылка</p>
 
           <div className="space-y-1">
@@ -274,7 +274,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
               <button
                 onClick={() => setAccess('public')}
                 className={cn(
-                  'flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-theme-md border text-sm transition-colors',
+                  'flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-theme border text-sm transition-colors',
                   access === 'public'
                     ? 'border-brand bg-brand/10 text-brand'
                     : 'border-theme bg-theme-secondary text-theme-secondary hover:border-brand hover:text-brand hover:bg-brand-light',
@@ -286,7 +286,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
               <button
                 onClick={() => setAccess('authenticated')}
                 className={cn(
-                  'flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-theme-md border text-sm transition-colors',
+                  'flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-theme border text-sm transition-colors',
                   access === 'authenticated'
                     ? 'border-brand bg-brand/10 text-brand'
                     : 'border-theme bg-theme-secondary text-theme-secondary hover:border-brand hover:text-brand hover:bg-brand-light',
@@ -311,7 +311,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
                   key={opt.value}
                   onClick={() => setExpiry(opt.value)}
                   className={cn(
-                    'px-3 py-1.5 rounded-theme-md border text-xs transition-colors',
+                    'px-3 py-1.5 rounded-theme border text-xs transition-colors',
                     expiry === opt.value
                       ? 'border-brand bg-brand/10 text-brand'
                       : 'border-theme bg-theme-secondary text-theme-secondary hover:border-brand hover:text-brand hover:bg-brand-light',
@@ -338,7 +338,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Оставьте пустым, если не нужен"
                 autoComplete="new-password"
-                className="w-full pl-9 pr-9 py-2 text-sm bg-theme-secondary border border-theme rounded-theme-md text-theme-primary placeholder:text-theme-muted focus:outline-none focus:border-brand transition-colors"
+                className="w-full pl-9 pr-9 py-2 text-sm bg-theme-secondary border border-theme rounded-theme text-theme-primary placeholder:text-theme-muted focus:outline-none focus:border-brand transition-colors"
               />
               <button
                 type="button"
@@ -373,7 +373,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
       )}
 
       {error && (
-        <div className="flex items-center gap-2 mb-4 p-3 bg-danger-light border border-danger/20 rounded-theme-md text-sm text-danger">
+        <div className="flex items-center gap-2 mb-4 p-3 bg-danger-light border border-danger/20 rounded-theme text-sm text-danger">
           <AlertCircle size={14} className="shrink-0" />
           {error}
         </div>
@@ -382,7 +382,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
       <div className="space-y-3">
         {isLoading && (
           <div className="flex justify-center py-6">
-            <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+            <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-[50%] animate-spin" />
           </div>
         )}
 
@@ -403,7 +403,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
               onClick={() => (!link.is_active || expired ? undefined : handleEditLink(link))}
               onContextMenu={(e) => handleCopyAndClose(e, link)}
               className={cn(
-                'flex items-start gap-3 p-3 rounded-theme-md border transition-colors cursor-pointer',
+                'flex items-start gap-3 p-3 rounded-theme border transition-colors cursor-pointer',
                 !link.is_active || expired
                   ? 'border-theme bg-theme-tertiary opacity-60'
                   : 'border-theme bg-theme-secondary hover:border-brand/30 hover:bg-brand-light',
@@ -411,7 +411,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
             >
               <div
                 className={cn(
-                  'shrink-0 mt-0.5 p-1.5 rounded-theme-sm',
+                  'shrink-0 mt-0.5 p-1.5 rounded-theme',
                   link.access_type === 'public' ? 'bg-green-500/10' : 'bg-theme-hover',
                 )}
               >
@@ -456,7 +456,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
                   <button
                     onClick={(e) => handleCopy(e, link)}
                     title="Скопировать ссылку"
-                    className="p-1.5 rounded-theme-sm hover:bg-theme-hover transition-colors group"
+                    className="p-1.5 rounded-theme hover:bg-theme-hover transition-colors group"
                   >
                     {isCopied ? (
                       <Check size={14} className="text-green-500" />
@@ -471,7 +471,7 @@ export const ShareLinkModal: React.FC<ShareLinkModalProps> = ({
                 <button
                   onClick={(e) => handleDelete(e, link)}
                   title="Удалить ссылку"
-                  className="p-1.5 rounded-theme-sm hover:bg-danger-light text-theme-secondary hover:text-danger transition-colors"
+                  className="p-1.5 rounded-theme hover:bg-danger-light text-theme-secondary hover:text-danger transition-colors"
                 >
                   <Trash2 size={14} />
                 </button>

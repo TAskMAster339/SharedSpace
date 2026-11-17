@@ -18,7 +18,7 @@ export const ViewToggle: React.FC<ViewToggleProps> = ({
   return (
     <div
       className={cn(
-        'inline-flex rounded-theme-md overflow-hidden border border-theme divide-x divide-theme',
+        'inline-flex rounded-theme overflow-hidden border border-theme divide-x divide-theme',
         className,
       )}
     >

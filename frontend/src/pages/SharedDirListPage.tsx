@@ -256,7 +256,7 @@ const SharedDirListPage: React.FC = () => {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={closeModal} />
-          <div className="relative bg-theme-secondary rounded-theme-xl max-w-md w-full p-6 shadow-theme-dropdown border border-theme">
+          <div className="relative bg-theme-secondary rounded-theme max-w-md w-full p-6 shadow-theme-dropdown border border-theme">
             <h3 className="text-lg font-semibold text-theme-primary mb-4">
               Новая общая директория
             </h3>
@@ -271,7 +271,7 @@ const SharedDirListPage: React.FC = () => {
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder="Marketing Team"
-                  className="w-full px-3 py-2.5 rounded-theme-md border-2 outline-none transition-colors text-sm bg-theme-tertiary text-theme-primary placeholder:text-theme-muted border-theme-hover focus:border-brand"
+                  className="w-full px-3 py-2.5 rounded-theme border-2 outline-none transition-colors text-sm bg-theme-tertiary text-theme-primary placeholder:text-theme-muted border-theme-hover focus:border-brand"
                 />
               </div>
 
@@ -366,7 +366,7 @@ const SharedDirListPage: React.FC = () => {
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleInvite();
               }}
-              className="w-full px-3 py-2.5 rounded-theme-md border-2 border-theme-hover bg-theme-tertiary text-theme-primary placeholder:text-theme-muted outline-none focus:border-brand transition-colors text-sm"
+              className="w-full px-3 py-2.5 rounded-theme border-2 border-theme-hover bg-theme-tertiary text-theme-primary placeholder:text-theme-muted outline-none focus:border-brand transition-colors text-sm"
             />
           </div>
 
@@ -381,14 +381,14 @@ const SharedDirListPage: React.FC = () => {
             <button
               onClick={() => setInviteDir(null)}
               disabled={isInviting}
-              className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium disabled:opacity-50"
+              className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme transition-colors text-sm font-medium disabled:opacity-50"
             >
               Отмена
             </button>
             <button
               onClick={handleInvite}
               disabled={!inviteUsername.trim() || isInviting}
-              className="flex-1 inline-flex items-center justify-center px-4 py-2 bg-brand text-theme-on-brand hover:bg-brand-hover rounded-theme-md transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 inline-flex items-center justify-center px-4 py-2 bg-brand text-theme-on-brand hover:bg-brand-hover rounded-theme transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isInviting ? 'Отправка...' : 'Пригласить'}
             </button>

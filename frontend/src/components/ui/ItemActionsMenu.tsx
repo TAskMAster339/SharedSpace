@@ -200,7 +200,7 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
             setIsOpen((prev) => !prev);
           }}
           className={cn(
-            'p-2 -m-1 rounded-theme-sm text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors',
+            'p-2 -m-1 rounded-theme text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors',
             contextAnchor,
           )}
         >

@@ -3,7 +3,7 @@ import { Share2, Star } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
 const badge =
-  'pointer-events-none absolute grid size-6 place-items-center rounded-theme-sm border border-theme bg-theme-secondary shadow-theme-card motion-safe:transition-[opacity,transform] motion-safe:duration-300';
+  'pointer-events-none absolute grid size-6 place-items-center rounded-theme border border-theme bg-theme-secondary shadow-theme-card motion-safe:transition-[opacity,transform] motion-safe:duration-300';
 
 export function ItemStatusBadges({
   favorite = false,

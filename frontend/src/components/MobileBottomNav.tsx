@@ -151,12 +151,12 @@ export const MobileBottomNav: React.FC = () => {
     <>
       <nav
         ref={navRef}
-        className="fixed bottom-4 left-4 right-4 z-40 bg-theme-secondary rounded-theme-xl shadow-theme-dropdown border border-theme md:hidden"
+        className="fixed bottom-4 left-4 right-4 z-40 bg-theme-secondary rounded-theme shadow-theme-dropdown border border-theme md:hidden"
       >
         <div className="relative flex items-center px-1 py-1">
           <div
             ref={indicatorRef}
-            className="absolute inset-y-1 rounded-theme-xl bg-theme-hover transition-all duration-300 ease-out pointer-events-none z-0 opacity-0"
+            className="absolute inset-y-1 rounded-theme bg-theme-hover transition-all duration-300 ease-out pointer-events-none z-0 opacity-0"
           />
 
           {MAIN_TABS.map((tab, i) => {
@@ -167,7 +167,7 @@ export const MobileBottomNav: React.FC = () => {
                 to={findPath(tab.key)}
                 data-tab-idx={i}
                 className={cn(
-                  'relative z-10 flex-1 flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-theme-xl transition-all duration-200 min-w-0',
+                  'relative z-10 flex-1 flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-theme transition-all duration-200 min-w-0',
                   active
                     ? TAB_ACTIVE_COLORS[tab.key] || 'text-brand'
                     : 'text-theme-muted hover:text-theme-secondary',
@@ -185,7 +185,7 @@ export const MobileBottomNav: React.FC = () => {
             data-tab-idx={4}
             onClick={() => setMoreOpen((o) => !o)}
             className={cn(
-              'relative z-10 flex-1 flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-theme-xl transition-all duration-200',
+              'relative z-10 flex-1 flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-theme transition-all duration-200',
               isMoreActive ? moreBtnActiveColor : 'text-theme-muted hover:text-theme-secondary',
             )}
           >
@@ -204,11 +204,11 @@ export const MobileBottomNav: React.FC = () => {
       {moreOpen && (
         <div
           ref={moreRef}
-          className="fixed bottom-20 left-4 right-4 z-[52] max-h-[60vh] overflow-y-auto bg-theme-secondary rounded-theme-xl shadow-theme-dropdown border border-theme py-3 md:hidden"
+          className="fixed bottom-20 left-4 right-4 z-[52] max-h-[60vh] overflow-y-auto bg-theme-secondary rounded-theme shadow-theme-dropdown border border-theme py-3 md:hidden"
         >
           {isLoading ? (
             <div className="flex items-center justify-center py-6">
-              <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+              <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-[50%] animate-spin" />
             </div>
           ) : (
             <div className="px-2 flex flex-col space-y-1">
@@ -221,7 +221,7 @@ export const MobileBottomNav: React.FC = () => {
                       to={item.path}
                       onClick={closeMore}
                       className={cn(
-                        'flex items-center gap-3 px-3 py-2.5 rounded-theme-xl text-sm font-medium transition-colors',
+                        'flex items-center gap-3 px-3 py-2.5 rounded-theme text-sm font-medium transition-colors',
                         isActive
                           ? 'bg-brand-light text-brand dark:bg-brand-light'
                           : 'text-theme-secondary hover:bg-theme-hover',
@@ -241,7 +241,7 @@ export const MobileBottomNav: React.FC = () => {
                 <Link
                   to="/links"
                   onClick={closeMore}
-                  className="group bg-theme-tertiary hover:bg-theme-hover rounded-theme-xl px-4 py-2.5 shadow-theme-card border border-theme/50 transition-colors cursor-pointer block"
+                  className="group bg-theme-tertiary hover:bg-theme-hover rounded-theme px-4 py-2.5 shadow-theme-card border border-theme/50 transition-colors cursor-pointer block"
                 >
                   <QuotaIndicator
                     fullWidth
@@ -258,7 +258,7 @@ export const MobileBottomNav: React.FC = () => {
                     closeMore();
                     openStorage();
                   }}
-                  className="group w-full text-left bg-theme-tertiary hover:bg-theme-hover rounded-theme-xl p-4 shadow-theme-card border border-theme/50 transition-colors"
+                  className="group w-full text-left bg-theme-tertiary hover:bg-theme-hover rounded-theme p-4 shadow-theme-card border border-theme/50 transition-colors"
                 >
                   <StorageIndicator used={storageUsed} total={storageQuota} />
                 </button>

@@ -64,7 +64,7 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
   return (
     <span
       ref={ref}
-      className={`relative inline-flex items-center justify-center shrink-0 overflow-hidden ${fill ? 'w-full h-full' : ''} ${url ? 'bg-theme-secondary' : ''}`}
+      className={`relative inline-flex items-center justify-center shrink-0 overflow-hidden rounded-theme ${fill ? 'w-full h-full' : ''} ${url ? 'bg-theme-secondary' : ''}`}
       style={fill ? undefined : { width: size, height: size }}
     >
       {url ? (
@@ -75,14 +75,14 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
             loading="lazy"
             decoding="async"
             draggable={false}
-            className="w-full h-full object-contain rounded-none"
+            className="w-full h-full object-contain"
             onError={() => setUrl(null)}
           />
           {type === 'video' && (
             <span
               role="img"
               aria-label="Видео"
-              className="absolute bottom-1 right-1 flex items-center justify-center p-1 bg-black/60 text-white pointer-events-none"
+              className="absolute bottom-1 right-1 flex items-center justify-center p-1 rounded-theme bg-black/60 text-white pointer-events-none"
             >
               <Play size={12} fill="currentColor" aria-hidden="true" />
             </span>

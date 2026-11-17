@@ -104,14 +104,14 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
       ref={menu.anchor}
       {...menu.handlers}
       className={cn(
-        'group flex flex-col items-center p-3 rounded-theme-md transition-colors cursor-pointer relative min-w-0 [-webkit-touch-callout:none]',
+        'group flex flex-col items-center p-3 rounded-theme transition-colors cursor-pointer relative min-w-0 [-webkit-touch-callout:none]',
         'bg-theme-tertiary hover:bg-theme-hover border border-theme',
         isDragOver && '!border-brand !bg-brand/20 !shadow-lg !ring-2 !ring-brand/40',
         className,
       )}
     >
       <div className="relative flex aspect-square w-full max-w-[160px] items-center justify-center text-theme-muted transition-colors group-hover:text-brand">
-        <Folder size={40} strokeWidth={1.5} />
+        <Folder size={64} strokeWidth={1.5} />
       </div>
       <ItemStatusBadges grid shared={hasShareLinks} />
       <p className="mt-2 text-xs tabular-nums text-theme-secondary">

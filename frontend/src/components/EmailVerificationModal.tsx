@@ -81,7 +81,7 @@ const EmailVerificationModal: React.FC = () => {
       maxWidth="md"
     >
       <div className="flex flex-col items-center text-center">
-        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-brand-light text-brand">
+        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-theme bg-brand-light text-brand">
           <Mail size={32} />
         </div>
 

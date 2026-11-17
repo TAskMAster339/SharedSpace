@@ -19,11 +19,7 @@ export const Footer: React.FC = () => {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
         {isOnLandingPage ? (
           <div className="flex items-center gap-2">
-            <img
-              src={logo}
-              alt="SharedSpace"
-              className="w-7 h-7 rounded-theme-sm shadow-theme-card"
-            />
+            <img src={logo} alt="SharedSpace" className="w-7 h-7 rounded-theme shadow-theme-card" />
             <span className="text-sm font-semibold tracking-tight">
               <span className="text-brand-dark dark:text-brand">Shared</span>
               <span className="text-brand">Space</span>
@@ -34,11 +30,7 @@ export const Footer: React.FC = () => {
             to={isAuthenticated ? '/dashboard' : '/'}
             className="flex items-center gap-2 cursor-pointer"
           >
-            <img
-              src={logo}
-              alt="SharedSpace"
-              className="w-7 h-7 rounded-theme-sm shadow-theme-card"
-            />
+            <img src={logo} alt="SharedSpace" className="w-7 h-7 rounded-theme shadow-theme-card" />
             <span className="text-sm font-semibold tracking-tight">
               <span className="text-brand-dark dark:text-brand">Shared</span>
               <span className="text-brand">Space</span>

@@ -61,7 +61,7 @@ export const Modal: React.FC<ModalProps> = ({
   };
 
   const panelClassName = cn(
-    'bg-theme-secondary rounded-theme-xl shadow-theme-dropdown border border-theme max-h-[90vh] flex-col',
+    'bg-theme-secondary rounded-theme shadow-theme-dropdown border border-theme max-h-[90vh] flex-col',
     maxWidthClasses[maxWidth],
     className,
   );
@@ -78,7 +78,7 @@ export const Modal: React.FC<ModalProps> = ({
             type="button"
             aria-label="Закрыть"
             onClick={() => (native ? dialogRef.current?.close() : onClose())}
-            className="p-1 rounded-theme-full hover:bg-theme-hover transition-colors group"
+            className="p-1 rounded-theme hover:bg-theme-hover transition-colors group"
           >
             <X
               size={20}

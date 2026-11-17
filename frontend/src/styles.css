@@ -40,11 +40,7 @@
   --shadow-dropdown: 0 10px 40px -8px rgba(0, 0, 0, 0.1);
 
   /* Скругления */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
-  --radius-full: 9999px;
+  --radius: 8px;
 }
 
 /* Тёмная тема */
@@ -120,7 +116,7 @@
     background-clip: content-box;
     border: 2px solid transparent;
     background-color: var(--text-muted);
-    border-radius: var(--radius-full);
+    border-radius: var(--radius);
   }
 
   ::-webkit-scrollbar-thumb:hover {
@@ -263,24 +259,18 @@
   }
 
   /* Скругления */
-  .rounded-theme-sm {
-    border-radius: var(--radius-sm);
+  .rounded-theme {
+    border-radius: var(--radius);
   }
 
-  .rounded-theme-md {
-    border-radius: var(--radius-md);
+  .rounded-t-theme {
+    border-start-start-radius: var(--radius);
+    border-start-end-radius: var(--radius);
   }
 
-  .rounded-theme-lg {
-    border-radius: var(--radius-lg);
-  }
-
-  .rounded-theme-xl {
-    border-radius: var(--radius-xl);
-  }
-
-  .rounded-theme-full {
-    border-radius: var(--radius-full);
+  .item-list-thumbnail {
+    @apply grid size-12 shrink-0 place-items-center;
+    border-radius: var(--radius);
   }
 
   /* Скрытие скроллбара */
@@ -395,13 +385,15 @@
 }
 
 @layer utilities {
-  .storage-usage-row:hover,
-  .storage-usage-row:focus-within {
-    background-color: var(--brand-light);
+  .storage-usage-row {
+    --storage-icon-accent: var(--brand);
   }
 
-  .storage-usage-row-trash:hover,
-  .storage-usage-row-trash:focus-within {
-    background-color: var(--danger-light);
+  .storage-usage-row-trash {
+    --storage-icon-accent: var(--danger);
+  }
+
+  .storage-usage-row:is(:hover, :focus-within) .storage-usage-icon {
+    color: var(--storage-icon-accent);
   }
 }

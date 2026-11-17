@@ -94,7 +94,7 @@ const FolderSettingsPage: React.FC = () => {
     return (
       <div className="flex items-center justify-center py-20">
         <SEOHead title="Настройки папки" description="Загрузка..." />
-        <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-[50%] animate-spin" />
       </div>
     );
   }
@@ -200,7 +200,7 @@ const FolderSettingsPage: React.FC = () => {
                 setDeleteError('');
                 setIsDeleteOpen(true);
               }}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-danger hover:bg-danger-hover rounded-theme-md transition-colors shrink-0"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-danger hover:bg-danger-hover rounded-theme transition-colors shrink-0"
             >
               <Trash2 size={16} />
               Удалить папку

@@ -88,7 +88,7 @@ export const StorageUsageModal: React.FC = () => {
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={percentage}
-              className="h-2 overflow-hidden rounded-full bg-theme-border"
+              className="h-2 overflow-hidden rounded-theme bg-theme-border"
             >
               <div className="h-full bg-brand" style={{ width: `${percentage}%` }} />
             </div>
@@ -98,11 +98,15 @@ export const StorageUsageModal: React.FC = () => {
               <li
                 key={to}
                 className={cn(
-                  'storage-usage-row flex items-center gap-3 rounded-theme-md border-t border-theme px-2 py-3 transition-colors',
+                  'storage-usage-row flex items-center gap-3 border-t border-theme px-2 py-3',
                   to === '/trash' && 'storage-usage-row-trash',
                 )}
               >
-                <Icon aria-hidden="true" size={18} className="shrink-0 text-theme-secondary" />
+                <Icon
+                  aria-hidden="true"
+                  size={18}
+                  className="storage-usage-icon shrink-0 text-theme-secondary transition-colors"
+                />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-theme-primary">{name}</p>
                   <p className="text-xs tabular-nums text-theme-secondary">
@@ -114,7 +118,7 @@ export const StorageUsageModal: React.FC = () => {
                   onClick={close}
                   variant="secondary"
                   aria-label={`Открыть «${name}»`}
-                  className="shrink-0 rounded-theme-md border border-theme bg-theme-tertiary px-3 py-2 text-sm font-medium hover:bg-theme-hover"
+                  className="shrink-0 rounded-theme border border-theme bg-theme-tertiary px-3 py-2 text-sm font-medium hover:bg-theme-hover"
                 >
                   Открыть
                 </Link>

@@ -59,7 +59,7 @@ const ForgotPasswordPage: React.FC = () => {
       <Card className="w-full max-w-md">
         {submitted ? (
           <div className="flex flex-col items-center text-center py-4">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-brand-light text-brand">
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-theme bg-brand-light text-brand">
               <MailCheck size={28} />
             </div>
             <h2 className="text-xl font-semibold text-theme-primary mb-2">Проверьте почту</h2>
@@ -90,7 +90,7 @@ const ForgotPasswordPage: React.FC = () => {
                   placeholder="Email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-3 py-2 rounded-theme-md border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
+                  className="w-full px-3 py-2 rounded-theme border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
                   autoComplete="email"
                 />
                 <p className="min-h-5 pt-1 pl-3 text-sm leading-4 text-danger">

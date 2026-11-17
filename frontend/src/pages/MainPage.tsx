@@ -80,12 +80,12 @@ const MainPage: React.FC = () => {
       {/* Hero — на всю ширину экрана, заподлицо с шапкой, на полный экран */}
       <section className="relative left-1/2 right-1/2 -mx-[50vw] -mt-4 sm:-mt-6 w-screen min-h-[calc(100vh-4vh)] flex items-center overflow-hidden bg-brand-gradient">
         <div className="absolute inset-0 bg-starfield opacity-60" />
-        <div className="absolute -top-10 -right-10 w-80 h-80 bg-white/10 rounded-theme-full blur-3xl" />
-        <div className="absolute bottom-0 left-10 w-64 h-64 bg-white/10 rounded-theme-full blur-3xl" />
+        <div className="absolute -top-10 -right-10 w-80 h-80 bg-white/10 rounded-theme blur-3xl" />
+        <div className="absolute bottom-0 left-10 w-64 h-64 bg-white/10 rounded-theme blur-3xl" />
 
         <div className="relative w-full max-w-6xl mx-auto px-6 sm:px-10 py-12 grid sm:grid-cols-2 gap-12 items-center">
           <div className="space-y-6">
-            <span className="inline-block text-xs font-semibold uppercase tracking-wide text-white bg-white/15 border border-white/25 px-3 py-1 rounded-theme-full">
+            <span className="inline-block text-xs font-semibold uppercase tracking-wide text-white bg-white/15 border border-white/25 px-3 py-1 rounded-theme">
               SharedSpace — просторный как космос
             </span>
             <h1 className="text-3xl sm:text-5xl font-bold text-white leading-tight">
@@ -105,15 +105,15 @@ const MainPage: React.FC = () => {
           {/* «Планета»-лого с вращающейся орбитой возможностей */}
           <div className="relative hidden sm:flex items-center justify-center h-96">
             <div className="relative w-80 h-80">
-              <div className="absolute inset-0 rounded-theme-full bg-white/15 blur-2xl" />
+              <div className="absolute inset-0 rounded-theme bg-white/15 blur-2xl" />
 
               {/* Вращающееся кольцо со спутниками */}
-              <div className="absolute inset-0 rounded-theme-full border-2 border-dashed border-white/40 animate-orbit">
+              <div className="absolute inset-0 rounded-[50%] border-2 border-dashed border-white/40 animate-orbit">
                 {ORBIT.map(({ icon: Icon, position }, i) => (
                   // Внешний div отвечает за позицию (translate), внутренний — за контр-вращение,
                   // иначе анимация rotate перезаписала бы центрирующий transform.
                   <div key={i} className={cn('absolute w-14 h-14', position)}>
-                    <div className="w-full h-full rounded-theme-full bg-white shadow-theme-dropdown flex items-center justify-center animate-orbit-reverse">
+                    <div className="w-full h-full rounded-theme bg-white shadow-theme-dropdown flex items-center justify-center animate-orbit-reverse">
                       <Icon size={24} className="text-brand" />
                     </div>
                   </div>
@@ -121,7 +121,7 @@ const MainPage: React.FC = () => {
               </div>
 
               {/* Центральное лого */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 rounded-theme-full bg-white shadow-theme-dropdown flex items-center justify-center p-6">
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 rounded-theme bg-white shadow-theme-dropdown flex items-center justify-center p-6">
                 <img src={logo} alt="SharedSpace" className="w-full h-full object-contain" />
               </div>
             </div>
@@ -144,7 +144,7 @@ const MainPage: React.FC = () => {
               key={title}
               className="group w-full sm:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.7rem)] space-y-3 transition-all hover:-translate-y-1 hover:shadow-theme-dropdown"
             >
-              <div className="w-11 h-11 flex items-center justify-center rounded-theme-md bg-brand-light transition-colors group-hover:bg-brand">
+              <div className="w-11 h-11 flex items-center justify-center rounded-theme bg-brand-light transition-colors group-hover:bg-brand">
                 <Icon size={22} className="text-brand transition-colors group-hover:text-white" />
               </div>
               <h3 className="font-semibold text-theme-primary">{title}</h3>
@@ -169,7 +169,7 @@ const MainPage: React.FC = () => {
           <div className="grid sm:grid-cols-3 gap-8">
             {STEPS.map(({ title, description }, index) => (
               <div key={title} className="relative text-center space-y-3">
-                <div className="relative z-10 mx-auto w-14 h-14 flex items-center justify-center rounded-theme-full bg-brand text-theme-on-brand text-lg font-bold shadow-theme-card">
+                <div className="relative z-10 mx-auto w-14 h-14 flex items-center justify-center rounded-theme bg-brand text-theme-on-brand text-lg font-bold shadow-theme-card">
                   {index + 1}
                 </div>
                 <h3 className="font-semibold text-theme-primary">{title}</h3>
