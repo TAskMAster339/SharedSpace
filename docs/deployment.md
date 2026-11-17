@@ -24,10 +24,9 @@ DATABASE_URL=postgres://user:password@host:5432/sharedspace?sslmode=require
 
 # MinIO — production endpoint
 MINIO_ENDPOINT=minio.example.com:9000
-MINIO_PUBLIC_ENDPOINT=https://minio-pub.example.com
+MINIO_PUBLIC_ENDPOINT=minio-pub.example.com
 MINIO_USE_SSL=true
-MINIO_PUBLIC_USE_SSL=true   # false для локальной разработки, иначе presigned-ссылки
-                            # будут с HTTPS, и браузер заблокирует загрузку по HTTP
+MINIO_PUBLIC_USE_SSL=true
 
 # Фронтенд
 REACT_APP_API_BASE_URL=https://api.example.com/api/v1
@@ -113,6 +112,16 @@ server {
 ```
 
 ### Прокси для MinIO (`nginx-minio.conf`)
+
+`MINIO_PUBLIC_ENDPOINT` задаётся в формате `host[:port]`. На публичном
+адресе MinIO настройте TLS с действительным сертификатом. При проксировании
+сохраните путь и query string, а в `Host` передайте адрес, с которым бэкенд
+подписал запрос (`MINIO_ENDPOINT`, в примере ниже — `minio:9000`).
+
+На HTTPS-стенде загрузите изображение, запросите
+`GET /api/v1/files/{id}/preview` с Bearer-токеном и откройте полученный URL.
+Проверьте, что URL начинается с `https://`, а ответ содержит `200 OK` и
+`Content-Type: image/jpeg`.
 
 ```nginx
 server {
