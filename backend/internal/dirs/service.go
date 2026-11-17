@@ -13,6 +13,7 @@ import (
 
 	"sharedspace/internal/access"
 	"sharedspace/internal/apperror"
+	"sharedspace/internal/database"
 	"sharedspace/internal/sharelinks"
 )
 
@@ -376,6 +377,10 @@ func (s *Service) Update(ctx context.Context, userID, dirID string, req UpdateDi
 		if isUniqueViolation(err) {
 			return DirectoryResponse{}, apperror.Conflict("директория с таким названием уже существует в целевом расположении")
 		}
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.ConstraintName == "directories_acyclic" {
+			return DirectoryResponse{}, apperror.Validation("нельзя переместить папку в одну из её вложенных папок")
+		}
 		return DirectoryResponse{}, apperror.WrapInternal("ошибка обновления директории", err)
 	}
 
@@ -495,6 +500,7 @@ func (s *Service) toDirectoryResponse(ctx context.Context, userID string, d dire
 		ParentID:          d.ParentID,
 		Type:              d.Type,
 		FilesCount:        d.FilesCount,
+		SizeBytes:         d.SizeBytes,
 		CreatedAt:         d.CreatedAt,
 		UpdatedAt:         d.UpdatedAt,
 		Permissions:       perms,
@@ -731,6 +737,9 @@ func (s *Service) PermanentDelete(ctx context.Context, userID, dirID string) err
 		return apperror.WrapInternal("начало транзакции", err)
 	}
 	defer tx.Rollback(ctx)
+	if err := database.LockDirectoryTopology(ctx, tx); err != nil {
+		return apperror.WrapInternal("блокировка дерева директорий", err)
+	}
 
 	allFileIDs := make([]string, 0, len(allFiles))
 	for _, f := range allFiles {

@@ -307,3 +307,7 @@ func TestServiceSearchUsersShortQuery(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+func (m *mockRepo) FindStorageUsage(_ context.Context, _ dbTX, _, _ string) (StorageUsageResponse, error) {
+	return StorageUsageResponse{}, nil
+}

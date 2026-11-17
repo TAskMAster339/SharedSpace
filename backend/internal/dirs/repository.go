@@ -15,27 +15,27 @@ func NewRepository() *Repository {
 func (r *Repository) FindByID(ctx context.Context, db dbTX, id string) (directoryRecord, error) {
 	var d directoryRecord
 	err := db.QueryRow(ctx, `
-		SELECT id, name, owner_id, parent_id, type, files_count, created_at, updated_at
+		SELECT id, name, owner_id, parent_id, type, files_count, size_bytes, created_at, updated_at
 		FROM directories
 		WHERE id = $1 AND deleted_at IS NULL
-	`, id).Scan(&d.ID, &d.Name, &d.OwnerID, &d.ParentID, &d.Type, &d.FilesCount, &d.CreatedAt, &d.UpdatedAt)
+	`, id).Scan(&d.ID, &d.Name, &d.OwnerID, &d.ParentID, &d.Type, &d.FilesCount, &d.SizeBytes, &d.CreatedAt, &d.UpdatedAt)
 	return d, err
 }
 
 func (r *Repository) FindRootByOwner(ctx context.Context, db dbTX, ownerID string) (directoryRecord, error) {
 	var d directoryRecord
 	err := db.QueryRow(ctx, `
-		SELECT id, name, owner_id, parent_id, type, files_count, created_at, updated_at
+		SELECT id, name, owner_id, parent_id, type, files_count, size_bytes, created_at, updated_at
 		FROM directories
 		WHERE owner_id = $1 AND type = 'root' AND deleted_at IS NULL
 		LIMIT 1
-	`, ownerID).Scan(&d.ID, &d.Name, &d.OwnerID, &d.ParentID, &d.Type, &d.FilesCount, &d.CreatedAt, &d.UpdatedAt)
+	`, ownerID).Scan(&d.ID, &d.Name, &d.OwnerID, &d.ParentID, &d.Type, &d.FilesCount, &d.SizeBytes, &d.CreatedAt, &d.UpdatedAt)
 	return d, err
 }
 
 func (r *Repository) FindSubdirectories(ctx context.Context, db dbTX, parentID string) ([]directoryRecord, error) {
 	rows, err := db.Query(ctx, `
-		SELECT id, name, owner_id, parent_id, type, files_count, created_at, updated_at
+		SELECT id, name, owner_id, parent_id, type, files_count, size_bytes, created_at, updated_at
 		FROM directories
 		WHERE parent_id = $1 AND deleted_at IS NULL
 		ORDER BY name ASC, id ASC
@@ -48,7 +48,7 @@ func (r *Repository) FindSubdirectories(ctx context.Context, db dbTX, parentID s
 	var dirs []directoryRecord
 	for rows.Next() {
 		var d directoryRecord
-		if err := rows.Scan(&d.ID, &d.Name, &d.OwnerID, &d.ParentID, &d.Type, &d.FilesCount, &d.CreatedAt, &d.UpdatedAt); err != nil {
+		if err := rows.Scan(&d.ID, &d.Name, &d.OwnerID, &d.ParentID, &d.Type, &d.FilesCount, &d.SizeBytes, &d.CreatedAt, &d.UpdatedAt); err != nil {
 			return nil, err
 		}
 		dirs = append(dirs, d)
@@ -58,7 +58,7 @@ func (r *Repository) FindSubdirectories(ctx context.Context, db dbTX, parentID s
 
 func (r *Repository) FindSubdirectoriesAfterCursor(ctx context.Context, db dbTX, parentID string, cursorName string, cursorID string, limit int) ([]directoryRecord, bool, string, error) {
 	query := `
-		SELECT id, name, owner_id, parent_id, type, files_count, created_at, updated_at
+		SELECT id, name, owner_id, parent_id, type, files_count, size_bytes, created_at, updated_at
 		FROM directories
 		WHERE parent_id = $1 AND deleted_at IS NULL`
 	args := []any{parentID}
@@ -82,7 +82,7 @@ func (r *Repository) FindSubdirectoriesAfterCursor(ctx context.Context, db dbTX,
 	var dirs []directoryRecord
 	for rows.Next() {
 		var d directoryRecord
-		if err := rows.Scan(&d.ID, &d.Name, &d.OwnerID, &d.ParentID, &d.Type, &d.FilesCount, &d.CreatedAt, &d.UpdatedAt); err != nil {
+		if err := rows.Scan(&d.ID, &d.Name, &d.OwnerID, &d.ParentID, &d.Type, &d.FilesCount, &d.SizeBytes, &d.CreatedAt, &d.UpdatedAt); err != nil {
 			return nil, false, "", err
 		}
 		dirs = append(dirs, d)
@@ -180,11 +180,11 @@ func (r *Repository) FindFilesAfterCursor(ctx context.Context, db dbTX, director
 func (r *Repository) FindByNameAndParent(ctx context.Context, db dbTX, name, parentID, ownerID string) (directoryRecord, error) {
 	var d directoryRecord
 	err := db.QueryRow(ctx, `
-		SELECT id, name, owner_id, parent_id, type, files_count, created_at, updated_at
+		SELECT id, name, owner_id, parent_id, type, files_count, size_bytes, created_at, updated_at
 		FROM directories
 		WHERE name = $1 AND parent_id = $2 AND owner_id = $3 AND deleted_at IS NULL
 		LIMIT 1
-	`, name, parentID, ownerID).Scan(&d.ID, &d.Name, &d.OwnerID, &d.ParentID, &d.Type, &d.FilesCount, &d.CreatedAt, &d.UpdatedAt)
+	`, name, parentID, ownerID).Scan(&d.ID, &d.Name, &d.OwnerID, &d.ParentID, &d.Type, &d.FilesCount, &d.SizeBytes, &d.CreatedAt, &d.UpdatedAt)
 	return d, err
 }
 
@@ -193,8 +193,8 @@ func (r *Repository) Create(ctx context.Context, db dbTX, name, ownerID, parentI
 	err := db.QueryRow(ctx, `
 		INSERT INTO directories (name, owner_id, parent_id, type)
 		VALUES ($1, $2, $3, 'regular')
-		RETURNING id, name, owner_id, parent_id, type, files_count, created_at, updated_at
-	`, name, ownerID, parentID).Scan(&d.ID, &d.Name, &d.OwnerID, &d.ParentID, &d.Type, &d.FilesCount, &d.CreatedAt, &d.UpdatedAt)
+		RETURNING id, name, owner_id, parent_id, type, files_count, size_bytes, created_at, updated_at
+	`, name, ownerID, parentID).Scan(&d.ID, &d.Name, &d.OwnerID, &d.ParentID, &d.Type, &d.FilesCount, &d.SizeBytes, &d.CreatedAt, &d.UpdatedAt)
 	return d, err
 }
 
@@ -207,17 +207,17 @@ func (r *Repository) UpdateNameAndParent(ctx context.Context, db dbTX, id string
 			parent_id = CASE WHEN $3::uuid IS NULL THEN parent_id ELSE $3 END,
 			updated_at = now()
 		WHERE id = $1 AND deleted_at IS NULL
-		RETURNING id, name, owner_id, parent_id, type, files_count, created_at, updated_at
-	`, id, name, parentID).Scan(&d.ID, &d.Name, &d.OwnerID, &d.ParentID, &d.Type, &d.FilesCount, &d.CreatedAt, &d.UpdatedAt)
+		RETURNING id, name, owner_id, parent_id, type, files_count, size_bytes, created_at, updated_at
+	`, id, name, parentID).Scan(&d.ID, &d.Name, &d.OwnerID, &d.ParentID, &d.Type, &d.FilesCount, &d.SizeBytes, &d.CreatedAt, &d.UpdatedAt)
 	return d, err
 }
 
 func (r *Repository) FindByIDAnyState(ctx context.Context, db dbTX, id string) (directoryRecord, error) {
 	var d directoryRecord
 	err := db.QueryRow(ctx, `
-		SELECT id, name, owner_id, parent_id, type, files_count, deleted_at, created_at, updated_at
+		SELECT id, name, owner_id, parent_id, type, files_count, size_bytes, deleted_at, created_at, updated_at
 		FROM directories WHERE id = $1
-	`, id).Scan(&d.ID, &d.Name, &d.OwnerID, &d.ParentID, &d.Type, &d.FilesCount, &d.DeletedAt, &d.CreatedAt, &d.UpdatedAt)
+	`, id).Scan(&d.ID, &d.Name, &d.OwnerID, &d.ParentID, &d.Type, &d.FilesCount, &d.SizeBytes, &d.DeletedAt, &d.CreatedAt, &d.UpdatedAt)
 	return d, err
 }
 
@@ -285,7 +285,7 @@ func (r *Repository) SoftDeleteFilesInDirs(ctx context.Context, db dbTX, dirIDs 
 	if len(dirIDs) == 0 {
 		return nil
 	}
-	_, err := db.Exec(ctx, `UPDATE files SET deleted_at=$2, updated_at=now() WHERE directory_id = ANY($1)`, dirIDs, deletedAt)
+	_, err := db.Exec(ctx, `UPDATE files SET deleted_at=$2, updated_at=now() WHERE directory_id = ANY($1) AND deleted_at IS NULL`, dirIDs, deletedAt)
 	return err
 }
 func (r *Repository) RestoreSubtree(ctx context.Context, db dbTX, dirIDs []string) error {

@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { GitFork } from 'lucide-react';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
+import { StorageUsageModal } from './ui/StorageUsageModal';
 import { Footer } from './Footer';
 import { MobileBottomNav } from './MobileBottomNav';
 import { ScrollToTopButton } from './ScrollToTopButton';
@@ -81,6 +82,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       </div>
 
       {isAuthenticated && <MobileBottomNav />}
+      {isAuthenticated && <StorageUsageModal />}
       <ScrollToTopButton />
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>

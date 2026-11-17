@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Star, Trash2, Share2 } from 'lucide-react';
+import { useStorageUsageStore } from '../store/storageUsageStore';
 import { StorageIndicator } from './ui/StorageIndicator';
 import { QuotaIndicator } from './ui/QuotaIndicator';
 import { cn } from '../utils/cn';
@@ -9,6 +10,7 @@ import { useDirectoryStore } from '../store/directoryStore';
 
 export const Sidebar: React.FC = () => {
   const location = useLocation();
+  const openStorage = useStorageUsageStore((s) => s.open);
   const currentPath = location.pathname;
   const currentSection = useDirectoryStore((s) => s.currentSection);
   const { menuItems, storageUsed, storageQuota, shareLinksUsed, shareLinksQuota, isLoading } =
@@ -85,9 +87,14 @@ export const Sidebar: React.FC = () => {
             total={shareLinksQuota}
           />
         </Link>
-        <div className="group bg-theme-tertiary hover:bg-theme-hover rounded-theme-xl p-4 shadow-theme-card border border-theme/50 transition-colors cursor-default">
+        <button
+          type="button"
+          onClick={openStorage}
+          aria-label="Использование хранилища"
+          className="group w-full text-left bg-theme-tertiary hover:bg-theme-hover rounded-theme-xl p-4 shadow-theme-card border border-theme/50 transition-colors"
+        >
           <StorageIndicator used={storageUsed} total={storageQuota} />
-        </div>
+        </button>
       </div>
     </div>
   );

@@ -274,3 +274,7 @@ func TestHandlerGetUserByID(t *testing.T) {
 		t.Fatalf("unexpected response: %+v", resp)
 	}
 }
+
+func (m *mockService) GetStorageUsage(_ context.Context, _, _ string) (StorageUsageResponse, error) {
+	return StorageUsageResponse{}, nil
+}

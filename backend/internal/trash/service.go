@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"sharedspace/internal/apperror"
+	"sharedspace/internal/database"
 	"sharedspace/internal/sharelinks"
 )
 
@@ -389,6 +390,9 @@ func (s *Service) deleteItems(ctx context.Context, dirIDs, fileIDs []string, fil
 		return apperror.WrapInternal("ошибка начала транзакции", err)
 	}
 	defer tx.Rollback(ctx)
+	if err := database.LockDirectoryTopology(ctx, tx); err != nil {
+		return apperror.WrapInternal("блокировка дерева директорий", err)
+	}
 
 	fileCounts, err := s.shareLinkRepo.DeleteByFileIDs(ctx, tx, fileIDs)
 	if err != nil {

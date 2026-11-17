@@ -400,7 +400,7 @@ func TestServiceGetRootContents(t *testing.T) {
 		repo := &mockRepo{
 			findRootResult: directoryRecord{ID: "root-1", Name: "ivan", OwnerID: "user-1", Type: "root", CreatedAt: now, UpdatedAt: now},
 			subdirectories: []directoryRecord{
-				{ID: "sub-1", Name: "photos", OwnerID: "user-1", ParentID: strPtr("root-1"), Type: "regular", CreatedAt: now, UpdatedAt: now},
+				{ID: "sub-1", Name: "photos", SizeBytes: 987654321, OwnerID: "user-1", ParentID: strPtr("root-1"), Type: "regular", CreatedAt: now, UpdatedAt: now},
 			},
 			files: []fileRecord{
 				{ID: "file-1", Filename: "readme.txt", Extension: "txt", MimeType: "text/plain", Size: 1024, CreatedAt: now, UpdatedAt: now},
@@ -417,6 +417,9 @@ func TestServiceGetRootContents(t *testing.T) {
 		}
 		if len(resp.Subdirectories) != 1 || resp.Subdirectories[0].ID != "sub-1" {
 			t.Fatalf("unexpected subdirectories: %+v", resp.Subdirectories)
+		}
+		if resp.Subdirectories[0].SizeBytes != 987654321 {
+			t.Fatalf("cached folder size was not returned: %+v", resp.Subdirectories[0])
 		}
 		if len(resp.Files) != 1 || resp.Files[0].ID != "file-1" {
 			t.Fatalf("unexpected files: %+v", resp.Files)

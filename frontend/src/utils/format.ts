@@ -1,8 +1,8 @@
 export function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 Б';
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 Б';
   const k = 1024;
-  const sizes = ['Б', 'КБ', 'МБ', 'ГБ'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  const sizes = ['Б', 'КБ', 'МБ', 'ГБ', 'ТБ', 'ПБ'];
+  const i = Math.min(sizes.length - 1, Math.max(0, Math.floor(Math.log(bytes) / Math.log(k))));
   return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
 }
 

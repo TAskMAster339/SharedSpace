@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo, useLayoutEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Folder, Star, LayoutDashboard, Trash2, MoreHorizontal, Link2, X } from 'lucide-react';
+import { useStorageUsageStore } from '../store/storageUsageStore';
 import { StorageIndicator } from './ui/StorageIndicator';
 import { QuotaIndicator } from './ui/QuotaIndicator';
 import { cn } from '../utils/cn';
@@ -25,6 +26,7 @@ const TAB_INDEX: Record<string, number> = { storage: 0, favorites: 1, dashboard:
 
 export const MobileBottomNav: React.FC = () => {
   const location = useLocation();
+  const openStorage = useStorageUsageStore((s) => s.open);
   const currentPath = location.pathname;
   const currentSection = useDirectoryStore((s) => s.currentSection);
   const { menuItems, storageUsed, storageQuota, shareLinksUsed, shareLinksQuota, isLoading } =
@@ -249,9 +251,17 @@ export const MobileBottomNav: React.FC = () => {
                     total={shareLinksQuota}
                   />
                 </Link>
-                <div className="group bg-theme-tertiary hover:bg-theme-hover rounded-theme-xl p-4 shadow-theme-card border border-theme/50 transition-colors cursor-default">
+                <button
+                  type="button"
+                  aria-label="Использование хранилища"
+                  onClick={() => {
+                    closeMore();
+                    openStorage();
+                  }}
+                  className="group w-full text-left bg-theme-tertiary hover:bg-theme-hover rounded-theme-xl p-4 shadow-theme-card border border-theme/50 transition-colors"
+                >
                   <StorageIndicator used={storageUsed} total={storageQuota} />
-                </div>
+                </button>
               </div>
             </div>
           )}

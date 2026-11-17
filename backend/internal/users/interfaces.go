@@ -9,6 +9,7 @@ import (
 )
 
 type ServiceInterface interface {
+	GetStorageUsage(context.Context, string, string) (StorageUsageResponse, error)
 	GetMe(context.Context, string) (UserResponse, error)
 	GetUserByID(context.Context, string, string) (UserResponse, error) // <-- добавляем
 	UpdateMe(context.Context, string, UpdateProfileRequest) (UserResponse, error)
@@ -22,6 +23,7 @@ type AuthIdentity interface {
 }
 
 type RepositoryInterface interface {
+	FindStorageUsage(context.Context, dbTX, string, string) (StorageUsageResponse, error)
 	FindUserByID(context.Context, dbTX, string) (record, error)
 	FindUserByEmail(context.Context, dbTX, string) (record, error)
 	FindUserByUsername(context.Context, dbTX, string) (record, error)

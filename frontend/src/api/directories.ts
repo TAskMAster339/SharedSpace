@@ -14,6 +14,7 @@ export interface Permissions {
 }
 
 export interface Directory {
+  size_bytes: number;
   id: string;
   name: string;
   owner_id: string;

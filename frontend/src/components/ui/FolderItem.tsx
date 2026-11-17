@@ -2,11 +2,13 @@ import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Folder, Share2 } from 'lucide-react';
 import { ItemActionsMenu } from './ItemActionsMenu';
+import { formatFileSize } from '../../utils/format';
 import { cn } from '../../utils/cn';
 
 interface FolderItemProps {
   id: string;
   name: string;
+  sizeBytes?: number;
   to: string;
   className?: string;
   hasShareLinks?: boolean;
@@ -23,6 +25,7 @@ interface FolderItemProps {
 export const FolderItem: React.FC<FolderItemProps> = ({
   id,
   name,
+  sizeBytes,
   to,
   className,
   hasShareLinks = false,
@@ -129,16 +132,23 @@ export const FolderItem: React.FC<FolderItemProps> = ({
           <p className="text-xs text-theme-muted">Папка</p>
         </div>
       </div>
-      <ItemActionsMenu
-        onRename={onRename ? () => onRename(id) : undefined}
-        onMove={onMove ? () => onMove(id) : undefined}
-        onShare={onShare ? () => onShare(id) : undefined}
-        onDelete={onDelete ? () => onDelete(id) : undefined}
-        className="shrink-0"
-        openMenu={!!contextMenuOpen}
-        menuPosition={contextMenuOpen}
-        onCloseMenu={() => setContextMenuOpen(null)}
-      />
+      <div className="flex items-center gap-3 shrink-0">
+        {sizeBytes !== undefined && (
+          <span className="text-xs text-theme-muted tabular-nums whitespace-nowrap">
+            {formatFileSize(sizeBytes)}
+          </span>
+        )}
+        <ItemActionsMenu
+          onRename={onRename ? () => onRename(id) : undefined}
+          onMove={onMove ? () => onMove(id) : undefined}
+          onShare={onShare ? () => onShare(id) : undefined}
+          onDelete={onDelete ? () => onDelete(id) : undefined}
+          className="shrink-0"
+          openMenu={!!contextMenuOpen}
+          menuPosition={contextMenuOpen}
+          onCloseMenu={() => setContextMenuOpen(null)}
+        />
+      </div>
     </Link>
   );
 };

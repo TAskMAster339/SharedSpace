@@ -17,6 +17,7 @@ import (
 
 	"sharedspace/internal/access"
 	"sharedspace/internal/apperror"
+	"sharedspace/internal/database"
 	"sharedspace/internal/sharelinks"
 )
 
@@ -95,6 +96,10 @@ func (s *Service) Upload(ctx context.Context, userID, directoryID string, upload
 		return UploadFilesResponse{}, apperror.WrapInternal("начало транзакции", err)
 	}
 	defer tx.Rollback(ctx) // после Commit — no-op
+	if err := database.LockDirectoryContents(ctx, tx); err != nil {
+		s.cleanupObjects(uploadedKeys)
+		return UploadFilesResponse{}, apperror.WrapInternal("блокировка дерева директорий", err)
+	}
 
 	used, quota, err := s.repo.GetUserStorage(ctx, tx, userID)
 	if err != nil {
@@ -324,6 +329,9 @@ func (s *Service) Update(ctx context.Context, userID, fileID string, req UpdateF
 		return FileMetadataResponse{}, apperror.WrapInternal("начало транзакции", err)
 	}
 	defer tx.Rollback(ctx)
+	if err := database.LockDirectoryContents(ctx, tx); err != nil {
+		return FileMetadataResponse{}, apperror.WrapInternal("блокировка дерева директорий", err)
+	}
 
 	if _, err := s.repo.FindByFilenameAndDirectory(ctx, tx, targetFilename, targetParent, fileID); err == nil {
 		return FileMetadataResponse{}, apperror.Conflict("файл с таким именем уже существует в целевой директории")
@@ -490,6 +498,9 @@ func (s *Service) PermanentDelete(ctx context.Context, userID, fileID string) er
 		return apperror.WrapInternal("начало транзакции", err)
 	}
 	defer tx.Rollback(ctx)
+	if err := database.LockDirectoryContents(ctx, tx); err != nil {
+		return apperror.WrapInternal("блокировка дерева директорий", err)
+	}
 
 	if counts, err := s.shareLinkRepo.DeleteByFileIDs(ctx, tx, []string{fileID}); err != nil {
 		return apperror.WrapInternal("удаление ссылок файла", err)
@@ -602,6 +613,10 @@ func (s *Service) ConvertAndSave(ctx context.Context, userID, fileID, target str
 		return ConversionResponse{}, apperror.WrapInternal("начало транзакции", err)
 	}
 	defer tx.Rollback(ctx)
+	if err := database.LockDirectoryContents(ctx, tx); err != nil {
+		s.cleanupObjects([]string{objectKey})
+		return ConversionResponse{}, apperror.WrapInternal("блокировка дерева директорий", err)
+	}
 
 	used, quota, err := s.repo.GetUserStorage(ctx, tx, userID)
 	if err != nil {

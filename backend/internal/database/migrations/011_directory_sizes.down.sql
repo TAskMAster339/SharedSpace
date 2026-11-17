@@ -1,0 +1,16 @@
+DROP TRIGGER IF EXISTS directories_size_delete ON directories;
+DROP TRIGGER IF EXISTS directories_size_move ON directories;
+DROP TRIGGER IF EXISTS directories_size_parent_check ON directories;
+DROP TRIGGER IF EXISTS files_size_insert ON files;
+DROP TRIGGER IF EXISTS files_size_update ON files;
+DROP TRIGGER IF EXISTS files_size_delete ON files;
+DROP TRIGGER IF EXISTS directories_size_move_lock ON directories;
+DROP TRIGGER IF EXISTS directories_size_delete_lock ON directories;
+DROP TRIGGER IF EXISTS files_size_topology ON files;
+DROP FUNCTION IF EXISTS reconcile_directory_sizes_after_delete();
+DROP FUNCTION IF EXISTS update_directory_sizes_from_move();
+DROP FUNCTION IF EXISTS validate_directory_size_parent();
+DROP FUNCTION IF EXISTS update_directory_sizes_from_files();
+DROP FUNCTION IF EXISTS apply_directory_size_deltas(uuid[], bigint[]);
+DROP FUNCTION IF EXISTS lock_directory_size_topology();
+ALTER TABLE directories DROP COLUMN IF EXISTS size_bytes;
