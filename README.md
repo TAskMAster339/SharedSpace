@@ -29,7 +29,7 @@ docker compose up --build
 
 Подробная документация — в папке [`/docs`](/docs).
 
-**Бэкенд:** `cd backend && go run ./cmd/api`
+**Бэкенд:** `make dev` из корня репозитория. Для запуска без Docker см. [настройку окружения](docs/README.md#локальный-запуск-без-docker).
 **Фронтенд:** `cd frontend && npm install && npm start`
 **Тесты:** `cd backend && go test ./...`
 
@@ -42,6 +42,12 @@ docker compose -f docker-compose.dev.yml logs -f backend
 ```
 
 Найдите запись `dev mail:` со своим адресом и откройте ссылку из следующей строки.
+
+### Работа с агентами
+
+Порядок разработки описан в [AGENTS.md](AGENTS.md). Проектные инструкции лежат в [.skills/](.skills/README.md) и доступны сразу после клонирования. Правила редактуры `anti-neuroslog` уже включены в [скилл документации](.skills/documentation/SKILL.md).
+
+Для ревью интерфейса можно установить Impeccable в пользовательское окружение. Для Codex подойдёт команда `npx impeccable install --providers=codex --scope=global`. После установки перезапустите Codex и вызовите `$impeccable` для ревью готовых изменений. Если установщик предложит автоматическую проверку при редактировании, её можно пропустить и запускать ревью вручную в конце работы. Для других агентов используйте [официальную инструкцию Impeccable](https://impeccable.style/docs/).
 
 ## Авторы
 
