@@ -254,9 +254,6 @@ const TrashPage: React.FC = () => {
             fill
           />
         )}
-        <span className="absolute right-2 top-2 rounded-theme border border-theme bg-theme-secondary p-1 text-theme-secondary">
-          <MoreVertical size={16} aria-hidden="true" />
-        </span>
       </button>
       <GridItemCaption name={item.name} size={formatFileSize(item.size)} />
     </div>

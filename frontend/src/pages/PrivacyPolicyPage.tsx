@@ -3,6 +3,7 @@ import SEOHead from '../components/SEOHead';
 import { PRIVACY_POLICY_PATH } from '../constants/privacy';
 
 const email = 'dimagr3214@gmail.com';
+const contact_site = 'https://taskmaster339.github.io/#contact';
 const title = 'Политика конфиденциальности';
 const sectionClass = 'space-y-3 border-t border-theme pt-5';
 const headingClass = 'text-lg font-semibold text-theme-primary';
@@ -137,7 +138,7 @@ const PrivacyPolicyPage: React.FC = () => {
           Напишите Гришко Дмитрию Михайловичу на{' '}
           <a className={linkClass} href={`mailto:${email}`}>
             {email}
-          </a>
+          </a> Другие контакты оператора можно посмотреть на <a className={linkClass} target="_blank" href={`${contact_site}`}>{contact_site}</a>
           . Укажите, с какими данными связано обращение. Если нужна дополнительная проверка личности
           или полномочий представителя, оператор сообщит порядок её прохождения.
         </p>
