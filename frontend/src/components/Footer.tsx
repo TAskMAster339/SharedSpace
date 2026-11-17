@@ -2,11 +2,11 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { GitFork } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { PRIVACY_POLICY_PATH } from '../constants/privacy';
 
 const logo = '/logo-mark.png';
 
 const GITHUB_URL = 'https://github.com/TAskMAster339/SharedSpace';
-const PRIVACY_POLICY_URL = 'https://ifbest.org/politika-konfidentsialnosti';
 
 export const Footer: React.FC = () => {
   const { isAuthenticated } = useAuth();
@@ -43,14 +43,12 @@ export const Footer: React.FC = () => {
         </p>
 
         <div className="flex items-center gap-4">
-          <a
-            href={PRIVACY_POLICY_URL}
-            target="_blank"
-            rel="noopener noreferrer"
+          <Link
+            to={PRIVACY_POLICY_PATH}
             className="text-sm font-medium text-theme-secondary hover:text-theme-primary transition-colors"
           >
             Политика конфиденциальности
-          </a>
+          </Link>
 
           <a
             href={GITHUB_URL}

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useMatch } from 'react-router-dom';
 import { Mail, RefreshCw, LogOut } from 'lucide-react';
+import { PRIVACY_POLICY_PATH } from '../constants/privacy';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
 import { useAuth } from '../hooks/useAuth';
@@ -23,8 +24,13 @@ const EmailVerificationModal: React.FC = () => {
   const { isAuthenticated, isActivated, user, resendVerification, logout } = useAuth();
   const showToast = useToastStore((s) => s.showToast);
   const location = useLocation();
+  const isPrivacyPage = useMatch(PRIVACY_POLICY_PATH);
 
-  const isOpen = isAuthenticated && !isActivated && !location.pathname.startsWith('/verify-email/');
+  const isOpen =
+    isAuthenticated &&
+    !isActivated &&
+    !isPrivacyPage &&
+    !location.pathname.startsWith('/verify-email/');
   const [isSending, setIsSending] = useState(false);
   const [cooldown, setCooldown] = useState(0);
 

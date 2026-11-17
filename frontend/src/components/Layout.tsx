@@ -1,5 +1,5 @@
 import React from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Link, Outlet, useLocation } from 'react-router-dom';
 import { GitFork } from 'lucide-react';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
@@ -12,9 +12,9 @@ import { ToastContainer } from './ui/ToastContainer';
 import { useToastStore } from '../hooks/useToast';
 import { useAuth } from '../hooks/useAuth';
 import { cn } from '../utils/cn';
+import { PRIVACY_POLICY_PATH } from '../constants/privacy';
 
 const GITHUB_URL = 'https://github.com/TAskMAster339/SharedSpace';
-const PRIVACY_POLICY_URL = 'https://ifbest.org/politika-konfidentsialnosti';
 const CURRENT_YEAR = new Date().getFullYear();
 
 interface LayoutProps {
@@ -57,14 +57,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               &copy; {CURRENT_YEAR} SharedSpace. Учебный проект.
             </p>
             <div className="flex items-center justify-center gap-4 mt-2">
-              <a
-                href={PRIVACY_POLICY_URL}
-                target="_blank"
-                rel="noopener noreferrer"
+              <Link
+                to={PRIVACY_POLICY_PATH}
                 className="text-xs text-theme-muted hover:text-theme-secondary transition-colors"
               >
                 Политика конфиденциальности
-              </a>
+              </Link>
               <a
                 href={GITHUB_URL}
                 target="_blank"

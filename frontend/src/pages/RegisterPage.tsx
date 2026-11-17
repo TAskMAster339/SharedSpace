@@ -6,6 +6,7 @@ import { useAuth } from '../hooks/useAuth';
 import { ApiError } from '../api/client';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
+import { PRIVACY_POLICY_PATH } from '../constants/privacy';
 
 const AuthFieldError: React.FC<{ message?: string; reserve?: boolean }> = ({
   message,
@@ -19,8 +20,6 @@ const AuthFieldError: React.FC<{ message?: string; reserve?: boolean }> = ({
 const MIN_PASSWORD_LENGTH = 8;
 
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-
-const PRIVACY_POLICY_URL = 'https://ifbest.org/politika-konfidentsialnosti';
 
 const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
@@ -38,7 +37,7 @@ const RegisterPage: React.FC = () => {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [policyAccepted, setPolicyAccepted] = useState(false);
+  const [policyAcknowledged, setPolicyAcknowledged] = useState(false);
 
   const validate = (): boolean => {
     const errors: Record<string, string> = {};
@@ -57,8 +56,8 @@ const RegisterPage: React.FC = () => {
     if (confirmPassword !== password) {
       errors.confirmPassword = 'Пароли не совпадают';
     }
-    if (!policyAccepted) {
-      errors.policy = 'Необходимо согласиться с политикой конфиденциальности';
+    if (!policyAcknowledged) {
+      errors.policy = 'Подтвердите, что ознакомились с политикой конфиденциальности';
     }
 
     setFieldErrors(errors);
@@ -198,26 +197,30 @@ const RegisterPage: React.FC = () => {
             <label className="flex items-start gap-2 ml-3 text-sm text-theme-secondary cursor-pointer select-none">
               <input
                 type="checkbox"
-                checked={policyAccepted}
-                onChange={(e) => setPolicyAccepted(e.target.checked)}
+                checked={policyAcknowledged}
+                onChange={(e) => setPolicyAcknowledged(e.target.checked)}
                 className="mt-0.5 h-4 w-4 shrink-0 accent-brand cursor-pointer"
               />
               <span className="leading-5">
-                Я прочитал и согласен с{' '}
-                <a
-                  href={PRIVACY_POLICY_URL}
+                Я ознакомился с{' '}
+                <Link
+                  to={PRIVACY_POLICY_PATH}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-brand hover:text-brand-hover underline"
                 >
                   политикой конфиденциальности
-                </a>
+                </Link>
               </span>
             </label>
             <AuthFieldError message={fieldErrors.policy} reserve={Boolean(fieldErrors.policy)} />
           </div>
 
-          <Button type="submit" disabled={isSubmitting || !policyAccepted} className="mt-1 w-full">
+          <Button
+            type="submit"
+            disabled={isSubmitting || !policyAcknowledged}
+            className="mt-1 w-full"
+          >
             {isSubmitting ? 'Регистрация...' : 'Зарегистрироваться'}
           </Button>
         </form>
