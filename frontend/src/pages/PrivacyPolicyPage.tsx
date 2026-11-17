@@ -138,7 +138,11 @@ const PrivacyPolicyPage: React.FC = () => {
           Напишите Гришко Дмитрию Михайловичу на{' '}
           <a className={linkClass} href={`mailto:${email}`}>
             {email}
-          </a> Другие контакты оператора можно посмотреть на <a className={linkClass} target="_blank" href={`${contact_site}`}>{contact_site}</a>
+          </a>{' '}
+          Другие контакты оператора можно посмотреть на{' '}
+          <a className={linkClass} target="_blank" href={`${contact_site}`}>
+            {contact_site}
+          </a>
           . Укажите, с какими данными связано обращение. Если нужна дополнительная проверка личности
           или полномочий представителя, оператор сообщит порядок её прохождения.
         </p>
