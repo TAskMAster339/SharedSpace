@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Star, Share2 } from 'lucide-react';
-import { FileIcon } from './FileIcon';
+import { FilePreview } from './FilePreview';
 import { ItemActionsMenu } from './ItemActionsMenu';
 import { cn } from '../../utils/cn';
 import { FileIconType } from '../../utils/fileType';
@@ -80,13 +80,19 @@ export const FileItem: React.FC<FileItemProps> = ({
     >
       <div className="flex items-center gap-3 min-w-0">
         <div className="relative shrink-0">
-          <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card">
-            <FileIcon type={type} size={20} className="group-hover:text-brand transition-colors" />
+          <div className="w-12 h-12 flex items-center justify-center bg-theme-secondary shadow-theme-card">
+            <FilePreview
+              fileId={id}
+              type={type}
+              size={20}
+              fill
+              className="group-hover:text-brand transition-colors"
+            />
           </div>
           <span
             className={`absolute -top-1.5 flex items-center justify-center rounded-full bg-theme-tertiary border border-theme p-0.5 shadow-theme-card transition-all duration-500 ease-in-out ${
               hasShareLinks ? 'opacity-100' : 'opacity-0 pointer-events-none'
-            } ${isFavorite && hasShareLinks ? '-left-1.5' : 'left-[25px]'}`}
+            } ${isFavorite && hasShareLinks ? '-left-1.5' : '-right-1.5'}`}
             aria-label="Есть ссылки общего доступа"
             title="Есть ссылки общего доступа"
           >

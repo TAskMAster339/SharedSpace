@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+	"net"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -43,6 +45,7 @@ type Config struct {
 	JWTTTL        time.Duration
 	RefreshJWTTTL time.Duration
 
+	LogEmails    bool
 	SMTPHost     string
 	SMTPPort     int
 	SMTPUser     string
@@ -102,6 +105,11 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("APP_URL is required")
 	}
 
+	publicEndpoint := getEnv("MINIO_PUBLIC_ENDPOINT", "localhost:9002")
+	if err := validateMinIOPublicEndpoint(publicEndpoint); err != nil {
+		return nil, err
+	}
+
 	return &Config{
 		DBDSN: dsn,
 
@@ -109,7 +117,7 @@ func Load() (*Config, error) {
 		MinIOAccessKey:      getEnv("MINIO_ROOT_USER", "minioadmin"),
 		MinIOSecretKey:      getEnv("MINIO_ROOT_PASSWORD", "minioadmin"),
 		MinIOBucket:         getEnv("MINIO_BUCKET", "sharedspace"),
-		MinIOPublicEndpoint: getEnv("MINIO_PUBLIC_ENDPOINT", "localhost:9002"),
+		MinIOPublicEndpoint: publicEndpoint,
 		MinIOUseSSL:         getEnv("MINIO_USE_SSL", "false") == "true",
 		MinIOPublicUseSSL:   getEnv("MINIO_PUBLIC_USE_SSL", "true") == "true",
 		MinIOTmpBucket:      getEnv("MINIO_TMP_BUCKET", "tmp"),
@@ -119,6 +127,7 @@ func Load() (*Config, error) {
 		JWTTTL:        time.Duration(ttl) * time.Second,
 		RefreshJWTTTL: time.Duration(refreshTTL) * time.Second,
 
+		LogEmails:    getEnv("DEV_LOG_EMAILS", "false") == "true",
 		SMTPHost:     getEnv("SMTP_HOST", ""),
 		SMTPPort:     smtpPort,
 		SMTPUser:     getEnv("SMTP_USER", ""),
@@ -133,6 +142,30 @@ func Load() (*Config, error) {
 
 		Port: getEnv("PORT", "8080"),
 	}, nil
+}
+
+func validateMinIOPublicEndpoint(endpoint string) error {
+	parsed, err := url.Parse("http://" + endpoint)
+	invalid := fmt.Errorf("MINIO_PUBLIC_ENDPOINT must be host[:port], with TLS configured by MINIO_PUBLIC_USE_SSL")
+	if err != nil || parsed.Host != endpoint || parsed.Hostname() == "" {
+		return invalid
+	}
+	host := parsed.Hostname()
+	if strings.HasPrefix(endpoint, "[") || strings.Contains(host, ":") {
+		if net.ParseIP(host) == nil || !strings.HasPrefix(endpoint, "[") {
+			return invalid
+		}
+	}
+	if strings.HasSuffix(endpoint, ":") {
+		return invalid
+	}
+	if port := parsed.Port(); port != "" {
+		number, err := strconv.ParseUint(port, 10, 16)
+		if err != nil || number == 0 {
+			return invalid
+		}
+	}
+	return nil
 }
 
 func getEnv(key, fallback string) string {

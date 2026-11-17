@@ -30,9 +30,10 @@ type Service struct {
 	tmpStorage    StorageClient
 	accessChecker access.AccessChecker
 	shareLinkRepo *sharelinks.Repository
+	previewDir    string
 }
 
-func NewService(pool *pgxpool.Pool, repo RepositoryInterface, storage, tmpStorage StorageClient, accessChecker access.AccessChecker, shareLinkRepo *sharelinks.Repository) *Service {
+func NewService(pool *pgxpool.Pool, repo RepositoryInterface, storage, tmpStorage StorageClient, accessChecker access.AccessChecker, shareLinkRepo *sharelinks.Repository, previewDir string) *Service {
 	beginTx := func(ctx context.Context, opts pgx.TxOptions) (transaction, error) {
 		tx, err := pool.BeginTx(ctx, opts)
 		if err != nil {
@@ -40,7 +41,7 @@ func NewService(pool *pgxpool.Pool, repo RepositoryInterface, storage, tmpStorag
 		}
 		return txWrapper{Tx: tx}, nil
 	}
-	return &Service{beginTx: beginTx, db: pool, repo: repo, storage: storage, tmpStorage: tmpStorage, accessChecker: accessChecker, shareLinkRepo: shareLinkRepo}
+	return &Service{beginTx: beginTx, db: pool, repo: repo, storage: storage, tmpStorage: tmpStorage, accessChecker: accessChecker, shareLinkRepo: shareLinkRepo, previewDir: previewDir}
 }
 
 func (s *Service) Upload(ctx context.Context, userID, directoryID string, uploads []FileUpload) (UploadFilesResponse, error) {
