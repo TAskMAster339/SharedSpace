@@ -364,13 +364,13 @@ const FileViewPage: React.FC = () => {
   // Функция для рендера сообщения о недоступности просмотра
   const renderUnavailableMessage = (message?: string, subMessage?: string) => {
     return (
-      <div className="bg-theme-tertiary rounded-theme-lg py-16 flex flex-col items-center gap-4 text-theme-muted">
+      <div className="bg-theme-tertiary rounded-theme py-16 flex flex-col items-center gap-4 text-theme-muted">
         <EyeOff size={64} className="text-theme-muted" />
         <p className="text-base font-medium">{message || 'Просмотр недоступен'}</p>
         <p className="text-sm">{subMessage || 'Файл не может быть отображён в браузере'}</p>
         <button
           onClick={downloadFile}
-          className="mt-4 inline-flex items-center gap-2 px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium"
+          className="mt-4 inline-flex items-center gap-2 px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme transition-colors text-sm font-medium"
         >
           <Download size={16} />
           Скачать файл
@@ -402,7 +402,7 @@ const FileViewPage: React.FC = () => {
     switch (previewType) {
       case 'image':
         return (
-          <div className="flex items-center justify-center bg-theme-tertiary rounded-theme-lg overflow-hidden min-h-[400px]">
+          <div className="flex items-center justify-center bg-theme-tertiary rounded-theme overflow-hidden min-h-[400px]">
             {fileUrl ? (
               <img
                 src={fileUrl}
@@ -424,7 +424,7 @@ const FileViewPage: React.FC = () => {
 
       case 'video':
         return (
-          <div className="bg-theme-tertiary rounded-theme-lg overflow-hidden">
+          <div className="bg-theme-tertiary rounded-theme overflow-hidden">
             {fileUrl ? (
               <video
                 src={fileUrl}
@@ -444,9 +444,9 @@ const FileViewPage: React.FC = () => {
 
       case 'audio':
         return (
-          <div className="bg-theme-tertiary rounded-theme-lg p-8">
+          <div className="bg-theme-tertiary rounded-theme p-8">
             <div className="flex flex-col items-center gap-6">
-              <div className="w-24 h-24 rounded-theme-full bg-brand-light flex items-center justify-center text-brand">
+              <div className="w-24 h-24 rounded-theme bg-brand-light flex items-center justify-center text-brand">
                 <FileIcon type="audio" size={40} />
               </div>
               <p className="text-lg font-medium text-theme-primary">{file.filename}</p>
@@ -467,7 +467,7 @@ const FileViewPage: React.FC = () => {
 
       case 'pdf':
         return (
-          <div className="bg-theme-tertiary rounded-theme-lg overflow-hidden min-h-[500px] relative">
+          <div className="bg-theme-tertiary rounded-theme overflow-hidden min-h-[500px] relative">
             {fileUrl ? (
               <object
                 data={fileUrl}
@@ -492,7 +492,7 @@ const FileViewPage: React.FC = () => {
       case 'text':
       case 'code':
         return (
-          <div className="bg-theme-tertiary rounded-theme-lg overflow-hidden min-h-[400px] relative">
+          <div className="bg-theme-tertiary rounded-theme overflow-hidden min-h-[400px] relative">
             {fileUrl ? (
               <iframe
                 ref={iframeRef}
@@ -528,7 +528,7 @@ const FileViewPage: React.FC = () => {
     return (
       <div className="flex items-center justify-center py-20">
         <SEOHead title="Загрузка..." description="Загрузка информации о файле..." />
-        <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-[50%] animate-spin" />
       </div>
     );
   }
@@ -570,14 +570,14 @@ const FileViewPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Левая часть: предпросмотр (2/3) */}
         <div className="lg:col-span-2">
-          <div className="bg-theme-secondary border border-theme rounded-theme-lg p-4 shadow-theme-card">
+          <div className="bg-theme-secondary border border-theme rounded-theme p-4 shadow-theme-card">
             <div className="mb-3 flex items-center justify-between gap-3">
               <h2 className="text-sm font-medium text-theme-secondary">Предпросмотр</h2>
               <button
                 onClick={downloadFile}
                 aria-label="Скачать файл"
                 title="Скачать файл"
-                className="group inline-flex h-9 w-9 items-center justify-center gap-2 rounded-theme-md border border-brand/30 bg-brand-light text-brand transition-colors hover:bg-brand hover:text-theme-on-brand sm:w-auto sm:px-3 sm:text-sm sm:font-medium"
+                className="group inline-flex h-9 w-9 items-center justify-center gap-2 rounded-theme border border-brand/30 bg-brand-light text-brand transition-colors hover:bg-brand hover:text-theme-on-brand sm:w-auto sm:px-3 sm:text-sm sm:font-medium"
               >
                 <Download
                   size={16}
@@ -593,15 +593,15 @@ const FileViewPage: React.FC = () => {
         {/* Правая часть: информация о файле (1/3) */}
         <div className="space-y-4">
           {/* Информация о файле */}
-          <div className="bg-theme-secondary border border-theme rounded-theme-lg p-5 shadow-theme-card">
+          <div className="bg-theme-secondary border border-theme rounded-theme p-5 shadow-theme-card">
             <h3 className="font-medium text-theme-primary mb-3">Информация о файле</h3>
 
             {/* Отображение файла с возможностью переименовать */}
             <button
               onClick={() => setIsRenameModalOpen(true)}
-              className="group flex items-center gap-3 p-3 bg-theme-tertiary hover:bg-theme-hover rounded-theme-md border border-theme transition-colors w-full text-left"
+              className="group flex items-center gap-3 p-3 bg-theme-tertiary hover:bg-theme-hover rounded-theme border border-theme transition-colors w-full text-left"
             >
-              <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card shrink-0 group-hover:text-brand transition-colors">
+              <div className="p-2 bg-theme-secondary rounded-theme shadow-theme-card shrink-0 group-hover:text-brand transition-colors">
                 <FileIcon
                   type={fileIconType}
                   size={20}
@@ -652,12 +652,12 @@ const FileViewPage: React.FC = () => {
           </div>
 
           {/* Действия */}
-          <div className="bg-theme-secondary border border-theme rounded-theme-lg p-5 shadow-theme-card">
+          <div className="bg-theme-secondary border border-theme rounded-theme p-5 shadow-theme-card">
             <h3 className="font-medium text-theme-primary mb-3">Действия</h3>
             <div className="space-y-2">
               <button
                 onClick={() => setIsShareModalOpen(true)}
-                className="group w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium"
+                className="group w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme transition-colors text-sm font-medium"
               >
                 <Share2 size={16} className="group-hover:text-green-500 transition-colors" />
                 Поделиться ссылкой
@@ -665,7 +665,7 @@ const FileViewPage: React.FC = () => {
 
               <button
                 onClick={handleToggleFavorite}
-                className="group w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium"
+                className="group w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme transition-colors text-sm font-medium"
               >
                 <Star
                   size={16}
@@ -683,7 +683,7 @@ const FileViewPage: React.FC = () => {
 
               <button
                 onClick={() => setIsDeleteModalOpen(true)}
-                className="group w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium"
+                className="group w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme transition-colors text-sm font-medium"
               >
                 <Trash2 size={16} className="group-hover:text-red-500 transition-colors" />
                 Удалить файл
@@ -694,7 +694,7 @@ const FileViewPage: React.FC = () => {
             <div className="mt-4 pt-4 border-t border-theme">
               <button
                 onClick={() => setIsConvertModalOpen(true)}
-                className="group w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium"
+                className="group w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme transition-colors text-sm font-medium"
               >
                 <Image size={16} className="group-hover:text-brand transition-colors" />
                 Конвертировать

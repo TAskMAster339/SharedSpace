@@ -8,6 +8,7 @@
 /share/dir/:token              → SharedDirectoryPage (публичная)
 
 /login                         → LoginPage (только гости)
+/privacy                       → PrivacyPolicyPage (публичный маршрут)
 /register                      → RegisterPage (только гости)
 
 /dashboard                     → DashboardPage (auth + DropZone)

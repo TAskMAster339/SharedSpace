@@ -81,3 +81,22 @@ export function getUserById(accessToken: string, userId: string): Promise<AuthUs
     token: accessToken,
   });
 }
+
+export interface StorageUsage {
+  used_bytes: number;
+  quota_bytes: number;
+  trash_bytes: number;
+  root_files_bytes: number;
+  other_files_bytes: number;
+  root_id: string | null;
+  folder_count: number;
+  folders: { id: string; name: string; size_bytes: number }[];
+}
+
+export function getStorageUsage(
+  token: string,
+  sort: 'size' | 'name',
+  signal?: AbortSignal,
+): Promise<StorageUsage> {
+  return apiRequest<StorageUsage>(`/users/me/storage?sort=${sort}`, { token, signal });
+}

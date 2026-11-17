@@ -2,11 +2,11 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { GitFork } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { PRIVACY_POLICY_PATH } from '../constants/privacy';
 
 const logo = '/logo-mark.png';
 
 const GITHUB_URL = 'https://github.com/TAskMAster339/SharedSpace';
-const PRIVACY_POLICY_URL = 'https://ifbest.org/politika-konfidentsialnosti';
 
 export const Footer: React.FC = () => {
   const { isAuthenticated } = useAuth();
@@ -19,11 +19,7 @@ export const Footer: React.FC = () => {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
         {isOnLandingPage ? (
           <div className="flex items-center gap-2">
-            <img
-              src={logo}
-              alt="SharedSpace"
-              className="w-7 h-7 rounded-theme-sm shadow-theme-card"
-            />
+            <img src={logo} alt="SharedSpace" className="w-7 h-7 rounded-theme shadow-theme-card" />
             <span className="text-sm font-semibold tracking-tight">
               <span className="text-brand-dark dark:text-brand">Shared</span>
               <span className="text-brand">Space</span>
@@ -34,11 +30,7 @@ export const Footer: React.FC = () => {
             to={isAuthenticated ? '/dashboard' : '/'}
             className="flex items-center gap-2 cursor-pointer"
           >
-            <img
-              src={logo}
-              alt="SharedSpace"
-              className="w-7 h-7 rounded-theme-sm shadow-theme-card"
-            />
+            <img src={logo} alt="SharedSpace" className="w-7 h-7 rounded-theme shadow-theme-card" />
             <span className="text-sm font-semibold tracking-tight">
               <span className="text-brand-dark dark:text-brand">Shared</span>
               <span className="text-brand">Space</span>
@@ -51,14 +43,12 @@ export const Footer: React.FC = () => {
         </p>
 
         <div className="flex items-center gap-4">
-          <a
-            href={PRIVACY_POLICY_URL}
-            target="_blank"
-            rel="noopener noreferrer"
+          <Link
+            to={PRIVACY_POLICY_PATH}
             className="text-sm font-medium text-theme-secondary hover:text-theme-primary transition-colors"
           >
             Политика конфиденциальности
-          </a>
+          </Link>
 
           <a
             href={GITHUB_URL}

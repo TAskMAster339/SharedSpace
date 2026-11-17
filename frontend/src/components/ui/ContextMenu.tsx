@@ -7,6 +7,7 @@ interface ContextMenuProps {
   position: { x: number; y: number } | null;
   children: React.ReactNode;
   width?: number;
+  trigger?: HTMLElement | null;
 }
 
 const MENU_WIDTH = 224;
@@ -18,6 +19,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   position,
   children,
   width = MENU_WIDTH,
+  trigger,
 }) => {
   const [isMobile, setIsMobile] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -47,7 +49,10 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   useEffect(() => {
     if (!isOpen || isMobile) return;
 
-    const close = () => onClose();
+    const close = (event: Event) => {
+      if (event.target instanceof Node && menuRef.current?.contains(event.target)) return;
+      onClose();
+    };
     window.addEventListener('scroll', close, true);
     window.addEventListener('resize', close);
     return () => {
@@ -82,6 +87,34 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
     setAdjustedY(y);
   }, [isOpen, position, isMobile]);
 
+  useLayoutEffect(() => {
+    if (isOpen && position && trigger) {
+      menuRef.current?.querySelector<HTMLElement>('[role="menuitem"], button')?.focus({
+        preventScroll: true,
+      });
+    }
+  }, [isOpen, position, isMobile, trigger]);
+
+  const handleKeys = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!trigger) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      onClose();
+      trigger.focus({ preventScroll: true });
+    } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      const items = Array.from(
+        event.currentTarget.querySelectorAll<HTMLElement>(
+          '[role="menuitem"]:not(:disabled), button:not(:disabled)',
+        ),
+      );
+      const current = items.indexOf(document.activeElement as HTMLElement);
+      const step = event.key === 'ArrowDown' ? 1 : -1;
+      items[(current + step + items.length) % items.length]?.focus({ preventScroll: true });
+    }
+  };
+
   if (!isOpen || !position) return null;
 
   const clampedX = Math.max(EDGE, Math.min(position.x, window.innerWidth - width - EDGE));
@@ -101,11 +134,12 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
         <div
           ref={menuRef}
           role="menu"
+          onKeyDown={handleKeys}
           onClick={(e) => e.stopPropagation()}
-          className="fixed inset-x-0 bottom-0 z-[61] w-full rounded-t-theme-xl border-t border-theme bg-theme-secondary shadow-theme-dropdown overflow-hidden pb-[env(safe-area-inset-bottom)]"
+          className="fixed inset-x-0 bottom-0 z-[61] w-full rounded-t-theme border-t border-theme bg-theme-secondary shadow-theme-dropdown max-h-[90dvh] overflow-y-auto pb-[env(safe-area-inset-bottom)]"
         >
           <div className="flex justify-center pt-1 pb-0.5">
-            <span className="h-1 w-10 rounded-full bg-theme-muted/40" />
+            <span className="h-1 w-10 rounded-theme bg-theme-muted/40" />
           </div>
           {children}
         </div>
@@ -114,6 +148,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
       <div
         ref={menuRef}
         role="menu"
+        onKeyDown={handleKeys}
         onClick={(e) => e.stopPropagation()}
         style={{
           position: 'fixed',
@@ -122,7 +157,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
           width,
           zIndex: 61,
         }}
-        className="rounded-theme-md border border-theme bg-theme-secondary shadow-theme-dropdown overflow-hidden"
+        className="rounded-theme border border-theme bg-theme-secondary shadow-theme-dropdown max-h-[calc(100dvh_-_1rem)] overflow-y-auto"
       >
         {children}
       </div>

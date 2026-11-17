@@ -99,11 +99,7 @@ export const Header: React.FC = () => {
       <div className="flex items-center gap-2 sm:gap-8 min-w-0">
         {isOnLandingPage ? (
           <div className="flex items-center gap-2 shrink-0">
-            <img
-              src={logo}
-              alt="SharedSpace"
-              className="w-8 h-8 rounded-theme-sm shadow-theme-card"
-            />
+            <img src={logo} alt="SharedSpace" className="w-8 h-8 rounded-theme shadow-theme-card" />
             <span className="text-xl font-semibold tracking-tight hidden sm:inline">
               <span className="text-brand-dark dark:text-brand">Shared</span>
               <span className="text-brand">Space</span>
@@ -114,11 +110,7 @@ export const Header: React.FC = () => {
             to={isAuthenticated ? '/dashboard' : '/'}
             className="flex items-center gap-2 cursor-pointer shrink-0"
           >
-            <img
-              src={logo}
-              alt="SharedSpace"
-              className="w-8 h-8 rounded-theme-sm shadow-theme-card"
-            />
+            <img src={logo} alt="SharedSpace" className="w-8 h-8 rounded-theme shadow-theme-card" />
             <span className="text-xl font-semibold tracking-tight hidden sm:inline">
               <span className="text-brand-dark dark:text-brand">Shared</span>
               <span className="text-brand">Space</span>
@@ -158,7 +150,7 @@ export const Header: React.FC = () => {
             <button
               ref={mobileSearchBtnRef}
               onClick={toggleMobileSearch}
-              className="group p-2 rounded-theme-full hover:bg-theme-hover transition-colors md:hidden"
+              className="group p-2 rounded-theme hover:bg-theme-hover transition-colors md:hidden"
               aria-label="Поиск"
             >
               {mobileSearchOpen ? (
@@ -174,7 +166,7 @@ export const Header: React.FC = () => {
             {/* Кнопка переключения темы*/}
             <button
               onClick={toggleTheme}
-              className="p-2 rounded-theme-full hover:bg-theme-hover transition-colors"
+              className="p-2 rounded-theme hover:bg-theme-hover transition-colors"
               aria-label="Переключить тему"
             >
               <MoonStar
@@ -187,7 +179,7 @@ export const Header: React.FC = () => {
             <div className="relative" ref={profileRef}>
               <button
                 onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="flex items-center gap-2 p-1 rounded-theme-full hover:bg-theme-hover transition-colors outline-none"
+                className="flex items-center gap-2 p-1 rounded-theme hover:bg-theme-hover transition-colors outline-none"
               >
                 <Avatar username={user?.username ?? ''} className="w-8 h-8 border border-theme" />
                 <span className="text-sm font-medium text-theme-primary hidden sm:block">
@@ -202,7 +194,7 @@ export const Header: React.FC = () => {
               </button>
 
               {dropdownOpen && (
-                <div className="absolute right-0 top-12 w-48 bg-theme-secondary rounded-theme-xl shadow-theme-dropdown border border-theme z-20 overflow-hidden">
+                <div className="absolute right-0 top-12 w-48 bg-theme-secondary rounded-theme shadow-theme-dropdown border border-theme z-20 overflow-hidden">
                   <Link
                     to="/settings"
                     className="flex items-center gap-3 px-4 py-2.5 text-sm text-theme-secondary hover:bg-theme-hover transition-colors"
@@ -226,7 +218,7 @@ export const Header: React.FC = () => {
               ref={mobileSearchRef}
               className="absolute left-0 right-0 top-20 mx-3 z-40 md:hidden"
             >
-              <UserSearch className="w-full ring-2 ring-brand/50 rounded-theme-full" />
+              <UserSearch className="w-full ring-2 ring-brand/50 rounded-theme" />
             </div>
           )}
         </>
@@ -235,7 +227,7 @@ export const Header: React.FC = () => {
         <div className="flex items-center gap-2 sm:gap-4 shrink-0">
           <button
             onClick={toggleTheme}
-            className="p-2 rounded-theme-full hover:bg-theme-hover transition-colors shrink-0"
+            className="p-2 rounded-theme hover:bg-theme-hover transition-colors shrink-0"
             aria-label="Переключить тему"
           >
             <MoonStar
@@ -245,13 +237,13 @@ export const Header: React.FC = () => {
           </button>
           <Link
             to="/login"
-            className="text-sm font-medium text-theme-secondary hover:text-theme-primary px-3 sm:px-4 py-2 rounded-theme-md transition-colors whitespace-nowrap"
+            className="text-sm font-medium text-theme-secondary hover:text-theme-primary px-3 sm:px-4 py-2 rounded-theme transition-colors whitespace-nowrap"
           >
             Войти
           </Link>
           <Link
             to="/register"
-            className="text-sm font-medium text-theme-on-brand bg-brand hover:bg-brand-hover px-3 sm:px-4 py-2 rounded-theme-md transition-colors whitespace-nowrap"
+            className="text-sm font-medium text-theme-on-brand bg-brand hover:bg-brand-hover px-3 sm:px-4 py-2 rounded-theme transition-colors whitespace-nowrap"
           >
             Зарегистрироваться
           </Link>

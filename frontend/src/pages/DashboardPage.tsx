@@ -12,6 +12,7 @@ import { getSharedWithMe, SharedDirectory, inviteToDirectory } from '../api/shar
 import { renameDirectory } from '../api/directories';
 import { ApiError } from '../api/client';
 import { Card, CardHeader, CardTitle } from '../components/ui/Card';
+import { ItemPropertiesAction } from '../components/ui/ItemProperties';
 import { ContextMenu } from '../components/ui/ContextMenu';
 import { Modal } from '../components/ui/Modal';
 import { FileItem } from '../components/ui/FileItem';
@@ -68,6 +69,7 @@ const DashboardPage: React.FC = () => {
     id: string;
     directoryId: string;
     name: string;
+    trigger: HTMLElement;
   } | null>(null);
   const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
 
@@ -78,8 +80,18 @@ const DashboardPage: React.FC = () => {
 
   const handleDirContextMenu = (e: React.MouseEvent, dir: SharedDirectory) => {
     e.preventDefault();
-    setContextMenuDir({ id: dir.id, directoryId: dir.directory_id, name: dir.name });
-    setContextMenuPos({ x: e.clientX, y: e.clientY });
+    setContextMenuDir({
+      id: dir.id,
+      directoryId: dir.directory_id,
+      name: dir.name,
+      trigger: e.currentTarget as HTMLElement,
+    });
+    if (e.type === 'click') {
+      const rect = e.currentTarget.getBoundingClientRect();
+      setContextMenuPos({ x: rect.right - 224, y: rect.bottom + 4 });
+    } else {
+      setContextMenuPos({ x: e.clientX, y: e.clientY });
+    }
   };
 
   const handleOpenInvite = () => {
@@ -263,7 +275,7 @@ const DashboardPage: React.FC = () => {
     return (
       <div className="flex items-center justify-center py-20">
         <SEOHead title="Панель управления" description="Загрузка..." />
-        <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-[50%] animate-spin" />
       </div>
     );
   }
@@ -352,6 +364,7 @@ const DashboardPage: React.FC = () => {
             <div className="space-y-4">
               {recentFiles.map((file) => (
                 <FileItem
+                  showProperties
                   key={file.id}
                   id={file.id}
                   name={file.filename}
@@ -406,6 +419,7 @@ const DashboardPage: React.FC = () => {
                 <DirectoryItem
                   key={dir.id}
                   id={dir.id}
+                  sizeBytes={dir.size_bytes}
                   name={dir.name}
                   to={`/directories/${dir.directory_id}`}
                   onContextMenu={(e) => handleDirContextMenu(e, dir)}
@@ -431,6 +445,7 @@ const DashboardPage: React.FC = () => {
               >
                 {displayFavorites.map((fav) => (
                   <FileItem
+                    showProperties
                     key={fav.id}
                     id={fav.id}
                     name={fav.filename}
@@ -491,7 +506,12 @@ const DashboardPage: React.FC = () => {
         />
       )}
 
-      <ContextMenu isOpen={!!contextMenuDir} onClose={closeContextMenu} position={contextMenuPos}>
+      <ContextMenu
+        isOpen={!!contextMenuDir}
+        onClose={closeContextMenu}
+        position={contextMenuPos}
+        trigger={contextMenuDir?.trigger}
+      >
         <button
           type="button"
           onClick={() => {
@@ -516,6 +536,14 @@ const DashboardPage: React.FC = () => {
           <UserPlus size={16} className="group-hover:text-green-500 transition-colors" />
           Пригласить
         </button>
+        {contextMenuDir && (
+          <ItemPropertiesAction
+            separated
+            target={{ kind: 'directory', id: contextMenuDir.directoryId }}
+            focusTarget={() => contextMenuDir.trigger}
+            onSelect={closeContextMenu}
+          />
+        )}
       </ContextMenu>
 
       <Modal
@@ -538,7 +566,7 @@ const DashboardPage: React.FC = () => {
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleInvite();
               }}
-              className="w-full px-3 py-2.5 rounded-theme-md border-2 border-theme-hover bg-theme-tertiary text-theme-primary placeholder:text-theme-muted outline-none focus:border-brand transition-colors text-sm"
+              className="w-full px-3 py-2.5 rounded-theme border-2 border-theme-hover bg-theme-tertiary text-theme-primary placeholder:text-theme-muted outline-none focus:border-brand transition-colors text-sm"
             />
           </div>
 
@@ -553,14 +581,14 @@ const DashboardPage: React.FC = () => {
             <button
               onClick={() => setInviteDir(null)}
               disabled={isInviting}
-              className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium disabled:opacity-50"
+              className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme transition-colors text-sm font-medium disabled:opacity-50"
             >
               Отмена
             </button>
             <button
               onClick={handleInvite}
               disabled={!inviteUsername.trim() || isInviting}
-              className="flex-1 inline-flex items-center justify-center px-4 py-2 bg-brand text-theme-on-brand hover:bg-brand-hover rounded-theme-md transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 inline-flex items-center justify-center px-4 py-2 bg-brand text-theme-on-brand hover:bg-brand-hover rounded-theme transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isInviting ? 'Отправка...' : 'Пригласить'}
             </button>

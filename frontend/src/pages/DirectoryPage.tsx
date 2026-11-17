@@ -916,7 +916,7 @@ const DirectoryPage: React.FC = () => {
     return (
       <div className="flex items-center justify-center py-20">
         <SEOHead title="Загрузка..." description="Загрузка содержимого директории..." />
-        <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-[50%] animate-spin" />
       </div>
     );
   }
@@ -967,7 +967,7 @@ const DirectoryPage: React.FC = () => {
               <Folder size={28} className="text-brand shrink-0" />
               <span className="truncate min-w-0">{titleName}</span>
               {isSharedDirectory && (
-                <span className="text-xs font-medium px-2 py-0.5 bg-brand/10 text-brand rounded-full">
+                <span className="text-xs font-medium px-2 py-0.5 bg-brand/10 text-brand rounded-theme">
                   Общая
                 </span>
               )}
@@ -993,7 +993,7 @@ const DirectoryPage: React.FC = () => {
                   setUploadError(null);
                   setIsUploadModalOpen(true);
                 }}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-brand text-theme-on-brand rounded-theme-md hover:bg-brand-hover transition-colors text-sm font-medium"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-brand text-theme-on-brand rounded-theme hover:bg-brand-hover transition-colors text-sm font-medium"
               >
                 <Upload size={16} />
                 <span className="hidden sm:inline">Загрузить</span>
@@ -1002,7 +1002,7 @@ const DirectoryPage: React.FC = () => {
             {perms?.create_folder && (
               <button
                 onClick={() => setIsCreateFolderModalOpen(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium"
+                className="inline-flex items-center gap-2 px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme transition-colors text-sm font-medium"
               >
                 <FolderPlus size={16} />
                 <span className="hidden sm:inline">Новая папка</span>
@@ -1017,7 +1017,7 @@ const DirectoryPage: React.FC = () => {
                       : `/directories/${actualId}/settings`,
                   )
                 }
-                className="inline-flex items-center gap-2 px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium"
+                className="inline-flex items-center gap-2 px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme transition-colors text-sm font-medium"
               >
                 <Settings size={16} />
                 <span className="hidden sm:inline">
@@ -1044,7 +1044,7 @@ const DirectoryPage: React.FC = () => {
                 className="min-h-[300px]"
               />
             ) : (
-              <div className="min-h-[300px] flex items-center justify-center border-2 border-dashed border-theme-hover rounded-theme-lg bg-theme-tertiary">
+              <div className="min-h-[300px] flex items-center justify-center border-2 border-dashed border-theme-hover rounded-theme bg-theme-tertiary">
                 <p className="text-theme-muted">Директория пуста</p>
               </div>
             )}
@@ -1080,8 +1080,10 @@ const DirectoryPage: React.FC = () => {
                 {filteredSubdirectories.map((folder) =>
                   viewMode === 'grid' ? (
                     <FolderGridItem
+                      showProperties
                       key={folder.id}
                       id={folder.id}
+                      sizeBytes={folder.size_bytes}
                       name={folder.name}
                       to={`/directories/${folder.id}`}
                       hasShareLinks={folder.has_share_links}
@@ -1117,9 +1119,11 @@ const DirectoryPage: React.FC = () => {
                     />
                   ) : (
                     <FolderItem
+                      showProperties
                       key={folder.id}
                       id={folder.id}
                       name={folder.name}
+                      sizeBytes={folder.size_bytes}
                       to={`/directories/${folder.id}`}
                       hasShareLinks={folder.has_share_links}
                       onRename={
@@ -1168,9 +1172,11 @@ const DirectoryPage: React.FC = () => {
                 {formattedFiles.map((file) =>
                   viewMode === 'grid' ? (
                     <FileGridItem
+                      showProperties
                       key={file.id}
                       id={file.id}
                       name={file.name}
+                      size={file.size}
                       type={file.type}
                       to={`/files/${file.id}`}
                       isFavorite={file.isFavorite}
@@ -1207,6 +1213,7 @@ const DirectoryPage: React.FC = () => {
                     />
                   ) : (
                     <FileItem
+                      showProperties
                       key={file.id}
                       id={file.id}
                       name={file.name}
@@ -1357,7 +1364,7 @@ const DirectoryPage: React.FC = () => {
               value={newFolderName}
               onChange={(e) => setNewFolderName(e.target.value)}
               placeholder="Введите название..."
-              className="w-full px-3 py-2.5 rounded-theme-md border-2 border-theme-hover bg-theme-tertiary text-theme-primary placeholder:text-theme-muted outline-none focus:border-brand transition-colors text-sm"
+              className="w-full px-3 py-2.5 rounded-theme border-2 border-theme-hover bg-theme-tertiary text-theme-primary placeholder:text-theme-muted outline-none focus:border-brand transition-colors text-sm"
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleCreateFolder();
@@ -1368,14 +1375,14 @@ const DirectoryPage: React.FC = () => {
             <button
               onClick={() => setIsCreateFolderModalOpen(false)}
               disabled={isCreatingFolder}
-              className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Отмена
             </button>
             <button
               onClick={handleCreateFolder}
               disabled={!newFolderName.trim() || isCreatingFolder}
-              className="flex-1 inline-flex items-center justify-center px-4 py-2 bg-brand text-theme-on-brand hover:bg-brand-hover rounded-theme-md transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 inline-flex items-center justify-center px-4 py-2 bg-brand text-theme-on-brand hover:bg-brand-hover rounded-theme transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isCreatingFolder ? 'Создание...' : 'Создать'}
             </button>

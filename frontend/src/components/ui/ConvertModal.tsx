@@ -103,8 +103,8 @@ export const ConvertModal: React.FC<ConvertModalProps> = ({
         onClick={!isConverting ? onClose : undefined}
       />
       {isConverting ? (
-        <div className="relative bg-theme-secondary rounded-theme-xl max-w-sm w-full shadow-theme-dropdown border border-theme p-10 flex flex-col items-center gap-4">
-          <div className="w-16 h-16 rounded-theme-full bg-brand-light flex items-center justify-center">
+        <div className="relative bg-theme-secondary rounded-theme max-w-sm w-full shadow-theme-dropdown border border-theme p-10 flex flex-col items-center gap-4">
+          <div className="w-16 h-16 rounded-theme bg-brand-light flex items-center justify-center">
             <svg
               className="animate-spin h-8 w-8 text-brand"
               xmlns="http://www.w3.org/2000/svg"
@@ -127,9 +127,9 @@ export const ConvertModal: React.FC<ConvertModalProps> = ({
             </svg>
           </div>
           <p className="text-theme-primary font-medium text-lg">Конвертация...</p>
-          <div className="mt-1 w-full h-2 bg-theme-border rounded-full overflow-hidden relative">
+          <div className="mt-1 w-full h-2 bg-theme-border rounded-theme overflow-hidden relative">
             <div
-              className="h-full bg-brand rounded-full transition-all duration-150 ease-linear"
+              className="h-full bg-brand rounded-theme transition-all duration-150 ease-linear"
               style={{ width: `${conversionProgress}%` }}
             />
           </div>
@@ -143,13 +143,13 @@ export const ConvertModal: React.FC<ConvertModalProps> = ({
           </p>
         </div>
       ) : (
-        <div className="relative bg-theme-secondary rounded-theme-xl max-w-md w-full shadow-theme-dropdown border border-theme max-h-[90vh] flex flex-col">
+        <div className="relative bg-theme-secondary rounded-theme max-w-md w-full shadow-theme-dropdown border border-theme max-h-[90vh] flex flex-col">
           {/* Шапка */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-theme shrink-0">
             <h2 className="text-lg font-semibold text-theme-primary">Конвертация файла</h2>
             <button
               onClick={onClose}
-              className="p-1 rounded-theme-full hover:bg-theme-hover transition-colors"
+              className="p-1 rounded-theme hover:bg-theme-hover transition-colors"
             >
               <X size={20} className="text-theme-secondary" />
             </button>
@@ -169,7 +169,7 @@ export const ConvertModal: React.FC<ConvertModalProps> = ({
             {isSupported ? (
               <>
                 {/* Предупреждение о совместимости */}
-                <div className="bg-brand-light border border-theme rounded-theme-md p-3 text-xs text-theme-secondary">
+                <div className="bg-brand-light border border-theme rounded-theme p-3 text-xs text-theme-secondary">
                   <p className="font-medium mb-0.5 text-theme-primary">Важно</p>
                   <p>
                     Не все преобразования могут быть идеально точными — некоторые форматы не
@@ -185,7 +185,7 @@ export const ConvertModal: React.FC<ConvertModalProps> = ({
                     type="button"
                     onClick={toggleDropdown}
                     className={cn(
-                      'w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-theme-md text-sm border transition-colors',
+                      'w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-theme text-sm border transition-colors',
                       'focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand',
                       isDropdownOpen
                         ? 'border-brand bg-theme-tertiary'
@@ -206,7 +206,7 @@ export const ConvertModal: React.FC<ConvertModalProps> = ({
                   {isDropdownOpen && dropdownStyle && (
                     <div
                       style={dropdownStyle}
-                      className="bg-theme-secondary border border-theme rounded-theme-md shadow-theme-dropdown overflow-hidden max-h-48 overflow-y-auto"
+                      className="bg-theme-secondary border border-theme rounded-theme shadow-theme-dropdown overflow-hidden max-h-48 overflow-y-auto"
                     >
                       {availableFormats.map((format) => (
                         <button
@@ -237,7 +237,7 @@ export const ConvertModal: React.FC<ConvertModalProps> = ({
                     <button
                       onClick={() => setActionType('download')}
                       className={cn(
-                        'flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-theme-md text-sm font-medium transition-colors border',
+                        'flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-theme text-sm font-medium transition-colors border',
                         actionType === 'download'
                           ? 'bg-brand-light border-brand text-brand'
                           : 'bg-theme-tertiary border-theme text-theme-secondary hover:bg-theme-hover',
@@ -249,7 +249,7 @@ export const ConvertModal: React.FC<ConvertModalProps> = ({
                     <button
                       onClick={() => setActionType('save')}
                       className={cn(
-                        'flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-theme-md text-sm font-medium transition-colors border',
+                        'flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-theme text-sm font-medium transition-colors border',
                         actionType === 'save'
                           ? 'bg-brand-light border-brand text-brand'
                           : 'bg-theme-tertiary border-theme text-theme-secondary hover:bg-theme-hover',

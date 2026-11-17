@@ -339,8 +339,10 @@ const MyLinksPage: React.FC = () => {
               {directories.map((item) =>
                 viewMode === 'grid' ? (
                   <FolderGridItem
+                    showProperties
                     key={item.id}
                     id={item.id}
+                    sizeBytes={item.size}
                     name={item.filename}
                     to={`/directories/${item.id}`}
                     hasShareLinks={itemsWithLinks.has(item.id)}
@@ -358,8 +360,10 @@ const MyLinksPage: React.FC = () => {
                   />
                 ) : (
                   <FolderItem
+                    showProperties
                     key={item.id}
                     id={item.id}
+                    sizeBytes={item.size}
                     name={item.filename}
                     to={`/directories/${item.id}`}
                     hasShareLinks={itemsWithLinks.has(item.id)}
@@ -385,9 +389,11 @@ const MyLinksPage: React.FC = () => {
               {files.map((item) =>
                 viewMode === 'grid' ? (
                   <FileGridItem
+                    showProperties
                     key={item.id}
                     id={item.id}
                     name={item.filename}
+                    size={formatFileSize(item.size)}
                     type={resolveFileIconType(item.mime_type, item.extension)}
                     to={`/files/${item.id}`}
                     isFavorite={false}
@@ -414,6 +420,7 @@ const MyLinksPage: React.FC = () => {
                   />
                 ) : (
                   <FileItem
+                    showProperties
                     key={item.id}
                     id={item.id}
                     name={item.filename}
@@ -451,7 +458,7 @@ const MyLinksPage: React.FC = () => {
           {hasMore && (
             <div className="flex items-center justify-center py-2">
               {isLoadingMore ? (
-                <div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+                <div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-[50%] animate-spin" />
               ) : (
                 <div ref={sentinelRef} className="h-1" />
               )}

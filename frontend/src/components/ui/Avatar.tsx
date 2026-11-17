@@ -20,7 +20,7 @@ export const Avatar: React.FC<AvatarProps> = ({
     <div
       title={title}
       className={cn(
-        'rounded-theme-full bg-brand-light text-brand flex items-center justify-center font-semibold shrink-0',
+        'rounded-theme bg-brand-light text-brand flex items-center justify-center font-semibold shrink-0',
         fallbackClassName,
         className,
       )}

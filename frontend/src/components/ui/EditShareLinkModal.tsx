@@ -153,7 +153,7 @@ export const EditShareLinkModal: React.FC<EditShareLinkModalProps> = ({
             <button
               type="button"
               onClick={handleCopyUrl}
-              className="w-full flex items-center gap-2 p-2.5 rounded-theme-md border border-theme bg-theme-secondary text-left hover:border-brand hover:bg-brand-light transition-colors group"
+              className="w-full flex items-center gap-2 p-2.5 rounded-theme border border-theme bg-theme-secondary text-left hover:border-brand hover:bg-brand-light transition-colors group"
             >
               <Link2
                 size={14}
@@ -181,7 +181,7 @@ export const EditShareLinkModal: React.FC<EditShareLinkModalProps> = ({
             <button
               onClick={() => setAccess('public')}
               className={cn(
-                'flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-theme-md border text-sm transition-colors',
+                'flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-theme border text-sm transition-colors',
                 access === 'public'
                   ? 'border-brand bg-brand/10 text-brand'
                   : 'border-theme bg-theme-secondary text-theme-secondary hover:border-brand hover:text-brand hover:bg-brand-light',
@@ -193,7 +193,7 @@ export const EditShareLinkModal: React.FC<EditShareLinkModalProps> = ({
             <button
               onClick={() => setAccess('authenticated')}
               className={cn(
-                'flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-theme-md border text-sm transition-colors',
+                'flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-theme border text-sm transition-colors',
                 access === 'authenticated'
                   ? 'border-brand bg-brand/10 text-brand'
                   : 'border-theme bg-theme-secondary text-theme-secondary hover:border-brand hover:text-brand hover:bg-brand-light',
@@ -214,7 +214,7 @@ export const EditShareLinkModal: React.FC<EditShareLinkModalProps> = ({
                 key={opt.value}
                 onClick={() => setExpiry(opt.value)}
                 className={cn(
-                  'px-3 py-1.5 rounded-theme-md border text-xs transition-colors',
+                  'px-3 py-1.5 rounded-theme border text-xs transition-colors',
                   expiry === opt.value
                     ? 'border-brand bg-brand/10 text-brand'
                     : 'border-theme bg-theme-secondary text-theme-secondary hover:border-brand hover:text-brand hover:bg-brand-light',
@@ -231,14 +231,14 @@ export const EditShareLinkModal: React.FC<EditShareLinkModalProps> = ({
           <label className="text-xs text-theme-secondary font-medium">Пароль (необязательно)</label>
 
           {hasPassword && (
-            <div className="flex items-center gap-2 p-2.5 rounded-theme-md bg-theme-tertiary border border-theme">
+            <div className="flex items-center gap-2 p-2.5 rounded-theme bg-theme-tertiary border border-theme">
               <KeyRound size={14} className="text-theme-muted shrink-0" />
               <span className="text-xs text-theme-secondary flex-1">Пароль установлен</span>
               <button
                 type="button"
                 onClick={() => setClearPassword(!clearPassword)}
                 className={cn(
-                  'text-xs font-medium px-2 py-1 rounded-theme-sm border transition-colors',
+                  'text-xs font-medium px-2 py-1 rounded-theme border transition-colors',
                   clearPassword
                     ? 'border-danger text-danger bg-danger-light'
                     : 'border-theme text-theme-secondary hover:text-danger hover:border-danger',
@@ -264,7 +264,7 @@ export const EditShareLinkModal: React.FC<EditShareLinkModalProps> = ({
                   : 'Оставьте пустым, если не нужен'
               }
               autoComplete="new-password"
-              className="w-full pl-9 pr-9 py-2 text-sm bg-theme-secondary border border-theme rounded-theme-md text-theme-primary placeholder:text-theme-muted focus:outline-none focus:border-brand transition-colors"
+              className="w-full pl-9 pr-9 py-2 text-sm bg-theme-secondary border border-theme rounded-theme text-theme-primary placeholder:text-theme-muted focus:outline-none focus:border-brand transition-colors"
             />
             <button
               type="button"
@@ -278,7 +278,7 @@ export const EditShareLinkModal: React.FC<EditShareLinkModalProps> = ({
 
         {/* Ошибка */}
         {error && (
-          <div className="flex items-center gap-2 p-3 bg-danger-light border border-danger/20 rounded-theme-md text-sm text-danger">
+          <div className="flex items-center gap-2 p-3 bg-danger-light border border-danger/20 rounded-theme text-sm text-danger">
             <AlertCircle size={14} className="shrink-0" />
             {error}
           </div>

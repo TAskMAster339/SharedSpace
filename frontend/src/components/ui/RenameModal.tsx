@@ -84,13 +84,13 @@ export const RenameModal: React.FC<RenameModalProps> = ({
                 onChange={(e) => setName(e.target.value)}
                 autoFocus
                 className={cn(
-                  'w-full bg-theme-tertiary border border-theme rounded-theme-md py-2.5 pl-10 pr-3 text-sm text-theme-primary',
+                  'w-full bg-theme-tertiary border border-theme rounded-theme py-2.5 pl-10 pr-3 text-sm text-theme-primary',
                   'placeholder:text-theme-muted focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand transition-colors',
                 )}
               />
             </div>
             {type === 'file' && extension && (
-              <span className="px-3 py-2.5 text-sm text-theme-muted bg-theme-tertiary border border-theme rounded-theme-md select-none">
+              <span className="px-3 py-2.5 text-sm text-theme-muted bg-theme-tertiary border border-theme rounded-theme select-none">
                 .{extension}
               </span>
             )}

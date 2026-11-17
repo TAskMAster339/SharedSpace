@@ -7,6 +7,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import PublicRoute from './components/PublicRoute';
 import EmailVerificationModal from './components/EmailVerificationModal';
 import MainPage from './pages/MainPage';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import { PRIVACY_POLICY_PATH } from './constants/privacy';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
@@ -49,6 +51,14 @@ const App: React.FC = () => {
           element={
             <Layout>
               <MainPage />
+            </Layout>
+          }
+        />
+        <Route
+          path={PRIVACY_POLICY_PATH}
+          element={
+            <Layout>
+              <PrivacyPolicyPage />
             </Layout>
           }
         />

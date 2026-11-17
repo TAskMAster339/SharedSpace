@@ -11,6 +11,7 @@ export interface SharedDirectoryWithStats {
   member_count: number;
   file_count: number;
   member_usernames: string[];
+  size_bytes?: number;
 }
 
 export interface SharedDirectory {
@@ -21,6 +22,7 @@ export interface SharedDirectory {
   owner_name: string;
   role: SharingRole;
   created_at: string;
+  size_bytes?: number;
 }
 
 export interface Member {

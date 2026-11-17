@@ -1,5 +1,35 @@
 basePath: /
 definitions:
+  users.StorageFolder:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      size_bytes:
+        type: integer
+    type: object
+  users.StorageUsageResponse:
+    properties:
+      folder_count:
+        type: integer
+      folders:
+        items:
+          $ref: '#/definitions/users.StorageFolder'
+        type: array
+      other_files_bytes:
+        type: integer
+      quota_bytes:
+        type: integer
+      root_files_bytes:
+        type: integer
+      root_id:
+        type: string
+      trash_bytes:
+        type: integer
+      used_bytes:
+        type: integer
+    type: object
   files.FileContentResponse:
     type: object
     properties:
@@ -121,6 +151,8 @@ definitions:
     type: object
   dirs.DirectoryResponse:
     properties:
+      size_bytes:
+        type: integer
       created_at:
         type: string
       id:
@@ -756,6 +788,30 @@ paths:
       summary: Get image or first video frame preview
       tags:
       - files
+  /api/v1/users/me/storage:
+    get:
+      parameters:
+      - default: size
+        description: 'Sort folders: size or name'
+        in: query
+        name: sort
+        type: string
+      produces:
+      - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/users.StorageUsageResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apperror.Response'
+      security:
+      - BearerAuth: []
+      summary: Get storage usage including trash
+      tags:
+      - users
 schemes:
   - http
 securityDefinitions:

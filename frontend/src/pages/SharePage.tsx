@@ -193,13 +193,13 @@ const SharePage: React.FC = () => {
   };
 
   const renderUnavailableMessage = (message?: string, subMessage?: string) => (
-    <div className="bg-theme-tertiary rounded-theme-lg py-16 flex flex-col items-center gap-4 text-theme-muted">
+    <div className="bg-theme-tertiary rounded-theme py-16 flex flex-col items-center gap-4 text-theme-muted">
       <EyeOff size={64} className="text-theme-muted" />
       <p className="text-base font-medium">{message || 'Просмотр недоступен'}</p>
       <p className="text-sm">{subMessage || 'Файл не может быть отображён в браузере'}</p>
       <button
         onClick={handleDownload}
-        className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-brand text-theme-on-brand hover:bg-brand-hover rounded-theme-md transition-colors text-sm font-medium"
+        className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-brand text-theme-on-brand hover:bg-brand-hover rounded-theme transition-colors text-sm font-medium"
       >
         <Download size={16} />
         Скачать файл
@@ -214,7 +214,7 @@ const SharePage: React.FC = () => {
     switch (previewType) {
       case 'image':
         return (
-          <div className="flex items-center justify-center bg-theme-tertiary rounded-theme-lg overflow-hidden min-h-[400px]">
+          <div className="flex items-center justify-center bg-theme-tertiary rounded-theme overflow-hidden min-h-[400px]">
             {file.url ? (
               <img
                 src={file.url}
@@ -236,7 +236,7 @@ const SharePage: React.FC = () => {
 
       case 'video':
         return (
-          <div className="bg-theme-tertiary rounded-theme-lg overflow-hidden">
+          <div className="bg-theme-tertiary rounded-theme overflow-hidden">
             <video
               src={file.url}
               controls
@@ -248,9 +248,9 @@ const SharePage: React.FC = () => {
 
       case 'audio':
         return (
-          <div className="bg-theme-tertiary rounded-theme-lg p-8">
+          <div className="bg-theme-tertiary rounded-theme p-8">
             <div className="flex flex-col items-center gap-6">
-              <div className="w-24 h-24 rounded-theme-full bg-brand-light flex items-center justify-center text-brand">
+              <div className="w-24 h-24 rounded-theme bg-brand-light flex items-center justify-center text-brand">
                 <FileIcon type="audio" size={40} />
               </div>
               <p className="text-lg font-medium text-theme-primary">{file.filename}</p>
@@ -266,7 +266,7 @@ const SharePage: React.FC = () => {
 
       case 'pdf':
         return (
-          <div className="bg-theme-tertiary rounded-theme-lg overflow-hidden min-h-[500px]">
+          <div className="bg-theme-tertiary rounded-theme overflow-hidden min-h-[500px]">
             {file.url ? (
               <object
                 data={file.url}
@@ -288,7 +288,7 @@ const SharePage: React.FC = () => {
       case 'text':
       case 'code':
         return (
-          <div className="bg-theme-tertiary rounded-theme-lg overflow-hidden min-h-[400px]">
+          <div className="bg-theme-tertiary rounded-theme overflow-hidden min-h-[400px]">
             {file.url ? (
               <iframe
                 ref={iframeRef}
@@ -324,7 +324,7 @@ const SharePage: React.FC = () => {
         <SEOHead title="Файл защищён паролем" description="Для доступа к файлу требуется пароль." />
         <Card className="w-full max-w-md">
           <div className="text-center space-y-1 mb-6">
-            <div className="w-12 h-12 mx-auto flex items-center justify-center bg-brand/10 rounded-full mb-3">
+            <div className="w-12 h-12 mx-auto flex items-center justify-center bg-brand/10 rounded-theme mb-3">
               <KeyRound size={22} className="text-brand" />
             </div>
             <h2 className="text-xl font-semibold text-theme-primary">Файл защищён паролем</h2>
@@ -344,7 +344,7 @@ const SharePage: React.FC = () => {
                 placeholder="Пароль"
                 autoComplete="new-password"
                 autoFocus
-                className="w-full pl-9 pr-10 py-2 rounded-theme-md border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
+                className="w-full pl-9 pr-10 py-2 rounded-theme border border-theme bg-theme-primary text-theme-primary outline-none focus:border-brand"
               />
               <button
                 type="button"
@@ -380,7 +380,7 @@ const SharePage: React.FC = () => {
     return (
       <div className="min-h-[80vh] flex items-center justify-center bg-theme-primary">
         <SEOHead title="Загрузка..." description="Загрузка информации о файле..." />
-        <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-[50%] animate-spin" />
       </div>
     );
   }
@@ -390,7 +390,7 @@ const SharePage: React.FC = () => {
       <div className="min-h-[80vh] flex items-center justify-center bg-theme-primary px-4">
         <SEOHead title="Файл недоступен" description={error || 'Файл не найден'} />
         <div className="text-center space-y-4 max-w-sm">
-          <div className="w-16 h-16 mx-auto flex items-center justify-center bg-danger-light rounded-full">
+          <div className="w-16 h-16 mx-auto flex items-center justify-center bg-danger-light rounded-theme">
             <FileIcon type="unknown" size={28} />
           </div>
           <h1 className="text-xl font-semibold text-theme-primary">Файл недоступен</h1>
@@ -429,14 +429,14 @@ const SharePage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Левая часть: предпросмотр (2/3) */}
         <div className="lg:col-span-2">
-          <div className="bg-theme-secondary border border-theme rounded-theme-lg p-4 shadow-theme-card">
+          <div className="bg-theme-secondary border border-theme rounded-theme p-4 shadow-theme-card">
             <div className="mb-3 flex items-center justify-between gap-3">
               <h2 className="text-sm font-medium text-theme-secondary">Предпросмотр</h2>
               <button
                 onClick={handleDownload}
                 aria-label="Скачать файл"
                 title="Скачать файл"
-                className="group inline-flex h-9 w-9 items-center justify-center gap-2 rounded-theme-md border border-brand/30 bg-brand-light text-brand transition-colors hover:bg-brand hover:text-theme-on-brand sm:w-auto sm:px-3 sm:text-sm sm:font-medium"
+                className="group inline-flex h-9 w-9 items-center justify-center gap-2 rounded-theme border border-brand/30 bg-brand-light text-brand transition-colors hover:bg-brand hover:text-theme-on-brand sm:w-auto sm:px-3 sm:text-sm sm:font-medium"
               >
                 <Download
                   size={16}
@@ -452,14 +452,14 @@ const SharePage: React.FC = () => {
         {/* Правая часть: информация (1/3) */}
         <div className="space-y-4">
           {/* Информация о файле */}
-          <div className="bg-theme-secondary border border-theme rounded-theme-lg p-5 shadow-theme-card">
+          <div className="bg-theme-secondary border border-theme rounded-theme p-5 shadow-theme-card">
             <h3 className="font-medium text-theme-primary mb-3">Информация о файле</h3>
 
             <button
               onClick={handleCopyFilename}
-              className="group flex items-center gap-3 p-3 bg-theme-tertiary hover:bg-theme-hover rounded-theme-md border border-theme transition-colors w-full text-left"
+              className="group flex items-center gap-3 p-3 bg-theme-tertiary hover:bg-theme-hover rounded-theme border border-theme transition-colors w-full text-left"
             >
-              <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card shrink-0 group-hover:text-brand transition-colors">
+              <div className="p-2 bg-theme-secondary rounded-theme shadow-theme-card shrink-0 group-hover:text-brand transition-colors">
                 <FileIcon
                   type={fileIconType}
                   size={20}

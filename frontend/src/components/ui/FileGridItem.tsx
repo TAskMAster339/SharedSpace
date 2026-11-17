@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { Star, Share2 } from 'lucide-react';
 import { FilePreview } from './FilePreview';
+import { GridItemCaption } from './GridItemCaption';
+import { ItemStatusBadges } from './ItemStatusBadges';
+import { useGridItemMenu } from './useGridItemMenu';
 import { ItemActionsMenu } from './ItemActionsMenu';
 import { cn } from '../../utils/cn';
 import { FileIconType } from '../../utils/fileType';
@@ -9,12 +11,14 @@ import { FileIconType } from '../../utils/fileType';
 interface FileGridItemProps {
   id: string;
   name: string;
+  size: string;
   type: FileIconType | string;
   to: string;
   className?: string;
   isFavorite?: boolean;
   hasShareLinks?: boolean;
   onClick?: (id: string) => void;
+  showProperties?: boolean;
   onContextMenu?: (e: React.MouseEvent, id: string) => void;
   onToggleFavorite?: (id: string) => void;
   onRename?: (id: string) => void;
@@ -29,6 +33,7 @@ interface FileGridItemProps {
 export const FileGridItem: React.FC<FileGridItemProps> = ({
   id,
   name,
+  size,
   type,
   to,
   className,
@@ -36,6 +41,7 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
   hasShareLinks = false,
   onClick,
   onContextMenu,
+  showProperties = false,
   onToggleFavorite,
   onRename,
   onDelete,
@@ -45,83 +51,50 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
   onConvert,
   onDragStart,
 }) => {
-  const [contextMenuOpen, setContextMenuOpen] = useState<{ x: number; y: number } | null>(null);
+  const menu = useGridItemMenu(onContextMenu && ((event) => onContextMenu(event, id)));
 
   return (
-    <Link
-      to={to}
-      draggable={!!onDragStart}
-      onDragStart={(e) => onDragStart?.(e, id, name)}
-      onClick={(e) => {
-        if (onClick) {
-          e.preventDefault();
-          onClick(id);
-        }
-      }}
-      onContextMenu={(e) => {
-        if (onContextMenu) {
-          onContextMenu(e, id);
-        } else {
-          e.preventDefault();
-          e.stopPropagation();
-          setContextMenuOpen({ x: e.clientX, y: e.clientY });
-        }
-      }}
-      className={cn(
-        'group flex flex-col items-center p-3 rounded-theme-md transition-colors cursor-pointer relative min-w-0',
-        'bg-theme-tertiary hover:bg-theme-hover border border-theme',
-        className,
-      )}
-    >
-      <div className="relative w-full aspect-square max-w-[160px] flex items-center justify-center text-theme-muted group-hover:text-brand transition-colors">
-        <FilePreview
-          fileId={id}
-          type={type}
-          size={40}
-          fill
-          className="group-hover:text-brand transition-colors"
-        />
-        <div className="absolute top-0 left-0 flex items-center gap-1 pointer-events-none">
-          {isFavorite && (
-            <span
-              className="flex items-center justify-center rounded-full bg-theme-tertiary border border-theme p-0.5 shadow-theme-card"
-              aria-label="В избранном"
-              title="В избранном"
-            >
-              <Star size={12} className="text-yellow-400" fill="currentColor" />
-            </span>
-          )}
-          {hasShareLinks && (
-            <span
-              className="flex items-center justify-center rounded-full bg-theme-tertiary border border-theme p-0.5 shadow-theme-card"
-              aria-label="Есть ссылки общего доступа"
-              title="Есть ссылки общего доступа"
-            >
-              <Share2 size={12} className="text-green-500" />
-            </span>
-          )}
-        </div>
-      </div>
-      <p className="text-sm text-theme-primary font-medium text-center mt-2 truncate w-full max-w-[120px]">
-        {name}
-      </p>
+    <div className={cn('flex min-w-0 flex-col items-center pb-2', className)}>
+      <Link
+        to={to}
+        aria-label={name}
+        draggable={!!onDragStart}
+        onDragStart={(e) => onDragStart?.(e, id, name)}
+        onClick={(e) => {
+          if (menu.consumeLongPress()) {
+            e.preventDefault();
+            return;
+          }
+          if (onClick) {
+            e.preventDefault();
+            onClick(id);
+          }
+        }}
+        ref={menu.anchor}
+        {...menu.handlers}
+        className="item-grid-preview cursor-pointer p-3 [-webkit-touch-callout:none]"
+      >
+        <FilePreview fileId={id} type={type} size={64} fill className="transition-colors" />
+        <ItemStatusBadges grid favorite={isFavorite} shared={hasShareLinks} />
+      </Link>
+      <GridItemCaption name={name} size={size} />
 
-      <div className="absolute top-2 right-2 flex items-center gap-1.5">
-        <ItemActionsMenu
-          isFavorite={isFavorite}
-          onToggleFavorite={onToggleFavorite ? () => onToggleFavorite(id) : undefined}
-          onRename={onRename ? () => onRename(id) : undefined}
-          onDelete={onDelete ? () => onDelete(id) : undefined}
-          onMove={onMove ? () => onMove(id) : undefined}
-          onShare={onShare ? () => onShare(id) : undefined}
-          onDownload={onDownload ? () => onDownload(id) : undefined}
-          onConvert={onConvert ? () => onConvert(id) : undefined}
-          iconSize={16}
-          openMenu={!!contextMenuOpen}
-          menuPosition={contextMenuOpen}
-          onCloseMenu={() => setContextMenuOpen(null)}
-        />
-      </div>
-    </Link>
+      <ItemActionsMenu
+        properties={showProperties ? { kind: 'file', id } : undefined}
+        isFavorite={isFavorite}
+        onToggleFavorite={onToggleFavorite ? () => onToggleFavorite(id) : undefined}
+        onRename={onRename ? () => onRename(id) : undefined}
+        onDelete={onDelete ? () => onDelete(id) : undefined}
+        onMove={onMove ? () => onMove(id) : undefined}
+        onShare={onShare ? () => onShare(id) : undefined}
+        onDownload={onDownload ? () => onDownload(id) : undefined}
+        onConvert={onConvert ? () => onConvert(id) : undefined}
+        iconSize={16}
+        openMenu={!!menu.position}
+        menuPosition={menu.position}
+        onCloseMenu={menu.close}
+        contextAnchor={menu.anchor}
+      />
+    </div>
   );
 };

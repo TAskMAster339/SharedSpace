@@ -23,7 +23,7 @@ const Error404Page: React.FC = () => {
 
         <Link
           to="/dashboard"
-          className="mt-2 px-6 py-2.5 bg-brand text-theme-on-brand rounded-theme-md font-medium hover:bg-brand-hover transition-colors"
+          className="mt-2 px-6 py-2.5 bg-brand text-theme-on-brand rounded-theme font-medium hover:bg-brand-hover transition-colors"
         >
           На главную
         </Link>

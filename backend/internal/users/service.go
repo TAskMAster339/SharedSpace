@@ -13,6 +13,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"sharedspace/internal/apperror"
+	"sharedspace/internal/database"
 )
 
 const minSearchQueryLength = 2
@@ -302,6 +303,9 @@ func (s *Service) DeleteAccount(ctx context.Context, userID string, req DeleteAc
 		return apperror.WrapInternal("ошибка начала транзакции", err)
 	}
 	defer tx.Rollback(ctx)
+	if err := database.LockDirectoryTopology(ctx, tx); err != nil {
+		return apperror.WrapInternal("блокировка дерева директорий", err)
+	}
 
 	_, err = s.repo.FindUserByID(ctx, tx, userID)
 	if err != nil {

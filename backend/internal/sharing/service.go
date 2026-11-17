@@ -52,6 +52,7 @@ func (s *Service) GetSharedWithMe(ctx context.Context, userID string, limit int)
 			OwnerName:   r.OwnerName,
 			Role:        Role(r.Role),
 			CreatedAt:   r.CreatedAt,
+			SizeBytes:   r.SizeBytes,
 		})
 	}
 	return resp, nil
@@ -75,6 +76,7 @@ func (s *Service) GetSharedWithMeStats(ctx context.Context, userID string) ([]Sh
 			MemberCount: r.MemberCount,
 			FileCount:   r.FileCount,
 			CreatedAt:   r.CreatedAt,
+			SizeBytes:   r.SizeBytes,
 		})
 	}
 	return resp, nil

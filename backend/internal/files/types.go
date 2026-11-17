@@ -27,6 +27,7 @@ type FileMetadataResponse struct {
 	Size          int64     `json:"size"`
 	DirectoryID   string    `json:"directory_id"`
 	OwnerID       string    `json:"owner_id"`
+	OwnerUsername string    `json:"owner_username,omitempty"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
 	HasShareLinks bool      `json:"has_share_links"`
@@ -51,17 +52,18 @@ type RecentFilesResponse struct {
 }
 
 type fileRecord struct {
-	ID          string
-	Filename    string
-	Extension   string
-	MimeType    string
-	Size        int64
-	DirectoryID string
-	OwnerID     string
-	ObjectKey   string
-	DeletedAt   *time.Time
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID            string
+	Filename      string
+	Extension     string
+	MimeType      string
+	Size          int64
+	DirectoryID   string
+	OwnerID       string
+	OwnerUsername string
+	ObjectKey     string
+	DeletedAt     *time.Time
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 type ConvertRequest struct {

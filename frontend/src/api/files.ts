@@ -26,6 +26,7 @@ export interface FileMetadata {
   size: number;
   directory_id: string;
   owner_id: string;
+  owner_username?: string;
   created_at: string;
   updated_at: string;
   has_share_links?: boolean;
@@ -101,9 +102,14 @@ export function uploadFilesWithProgress(
   });
 }
 
-export function getFileMetadata(accessToken: string, fileId: string): Promise<FileMetadata> {
+export function getFileMetadata(
+  accessToken: string,
+  fileId: string,
+  signal?: AbortSignal,
+): Promise<FileMetadata> {
   return apiRequest<FileMetadata>(`/files/${fileId}`, {
     method: 'GET',
+    signal,
     token: accessToken,
   });
 }

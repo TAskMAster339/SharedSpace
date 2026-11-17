@@ -3396,6 +3396,45 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/users/me/storage": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Get storage usage including trash",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "size",
+                        "description": "Sort folders: size or name",
+                        "name": "sort",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_users.StorageUsageResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/users/search": {
             "get": {
                 "security": [
@@ -3782,6 +3821,9 @@ const docTemplate = `{
                 "owner_id": {
                     "type": "string"
                 },
+                "owner_username": {
+                    "type": "string"
+                },
                 "parent_id": {
                     "type": "string"
                 },
@@ -3790,6 +3832,9 @@ const docTemplate = `{
                 },
                 "shared_directory_id": {
                     "type": "string"
+                },
+                "size_bytes": {
+                    "type": "integer"
                 },
                 "type": {
                     "type": "string"
@@ -3980,6 +4025,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "owner_id": {
+                    "type": "string"
+                },
+                "owner_username": {
                     "type": "string"
                 },
                 "size": {
@@ -4213,6 +4261,9 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string"
+                },
+                "size_bytes": {
+                    "type": "integer"
                 }
             }
         },
@@ -4431,6 +4482,9 @@ const docTemplate = `{
                 "shared_directory_id": {
                     "type": "string"
                 },
+                "size_bytes": {
+                    "type": "integer"
+                },
                 "type": {
                     "type": "string"
                 },
@@ -4468,6 +4522,9 @@ const docTemplate = `{
                 },
                 "role": {
                     "$ref": "#/definitions/internal_sharing.Role"
+                },
+                "size_bytes": {
+                    "type": "integer"
                 }
             }
         },
@@ -4567,6 +4624,52 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/internal_users.UserResponse"
                     }
+                }
+            }
+        },
+        "internal_users.StorageFolder": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "size_bytes": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_users.StorageUsageResponse": {
+            "type": "object",
+            "properties": {
+                "folder_count": {
+                    "type": "integer"
+                },
+                "folders": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_users.StorageFolder"
+                    }
+                },
+                "other_files_bytes": {
+                    "type": "integer"
+                },
+                "quota_bytes": {
+                    "type": "integer"
+                },
+                "root_files_bytes": {
+                    "type": "integer"
+                },
+                "root_id": {
+                    "type": "string"
+                },
+                "trash_bytes": {
+                    "type": "integer"
+                },
+                "used_bytes": {
+                    "type": "integer"
                 }
             }
         },

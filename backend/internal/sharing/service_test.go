@@ -170,7 +170,7 @@ func TestServiceGetSharedWithMe(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		repo := &mockRepo{
 			findByMemberResult: []sharedDirectoryRecord{
-				{ID: "s-1", DirectoryID: "d-1", OwnerID: "user-2", Name: "photos", OwnerName: "ivan", Role: "admin", CreatedAt: now},
+				{ID: "s-1", DirectoryID: "d-1", OwnerID: "user-2", Name: "photos", OwnerName: "ivan", Role: "admin", CreatedAt: now, SizeBytes: 4096},
 				{ID: "s-2", DirectoryID: "d-2", OwnerID: "user-3", Name: "docs", OwnerName: "petr", Role: "viewer", CreatedAt: now},
 			},
 		}
@@ -183,7 +183,7 @@ func TestServiceGetSharedWithMe(t *testing.T) {
 		if len(resp) != 2 {
 			t.Fatalf("expected 2 items, got %d", len(resp))
 		}
-		if resp[0].Name != "photos" || resp[0].Role != RoleAdmin {
+		if resp[0].Name != "photos" || resp[0].Role != RoleAdmin || resp[0].SizeBytes != 4096 {
 			t.Fatalf("unexpected first item: %+v", resp[0])
 		}
 		if resp[1].Name != "docs" || resp[1].Role != RoleViewer {

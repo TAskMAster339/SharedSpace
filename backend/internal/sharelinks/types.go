@@ -68,8 +68,9 @@ type ResolveDirectoryParams struct {
 }
 
 type DirectorySubdir struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	SizeBytes int64  `json:"size_bytes"`
 }
 
 type shareLinkRecord struct {
@@ -114,8 +115,9 @@ type dirFileRecord struct {
 }
 
 type dirSubdirRecord struct {
-	ID   string
-	Name string
+	ID        string
+	Name      string
+	SizeBytes int64
 }
 
 type sitemapEntry struct {

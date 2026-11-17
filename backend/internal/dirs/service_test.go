@@ -2,6 +2,8 @@ package dirs
 
 import (
 	"context"
+	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -169,6 +171,8 @@ type mockRepo struct {
 	softDeleteFilesErr        error
 	restoreSubtreeErr         error
 	restoreFilesErr           error
+	restoredFileIDs           []string
+	filesCountDelta           int
 	hardDeleteSubtreeErr      error
 	addUserStorageUsedErr     error
 
@@ -267,8 +271,8 @@ func (m *mockRepo) RestoreSubtree(_ context.Context, _ dbTX, _ []string) error {
 	return m.restoreSubtreeErr
 }
 
-func (m *mockRepo) RestoreFilesInDirs(_ context.Context, _ dbTX, _ []string, _ time.Time) error {
-	return m.restoreFilesErr
+func (m *mockRepo) RestoreFilesInDirs(_ context.Context, _ dbTX, _ []string, _ time.Time) ([]string, error) {
+	return m.restoredFileIDs, m.restoreFilesErr
 }
 
 func (m *mockRepo) HardDeleteSubtree(_ context.Context, _ dbTX, _ []string) error {
@@ -357,7 +361,8 @@ func (m *mockAccessChecker) GetSharedDirectoryID(_ context.Context, _, _ string)
 	return nil, nil
 }
 
-func (m *mockRepo) IncrementFilesCount(_ context.Context, _ dbTX, _ string, _ int) error {
+func (m *mockRepo) IncrementFilesCount(_ context.Context, _ dbTX, _ string, delta int) error {
+	m.filesCountDelta += delta
 	return nil
 }
 
@@ -400,7 +405,7 @@ func TestServiceGetRootContents(t *testing.T) {
 		repo := &mockRepo{
 			findRootResult: directoryRecord{ID: "root-1", Name: "ivan", OwnerID: "user-1", Type: "root", CreatedAt: now, UpdatedAt: now},
 			subdirectories: []directoryRecord{
-				{ID: "sub-1", Name: "photos", OwnerID: "user-1", ParentID: strPtr("root-1"), Type: "regular", CreatedAt: now, UpdatedAt: now},
+				{ID: "sub-1", Name: "photos", SizeBytes: 987654321, OwnerID: "user-1", ParentID: strPtr("root-1"), Type: "regular", CreatedAt: now, UpdatedAt: now},
 			},
 			files: []fileRecord{
 				{ID: "file-1", Filename: "readme.txt", Extension: "txt", MimeType: "text/plain", Size: 1024, CreatedAt: now, UpdatedAt: now},
@@ -417,6 +422,9 @@ func TestServiceGetRootContents(t *testing.T) {
 		}
 		if len(resp.Subdirectories) != 1 || resp.Subdirectories[0].ID != "sub-1" {
 			t.Fatalf("unexpected subdirectories: %+v", resp.Subdirectories)
+		}
+		if resp.Subdirectories[0].SizeBytes != 987654321 {
+			t.Fatalf("cached folder size was not returned: %+v", resp.Subdirectories[0])
 		}
 		if len(resp.Files) != 1 || resp.Files[0].ID != "file-1" {
 			t.Fatalf("unexpected files: %+v", resp.Files)
@@ -991,7 +999,7 @@ func TestServicePermanentDelete(t *testing.T) {
 }
 
 func TestServiceRestore(t *testing.T) {
-	t.Run("success", func(t *testing.T) {
+	t.Run("counts and reactivates only files restored with the directory", func(t *testing.T) {
 		now := time.Now()
 		deletedAt := now.Add(-time.Hour)
 		parentID := "parent-1"
@@ -1000,13 +1008,27 @@ func TestServiceRestore(t *testing.T) {
 			findByIDAnyStateResult2: directoryRecord{ID: "parent-1", OwnerID: "user-1"},
 			findByNameErr:           pgx.ErrNoRows,
 			findSubtreeIDsResult:    []string{"dir-1", "sub-1"},
-			findDeletedFilesResult:  []fileRecord{},
+			findDeletedFilesResult:  []fileRecord{{ID: "deleted-earlier"}, {ID: "deleted-with-directory"}},
+			restoredFileIDs:         []string{"deleted-with-directory"},
 		}
 		service, tx := newTestService(repo)
+		var reactivatedFileIDs []string
+		tx.execFn = func(sql string, args ...any) (pgconn.CommandTag, error) {
+			if strings.Contains(sql, "UPDATE share_links") && strings.Contains(sql, "WHERE file_id") && args[0] == true {
+				reactivatedFileIDs = args[1].([]string)
+			}
+			return pgconn.CommandTag{}, nil
+		}
 
 		err := service.Restore(context.Background(), "user-1", "dir-1")
 		if err != nil {
 			t.Fatalf("Restore returned error: %v", err)
+		}
+		if repo.filesCountDelta != 1 {
+			t.Errorf("file count delta = %d, want 1", repo.filesCountDelta)
+		}
+		if !slices.Equal(reactivatedFileIDs, []string{"deleted-with-directory"}) {
+			t.Errorf("reactivated file links = %v, want only the file deleted with the directory", reactivatedFileIDs)
 		}
 		if tx.commitCount != 1 {
 			t.Fatalf("commit count = %d, want 1", tx.commitCount)

@@ -104,7 +104,7 @@ export const UserSearch: React.FC<{ className?: string }> = ({ className }) => {
         />
 
         {isSearchOpen && searchQuery.trim().length >= SEARCH_MIN_LENGTH && (
-          <div className="absolute left-0 right-0 top-12 bg-theme-secondary rounded-theme-xl shadow-theme-dropdown border border-theme py-1 z-20 overflow-hidden max-h-80 overflow-y-auto">
+          <div className="absolute left-0 right-0 top-12 bg-theme-secondary rounded-theme shadow-theme-dropdown border border-theme py-1 z-20 overflow-hidden max-h-80 overflow-y-auto">
             {searchResults.length === 0 ? (
               <p className="px-4 py-3 text-sm text-theme-muted">Никого не нашли</p>
             ) : (
@@ -147,7 +147,7 @@ export const UserSearch: React.FC<{ className?: string }> = ({ className }) => {
       >
         {inviteSuccess ? (
           <div className="text-center py-4">
-            <div className="w-12 h-12 rounded-theme-full bg-brand-light flex items-center justify-center text-brand mx-auto mb-3">
+            <div className="w-12 h-12 rounded-theme bg-brand-light flex items-center justify-center text-brand mx-auto mb-3">
               <Check size={24} />
             </div>
             <p className="text-sm text-theme-primary font-medium">Приглашение отправлено</p>
@@ -175,7 +175,7 @@ export const UserSearch: React.FC<{ className?: string }> = ({ className }) => {
                       type="button"
                       onClick={() => setSelectedDirectoryId(dir.id)}
                       className={cn(
-                        'w-full flex items-center justify-between gap-2 text-left px-4 py-2.5 rounded-theme-md border-2 transition-colors text-sm',
+                        'w-full flex items-center justify-between gap-2 text-left px-4 py-2.5 rounded-theme border-2 transition-colors text-sm',
                         isSelected
                           ? 'border-brand bg-brand text-theme-on-brand font-medium'
                           : 'border-theme-hover bg-theme-tertiary text-theme-secondary hover:border-brand/50',

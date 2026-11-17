@@ -13,7 +13,7 @@ export const NavArrows: React.FC<NavArrowsProps> = ({ onBack, onForward }) => {
   const canGoForward = useNavigationStore((s) => s.canGoForward());
 
   return (
-    <div className="inline-flex rounded-theme-md overflow-hidden border border-theme divide-x divide-theme">
+    <div className="inline-flex rounded-theme overflow-hidden border border-theme divide-x divide-theme">
       <button
         onClick={onBack}
         disabled={!canGoBack}

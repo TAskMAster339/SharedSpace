@@ -14,9 +14,11 @@ export interface Permissions {
 }
 
 export interface Directory {
+  size_bytes: number;
   id: string;
   name: string;
   owner_id: string;
+  owner_username?: string;
   parent_id: string | null;
   type: 'root' | 'regular';
   created_at: string;
@@ -113,9 +115,14 @@ export function getDirectoryPath(
   });
 }
 
-export function getDirectoryById(token: string, directoryId: string): Promise<Directory> {
+export function getDirectoryById(
+  token: string,
+  directoryId: string,
+  signal?: AbortSignal,
+): Promise<Directory> {
   return apiRequest<Directory>(`/directories/${directoryId}`, {
     method: 'GET',
+    signal,
     token,
   });
 }

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { MoreVertical, Star, Trash2, Move, Share2, Download, Image, Pencil } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { ContextMenu } from './ContextMenu';
+import { ItemPropertiesAction, PropertiesTarget } from './ItemProperties';
 
 interface ItemActionsMenuProps {
   isFavorite?: boolean;
@@ -12,8 +13,10 @@ interface ItemActionsMenuProps {
   onShare?: () => void;
   onDownload?: () => void;
   onConvert?: () => void;
+  properties?: PropertiesTarget;
   className?: string;
   iconSize?: number;
+  contextAnchor?: React.RefObject<HTMLAnchorElement>;
   openMenu?: boolean;
   onCloseMenu?: () => void;
   menuPosition?: { x: number; y: number } | null;
@@ -31,8 +34,10 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
   onShare,
   onDownload,
   onConvert,
+  properties,
   className,
   iconSize = 18,
+  contextAnchor,
   openMenu,
   onCloseMenu,
   menuPosition,
@@ -40,6 +45,7 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const getTrigger = () => contextAnchor?.current ?? triggerRef.current;
 
   useEffect(() => {
     if (!openMenu) return;
@@ -65,16 +71,9 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
     }
   }, [menuPosition, isOpen]);
 
-  if (
-    !onToggleFavorite &&
-    !onRename &&
-    !onDelete &&
-    !onMove &&
-    !onShare &&
-    !onDownload &&
-    !onConvert
-  )
-    return null;
+  const hasOtherActions =
+    onToggleFavorite || onRename || onDelete || onMove || onShare || onDownload || onConvert;
+  if (!hasOtherActions && !properties) return null;
 
   const handleSelect = (e: React.MouseEvent, action: () => void) => {
     e.preventDefault();
@@ -171,32 +170,51 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
           className="group flex items-center gap-3 w-full px-4 py-3.5 text-base text-theme-secondary hover:bg-theme-hover transition-colors sm:px-3 sm:py-2 sm:text-sm"
         >
           <Trash2 size={18} className="group-hover:text-red-500 transition-colors" />
-          Переместить в корзину
+          <span className="whitespace-nowrap">Удалить</span>
         </button>
+      )}
+      {properties && (
+        <ItemPropertiesAction
+          target={properties}
+          separated={!!hasOtherActions}
+          focusTarget={getTrigger}
+          onSelect={handleClose}
+        />
       )}
     </div>
   );
 
   return (
     <div className={cn('relative inline-flex', className)}>
-      <button
-        ref={triggerRef}
-        type="button"
-        aria-label="Открыть меню действий"
-        aria-haspopup="menu"
-        aria-expanded={isOpen}
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          if (!menuPosition) updatePosition();
-          setIsOpen((prev) => !prev);
-        }}
-        className="p-2 -m-1 rounded-theme-sm text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors"
-      >
-        <MoreVertical size={iconSize} />
-      </button>
+      {!contextAnchor && (
+        <button
+          ref={triggerRef}
+          type="button"
+          aria-label="Открыть меню действий"
+          aria-haspopup="menu"
+          aria-expanded={isOpen}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!menuPosition) updatePosition();
+            setIsOpen((prev) => !prev);
+          }}
+          className={cn(
+            'p-2 -m-1 rounded-theme text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors',
+            contextAnchor,
+          )}
+        >
+          <MoreVertical size={iconSize} />
+        </button>
+      )}
 
-      <ContextMenu isOpen={isOpen} onClose={handleClose} position={position} width={MENU_WIDTH}>
+      <ContextMenu
+        isOpen={isOpen}
+        onClose={handleClose}
+        position={position}
+        width={MENU_WIDTH}
+        trigger={contextAnchor || properties ? getTrigger() : null}
+      >
         {menuItems}
       </ContextMenu>
     </div>

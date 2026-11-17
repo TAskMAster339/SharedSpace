@@ -45,7 +45,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   return (
     <div
       className={cn(
-        'text-center text-theme-muted border-2 border-theme-dashed rounded-theme-lg bg-theme-secondary',
+        'text-center text-theme-muted border-2 border-theme-dashed rounded-theme bg-theme-secondary',
         sizes[size],
         className,
       )}

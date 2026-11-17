@@ -75,7 +75,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
   return (
     <div
       className={cn(
-        'relative border-2 border-dashed rounded-theme-lg p-8 transition-all text-center',
+        'relative border-2 border-dashed rounded-theme p-8 transition-all text-center',
         isDragging
           ? 'border-brand bg-brand-light/20'
           : uploadError
@@ -102,13 +102,13 @@ export const DropZone: React.FC<DropZoneProps> = ({
 
       {isUploading ? (
         <div className="py-8">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-theme-full bg-brand-light flex items-center justify-center">
-            <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin" />
+          <div className="w-16 h-16 mx-auto mb-4 rounded-theme bg-brand-light flex items-center justify-center">
+            <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-[50%] animate-spin" />
           </div>
           <p className="text-sm font-medium text-theme-primary">Загрузка...</p>
-          <div className="mt-3 w-full max-w-xs mx-auto h-2 bg-theme-border rounded-full overflow-hidden">
+          <div className="mt-3 w-full max-w-xs mx-auto h-2 bg-theme-border rounded-theme overflow-hidden">
             <div
-              className="h-full bg-brand rounded-full transition-all duration-300"
+              className="h-full bg-brand rounded-theme transition-all duration-300"
               style={{ width: `${uploadProgress}%` }}
             />
           </div>
@@ -116,7 +116,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
         </div>
       ) : uploadError ? (
         <div className="py-8">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-theme-full bg-danger-light/20 flex items-center justify-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-theme bg-danger-light/20 flex items-center justify-center">
             <X size={28} className="text-danger" />
           </div>
           <p className="text-sm font-medium text-danger">{uploadError}</p>
@@ -133,7 +133,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
         </div>
       ) : (
         <>
-          <div className="w-16 h-16 mx-auto mb-4 rounded-theme-full bg-brand-light flex items-center justify-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-theme bg-brand-light flex items-center justify-center">
             <Upload size={28} className="text-brand" />
           </div>
           <p className="text-sm text-theme-secondary">
@@ -143,7 +143,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
           </p>
           <button
             type="button"
-            className="mt-2 inline-flex items-center gap-2 px-4 py-2 bg-brand text-theme-on-brand rounded-theme-md hover:bg-brand-hover transition-colors text-sm font-medium"
+            className="mt-2 inline-flex items-center gap-2 px-4 py-2 bg-brand text-theme-on-brand rounded-theme hover:bg-brand-hover transition-colors text-sm font-medium"
             onClick={(e) => {
               e.stopPropagation();
               fileInputRef.current?.click();

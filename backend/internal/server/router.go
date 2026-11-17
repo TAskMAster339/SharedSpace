@@ -95,6 +95,7 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 				// to avoid Mount-ing /users twice (which chi panics on).
 				r.Route("/users", func(r chi.Router) {
 					r.Get("/me", middleware.AppError(usersHandler.GetMe))
+					r.With(middleware.RequireActivated).Get("/me/storage", middleware.AppError(usersHandler.GetStorageUsage))
 					r.Patch("/me", middleware.AppError(usersHandler.UpdateMe))
 					r.Patch("/me/password", middleware.AppError(usersHandler.ChangePassword))
 					r.Delete("/me", middleware.AppError(usersHandler.DeleteAccount))

@@ -9,8 +9,13 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
+
+	"sharedspace/internal/access"
 	"sharedspace/internal/apperror"
 	"sharedspace/internal/auth"
+	"sharedspace/internal/middleware"
 )
 
 type mockService struct {
@@ -196,5 +201,49 @@ func TestHandlerUpload_NoFiles(t *testing.T) {
 	appErr, ok := apperror.From(err)
 	if !ok || appErr.Code() != apperror.CodeValidation {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestPropertiesResponse(t *testing.T) {
+	resource := fileRecord{ID: "item", Filename: "fixture", OwnerID: "owner", OwnerUsername: "alice"}
+	for _, tt := range []struct {
+		name       string
+		userID     string
+		canView    bool
+		lookupErr  error
+		wantStatus int
+	}{
+		{name: "owner", userID: "owner", canView: true, wantStatus: http.StatusOK},
+		{name: "viewer", userID: "viewer", canView: true, wantStatus: http.StatusOK},
+		{name: "unrelated user", userID: "unrelated", wantStatus: http.StatusForbidden},
+		{name: "trashed object", userID: "owner", lookupErr: pgx.ErrNoRows, wantStatus: http.StatusNotFound},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := &mockRepo{file: resource, fileErr: tt.lookupErr}
+			svc := newTestService(repo, &mockStorage{})
+			svc.accessChecker = &mockAccessChecker{canFn: func(_ context.Context, _, _ string, action access.Action) (bool, error) {
+				return action == access.ActionView && tt.canView, nil
+			}}
+			router := chi.NewRouter()
+			router.Get("/files/{id}", middleware.AppError(NewHandler(svc).GetMetadata))
+			req := httptest.NewRequest(http.MethodGet, "/files/item", nil)
+			req = req.WithContext(withClaims(req.Context(), tt.userID))
+			rec := httptest.NewRecorder()
+			router.ServeHTTP(rec, req)
+			if rec.Code != tt.wantStatus {
+				t.Fatalf("status = %d, want %d, body = %s", rec.Code, tt.wantStatus, rec.Body.String())
+			}
+			var body map[string]any
+			if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+				t.Fatal(err)
+			}
+			if tt.wantStatus == http.StatusOK {
+				if body["owner_username"] != "alice" || body["owner_id"] != "owner" || body["id"] != "item" {
+					t.Fatalf("unexpected metadata: %v", body)
+				}
+			} else if _, present := body["owner_username"]; present {
+				t.Fatalf("error exposed owner name: %v", body)
+			}
+		})
 	}
 }

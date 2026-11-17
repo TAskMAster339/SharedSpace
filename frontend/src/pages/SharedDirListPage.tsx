@@ -14,6 +14,7 @@ import { DirectoryCard } from '../components/ui/DirectoryCard';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
+import { ItemPropertiesAction } from '../components/ui/ItemProperties';
 import { ContextMenu } from '../components/ui/ContextMenu';
 import { QuotaIndicator } from '../components/ui/QuotaIndicator';
 import { RenameModal } from '../components/ui/RenameModal';
@@ -83,6 +84,7 @@ const SharedDirListPage: React.FC = () => {
     id: string;
     name: string;
     sharedId: string;
+    trigger: HTMLElement;
   } | null>(null);
   const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
 
@@ -101,7 +103,12 @@ const SharedDirListPage: React.FC = () => {
   const handleContextMenu = (e: React.MouseEvent, dir: DirectoryCardData) => {
     e.preventDefault();
     setContextMenuDir({ id: dir.directory_id, name: dir.name, sharedId: dir.id });
-    setContextMenuPos({ x: e.clientX, y: e.clientY });
+    if (e.type === 'click') {
+      const rect = e.currentTarget.getBoundingClientRect();
+      setContextMenuPos({ x: rect.right - 224, y: rect.bottom + 4 });
+    } else {
+      setContextMenuPos({ x: e.clientX, y: e.clientY });
+    }
   };
 
   const handleOpenInvite = () => {
@@ -232,6 +239,7 @@ const SharedDirListPage: React.FC = () => {
             <DirectoryCard
               key={dir.id}
               id={dir.id}
+              sizeBytes={dir.size_bytes}
               name={dir.name}
               role={roleLabel(dir, userId)}
               memberCount={dir.member_count}
@@ -239,6 +247,7 @@ const SharedDirListPage: React.FC = () => {
               memberUsernames={dir.memberUsernames}
               to={`/directories/${dir.directory_id}`}
               onContextMenu={(e) => handleContextMenu(e, dir)}
+              onMoreClick={(e) => handleContextMenu(e, dir)}
             />
           ))}
         </div>
@@ -247,7 +256,7 @@ const SharedDirListPage: React.FC = () => {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={closeModal} />
-          <div className="relative bg-theme-secondary rounded-theme-xl max-w-md w-full p-6 shadow-theme-dropdown border border-theme">
+          <div className="relative bg-theme-secondary rounded-theme max-w-md w-full p-6 shadow-theme-dropdown border border-theme">
             <h3 className="text-lg font-semibold text-theme-primary mb-4">
               Новая общая директория
             </h3>
@@ -262,7 +271,7 @@ const SharedDirListPage: React.FC = () => {
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder="Marketing Team"
-                  className="w-full px-3 py-2.5 rounded-theme-md border-2 outline-none transition-colors text-sm bg-theme-tertiary text-theme-primary placeholder:text-theme-muted border-theme-hover focus:border-brand"
+                  className="w-full px-3 py-2.5 rounded-theme border-2 outline-none transition-colors text-sm bg-theme-tertiary text-theme-primary placeholder:text-theme-muted border-theme-hover focus:border-brand"
                 />
               </div>
 
@@ -291,7 +300,12 @@ const SharedDirListPage: React.FC = () => {
         </div>
       )}
 
-      <ContextMenu isOpen={!!contextMenuDir} onClose={closeContextMenu} position={contextMenuPos}>
+      <ContextMenu
+        isOpen={!!contextMenuDir}
+        onClose={closeContextMenu}
+        position={contextMenuPos}
+        trigger={contextMenuDir?.trigger}
+      >
         <button
           type="button"
           onClick={() => {
@@ -312,6 +326,14 @@ const SharedDirListPage: React.FC = () => {
           <UserPlus size={16} className="group-hover:text-green-500 transition-colors" />
           Пригласить
         </button>
+        {contextMenuDir && (
+          <ItemPropertiesAction
+            separated
+            target={{ kind: 'directory', id: contextMenuDir.id }}
+            focusTarget={() => contextMenuDir.trigger}
+            onSelect={closeContextMenu}
+          />
+        )}
       </ContextMenu>
 
       {renameState && accessToken && (
@@ -344,7 +366,7 @@ const SharedDirListPage: React.FC = () => {
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleInvite();
               }}
-              className="w-full px-3 py-2.5 rounded-theme-md border-2 border-theme-hover bg-theme-tertiary text-theme-primary placeholder:text-theme-muted outline-none focus:border-brand transition-colors text-sm"
+              className="w-full px-3 py-2.5 rounded-theme border-2 border-theme-hover bg-theme-tertiary text-theme-primary placeholder:text-theme-muted outline-none focus:border-brand transition-colors text-sm"
             />
           </div>
 
@@ -359,14 +381,14 @@ const SharedDirListPage: React.FC = () => {
             <button
               onClick={() => setInviteDir(null)}
               disabled={isInviting}
-              className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme-md transition-colors text-sm font-medium disabled:opacity-50"
+              className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme transition-colors text-sm font-medium disabled:opacity-50"
             >
               Отмена
             </button>
             <button
               onClick={handleInvite}
               disabled={!inviteUsername.trim() || isInviting}
-              className="flex-1 inline-flex items-center justify-center px-4 py-2 bg-brand text-theme-on-brand hover:bg-brand-hover rounded-theme-md transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 inline-flex items-center justify-center px-4 py-2 bg-brand text-theme-on-brand hover:bg-brand-hover rounded-theme transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isInviting ? 'Отправка...' : 'Пригласить'}
             </button>

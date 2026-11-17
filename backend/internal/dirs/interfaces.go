@@ -38,7 +38,7 @@ type RepositoryInterface interface {
 	SoftDeleteSubtree(ctx context.Context, db dbTX, dirIDs []string, deletedAt time.Time) error
 	SoftDeleteFilesInDirs(ctx context.Context, db dbTX, dirIDs []string, deletedAt time.Time) error
 	RestoreSubtree(ctx context.Context, db dbTX, dirIDs []string) error
-	RestoreFilesInDirs(ctx context.Context, db dbTX, dirIDs []string, deletedAt time.Time) error
+	RestoreFilesInDirs(ctx context.Context, db dbTX, dirIDs []string, deletedAt time.Time) ([]string, error)
 	HardDeleteSubtree(ctx context.Context, db dbTX, dirIDs []string) error
 	AddUserStorageUsed(ctx context.Context, db dbTX, userID string, delta int64) error
 	GetSharedDirsStats(ctx context.Context, db dbTX, userID string) (count, quota int, err error)

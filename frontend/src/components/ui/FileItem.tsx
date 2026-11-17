@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Star, Share2 } from 'lucide-react';
 import { FilePreview } from './FilePreview';
+import { ItemStatusBadges } from './ItemStatusBadges';
 import { ItemActionsMenu } from './ItemActionsMenu';
 import { cn } from '../../utils/cn';
 import { FileIconType } from '../../utils/fileType';
@@ -17,6 +17,7 @@ interface FileItemProps {
   isFavorite?: boolean;
   hasShareLinks?: boolean;
   onClick?: (id: string) => void;
+  showProperties?: boolean;
   onContextMenu?: (e: React.MouseEvent, id: string) => void;
   onToggleFavorite?: (id: string) => void;
   onRename?: (id: string) => void;
@@ -40,6 +41,7 @@ export const FileItem: React.FC<FileItemProps> = ({
   hasShareLinks = false,
   onClick,
   onContextMenu,
+  showProperties = false,
   onToggleFavorite,
   onRename,
   onDelete,
@@ -73,14 +75,14 @@ export const FileItem: React.FC<FileItemProps> = ({
         }
       }}
       className={cn(
-        'group flex items-center justify-between p-3 rounded-theme-md transition-colors cursor-pointer',
+        'group flex items-center justify-between p-3 rounded-theme transition-colors cursor-pointer',
         'bg-theme-tertiary hover:bg-theme-hover border border-theme',
         className,
       )}
     >
       <div className="flex items-center gap-3 min-w-0">
-        <div className="relative shrink-0">
-          <div className="w-12 h-12 flex items-center justify-center bg-theme-secondary shadow-theme-card">
+        <div className="relative shrink-0 [--badge-preview-width:3rem]">
+          <div className="item-list-thumbnail bg-theme-secondary shadow-theme-card">
             <FilePreview
               fileId={id}
               type={type}
@@ -89,24 +91,7 @@ export const FileItem: React.FC<FileItemProps> = ({
               className="group-hover:text-brand transition-colors"
             />
           </div>
-          <span
-            className={`absolute -top-1.5 flex items-center justify-center rounded-full bg-theme-tertiary border border-theme p-0.5 shadow-theme-card transition-all duration-500 ease-in-out ${
-              hasShareLinks ? 'opacity-100' : 'opacity-0 pointer-events-none'
-            } ${isFavorite && hasShareLinks ? '-left-1.5' : '-right-1.5'}`}
-            aria-label="Есть ссылки общего доступа"
-            title="Есть ссылки общего доступа"
-          >
-            <Share2 size={11} className="text-green-500" />
-          </span>
-          <span
-            className={`absolute -top-1.5 -right-1.5 flex items-center justify-center rounded-full bg-theme-tertiary border border-theme p-0.5 shadow-theme-card transition-all duration-500 ease-in-out ${
-              isFavorite ? 'opacity-100' : 'opacity-0 pointer-events-none'
-            }`}
-            aria-label="В избранном"
-            title="В избранном"
-          >
-            <Star size={11} className="text-yellow-400" fill="currentColor" />
-          </span>
+          <ItemStatusBadges favorite={isFavorite} shared={hasShareLinks} />
         </div>
         <div className="min-w-0">
           <p className="text-sm text-theme-primary font-medium truncate">{name}</p>
@@ -116,6 +101,7 @@ export const FileItem: React.FC<FileItemProps> = ({
       <div className="flex items-center gap-3 shrink-0 ml-3">
         <span className="text-xs text-theme-muted hidden sm:inline">{size}</span>
         <ItemActionsMenu
+          properties={showProperties ? { kind: 'file', id } : undefined}
           isFavorite={isFavorite}
           onToggleFavorite={onToggleFavorite ? () => onToggleFavorite(id) : undefined}
           onRename={onRename ? () => onRename(id) : undefined}

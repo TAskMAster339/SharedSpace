@@ -293,9 +293,11 @@ const FavoritesPage: React.FC = () => {
             {files.map((file) =>
               viewMode === 'grid' ? (
                 <FileGridItem
+                  showProperties
                   key={file.id}
                   id={file.id}
                   name={file.filename}
+                  size={formatFileSize(file.size)}
                   type={resolveFileIconType(file.mime_type, file.extension)}
                   to={`/files/${file.id}`}
                   isFavorite={true}
@@ -321,6 +323,7 @@ const FavoritesPage: React.FC = () => {
                 />
               ) : (
                 <FileItem
+                  showProperties
                   key={file.id}
                   id={file.id}
                   name={file.filename}
