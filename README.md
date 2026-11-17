@@ -29,7 +29,7 @@ docker compose up --build
 
 Подробная документация — в папке [`/docs`](/docs).
 
-**Бэкенд:** `cd backend && go run ./cmd/api`
+**Бэкенд:** `make dev` из корня репозитория. Для запуска без Docker см. [настройку окружения](docs/README.md#локальный-запуск-без-docker).
 **Фронтенд:** `cd frontend && npm install && npm start`
 **Тесты:** `cd backend && go test ./...`
 

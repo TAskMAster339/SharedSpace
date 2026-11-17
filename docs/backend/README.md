@@ -32,7 +32,7 @@ backend/
     storage/                   — клиент MinIO
     trash/                     — корзина
     users/                     — профили пользователей
-  migrations/                  — SQL-миграции
+    database/migrations/       — SQL-миграции
 ```
 
 ## Требования
@@ -45,11 +45,9 @@ backend/
 ## Запуск
 
 ```bash
-# Настройка переменных окружения
-cp .env.example .env
-
-# Запуск
-go run cmd/api/main.go
+# Из корня репозитория, если локальный .env ещё не создан
+cp -n .env.example .env
+make dev
 ```
 
 ## Важные детали для разработчика
@@ -62,7 +60,7 @@ go run cmd/api/main.go
 
 ### Миграции
 
-SQL-миграции находятся в `backend/migrations/`. Применяются автоматически при запуске сервера через `database.Migrate()` в отсортированном порядке. Отслеживаются в таблице `schema_migrations`.
+SQL-файлы находятся в `backend/internal/database/migrations/`. Docker-сборка копирует их в рабочий каталог сервера. Порядок применения и проверка обновления описаны в [руководстве по миграциям](migrations.md).
 
 ### Swagger-документация
 
@@ -70,7 +68,7 @@ API описан через аннотации swaggo. Для перегенер
 ```bash
 make swagger  # требуется установленный swag: go install github.com/swaggo/swag/cmd/swag@v1.16.6
 ```
-Сгенерированные файлы: `backend/docs/` (docs.go, swagger.json, swagger.yaml)
+Команда обновляет `backend/docs/docs.go` и `backend/docs/swagger.json`. Лежащий рядом `swagger.yaml` в этот прогон не входит.
 
 ### Особенности архитектуры
 

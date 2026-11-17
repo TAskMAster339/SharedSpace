@@ -32,9 +32,11 @@ docker compose up --build
 ```bash
 # Требуется: Go 1.26+, PostgreSQL 15+, MinIO, ffmpeg
 cd backend
-cp .env.example .env  # настроить DATABASE_URL и MINIO_ENDPOINT=localhost:9000
-go run cmd/api/main.go
+cp -n ../.env.example .env  # настройте DATABASE_URL и MINIO_ENDPOINT=localhost:9000
+go run ./cmd/api
 ```
+
+Для запуска без Docker подготовьте схему PostgreSQL заранее. Сервер ищет миграции в каталоге `migrations/` относительно рабочего каталога, поэтому приведённая команда из `backend/` сама их не применит. Для проверки обновления схемы используйте [dev-сборку через Compose](backend/migrations.md).
 
 **Фронтенд:**
 ```bash
