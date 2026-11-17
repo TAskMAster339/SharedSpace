@@ -4485,16 +4485,16 @@ const docTemplate = `{
         "internal_trash.TrashItem": {
             "type": "object",
             "properties": {
-                "extension": {
-                    "type": "string"
-                },
-                "mime_type": {
-                    "type": "string"
-                },
                 "deleted_at": {
                     "type": "string"
                 },
+                "extension": {
+                    "type": "string"
+                },
                 "id": {
+                    "type": "string"
+                },
+                "mime_type": {
                     "type": "string"
                 },
                 "name": {
