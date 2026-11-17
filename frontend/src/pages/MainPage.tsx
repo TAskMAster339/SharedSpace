@@ -121,7 +121,7 @@ const MainPage: React.FC = () => {
               </div>
 
               {/* Центральное лого */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 rounded-theme bg-white shadow-theme-dropdown flex items-center justify-center p-6">
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 rounded-[50%] bg-white shadow-theme-dropdown flex items-center justify-center p-6">
                 <img src={logo} alt="SharedSpace" className="w-full h-full object-contain" />
               </div>
             </div>
