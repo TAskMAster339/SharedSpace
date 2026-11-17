@@ -276,7 +276,7 @@
     color: var(--text-muted);
   }
 
-  .group:hover > .item-grid-preview {
+  .item-grid-preview:is(:hover, :focus-visible) {
     background-color: var(--bg-hover);
     color: var(--brand);
   }

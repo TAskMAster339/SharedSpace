@@ -13,6 +13,7 @@ import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { ContextMenu } from '../components/ui/ContextMenu';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
+import { GridItemCaption } from '../components/ui/GridItemCaption';
 import { ItemGroup } from '../components/ui/ItemGroup';
 import { useToastStore } from '../hooks/useToast';
 import SEOHead from '../components/SEOHead';
@@ -229,6 +230,38 @@ const TrashPage: React.FC = () => {
   const directories = items.filter((item) => item.type === 'directory');
   const activeItem = activeMenuId ? items.find((i) => i.id === activeMenuId) : null;
 
+  const renderGridItem = (item: TrashItem) => (
+    <div key={item.id} className="flex min-w-0 flex-col items-center pb-2">
+      <button
+        type="button"
+        aria-label={`Открыть меню действий: ${item.name}`}
+        aria-haspopup="menu"
+        aria-expanded={activeMenuId === item.id}
+        onClick={(event) => handleMenuClick(event, item.id)}
+        onContextMenu={(event) => handleContextMenu(event, item.id)}
+        className="item-grid-preview cursor-pointer p-3"
+      >
+        {item.type === 'directory' ? (
+          <Folder size={64} strokeWidth={1.5} aria-hidden="true" />
+        ) : (
+          <FilePreview
+            fileId={item.id}
+            type={resolveFileIconType(
+              item.mime_type || '',
+              item.extension || item.name.split('.').pop() || '',
+            )}
+            size={64}
+            fill
+          />
+        )}
+        <span className="absolute right-2 top-2 rounded-theme border border-theme bg-theme-secondary p-1 text-theme-secondary">
+          <MoreVertical size={16} aria-hidden="true" />
+        </span>
+      </button>
+      <GridItemCaption name={item.name} size={formatFileSize(item.size)} />
+    </div>
+  );
+
   return (
     <div className="flex flex-col flex-1 space-y-6" onContextMenu={handlePageContextMenu}>
       <SEOHead title="Корзина" description="Удалённые файлы и папки." />
@@ -270,28 +303,7 @@ const TrashPage: React.FC = () => {
             <ItemGroup title="Папки" viewMode={viewMode}>
               {directories.map((item) =>
                 viewMode === 'grid' ? (
-                  <div
-                    key={item.id}
-                    onContextMenu={(e) => handleContextMenu(e, item.id)}
-                    className="group flex flex-col items-center p-3 rounded-theme transition-colors cursor-pointer relative min-w-0 bg-theme-tertiary hover:bg-theme-hover border border-theme"
-                  >
-                    <div className="w-16 h-16 flex items-center justify-center text-theme-muted group-hover:text-brand transition-colors">
-                      <Folder size={40} strokeWidth={1.5} />
-                    </div>
-                    <p className="text-sm text-theme-primary font-medium text-center mt-2 truncate w-full max-w-[120px]">
-                      {item.name}
-                    </p>
-                    <button
-                      type="button"
-                      aria-label="Открыть меню действий"
-                      aria-haspopup="menu"
-                      aria-expanded={activeMenuId === item.id}
-                      onClick={(e) => handleMenuClick(e, item.id)}
-                      className="absolute top-2 right-2 p-1 rounded-theme text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors "
-                    >
-                      <MoreVertical size={16} />
-                    </button>
-                  </div>
+                  renderGridItem(item)
                 ) : (
                   <div
                     key={item.id}
@@ -300,7 +312,7 @@ const TrashPage: React.FC = () => {
                     className="group flex items-center gap-3 p-3 rounded-theme bg-theme-tertiary border border-theme hover:bg-theme-hover transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className="p-2 bg-theme-secondary rounded-theme shadow-theme-card shrink-0 text-theme-muted group-hover:text-brand transition-colors">
+                      <div className="item-list-thumbnail bg-theme-secondary shadow-theme-card text-theme-muted group-hover:text-brand transition-colors">
                         <Folder size={20} />
                       </div>
                       <div className="min-w-0">
@@ -332,36 +344,7 @@ const TrashPage: React.FC = () => {
             <ItemGroup title="Файлы" viewMode={viewMode}>
               {files.map((item) =>
                 viewMode === 'grid' ? (
-                  <div
-                    key={item.id}
-                    onContextMenu={(e) => handleContextMenu(e, item.id)}
-                    className="group flex flex-col items-center p-3 rounded-theme transition-colors cursor-pointer relative min-w-0 bg-theme-tertiary hover:bg-theme-hover border border-theme"
-                  >
-                    <div className="w-full aspect-square max-w-[160px] flex items-center justify-center text-theme-muted group-hover:text-brand transition-colors">
-                      <FilePreview
-                        fileId={item.id}
-                        type={resolveFileIconType(
-                          item.mime_type || '',
-                          item.extension || item.name.split('.').pop() || '',
-                        )}
-                        size={40}
-                        fill
-                      />
-                    </div>
-                    <p className="text-sm text-theme-primary font-medium text-center mt-2 truncate w-full max-w-[120px]">
-                      {item.name}
-                    </p>
-                    <button
-                      type="button"
-                      aria-label="Открыть меню действий"
-                      aria-haspopup="menu"
-                      aria-expanded={activeMenuId === item.id}
-                      onClick={(e) => handleMenuClick(e, item.id)}
-                      className="absolute top-2 right-2 p-1 rounded-theme text-theme-muted hover:text-theme-primary hover:bg-theme-hover transition-colors "
-                    >
-                      <MoreVertical size={16} />
-                    </button>
-                  </div>
+                  renderGridItem(item)
                 ) : (
                   <div
                     key={item.id}
@@ -370,7 +353,7 @@ const TrashPage: React.FC = () => {
                     className="group flex items-center gap-3 p-3 rounded-theme bg-theme-tertiary border border-theme hover:bg-theme-hover transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className="w-12 h-12 flex items-center justify-center bg-theme-secondary shadow-theme-card shrink-0 text-theme-muted group-hover:text-brand transition-colors">
+                      <div className="item-list-thumbnail bg-theme-secondary shadow-theme-card text-theme-muted group-hover:text-brand transition-colors">
                         <FilePreview
                           fileId={item.id}
                           type={resolveFileIconType(

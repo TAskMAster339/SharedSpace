@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Folder } from 'lucide-react';
+import { GridItemCaption } from './GridItemCaption';
 import { ItemStatusBadges } from './ItemStatusBadges';
 import { useGridItemMenu } from './useGridItemMenu';
 import { ItemActionsMenu } from './ItemActionsMenu';
@@ -83,46 +84,40 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
   };
 
   return (
-    <Link
-      to={to}
-      draggable={!!onDragStart}
-      onDragStart={(e) => onDragStart?.(e, id, name)}
-      onDragOver={handleDragOver}
-      onDragEnter={handleDragEnter}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-      onClick={(e) => {
-        if (menu.consumeLongPress()) {
-          e.preventDefault();
-          return;
-        }
-        if (onClick) {
-          e.preventDefault();
-          onClick(id);
-        }
-      }}
-      ref={menu.anchor}
-      {...menu.handlers}
-      className={cn(
-        'group flex min-w-0 cursor-pointer flex-col items-center rounded-theme pb-2 [-webkit-touch-callout:none]',
-        className,
-      )}
-    >
-      <div
+    <div className={cn('flex min-w-0 flex-col items-center pb-2', className)}>
+      <Link
+        to={to}
+        aria-label={name}
+        draggable={!!onDragStart}
+        onDragStart={(e) => onDragStart?.(e, id, name)}
+        onDragOver={handleDragOver}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        onClick={(e) => {
+          if (menu.consumeLongPress()) {
+            e.preventDefault();
+            return;
+          }
+          if (onClick) {
+            e.preventDefault();
+            onClick(id);
+          }
+        }}
+        ref={menu.anchor}
+        {...menu.handlers}
         className={cn(
-          'item-grid-preview',
+          'item-grid-preview cursor-pointer [-webkit-touch-callout:none]',
           isDragOver && '!border-brand !bg-brand/20 !shadow-lg !ring-2 !ring-brand/40',
         )}
       >
         <Folder size={64} strokeWidth={1.5} />
         <ItemStatusBadges grid shared={hasShareLinks} />
-      </div>
-      <p className="mt-2 text-xs tabular-nums text-theme-secondary">
-        {sizeBytes === undefined ? '—' : formatFileSize(sizeBytes)}
-      </p>
-      <p className="text-sm text-theme-primary font-medium text-center truncate w-full max-w-[120px]">
-        {name}
-      </p>
+      </Link>
+      <GridItemCaption
+        name={name}
+        size={sizeBytes === undefined ? '—' : formatFileSize(sizeBytes)}
+      />
 
       <ItemActionsMenu
         properties={showProperties ? { kind: 'directory', id } : undefined}
@@ -136,6 +131,6 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
         onCloseMenu={menu.close}
         contextAnchor={menu.anchor}
       />
-    </Link>
+    </div>
   );
 };

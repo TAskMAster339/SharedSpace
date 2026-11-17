@@ -138,6 +138,11 @@ test('opens a folder from the keyboard and discards a response received after cl
   expect(
     within(folder).queryByRole('button', { name: 'Открыть меню действий' }),
   ).not.toBeInTheDocument();
+  const caption = screen.getByText('Пустая папка');
+  expect(within(folder).queryByText('Пустая папка')).not.toBeInTheDocument();
+  fireEvent.click(caption);
+  expect(fireEvent.contextMenu(caption)).toBe(false);
+  expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   fireEvent.keyDown(folder, { key: 'F10', shiftKey: true });
   selectProperties();
   await act(async () => finishFile(file));

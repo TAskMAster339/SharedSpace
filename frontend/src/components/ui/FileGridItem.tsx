@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { FilePreview } from './FilePreview';
+import { GridItemCaption } from './GridItemCaption';
 import { ItemStatusBadges } from './ItemStatusBadges';
 import { useGridItemMenu } from './useGridItemMenu';
 import { ItemActionsMenu } from './ItemActionsMenu';
@@ -53,41 +54,30 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
   const menu = useGridItemMenu(onContextMenu && ((event) => onContextMenu(event, id)));
 
   return (
-    <Link
-      to={to}
-      draggable={!!onDragStart}
-      onDragStart={(e) => onDragStart?.(e, id, name)}
-      onClick={(e) => {
-        if (menu.consumeLongPress()) {
-          e.preventDefault();
-          return;
-        }
-        if (onClick) {
-          e.preventDefault();
-          onClick(id);
-        }
-      }}
-      ref={menu.anchor}
-      {...menu.handlers}
-      className={cn(
-        'group flex min-w-0 cursor-pointer flex-col items-center rounded-theme pb-2 [-webkit-touch-callout:none]',
-        className,
-      )}
-    >
-      <div className="item-grid-preview p-3">
-        <FilePreview
-          fileId={id}
-          type={type}
-          size={64}
-          fill
-          className="group-hover:text-brand transition-colors"
-        />
+    <div className={cn('flex min-w-0 flex-col items-center pb-2', className)}>
+      <Link
+        to={to}
+        aria-label={name}
+        draggable={!!onDragStart}
+        onDragStart={(e) => onDragStart?.(e, id, name)}
+        onClick={(e) => {
+          if (menu.consumeLongPress()) {
+            e.preventDefault();
+            return;
+          }
+          if (onClick) {
+            e.preventDefault();
+            onClick(id);
+          }
+        }}
+        ref={menu.anchor}
+        {...menu.handlers}
+        className="item-grid-preview cursor-pointer p-3 [-webkit-touch-callout:none]"
+      >
+        <FilePreview fileId={id} type={type} size={64} fill className="transition-colors" />
         <ItemStatusBadges grid favorite={isFavorite} shared={hasShareLinks} />
-      </div>
-      <p className="mt-2 text-xs tabular-nums text-theme-secondary">{size}</p>
-      <p className="text-sm text-theme-primary font-medium text-center truncate w-full max-w-[120px]">
-        {name}
-      </p>
+      </Link>
+      <GridItemCaption name={name} size={size} />
 
       <ItemActionsMenu
         properties={showProperties ? { kind: 'file', id } : undefined}
@@ -105,6 +95,6 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
         onCloseMenu={menu.close}
         contextAnchor={menu.anchor}
       />
-    </Link>
+    </div>
   );
 };
