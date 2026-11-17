@@ -43,6 +43,7 @@ type Config struct {
 	JWTTTL        time.Duration
 	RefreshJWTTTL time.Duration
 
+	LogEmails    bool
 	SMTPHost     string
 	SMTPPort     int
 	SMTPUser     string
@@ -119,6 +120,7 @@ func Load() (*Config, error) {
 		JWTTTL:        time.Duration(ttl) * time.Second,
 		RefreshJWTTTL: time.Duration(refreshTTL) * time.Second,
 
+		LogEmails:    getEnv("DEV_LOG_EMAILS", "false") == "true",
 		SMTPHost:     getEnv("SMTP_HOST", ""),
 		SMTPPort:     smtpPort,
 		SMTPUser:     getEnv("SMTP_USER", ""),

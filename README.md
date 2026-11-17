@@ -33,6 +33,16 @@ docker compose up --build
 **Фронтенд:** `cd frontend && npm install && npm start`
 **Тесты:** `cd backend && go test ./...`
 
+При запуске через `make dev` ссылки подтверждения регистрации и сброса пароля
+появляются в логах бэкенда. Откройте логи перед регистрацией или запросом
+сброса пароля:
+
+```bash
+docker compose -f docker-compose.dev.yml logs -f backend
+```
+
+Найдите запись `dev mail:` со своим адресом и откройте ссылку из следующей строки.
+
 ## Авторы
 
 — [TAskMAster339](https://github.com/TAskMAster339)

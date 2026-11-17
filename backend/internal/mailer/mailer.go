@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"fmt"
+	"log"
 	"net"
 	"net/smtp"
 	"strconv"
@@ -217,6 +218,22 @@ func (m *SMTPMailer) SendVerificationEmail(ctx context.Context, to, verifyURL st
 func (m *SMTPMailer) SendPasswordResetEmail(ctx context.Context, to, resetURL string) error {
 	html, text := passwordResetEmailBody(resetURL)
 	return m.Send(ctx, to, "Восстановление пароля — SharedSpace", html, text)
+}
+
+// ConsoleMailer logs email messages for local development.
+type ConsoleMailer struct{}
+
+func (ConsoleMailer) Send(_ context.Context, to, subject, _, textBody string) error {
+	log.Printf("dev mail: subject=%q to=%q\n%s", subject, to, textBody)
+	return nil
+}
+
+func (m ConsoleMailer) SendVerificationEmail(ctx context.Context, to, verifyURL string) error {
+	return m.Send(ctx, to, "Подтверждение регистрации", "", verifyURL)
+}
+
+func (m ConsoleMailer) SendPasswordResetEmail(ctx context.Context, to, resetURL string) error {
+	return m.Send(ctx, to, "Восстановление пароля", "", resetURL)
 }
 
 // noopMailer is a no-op Mailer used when SMTP_HOST is not configured.

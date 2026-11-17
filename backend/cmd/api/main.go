@@ -69,6 +69,9 @@ func main() {
 		cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPassword,
 		cfg.SMTPFrom, cfg.SMTPFromName, cfg.SMTPUseTLS, mailer.LogoBytes(),
 	)
+	if cfg.LogEmails {
+		mailSvc = mailer.ConsoleMailer{}
+	}
 	authService := auth.NewService(
 		pool, authRepository, cfg.JWTSecret, cfg.JWTTTL, cfg.RefreshJWTTTL,
 		mailSvc, cfg.AppURL, cfg.VerifyEmailTTL, cfg.ResetPasswordTTL,
