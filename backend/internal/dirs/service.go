@@ -654,20 +654,16 @@ func (s *Service) Restore(ctx context.Context, userID, dirID string) error {
 		}
 	}
 
-	restoredFiles, err := s.repo.FindDeletedFilesInDirs(ctx, s.db, ids)
+	restoredFileIDs, err := s.repo.RestoreFilesInDirs(ctx, tx, ids, *dir.DeletedAt)
 	if err != nil {
-		return apperror.WrapInternal("поиск восстанавливаемых файлов", err)
-	}
-
-	if err := s.repo.RestoreFilesInDirs(ctx, tx, ids, *dir.DeletedAt); err != nil {
 		return apperror.WrapInternal("восстановление файлов", err)
 	}
 	if err := s.repo.RestoreSubtree(ctx, tx, ids); err != nil {
 		return apperror.WrapInternal("восстановление директорий", err)
 	}
 
-	if len(restoredFiles) > 0 && dir.ParentID != nil {
-		if err := s.repo.IncrementFilesCount(ctx, tx, *dir.ParentID, len(restoredFiles)); err != nil {
+	if len(restoredFileIDs) > 0 && dir.ParentID != nil {
+		if err := s.repo.IncrementFilesCount(ctx, tx, *dir.ParentID, len(restoredFileIDs)); err != nil {
 			return apperror.WrapInternal("обновление счётчика файлов", err)
 		}
 	}
@@ -676,10 +672,6 @@ func (s *Service) Restore(ctx context.Context, userID, dirID string) error {
 		return apperror.WrapInternal("обновление счётчика общих директорий", err)
 	}
 
-	restoredFileIDs := make([]string, 0, len(restoredFiles))
-	for _, f := range restoredFiles {
-		restoredFileIDs = append(restoredFileIDs, f.ID)
-	}
 	if err := s.shareLinkRepo.SetActiveByFileIDs(ctx, tx, restoredFileIDs, true); err != nil {
 		return apperror.WrapInternal("активация ссылок файлов", err)
 	}

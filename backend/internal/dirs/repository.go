@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 )
 
 type Repository struct{}
@@ -292,12 +294,19 @@ func (r *Repository) RestoreSubtree(ctx context.Context, db dbTX, dirIDs []strin
 	_, err := db.Exec(ctx, `UPDATE directories SET deleted_at=NULL, updated_at=now() WHERE id = ANY($1)`, dirIDs)
 	return err
 }
-func (r *Repository) RestoreFilesInDirs(ctx context.Context, db dbTX, dirIDs []string, deletedAt time.Time) error {
+func (r *Repository) RestoreFilesInDirs(ctx context.Context, db dbTX, dirIDs []string, deletedAt time.Time) ([]string, error) {
 	if len(dirIDs) == 0 {
-		return nil
+		return nil, nil
 	}
-	_, err := db.Exec(ctx, `UPDATE files SET deleted_at=NULL, updated_at=now() WHERE directory_id = ANY($1) AND deleted_at = $2`, dirIDs, deletedAt)
-	return err
+	rows, err := db.Query(ctx, `
+		UPDATE files SET deleted_at=NULL, updated_at=now()
+		WHERE directory_id = ANY($1) AND deleted_at = $2
+		RETURNING id
+	`, dirIDs, deletedAt)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[string])
 }
 func (r *Repository) HardDeleteSubtree(ctx context.Context, db dbTX, dirIDs []string) error {
 	_, err := db.Exec(ctx, `DELETE FROM directories WHERE id = ANY($1)`, dirIDs)
