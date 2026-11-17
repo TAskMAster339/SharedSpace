@@ -448,3 +448,31 @@ func (h *Handler) ListConversions(w http.ResponseWriter, r *http.Request) error 
 	}
 	return writeJSON(w, http.StatusOK, resp)
 }
+
+// GetPreview returns a signed URL for a cached, compact media preview.
+// @Summary Get image or first video frame preview
+// @Tags files
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "File ID"
+// @Success 200 {object} FileContentResponse
+// @Failure 401 {object} apperror.Response
+// @Failure 403 {object} apperror.Response
+// @Failure 404 {object} apperror.Response
+// @Router /api/v1/files/{id}/preview [get]
+func (h *Handler) GetPreview(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := auth.ClaimsFromCtx(r.Context())
+	if !ok {
+		return apperror.Unauthorized("не авторизован")
+	}
+	fileID := chi.URLParam(r, "id")
+	if fileID == "" {
+		return apperror.Validation("id файла обязателен")
+	}
+	resp, err := h.service.GetPreviewURL(r.Context(), claims.UserID, fileID)
+	if err != nil {
+		return err
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	return writeJSON(w, http.StatusOK, resp)
+}

@@ -1,11 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Trash2, Folder, File, RotateCcw, MoreVertical, List, LayoutGrid } from 'lucide-react';
+import { Trash2, Folder, RotateCcw, MoreVertical, List, LayoutGrid } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 import { getTrashList, clearAllTrash, TrashItem, TrashPaginationParams } from '../api/trash';
 import { restoreFile, permanentDeleteFile } from '../api/files';
 import { restoreDirectory, permanentDeleteDirectory } from '../api/directories';
 import { ApiError } from '../api/client';
+import { FilePreview } from '../components/ui/FilePreview';
+import { resolveFileIconType } from '../utils/fileType';
 import { Button } from '../components/ui/Button';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { ContextMenu } from '../components/ui/ContextMenu';
@@ -335,8 +337,16 @@ const TrashPage: React.FC = () => {
                     onContextMenu={(e) => handleContextMenu(e, item.id)}
                     className="group flex flex-col items-center p-3 rounded-theme-md transition-colors cursor-pointer relative min-w-0 bg-theme-tertiary hover:bg-theme-hover border border-theme"
                   >
-                    <div className="w-16 h-16 flex items-center justify-center text-theme-muted group-hover:text-brand transition-colors">
-                      <File size={40} strokeWidth={1.5} />
+                    <div className="w-full aspect-square max-w-[160px] flex items-center justify-center text-theme-muted group-hover:text-brand transition-colors">
+                      <FilePreview
+                        fileId={item.id}
+                        type={resolveFileIconType(
+                          item.mime_type || '',
+                          item.extension || item.name.split('.').pop() || '',
+                        )}
+                        size={40}
+                        fill
+                      />
                     </div>
                     <p className="text-sm text-theme-primary font-medium text-center mt-2 truncate w-full max-w-[120px]">
                       {item.name}
@@ -360,8 +370,16 @@ const TrashPage: React.FC = () => {
                     className="group flex items-center gap-3 p-3 rounded-theme-md bg-theme-tertiary border border-theme hover:bg-theme-hover transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className="p-2 bg-theme-secondary rounded-theme-sm shadow-theme-card shrink-0 text-theme-muted group-hover:text-brand transition-colors">
-                        <File size={20} />
+                      <div className="w-12 h-12 flex items-center justify-center bg-theme-secondary shadow-theme-card shrink-0 text-theme-muted group-hover:text-brand transition-colors">
+                        <FilePreview
+                          fileId={item.id}
+                          type={resolveFileIconType(
+                            item.mime_type || '',
+                            item.extension || item.name.split('.').pop() || '',
+                          )}
+                          size={20}
+                          fill
+                        />
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm text-theme-primary font-medium truncate">

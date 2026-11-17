@@ -1,5 +1,10 @@
 basePath: /
 definitions:
+  files.FileContentResponse:
+    type: object
+    properties:
+      url:
+        type: string
   apperror.Error:
     type: object
   apperror.Response:
@@ -719,6 +724,38 @@ paths:
       summary: Search users
       tags:
       - users
+  /api/v1/files/{id}/preview:
+    get:
+      parameters:
+      - description: File ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/files.FileContentResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apperror.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apperror.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apperror.Response'
+      security:
+      - BearerAuth: []
+      summary: Get image or first video frame preview
+      tags:
+      - files
 schemes:
   - http
 securityDefinitions:

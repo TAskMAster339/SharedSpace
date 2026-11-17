@@ -8,6 +8,8 @@ export interface TrashItem {
   parent_id?: string | null;
   size: number;
   deleted_at: string;
+  mime_type?: string;
+  extension?: string;
 }
 
 export interface TrashListResponse {

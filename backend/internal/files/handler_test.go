@@ -35,6 +35,10 @@ func (m *mockService) GetMetadata(_ context.Context, userID, fileID string) (Fil
 	return FileMetadataResponse{}, nil
 }
 
+func (m *mockService) GetPreviewURL(_ context.Context, _, _ string) (FileContentResponse, error) {
+	return FileContentResponse{}, nil
+}
+
 func (m *mockService) GetContentURL(_ context.Context, userID, fileID string) (FileContentResponse, error) {
 	return FileContentResponse{}, nil
 }

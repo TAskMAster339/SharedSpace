@@ -132,6 +132,8 @@ func (s *Service) GetTrashList(ctx context.Context, userID string, params TrashP
 			items = append(items, TrashItem{
 				ID:        f.ID,
 				Name:      f.Filename,
+				MimeType:  f.MimeType,
+				Extension: f.Extension,
 				Type:      "file",
 				OwnerID:   f.OwnerID,
 				ParentID:  &f.DirectoryID,
@@ -214,6 +216,8 @@ func (s *Service) getAllTrash(ctx context.Context, userID string) (TrashListResp
 			items = append(items, TrashItem{
 				ID:        f.ID,
 				Name:      f.Filename,
+				MimeType:  f.MimeType,
+				Extension: f.Extension,
 				Type:      "file",
 				OwnerID:   f.OwnerID,
 				ParentID:  &f.DirectoryID,

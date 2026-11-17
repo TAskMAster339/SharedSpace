@@ -1759,6 +1759,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/files/{id}/preview": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Get image or first video frame preview",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "File ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_files.FileContentResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/files/{id}/rename": {
             "post": {
                 "security": [
@@ -4434,6 +4485,12 @@ const docTemplate = `{
         "internal_trash.TrashItem": {
             "type": "object",
             "properties": {
+                "extension": {
+                    "type": "string"
+                },
+                "mime_type": {
+                    "type": "string"
+                },
                 "deleted_at": {
                     "type": "string"
                 },

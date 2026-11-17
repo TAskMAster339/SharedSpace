@@ -108,6 +108,13 @@ export function getFileMetadata(accessToken: string, fileId: string): Promise<Fi
   });
 }
 
+export function getFilePreviewUrl(accessToken: string, fileId: string): Promise<{ url: string }> {
+  return apiRequest<{ url: string }>(`/files/${fileId}/preview`, {
+    method: 'GET',
+    token: accessToken,
+  });
+}
+
 export function getFileContentUrl(accessToken: string, fileId: string): Promise<{ url: string }> {
   return apiRequest<{ url: string }>(`/files/${fileId}/content`, {
     method: 'GET',

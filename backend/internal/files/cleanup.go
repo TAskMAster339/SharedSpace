@@ -35,6 +35,7 @@ func (s *Service) StartCleanupWorker(ctx context.Context) {
 			select {
 			case <-ticker.C:
 				s.CleanupTmp(ctx)
+				s.CleanupPreviews(ctx)
 			case <-ctx.Done():
 				return
 			}

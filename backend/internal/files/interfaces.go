@@ -19,6 +19,7 @@ type StorageClient interface {
 }
 
 type ServiceInterface interface {
+	GetPreviewURL(ctx context.Context, userID, fileID string) (FileContentResponse, error)
 	Upload(ctx context.Context, userID, directoryID string, uploads []FileUpload) (UploadFilesResponse, error)
 	GetMetadata(ctx context.Context, userID, fileID string) (FileMetadataResponse, error)
 	GetContentURL(ctx context.Context, userID, fileID string) (FileContentResponse, error)
