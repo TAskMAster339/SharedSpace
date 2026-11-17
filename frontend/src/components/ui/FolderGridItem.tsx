@@ -11,6 +11,7 @@ interface FolderGridItemProps {
   className?: string;
   hasShareLinks?: boolean;
   onClick?: (id: string) => void;
+  showProperties?: boolean;
   onContextMenu?: (e: React.MouseEvent, id: string) => void;
   onRename?: (id: string) => void;
   onMove?: (id: string) => void;
@@ -28,6 +29,7 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
   hasShareLinks = false,
   onClick,
   onContextMenu,
+  showProperties = false,
   onRename,
   onMove,
   onDelete,
@@ -123,6 +125,7 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
       </p>
 
       <ItemActionsMenu
+        properties={showProperties ? { kind: 'directory', id } : undefined}
         onRename={onRename ? () => onRename(id) : undefined}
         onMove={onMove ? () => onMove(id) : undefined}
         onShare={onShare ? () => onShare(id) : undefined}

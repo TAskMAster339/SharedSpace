@@ -199,6 +199,7 @@ func (s *Service) GetByID(ctx context.Context, userID, dirID string) (DirectoryR
 		return DirectoryResponse{}, apperror.Forbidden("доступ запрещён")
 	}
 	resp := s.toDirectoryResponse(ctx, userID, dir)
+	resp.OwnerUsername = dir.OwnerUsername
 	_, dirLinks, err := s.repo.CheckShareLinks(ctx, s.db, nil, []string{dirID})
 	if err == nil {
 		resp.HasShareLinks = dirLinks[dirID]

@@ -43,6 +43,8 @@ export const DirectoryItem: React.FC<DirectoryItemProps> = ({
       {onMoreClick && (
         <button
           type="button"
+          aria-label="Открыть меню действий"
+          aria-haspopup="menu"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();

@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { GitFork } from 'lucide-react';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
+import { ItemPropertiesProvider } from './ui/ItemProperties';
 import { StorageUsageModal } from './ui/StorageUsageModal';
 import { Footer } from './Footer';
 import { MobileBottomNav } from './MobileBottomNav';
@@ -46,7 +47,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 isAuthenticated && !isOnLandingPage && 'pb-24 md:pb-6',
               )}
             >
-              {children ? children : <Outlet />}
+              <ItemPropertiesProvider>{children ? children : <Outlet />}</ItemPropertiesProvider>
             </div>
           </div>
           <div

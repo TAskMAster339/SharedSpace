@@ -1092,6 +1092,7 @@ const DirectoryPage: React.FC = () => {
                 {filteredSubdirectories.map((folder) =>
                   viewMode === 'grid' ? (
                     <FolderGridItem
+                      showProperties
                       key={folder.id}
                       id={folder.id}
                       name={folder.name}
@@ -1129,6 +1130,7 @@ const DirectoryPage: React.FC = () => {
                     />
                   ) : (
                     <FolderItem
+                      showProperties
                       key={folder.id}
                       id={folder.id}
                       name={folder.name}
@@ -1181,6 +1183,7 @@ const DirectoryPage: React.FC = () => {
                 {formattedFiles.map((file) =>
                   viewMode === 'grid' ? (
                     <FileGridItem
+                      showProperties
                       key={file.id}
                       id={file.id}
                       name={file.name}
@@ -1220,6 +1223,7 @@ const DirectoryPage: React.FC = () => {
                     />
                   ) : (
                     <FileItem
+                      showProperties
                       key={file.id}
                       id={file.id}
                       name={file.name}

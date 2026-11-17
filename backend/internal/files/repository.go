@@ -32,11 +32,11 @@ func (r *Repository) FindDirectoryByIDAnyState(ctx context.Context, db dbTX, id 
 func (r *Repository) FindByID(ctx context.Context, db dbTX, id string) (fileRecord, error) {
 	var f fileRecord
 	err := db.QueryRow(ctx, `
-		SELECT id, directory_id, owner_id, filename, extension, mime_type, size, object_key, created_at, updated_at
-		FROM files
-		WHERE id = $1 AND deleted_at IS NULL
+		SELECT f.id, f.directory_id, f.owner_id, u.username, f.filename, f.extension, f.mime_type, f.size, f.object_key, f.created_at, f.updated_at
+		FROM files f JOIN users u ON u.id = f.owner_id
+		WHERE f.id = $1 AND f.deleted_at IS NULL
 	`, id).Scan(
-		&f.ID, &f.DirectoryID, &f.OwnerID,
+		&f.ID, &f.DirectoryID, &f.OwnerID, &f.OwnerUsername,
 		&f.Filename, &f.Extension, &f.MimeType,
 		&f.Size, &f.ObjectKey, &f.CreatedAt, &f.UpdatedAt,
 	)

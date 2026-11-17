@@ -12,6 +12,7 @@ import { getSharedWithMe, SharedDirectory, inviteToDirectory } from '../api/shar
 import { renameDirectory } from '../api/directories';
 import { ApiError } from '../api/client';
 import { Card, CardHeader, CardTitle } from '../components/ui/Card';
+import { ItemPropertiesAction } from '../components/ui/ItemProperties';
 import { ContextMenu } from '../components/ui/ContextMenu';
 import { Modal } from '../components/ui/Modal';
 import { FileItem } from '../components/ui/FileItem';
@@ -68,6 +69,7 @@ const DashboardPage: React.FC = () => {
     id: string;
     directoryId: string;
     name: string;
+    trigger: HTMLElement;
   } | null>(null);
   const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
 
@@ -78,8 +80,18 @@ const DashboardPage: React.FC = () => {
 
   const handleDirContextMenu = (e: React.MouseEvent, dir: SharedDirectory) => {
     e.preventDefault();
-    setContextMenuDir({ id: dir.id, directoryId: dir.directory_id, name: dir.name });
-    setContextMenuPos({ x: e.clientX, y: e.clientY });
+    setContextMenuDir({
+      id: dir.id,
+      directoryId: dir.directory_id,
+      name: dir.name,
+      trigger: e.currentTarget as HTMLElement,
+    });
+    if (e.type === 'click') {
+      const rect = e.currentTarget.getBoundingClientRect();
+      setContextMenuPos({ x: rect.right - 224, y: rect.bottom + 4 });
+    } else {
+      setContextMenuPos({ x: e.clientX, y: e.clientY });
+    }
   };
 
   const handleOpenInvite = () => {
@@ -352,6 +364,7 @@ const DashboardPage: React.FC = () => {
             <div className="space-y-4">
               {recentFiles.map((file) => (
                 <FileItem
+                  showProperties
                   key={file.id}
                   id={file.id}
                   name={file.filename}
@@ -431,6 +444,7 @@ const DashboardPage: React.FC = () => {
               >
                 {displayFavorites.map((fav) => (
                   <FileItem
+                    showProperties
                     key={fav.id}
                     id={fav.id}
                     name={fav.filename}
@@ -491,7 +505,12 @@ const DashboardPage: React.FC = () => {
         />
       )}
 
-      <ContextMenu isOpen={!!contextMenuDir} onClose={closeContextMenu} position={contextMenuPos}>
+      <ContextMenu
+        isOpen={!!contextMenuDir}
+        onClose={closeContextMenu}
+        position={contextMenuPos}
+        trigger={contextMenuDir?.trigger}
+      >
         <button
           type="button"
           onClick={() => {
@@ -516,6 +535,13 @@ const DashboardPage: React.FC = () => {
           <UserPlus size={16} className="group-hover:text-green-500 transition-colors" />
           Пригласить
         </button>
+        {contextMenuDir && (
+          <ItemPropertiesAction
+            target={{ kind: 'directory', id: contextMenuDir.directoryId }}
+            focusTarget={() => contextMenuDir.trigger}
+            onSelect={closeContextMenu}
+          />
+        )}
       </ContextMenu>
 
       <Modal

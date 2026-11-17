@@ -14,6 +14,7 @@ import { DirectoryCard } from '../components/ui/DirectoryCard';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
+import { ItemPropertiesAction } from '../components/ui/ItemProperties';
 import { ContextMenu } from '../components/ui/ContextMenu';
 import { QuotaIndicator } from '../components/ui/QuotaIndicator';
 import { RenameModal } from '../components/ui/RenameModal';
@@ -83,6 +84,7 @@ const SharedDirListPage: React.FC = () => {
     id: string;
     name: string;
     sharedId: string;
+    trigger: HTMLElement;
   } | null>(null);
   const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
 
@@ -101,7 +103,12 @@ const SharedDirListPage: React.FC = () => {
   const handleContextMenu = (e: React.MouseEvent, dir: DirectoryCardData) => {
     e.preventDefault();
     setContextMenuDir({ id: dir.directory_id, name: dir.name, sharedId: dir.id });
-    setContextMenuPos({ x: e.clientX, y: e.clientY });
+    if (e.type === 'click') {
+      const rect = e.currentTarget.getBoundingClientRect();
+      setContextMenuPos({ x: rect.right - 224, y: rect.bottom + 4 });
+    } else {
+      setContextMenuPos({ x: e.clientX, y: e.clientY });
+    }
   };
 
   const handleOpenInvite = () => {
@@ -239,6 +246,7 @@ const SharedDirListPage: React.FC = () => {
               memberUsernames={dir.memberUsernames}
               to={`/directories/${dir.directory_id}`}
               onContextMenu={(e) => handleContextMenu(e, dir)}
+              onMoreClick={(e) => handleContextMenu(e, dir)}
             />
           ))}
         </div>
@@ -291,7 +299,12 @@ const SharedDirListPage: React.FC = () => {
         </div>
       )}
 
-      <ContextMenu isOpen={!!contextMenuDir} onClose={closeContextMenu} position={contextMenuPos}>
+      <ContextMenu
+        isOpen={!!contextMenuDir}
+        onClose={closeContextMenu}
+        position={contextMenuPos}
+        trigger={contextMenuDir?.trigger}
+      >
         <button
           type="button"
           onClick={() => {
@@ -312,6 +325,13 @@ const SharedDirListPage: React.FC = () => {
           <UserPlus size={16} className="group-hover:text-green-500 transition-colors" />
           Пригласить
         </button>
+        {contextMenuDir && (
+          <ItemPropertiesAction
+            target={{ kind: 'directory', id: contextMenuDir.id }}
+            focusTarget={() => contextMenuDir.trigger}
+            onSelect={closeContextMenu}
+          />
+        )}
       </ContextMenu>
 
       {renameState && accessToken && (

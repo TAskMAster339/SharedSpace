@@ -17,6 +17,7 @@ interface FileItemProps {
   isFavorite?: boolean;
   hasShareLinks?: boolean;
   onClick?: (id: string) => void;
+  showProperties?: boolean;
   onContextMenu?: (e: React.MouseEvent, id: string) => void;
   onToggleFavorite?: (id: string) => void;
   onRename?: (id: string) => void;
@@ -40,6 +41,7 @@ export const FileItem: React.FC<FileItemProps> = ({
   hasShareLinks = false,
   onClick,
   onContextMenu,
+  showProperties = false,
   onToggleFavorite,
   onRename,
   onDelete,
@@ -116,6 +118,7 @@ export const FileItem: React.FC<FileItemProps> = ({
       <div className="flex items-center gap-3 shrink-0 ml-3">
         <span className="text-xs text-theme-muted hidden sm:inline">{size}</span>
         <ItemActionsMenu
+          properties={showProperties ? { kind: 'file', id } : undefined}
           isFavorite={isFavorite}
           onToggleFavorite={onToggleFavorite ? () => onToggleFavorite(id) : undefined}
           onRename={onRename ? () => onRename(id) : undefined}

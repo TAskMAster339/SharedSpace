@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { MoreVertical, Star, Trash2, Move, Share2, Download, Image, Pencil } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { ContextMenu } from './ContextMenu';
+import { ItemPropertiesAction, PropertiesTarget } from './ItemProperties';
 
 interface ItemActionsMenuProps {
   isFavorite?: boolean;
@@ -12,6 +13,7 @@ interface ItemActionsMenuProps {
   onShare?: () => void;
   onDownload?: () => void;
   onConvert?: () => void;
+  properties?: PropertiesTarget;
   className?: string;
   iconSize?: number;
   openMenu?: boolean;
@@ -31,6 +33,7 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
   onShare,
   onDownload,
   onConvert,
+  properties,
   className,
   iconSize = 18,
   openMenu,
@@ -72,7 +75,8 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
     !onMove &&
     !onShare &&
     !onDownload &&
-    !onConvert
+    !onConvert &&
+    !properties
   )
     return null;
 
@@ -163,6 +167,13 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
           {isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'}
         </button>
       )}
+      {properties && (
+        <ItemPropertiesAction
+          target={properties}
+          focusTarget={() => triggerRef.current}
+          onSelect={handleClose}
+        />
+      )}
       {onDelete && (
         <button
           type="button"
@@ -196,7 +207,13 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
         <MoreVertical size={iconSize} />
       </button>
 
-      <ContextMenu isOpen={isOpen} onClose={handleClose} position={position} width={MENU_WIDTH}>
+      <ContextMenu
+        isOpen={isOpen}
+        onClose={handleClose}
+        position={position}
+        width={MENU_WIDTH}
+        trigger={properties ? triggerRef.current : null}
+      >
         {menuItems}
       </ContextMenu>
     </div>

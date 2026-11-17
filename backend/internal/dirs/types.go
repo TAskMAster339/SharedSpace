@@ -25,6 +25,7 @@ type DirectoryResponse struct {
 	ID                string              `json:"id"`
 	Name              string              `json:"name"`
 	OwnerID           string              `json:"owner_id"`
+	OwnerUsername     string              `json:"owner_username,omitempty"`
 	ParentID          *string             `json:"parent_id"`
 	Type              string              `json:"type"`
 	FilesCount        int                 `json:"files_count"`
@@ -68,16 +69,17 @@ type DirectoryContentsResponse struct {
 }
 
 type directoryRecord struct {
-	ID         string
-	Name       string
-	OwnerID    string
-	ParentID   *string
-	Type       string
-	FilesCount int
-	SizeBytes  int64
-	DeletedAt  *time.Time
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
+	ID            string
+	Name          string
+	OwnerID       string
+	OwnerUsername string
+	ParentID      *string
+	Type          string
+	FilesCount    int
+	SizeBytes     int64
+	DeletedAt     *time.Time
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 type fileRecord struct {

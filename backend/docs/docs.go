@@ -3821,6 +3821,9 @@ const docTemplate = `{
                 "owner_id": {
                     "type": "string"
                 },
+                "owner_username": {
+                    "type": "string"
+                },
                 "parent_id": {
                     "type": "string"
                 },
@@ -4022,6 +4025,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "owner_id": {
+                    "type": "string"
+                },
+                "owner_username": {
                     "type": "string"
                 },
                 "size": {

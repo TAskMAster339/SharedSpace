@@ -17,10 +17,10 @@ func NewRepository() *Repository {
 func (r *Repository) FindByID(ctx context.Context, db dbTX, id string) (directoryRecord, error) {
 	var d directoryRecord
 	err := db.QueryRow(ctx, `
-		SELECT id, name, owner_id, parent_id, type, files_count, size_bytes, created_at, updated_at
-		FROM directories
-		WHERE id = $1 AND deleted_at IS NULL
-	`, id).Scan(&d.ID, &d.Name, &d.OwnerID, &d.ParentID, &d.Type, &d.FilesCount, &d.SizeBytes, &d.CreatedAt, &d.UpdatedAt)
+		SELECT d.id, d.name, d.owner_id, u.username, d.parent_id, d.type, d.files_count, d.size_bytes, d.created_at, d.updated_at
+		FROM directories d JOIN users u ON u.id = d.owner_id
+		WHERE d.id = $1 AND d.deleted_at IS NULL
+	`, id).Scan(&d.ID, &d.Name, &d.OwnerID, &d.OwnerUsername, &d.ParentID, &d.Type, &d.FilesCount, &d.SizeBytes, &d.CreatedAt, &d.UpdatedAt)
 	return d, err
 }
 

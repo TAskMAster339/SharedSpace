@@ -3817,6 +3817,9 @@
                 "owner_id": {
                     "type": "string"
                 },
+                "owner_username": {
+                    "type": "string"
+                },
                 "parent_id": {
                     "type": "string"
                 },
@@ -4018,6 +4021,9 @@
                     "type": "string"
                 },
                 "owner_id": {
+                    "type": "string"
+                },
+                "owner_username": {
                     "type": "string"
                 },
                 "size": {

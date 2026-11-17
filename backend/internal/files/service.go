@@ -163,7 +163,9 @@ func (s *Service) GetMetadata(ctx context.Context, userID, fileID string) (FileM
 	if err != nil {
 		return FileMetadataResponse{}, apperror.WrapInternal("проверка общих ссылок", err)
 	}
-	return toMetadataResponse(file, links[file.ID]), nil
+	response := toMetadataResponse(file, links[file.ID])
+	response.OwnerUsername = file.OwnerUsername
+	return response, nil
 }
 
 func (s *Service) GetContentURL(ctx context.Context, userID, fileID string) (FileContentResponse, error) {

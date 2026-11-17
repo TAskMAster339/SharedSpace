@@ -15,6 +15,7 @@ interface FileGridItemProps {
   isFavorite?: boolean;
   hasShareLinks?: boolean;
   onClick?: (id: string) => void;
+  showProperties?: boolean;
   onContextMenu?: (e: React.MouseEvent, id: string) => void;
   onToggleFavorite?: (id: string) => void;
   onRename?: (id: string) => void;
@@ -36,6 +37,7 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
   hasShareLinks = false,
   onClick,
   onContextMenu,
+  showProperties = false,
   onToggleFavorite,
   onRename,
   onDelete,
@@ -108,6 +110,7 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
 
       <div className="absolute top-2 right-2 flex items-center gap-1.5">
         <ItemActionsMenu
+          properties={showProperties ? { kind: 'file', id } : undefined}
           isFavorite={isFavorite}
           onToggleFavorite={onToggleFavorite ? () => onToggleFavorite(id) : undefined}
           onRename={onRename ? () => onRename(id) : undefined}
