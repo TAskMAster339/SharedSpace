@@ -14,8 +14,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"sharedspace/internal/access"
+	"sharedspace/internal/storage"
 )
 
 type previewRow struct {
@@ -34,8 +36,8 @@ func (r previewRow) Scan(dest ...any) error {
 		*dest[2].(**time.Time) = v.DeletedAt
 	case string:
 		*dest[0].(*string) = v
-	case bool:
-		*dest[0].(*bool) = v
+	case []string:
+		*dest[0].(*[]string) = v
 	}
 	return nil
 }
@@ -58,18 +60,31 @@ func (db *previewDB) QueryRow(_ context.Context, _ string, _ ...any) pgx.Row {
 
 type previewStorage struct {
 	mockStorage
-	keys    []string
-	deleted []string
+	keys     []string
+	deleted  []string
+	onDelete func()
 }
 
-func (s *previewStorage) ListObjects(_ context.Context, prefix string, before time.Time) ([]string, error) {
-	if prefix != previewPrefix || time.Since(before) < 59*time.Minute {
-		return nil, errors.New("unsafe cleanup scope")
+func (s *previewStorage) ListOldObjectPage(_ context.Context, prefix, after string, before time.Time, limit int) ([]string, string, error) {
+	if prefix != previewPrefix || time.Since(before) < 59*time.Minute || limit != 500 {
+		return nil, "", errors.New("unsafe cleanup scope")
 	}
-	return s.keys, nil
+	var keys []string
+	for _, key := range s.keys {
+		if key > after {
+			keys = append(keys, key)
+		}
+	}
+	if len(keys) == 0 {
+		return nil, "", nil
+	}
+	return keys, keys[len(keys)-1], nil
 }
 func (s *previewStorage) Delete(_ context.Context, key string) error {
 	s.deleted = append(s.deleted, key)
+	if s.onDelete != nil {
+		s.onDelete()
+	}
 	return nil
 }
 
@@ -111,14 +126,18 @@ func TestCleanupPreviews(t *testing.T) {
 		rows []previewRow
 		want int
 	}{
-		{"keeps live deletes orphan", []previewRow{{value: true}, {value: false}}, 1},
+		{"keeps live deletes orphan", []previewRow{{value: []string{previewPrefix + "live.jpg"}}}, 1},
 		{"database failure keeps objects", []previewRow{{err: errors.New("db unavailable")}}, 0},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			storage := &previewStorage{keys: []string{previewPrefix + "live.jpg", previewPrefix + "orphan.jpg"}}
 			svc := newTestService(&mockRepo{}, storage)
-			svc.db = &previewDB{rows: tc.rows}
-			svc.CleanupPreviews(context.Background())
+			db := &previewDB{rows: tc.rows}
+			svc.db = db
+			svc.CleanupPreviews(context.Background(), "", time.Now().Add(-time.Hour))
+			if db.queries != 1 {
+				t.Fatalf("got %d lookups for one page", db.queries)
+			}
 			if len(storage.deleted) != tc.want {
 				t.Fatalf("deleted %v", storage.deleted)
 			}
@@ -126,6 +145,81 @@ func TestCleanupPreviews(t *testing.T) {
 				t.Fatal("deleted live preview")
 			}
 		})
+	}
+}
+
+func TestCleanupPreviewsResumesAfterCancellation(t *testing.T) {
+	first, second := previewPrefix+"first.jpg", previewPrefix+"second.jpg"
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	storage := &previewStorage{keys: []string{first, second}, onDelete: cancel}
+	svc := newTestService(&mockRepo{}, storage)
+	svc.db = &previewDB{rows: []previewRow{{value: []string{}}, {value: []string{}}}}
+	cutoff := time.Now().Add(-time.Hour)
+
+	cursor := svc.CleanupPreviews(ctx, "", cutoff)
+	if cursor != first {
+		t.Fatalf("got cursor %q, want %q", cursor, first)
+	}
+	storage.onDelete = nil
+	if cursor := svc.CleanupPreviews(context.Background(), cursor, cutoff); cursor != "" {
+		t.Fatalf("expected completed scan, got cursor %q", cursor)
+	}
+	if len(storage.deleted) != 2 || storage.deleted[0] != first || storage.deleted[1] != second {
+		t.Fatalf("deleted %v", storage.deleted)
+	}
+}
+
+func TestCleanupPreviewsIntegration(t *testing.T) {
+	dsn := os.Getenv("PREVIEW_TEST_DATABASE_URL")
+	if dsn == "" {
+		t.Skip("PREVIEW_TEST_DATABASE_URL is required")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	db, err := pgx.Connect(ctx, dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close(context.Background())
+	if _, err := db.Exec(ctx, "CREATE TEMP TABLE file_previews (object_key text PRIMARY KEY)"); err != nil {
+		t.Fatal(err)
+	}
+
+	endpoint := os.Getenv("MINIO_ENDPOINT")
+	store, err := storage.New(ctx, endpoint, os.Getenv("MINIO_ACCESS_KEY"), os.Getenv("MINIO_SECRET_KEY"),
+		"test-bucket", endpoint, false, false, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	live, orphan := previewPrefix+uuid.NewString()+".jpg", previewPrefix+uuid.NewString()+".jpg"
+	for _, key := range []string{live, orphan} {
+		if err := store.Upload(ctx, key, bytes.NewBufferString("test"), 4, "image/jpeg"); err != nil {
+			t.Fatal(err)
+		}
+		defer store.Delete(ctx, key)
+	}
+	if _, err := db.Exec(ctx, "INSERT INTO file_previews VALUES ($1)", live); err != nil {
+		t.Fatal(err)
+	}
+
+	svc := &Service{db: db, storage: store}
+	svc.CleanupPreviews(ctx, "", time.Now().Add(-time.Hour))
+	if obj, err := store.Get(ctx, orphan); err != nil {
+		t.Fatalf("fresh orphan should remain: %v", err)
+	} else {
+		obj.Close()
+	}
+	// Advance the worker's age cutoff without changing the storage clock.
+	svc.CleanupPreviews(ctx, "", time.Now().Add(time.Hour))
+	if obj, err := store.Get(ctx, orphan); err == nil {
+		obj.Close()
+		t.Fatal("old orphan should have been deleted")
+	}
+	if obj, err := store.Get(ctx, live); err != nil {
+		t.Fatalf("live preview should remain: %v", err)
+	} else {
+		obj.Close()
 	}
 }
 

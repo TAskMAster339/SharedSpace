@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -148,27 +147,4 @@ func renderPreview(ctx context.Context, source io.Reader) ([]byte, error) {
 		return nil, fmt.Errorf("invalid preview size: %d", len(data))
 	}
 	return data, nil
-}
-
-// Cascading DB deletes cover files, recursive directory deletion and accounts.
-// A grace period avoids racing in-flight generations. Failed deletes are retried.
-func (s *Service) CleanupPreviews(ctx context.Context) {
-	keys, err := s.storage.ListObjects(ctx, previewPrefix, time.Now().Add(-time.Hour))
-	if err != nil {
-		log.Printf("preview cleanup: list: %v", err)
-		return
-	}
-	for _, key := range keys {
-		var exists bool
-		err := s.db.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM file_previews WHERE object_key=$1)`, key).Scan(&exists)
-		if err != nil {
-			log.Printf("preview cleanup: lookup: %v", err)
-			return
-		}
-		if !exists {
-			if err := s.storage.Delete(ctx, key); err != nil {
-				log.Printf("preview cleanup: delete %s: %v", key, err)
-			}
-		}
-	}
 }

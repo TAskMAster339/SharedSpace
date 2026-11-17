@@ -119,3 +119,30 @@ func (s *Storage) ListObjects(ctx context.Context, prefix string, olderThan time
 	}
 	return keys, nil
 }
+
+// ListOldObjectPage returns eligible keys and the last key scanned, including
+// keys too recent for deletion. An empty cursor means the scan reached the end.
+func (s *Storage) ListOldObjectPage(ctx context.Context, prefix, after string, olderThan time.Time, limit int) ([]string, string, error) {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	keys := make([]string, 0, limit)
+	var last string
+	count := 0
+	for obj := range s.client.ListObjectsIter(ctx, s.bucket, minio.ListObjectsOptions{
+		Prefix: prefix, Recursive: true, StartAfter: after, MaxKeys: limit,
+	}) {
+		if obj.Err != nil {
+			return nil, "", obj.Err
+		}
+		last = obj.Key
+		if obj.LastModified.Before(olderThan) {
+			keys = append(keys, obj.Key)
+		}
+		count++
+		if count == limit {
+			break
+		}
+	}
+	return keys, last, ctx.Err()
+}

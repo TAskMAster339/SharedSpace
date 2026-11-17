@@ -127,6 +127,10 @@ func (m *mockStorage) ListObjects(_ context.Context, _ string, _ time.Time) ([]s
 	return nil, nil
 }
 
+func (m *mockStorage) ListOldObjectPage(context.Context, string, string, time.Time, int) ([]string, string, error) {
+	return nil, "", nil
+}
+
 type mockTx struct{}
 
 func (m *mockTx) QueryRow(_ context.Context, _ string, _ ...any) pgx.Row {

@@ -16,6 +16,7 @@ type StorageClient interface {
 	Get(ctx context.Context, objectKey string) (io.ReadCloser, error)
 	Delete(ctx context.Context, objectKey string) error
 	ListObjects(ctx context.Context, prefix string, olderThan time.Time) ([]string, error)
+	ListOldObjectPage(ctx context.Context, prefix, after string, olderThan time.Time, limit int) ([]string, string, error)
 }
 
 type ServiceInterface interface {
