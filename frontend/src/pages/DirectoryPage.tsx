@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   Upload,
-  HardDrive,
   Folder,
   FolderPlus,
   Settings,
@@ -13,7 +12,6 @@ import {
   LayoutGrid,
   List,
 } from 'lucide-react';
-import { useStorageUsageStore } from '../store/storageUsageStore';
 import { useAuthStore } from '../store/authStore';
 import { useDirectoryStore } from '../store/directoryStore';
 import { useDragDropStore } from '../store/dragDropStore';
@@ -74,7 +72,6 @@ interface BreadcrumbItem {
 const DirectoryPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const openStorage = useStorageUsageStore((s) => s.open);
 
   const accessToken = useAuthStore((s) => s.accessToken);
   const user = useAuthStore((s) => s.user);
@@ -990,15 +987,6 @@ const DirectoryPage: React.FC = () => {
           </div>
           <div className="flex items-center gap-2 mt-1 flex-wrap justify-end md:justify-start md:shrink-0">
             <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} />
-            <button
-              type="button"
-              onClick={openStorage}
-              aria-label="Использование хранилища"
-              title="Использование хранилища"
-              className="p-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-brand rounded-theme"
-            >
-              <HardDrive size={18} />
-            </button>
             {perms?.upload && (
               <button
                 onClick={() => {

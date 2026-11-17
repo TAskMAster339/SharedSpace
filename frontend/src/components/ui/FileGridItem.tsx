@@ -70,12 +70,11 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
       ref={menu.anchor}
       {...menu.handlers}
       className={cn(
-        'group flex flex-col items-center p-3 rounded-theme transition-colors cursor-pointer relative min-w-0 [-webkit-touch-callout:none]',
-        'bg-theme-tertiary hover:bg-theme-hover border border-theme',
+        'group flex min-w-0 cursor-pointer flex-col items-center rounded-theme pb-2 [-webkit-touch-callout:none]',
         className,
       )}
     >
-      <div className="relative w-full aspect-square max-w-[160px] flex items-center justify-center text-theme-muted group-hover:text-brand transition-colors">
+      <div className="item-grid-preview p-3">
         <FilePreview
           fileId={id}
           type={type}
@@ -83,8 +82,8 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
           fill
           className="group-hover:text-brand transition-colors"
         />
+        <ItemStatusBadges grid favorite={isFavorite} shared={hasShareLinks} />
       </div>
-      <ItemStatusBadges grid favorite={isFavorite} shared={hasShareLinks} />
       <p className="mt-2 text-xs tabular-nums text-theme-secondary">{size}</p>
       <p className="text-sm text-theme-primary font-medium text-center truncate w-full max-w-[120px]">
         {name}

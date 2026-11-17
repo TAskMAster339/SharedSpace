@@ -268,6 +268,19 @@
     border-start-end-radius: var(--radius);
   }
 
+  .item-grid-preview {
+    @apply relative grid aspect-square w-full max-w-[160px] place-items-center border transition-colors;
+    border-radius: var(--radius);
+    border-color: var(--border);
+    background-color: var(--bg-tertiary);
+    color: var(--text-muted);
+  }
+
+  .group:hover > .item-grid-preview {
+    background-color: var(--bg-hover);
+    color: var(--brand);
+  }
+
   .item-list-thumbnail {
     @apply grid size-12 shrink-0 place-items-center;
     border-radius: var(--radius);
