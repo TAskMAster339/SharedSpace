@@ -1,58 +1,72 @@
-.PHONY: dev prod dev-up prod-up dev-down prod-down dev-build prod-build \
-        dev-logs prod-logs dev-ps prod-ps dev-restart prod-restart \
-        back front check
+.DEFAULT_GOAL := help
 
-# ============================================================
-# Development
-# ============================================================
+ENV_FILE ?= .env
+PYTHON ?= python3
+DOCKER_COMPOSE ?= docker compose
+DEV_COMPOSE = $(DOCKER_COMPOSE) -f docker-compose.dev.yml --env-file "$(ENV_FILE)"
+DEV_OFFICE_COMPOSE = $(DEV_COMPOSE) --profile office
+PROD_COMPOSE = $(DOCKER_COMPOSE) -f docker-compose.yml --env-file "$(ENV_FILE)"
 
-dev-up:
-	docker compose -f docker-compose.dev.yml --env-file .env up -d
+.PHONY: help env dev dev-office dev-up dev-down dev-build dev-restart dev-logs dev-ps \
+        prod prod-up prod-down prod-build prod-restart prod-logs prod-ps back front check
+
+help:
+	@printf '%s\n' \
+		'make dev          Собрать и запустить локальный SharedSpace' \
+		'make dev-office   Собрать и запустить SharedSpace с редактором DOCX' \
+		'make env          Создать или дополнить локальный .env' \
+		'make dev-ps       Показать состояние локальных сервисов' \
+		'make dev-logs     Открыть логи локальных сервисов' \
+		'make dev-restart  Перезапустить локальные сервисы' \
+		'make dev-down     Остановить локальные сервисы' \
+		'make check        Отформатировать код и запустить проверки'
+
+env:
+	$(PYTHON) scripts/init-env.py --output "$(ENV_FILE)"
+
+dev: env
+	$(DEV_COMPOSE) up --build -d
+
+dev-office: env
+	OFFICE_ENABLED=true $(DEV_OFFICE_COMPOSE) up --build -d
+
+dev-up: env
+	$(DEV_COMPOSE) up -d
+
+dev-build: env
+	$(DEV_COMPOSE) build
 
 dev-down:
-	docker compose -f docker-compose.dev.yml down
+	$(DEV_OFFICE_COMPOSE) down
 
-dev-build:
-	docker compose -f docker-compose.dev.yml --env-file .env build
-
-dev-restart: dev-down dev-up
+dev-restart:
+	$(DEV_OFFICE_COMPOSE) restart
 
 dev-logs:
-	docker compose -f docker-compose.dev.yml logs -f
+	$(DEV_OFFICE_COMPOSE) logs -f
 
 dev-ps:
-	docker compose -f docker-compose.dev.yml ps
+	$(DEV_OFFICE_COMPOSE) ps
 
-dev:
-	docker compose -f docker-compose.dev.yml --env-file .env up --build -d
-
-# ============================================================
-# Production
-# ============================================================
+prod: prod-up
 
 prod-up:
-	docker compose -f docker-compose.yml --env-file .env up -d
+	$(PROD_COMPOSE) up -d
 
 prod-down:
-	docker compose -f docker-compose.yml down
+	$(PROD_COMPOSE) down
 
 prod-build:
-	docker compose -f docker-compose.yml --env-file .env build
+	$(PROD_COMPOSE) build
 
-prod-restart: prod-down prod-up
+prod-restart: prod-down
+	$(MAKE) prod-up
 
 prod-logs:
-	docker compose -f docker-compose.yml logs -f
+	$(PROD_COMPOSE) logs -f
 
 prod-ps:
-	docker compose -f docker-compose.yml ps
-
-prod:
-	docker compose -f docker-compose.yml --env-file .env up -d
-
-# ============================================================
-# Code Quality
-# ============================================================
+	$(PROD_COMPOSE) ps
 
 back:
 	cd backend && $(MAKE) fmt && $(MAKE) lint && $(MAKE) swagger && go test ./...

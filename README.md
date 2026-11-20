@@ -16,13 +16,13 @@
 ```bash
 git clone https://github.com/TAskMAster339/SharedSpace.git
 cd SharedSpace
-cp .env.example .env
-docker compose up --build
+make dev
 ```
 
-После запуска:
-- **Фронтенд** → http://localhost
-- **API** → http://localhost:8080
+Для локального запуска нужны Docker с Compose, Make и Python 3.9 или новее. Команда `make dev` подготовит `.env`, соберёт и запустит сервисы.
+
+- **Фронтенд** → http://localhost:3000
+- **API** → http://localhost:8080/api/v1
 - **Swagger** → http://localhost:8080/swagger/
 
 ## Разработка
@@ -38,7 +38,7 @@ docker compose up --build
 сброса пароля:
 
 ```bash
-docker compose -f docker-compose.dev.yml logs -f backend
+make dev-logs
 ```
 
 Найдите запись `dev mail:` со своим адресом и откройте ссылку из следующей строки.
@@ -51,9 +51,13 @@ docker compose -f docker-compose.dev.yml logs -f backend
 
 ### Локальный редактор DOCX
 
-Скопируйте `.env.example` в `.env` при первом запуске. В локальном `.env` задайте `OFFICE_ENABLED=true` и `OFFICE_JWT_SECRET` из `openssl rand -hex 32`. Запустите `COMPOSE_PROFILES=office make dev`. Проверьте `curl -fsS http://localhost:8082/healthcheck`, затем откройте SharedSpace на `http://localhost:3000`. Войдите в активированный аккаунт, загрузите `.docx` и откройте его через «Редактировать». Изменения становятся доступными в истории после завершения общей сессии.
+Запустите `make dev-office` из корня проекта. Команда включает редактирование и запускает Document Server вместе с SharedSpace. Когда `curl -fsS http://localhost:8082/healthcheck` вернёт `true`, откройте [SharedSpace](http://localhost:3000), загрузите `.docx` и выберите «Редактировать». Новая версия появится после завершения общей сессии с правками.
 
-Настройки и порядок отката описаны в [руководстве по деплою](docs/deployment.md#редактор-docx).
+`make dev-ps`, `make dev-logs`, `make dev-restart` и `make dev-down` работают и с редактором. После изменения настроек повторите `make dev-office`, чтобы Docker Compose применил их.
+
+Чтобы подготовить настройки отдельно, выполните `make env` или `python3 scripts/init-env.py`. Скрипт использует `.env.example`, добавляет недостающие локальные настройки и генерирует пароль PostgreSQL, пароль MinIO и два JWT-секрета. Заданные значения сохраняются. Для публичной установки задайте домен, публичные URL и настройки хранилища. При использовании внешнего SMTP заполните параметры провайдера. Храните локальный `.env` вместе с данными dev-окружения. PostgreSQL использует пароль из первого запуска с его томом.
+
+Подробности о публичной установке в [руководстве по деплою](docs/deployment.md#редактор-docx).
 
 ## Авторы
 
