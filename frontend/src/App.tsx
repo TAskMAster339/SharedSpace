@@ -63,14 +63,7 @@ const App: React.FC = () => {
             </Layout>
           }
         />
-        <Route
-          path="/share/:token"
-          element={
-            <Layout>
-              <SharePage />
-            </Layout>
-          }
-        />
+        <Route path="/share/:token" element={<SharePage />} />
         <Route
           path="/share/dir/:token"
           element={

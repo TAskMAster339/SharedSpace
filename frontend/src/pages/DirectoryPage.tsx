@@ -513,7 +513,7 @@ const DirectoryPage: React.FC = () => {
         setError('Не удалось удалить файл');
       }
     },
-    [accessToken, actualId, allFiles, loadDirectory, showToast],
+    [accessToken, actualId, allFiles, loadDirectory, refreshUser, showToast],
   );
 
   const handleDeleteFolder = useCallback(
@@ -542,7 +542,7 @@ const DirectoryPage: React.FC = () => {
         setError('Не удалось удалить папку');
       }
     },
-    [accessToken, actualId, filteredSubdirectories, loadDirectory, showToast],
+    [accessToken, actualId, filteredSubdirectories, loadDirectory, refreshUser, showToast],
   );
 
   const handleToggleFavorite = useCallback(

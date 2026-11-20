@@ -241,6 +241,8 @@ func (s *DocumentService) officeConfig(file fileRecord, key, source, user, usern
 	}
 	if user != "" {
 		editor["user"] = map[string]string{"id": user, "name": username}
+	} else {
+		customization["anonymous"] = map[string]bool{"request": false}
 	}
 	if edit {
 		editor["mode"] = "edit"

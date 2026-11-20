@@ -281,6 +281,16 @@
     color: var(--brand);
   }
 
+  .file-item-link:focus-visible .file-item-icon {
+    color: var(--brand);
+  }
+
+  @media (hover: hover) {
+    .file-item-link:hover .file-item-icon {
+      color: var(--brand);
+    }
+  }
+
   .item-list-thumbnail {
     @apply grid size-12 shrink-0 place-items-center;
     border-radius: var(--radius);

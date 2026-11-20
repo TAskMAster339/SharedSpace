@@ -1,11 +1,24 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useId } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Download, EyeOff, Image, KeyRound, Eye, Copy, Check } from 'lucide-react';
+import {
+  ArrowLeft,
+  Download,
+  EyeOff,
+  Image,
+  KeyRound,
+  Eye,
+  Copy,
+  Check,
+  Maximize,
+  Minimize,
+} from 'lucide-react';
 import {
   resolveShareLink,
   ShareLinkResolveResult,
   startSharedOfficePreview,
 } from '../api/sharelinks';
+import { Layout } from '../components/Layout';
+import { cn } from '../utils/cn';
 import { ApiError } from '../api/client';
 import type { OfficeTheme } from '../api/documents';
 import { useRootTheme } from '../hooks/useTheme';
@@ -96,10 +109,26 @@ function determinePreviewType(file: ShareLinkResolveResult): PreviewType {
 
 const SharePage: React.FC = () => {
   const { token } = useParams<{ token: string }>();
-  return token ? <SharedFile key={token} token={token} /> : null;
+  return token ? <SharedFileLayout key={token} token={token} /> : null;
 };
 
-const SharedFile = ({ token }: { token: string }) => {
+function SharedFileLayout({ token }: { token: string }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <Layout fillViewport={expanded}>
+      <SharedFile token={token} expanded={expanded} setExpanded={setExpanded} />
+    </Layout>
+  );
+}
+
+interface SharedFileProps {
+  token: string;
+  expanded: boolean;
+  setExpanded: (expanded: boolean) => void;
+}
+
+const SharedFile = ({ token, expanded, setExpanded }: SharedFileProps) => {
+  const previewId = useId();
   const accessToken = useAuthStore((state) => state.accessToken);
   const officeTheme = useRootTheme();
 
@@ -107,7 +136,6 @@ const SharedFile = ({ token }: { token: string }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [iframeError, setIframeError] = useState(false);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
   const [needsPassword, setNeedsPassword] = useState(false);
   const [password, setPassword] = useState('');
   const [acceptedPassword, setAcceptedPassword] = useState('');
@@ -126,6 +154,7 @@ const SharedFile = ({ token }: { token: string }) => {
 
   useEffect(() => {
     const controller = new AbortController();
+    setExpanded(false);
     setIsLoading(true);
     setError(null);
     setFile(null);
@@ -154,7 +183,7 @@ const SharedFile = ({ token }: { token: string }) => {
         if (!controller.signal.aborted) setIsLoading(false);
       });
     return () => controller.abort();
-  }, [token, accessToken]);
+  }, [token, accessToken, setExpanded]);
 
   const handleDownload = useCallback(async () => {
     if (!file?.url) return;
@@ -235,7 +264,15 @@ const SharedFile = ({ token }: { token: string }) => {
     switch (previewType) {
       case 'office':
         return (
-          <div className="h-[65dvh] min-h-[360px] overflow-hidden rounded-theme border border-theme">
+          <div
+            id={previewId}
+            className={cn(
+              'overflow-hidden',
+              expanded
+                ? 'min-h-0 flex-1'
+                : 'h-[65dvh] min-h-[360px] rounded-theme border border-theme',
+            )}
+          >
             <OfficeFrame mode="view" theme={officeTheme} loadPreview={loadOfficePreview} />
           </div>
         );
@@ -316,7 +353,6 @@ const SharedFile = ({ token }: { token: string }) => {
           <div className="bg-theme-tertiary rounded-theme overflow-hidden min-h-[400px]">
             {file.url ? (
               <iframe
-                ref={iframeRef}
                 src={file.url}
                 className="w-full h-[70vh]"
                 title={file.filename}
@@ -433,15 +469,14 @@ const SharedFile = ({ token }: { token: string }) => {
   const fileIconType = resolveFileIconType(file.mime_type, file.extension);
 
   return (
-    <div className="space-y-6">
+    <div className={cn(expanded ? 'flex min-h-0 flex-1 flex-col' : 'space-y-6')}>
       <SEOHead
         title={ogTitle}
         description={ogDescription}
         ogImage={ogImage}
         canonical={`https://shared-space.ru/share/${token}`}
       />
-      {/* Навигация назад */}
-      <div>
+      <div hidden={expanded}>
         <Link
           to={accessToken ? '/dashboard' : '/'}
           className="inline-flex items-center gap-2 text-sm text-theme-secondary hover:text-theme-primary transition-colors"
@@ -450,32 +485,65 @@ const SharedFile = ({ token }: { token: string }) => {
           SharedSpace
         </Link>
       </div>
-      {/* Основной контент: 2 колонки (предпросмотр) + 1 колонка (информация) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Левая часть: предпросмотр (2/3) */}
-        <div className="min-w-0 lg:col-span-2">
-          <div className="bg-theme-secondary border border-theme rounded-theme p-4 shadow-theme-card">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <h2 className="text-sm font-medium text-theme-secondary">Предпросмотр</h2>
-              <button
-                onClick={handleDownload}
-                aria-label="Скачать файл"
-                title="Скачать файл"
-                className="group inline-flex h-9 w-9 items-center justify-center gap-2 rounded-theme border border-brand/30 bg-brand-light text-brand transition-colors hover:bg-brand hover:text-theme-on-brand sm:w-auto sm:px-3 sm:text-sm sm:font-medium"
-              >
-                <Download
-                  size={16}
-                  className="group-hover:[animation:ss-bounce-up_0.4s_ease-in-out]"
-                />
-                <span className="hidden sm:inline">Скачать</span>
-              </button>
+      <div
+        className={cn(expanded ? 'flex min-h-0 flex-1' : 'grid grid-cols-1 gap-6 lg:grid-cols-3')}
+      >
+        <div className={cn('min-w-0', expanded ? 'flex min-h-0 flex-1 flex-col' : 'lg:col-span-2')}>
+          <div
+            className={cn(
+              'bg-theme-secondary',
+              expanded
+                ? 'flex min-h-0 flex-1 flex-col'
+                : 'rounded-theme border border-theme p-4 shadow-theme-card',
+            )}
+          >
+            <div
+              className={cn(
+                'flex shrink-0 items-center justify-between gap-3',
+                expanded ? 'border-b border-theme px-3 py-2 sm:px-4' : 'mb-3',
+              )}
+            >
+              <h2 className="min-w-0 truncate text-sm font-medium text-theme-secondary">
+                {expanded ? file.filename : 'Предпросмотр'}
+              </h2>
+              <div className="flex shrink-0 items-center gap-2">
+                {previewType === 'office' && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    aria-controls={previewId}
+                    aria-expanded={expanded}
+                    aria-label={expanded ? 'Свернуть предпросмотр' : 'Развернуть предпросмотр'}
+                    title={expanded ? 'Свернуть предпросмотр' : 'Развернуть предпросмотр'}
+                    className="size-9 p-0"
+                    onClick={() => setExpanded(!expanded)}
+                  >
+                    {expanded ? (
+                      <Minimize size={16} aria-hidden="true" />
+                    ) : (
+                      <Maximize size={16} aria-hidden="true" />
+                    )}
+                  </Button>
+                )}
+                <button
+                  onClick={handleDownload}
+                  aria-label="Скачать файл"
+                  title="Скачать файл"
+                  className="group inline-flex h-9 w-9 items-center justify-center gap-2 rounded-theme border border-brand/30 bg-brand-light text-brand transition-colors hover:bg-brand hover:text-theme-on-brand sm:w-auto sm:px-3 sm:text-sm sm:font-medium"
+                >
+                  <Download
+                    size={16}
+                    className="group-hover:[animation:ss-bounce-up_0.4s_ease-in-out]"
+                  />
+                  <span className="hidden sm:inline">Скачать</span>
+                </button>
+              </div>
             </div>
             {renderPreview()}
           </div>
         </div>
 
-        {/* Правая часть: информация (1/3) */}
-        <div className="space-y-4">
+        <div className={expanded ? 'hidden' : 'space-y-4'}>
           {/* Информация о файле */}
           <div className="bg-theme-secondary border border-theme rounded-theme p-5 shadow-theme-card">
             <h3 className="font-medium text-theme-primary mb-3">Информация о файле</h3>

@@ -15,6 +15,14 @@ jest.mock(
   { virtual: true },
 );
 
+jest.mock('../components/Layout', () => ({
+  Layout: ({ children, fillViewport }: { children: React.ReactNode; fillViewport: boolean }) => (
+    <div data-testid="share-layout" data-expanded={fillViewport}>
+      {children}
+    </div>
+  ),
+}));
+
 jest.mock('../components/SEOHead', () => () => null);
 
 jest.mock('../api/sharelinks', () => ({
@@ -78,4 +86,19 @@ test('a protected link only forwards a password after successful access verifica
       expect.any(AbortSignal),
     ),
   );
+});
+
+test('expanding and collapsing preserves the Office session', async () => {
+  resolve.mockResolvedValue(spreadsheet);
+  showSharedFile();
+
+  const expand = await screen.findByRole('button', { name: 'Развернуть предпросмотр' });
+  expect(expand).toHaveAttribute('aria-expanded', 'false');
+  fireEvent.click(expand);
+  expect(screen.getByTestId('share-layout')).toHaveAttribute('data-expanded', 'true');
+  const collapse = screen.getByRole('button', { name: 'Свернуть предпросмотр' });
+  expect(collapse).toHaveAttribute('aria-expanded', 'true');
+  fireEvent.click(collapse);
+  expect(screen.getByTestId('share-layout')).toHaveAttribute('data-expanded', 'false');
+  expect(preview).toHaveBeenCalledTimes(1);
 });

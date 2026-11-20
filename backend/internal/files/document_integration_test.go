@@ -171,6 +171,10 @@ func TestDocumentCollaborationIntegration(t *testing.T) {
 	mustDocument(t, err)
 	guestConfig := guest.Config["editorConfig"].(map[string]any)
 	guestDoc := guest.Config["document"].(map[string]any)
+	anonymous := guestConfig["customization"].(map[string]any)["anonymous"].(map[string]bool)
+	if request, present := anonymous["request"]; !present || request {
+		t.Fatal("public preview prompted the viewer for a name")
+	}
 	if guestConfig["mode"] != "view" || guestConfig["callbackUrl"] != nil ||
 		guestDoc["permissions"].(map[string]bool)["edit"] || guestDoc["permissions"].(map[string]bool)["comment"] {
 		t.Fatal("share link granted more than read-only access")

@@ -76,7 +76,7 @@ export const FileItem: React.FC<FileItemProps> = ({
         }
       }}
       className={cn(
-        'group flex items-center justify-between p-3 rounded-theme transition-colors cursor-pointer',
+        'file-item-link flex items-center justify-between p-3 rounded-theme transition-colors cursor-pointer',
         'bg-theme-tertiary hover:bg-theme-hover border border-theme',
         className,
       )}
@@ -89,7 +89,7 @@ export const FileItem: React.FC<FileItemProps> = ({
               type={type}
               size={20}
               fill
-              className="group-hover:text-brand transition-colors"
+              className="file-item-icon transition-colors"
             />
           </div>
           <ItemStatusBadges favorite={isFavorite} shared={hasShareLinks} />

@@ -87,7 +87,6 @@ export const MobileBottomNav: React.FC = () => {
     return isSidebarItemActive(path, currentPath, currentSection);
   };
 
-  const setMobileMoreOpen = useToastStore((s) => s.setMobileMoreOpen);
   const setToastMobileBottomPx = useToastStore((s) => s.setToastMobileBottomPx);
   const closeMore = useCallback(() => setMoreOpen(false), []);
 
@@ -99,8 +98,7 @@ export const MobileBottomNav: React.FC = () => {
     } else {
       setToastMobileBottomPx(80);
     }
-    setMobileMoreOpen(moreOpen);
-  }, [moreOpen, setMobileMoreOpen, setToastMobileBottomPx]);
+  }, [moreOpen, setToastMobileBottomPx]);
 
   useEffect(() => {
     if (!moreOpen) return;
