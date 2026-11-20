@@ -49,6 +49,12 @@ docker compose -f docker-compose.dev.yml logs -f backend
 
 Для ревью интерфейса можно установить Impeccable в пользовательское окружение. Для Codex подойдёт команда `npx impeccable install --providers=codex --scope=global`. После установки перезапустите Codex и вызовите `$impeccable` для ревью готовых изменений. Если установщик предложит автоматическую проверку при редактировании, её можно пропустить и запускать ревью вручную в конце работы. Для других агентов используйте [официальную инструкцию Impeccable](https://impeccable.style/docs/).
 
+### Локальный редактор DOCX
+
+Скопируйте `.env.example` в `.env` при первом запуске. В локальном `.env` задайте `OFFICE_ENABLED=true` и `OFFICE_JWT_SECRET` из `openssl rand -hex 32`. Запустите `COMPOSE_PROFILES=office make dev`. Проверьте `curl -fsS http://localhost:8082/healthcheck`, затем откройте SharedSpace на `http://localhost:3000`. Войдите в активированный аккаунт, загрузите `.docx` и откройте его через «Редактировать». Изменения становятся доступными в истории после завершения общей сессии.
+
+Настройки и порядок отката описаны в [руководстве по деплою](docs/deployment.md#редактор-docx).
+
 ## Авторы
 
 — [TAskMAster339](https://github.com/TAskMAster339)

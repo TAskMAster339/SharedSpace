@@ -1,0 +1,43 @@
+import { apiRequest } from './client';
+
+export interface DocumentVersion {
+  number: number;
+  size: number;
+  created_at: string;
+  contributors: string[];
+}
+
+export interface DocumentHistory {
+  can_edit: boolean;
+  can_restore: boolean;
+  save_pending: boolean;
+  versions: DocumentVersion[];
+}
+
+export interface DocumentEditorSession {
+  script_url: string;
+  config: {
+    document: { title: string };
+    editorConfig: { customization: Record<string, unknown> };
+  };
+}
+
+export function getDocumentHistory(token: string, id: string, signal?: AbortSignal) {
+  return apiRequest<DocumentHistory>(`/files/${id}/versions`, { token, signal });
+}
+
+export function startDocumentEditor(token: string, id: string, signal: AbortSignal) {
+  return apiRequest<DocumentEditorSession>(`/files/${id}/editor-session`, {
+    token,
+    signal,
+    method: 'POST',
+  });
+}
+
+export function getDocumentVersionURL(token: string, id: string, number: number) {
+  return apiRequest<{ url: string }>(`/files/${id}/versions/${number}/content`, { token });
+}
+
+export function restoreDocumentVersion(token: string, id: string, number: number) {
+  return apiRequest<void>(`/files/${id}/versions/${number}/restore`, { token, method: 'POST' });
+}

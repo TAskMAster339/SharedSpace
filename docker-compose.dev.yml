@@ -57,6 +57,11 @@ services:
       REFRESH_JWT_TTL: ${REFRESH_JWT_TTL:-2592000}
       VERIFY_EMAIL_TTL_HOURS: ${VERIFY_EMAIL_TTL_HOURS:-24}
       RESET_PASSWORD_TTL_HOURS: ${RESET_PASSWORD_TTL_HOURS:-1}
+      OFFICE_ENABLED: ${OFFICE_ENABLED:-false}
+      OFFICE_PUBLIC_URL: ${OFFICE_PUBLIC_URL:-http://localhost:8082}
+      OFFICE_INTERNAL_URL: ${OFFICE_INTERNAL_URL:-http://onlyoffice}
+      OFFICE_STORAGE_URL: ${OFFICE_STORAGE_URL:-http://backend:8080}
+      OFFICE_JWT_SECRET: ${OFFICE_JWT_SECRET:-}
       DEV_LOG_EMAILS: "true"
       APP_URL: ${APP_URL:-http://localhost:3000}
     depends_on:
@@ -64,6 +69,24 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+    networks:
+      - sharedspace-net
+
+  onlyoffice:
+    image: onlyoffice/documentserver:10.0.0@sha256:bff1a9fd46f2b79ada776fd0447c3fccf66cbf44c1996ec9316efa8ac4ee3fd5
+    profiles: [office]
+    environment:
+      JWT_ENABLED: "true"
+      JWT_SECRET: ${OFFICE_JWT_SECRET:-}
+      ALLOW_PRIVATE_IP_ADDRESS: "true"
+    ports:
+      - "127.0.0.1:8082:80"
+    volumes:
+      - office-data:/var/www/onlyoffice/Data
+      - office-lib:/var/lib/onlyoffice
+      - office-db:/var/lib/postgresql
+      - office-redis:/var/lib/redis
+      - office-rabbitmq:/var/lib/rabbitmq
     networks:
       - sharedspace-net
 
@@ -96,6 +119,11 @@ services:
 volumes:
   pgdata:
   miniodata:
+  office-data:
+  office-lib:
+  office-db:
+  office-redis:
+  office-rabbitmq:
 
 networks:
   sharedspace-net:

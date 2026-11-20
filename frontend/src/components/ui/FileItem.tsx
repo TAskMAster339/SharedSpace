@@ -101,6 +101,7 @@ export const FileItem: React.FC<FileItemProps> = ({
       <div className="flex items-center gap-3 shrink-0 ml-3">
         <span className="text-xs text-theme-muted hidden sm:inline">{size}</span>
         <ItemActionsMenu
+          documentId={showProperties && name.toLowerCase().endsWith('.docx') ? id : undefined}
           properties={showProperties ? { kind: 'file', id } : undefined}
           isFavorite={isFavorite}
           onToggleFavorite={onToggleFavorite ? () => onToggleFavorite(id) : undefined}

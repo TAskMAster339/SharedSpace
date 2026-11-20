@@ -16,6 +16,7 @@ import { getUserById } from '../api/users';
 import { ApiError } from '../api/client';
 import { FileIcon } from '../components/ui/FileIcon';
 import { Button } from '../components/ui/Button';
+import { DocumentActions } from '../components/ui/DocumentActions';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { RenameModal } from '../components/ui/RenameModal';
 import { ConvertModal } from '../components/ui/ConvertModal';
@@ -571,20 +572,36 @@ const FileViewPage: React.FC = () => {
         {/* Левая часть: предпросмотр (2/3) */}
         <div className="lg:col-span-2">
           <div className="bg-theme-secondary border border-theme rounded-theme p-4 shadow-theme-card">
-            <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-sm font-medium text-theme-secondary">Предпросмотр</h2>
-              <button
-                onClick={downloadFile}
-                aria-label="Скачать файл"
-                title="Скачать файл"
-                className="group inline-flex h-9 w-9 items-center justify-center gap-2 rounded-theme border border-brand/30 bg-brand-light text-brand transition-colors hover:bg-brand hover:text-theme-on-brand sm:w-auto sm:px-3 sm:text-sm sm:font-medium"
-              >
-                <Download
-                  size={16}
-                  className="group-hover:[animation:ss-bounce-up_0.4s_ease-in-out]"
-                />
-                <span className="hidden sm:inline">Скачать</span>
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                {accessToken && file.filename.toLowerCase().endsWith('.docx') && (
+                  <DocumentActions
+                    key={file.id}
+                    id={file.id}
+                    token={accessToken}
+                    onRestored={() => {
+                      void getFileMetadata(accessToken, file.id)
+                        .then((updated) =>
+                          setFile((current) => (current?.id === updated.id ? updated : current)),
+                        )
+                        .catch(() => {});
+                    }}
+                  />
+                )}
+                <button
+                  onClick={downloadFile}
+                  aria-label="Скачать файл"
+                  title="Скачать файл"
+                  className="group inline-flex h-9 w-9 items-center justify-center gap-2 rounded-theme border border-brand/30 bg-brand-light text-brand transition-colors hover:bg-brand hover:text-theme-on-brand sm:w-auto sm:px-3 sm:text-sm sm:font-medium"
+                >
+                  <Download
+                    size={16}
+                    className="group-hover:[animation:ss-bounce-up_0.4s_ease-in-out]"
+                  />
+                  <span className="hidden sm:inline">Скачать</span>
+                </button>
+              </div>
             </div>
             {renderPreview()}
           </div>

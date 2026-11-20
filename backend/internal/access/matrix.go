@@ -6,7 +6,7 @@ func Can(role Role, action Action) bool {
 		return true
 	case RoleEditor:
 		switch action {
-		case ActionView, ActionDownload, ActionUpload, ActionCreateFolder:
+		case ActionView, ActionDownload, ActionUpload, ActionCreateFolder, ActionEditContent:
 			return true
 		default:
 			return false

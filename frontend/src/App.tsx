@@ -19,6 +19,7 @@ import ProfileSettingsPage from './pages/ProfileSettingsPage';
 import SharedDirListPage from './pages/SharedDirListPage';
 import DirectoryPage from './pages/DirectoryPage';
 import FileViewPage from './pages/FileViewPage';
+import DocumentEditorPage from './pages/DocumentEditorPage';
 import SharedSettingsPage from './pages/SharedSettingsPage';
 import FolderSettingsPage from './pages/FolderSettingsPage';
 import InvitationsPage from './pages/InvitationsPage';
@@ -150,6 +151,7 @@ const App: React.FC = () => {
           <Route path="/directories" element={<SharedDirListPage />} />
           <Route path="/directories/:id/settings" element={<FolderSettingsPage />} />
           <Route path="/files/:id" element={<FileViewPage />} />
+          <Route path="/files/:id/edit" element={<DocumentEditorPage />} />
           <Route path="/shared/:id/settings" element={<SharedSettingsPage />} />
           <Route path="/links" element={<MyLinksPage />} />
           <Route path="/invitations" element={<InvitationsPage />} />

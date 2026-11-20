@@ -80,6 +80,7 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
       <GridItemCaption name={name} size={size} />
 
       <ItemActionsMenu
+        documentId={showProperties && name.toLowerCase().endsWith('.docx') ? id : undefined}
         properties={showProperties ? { kind: 'file', id } : undefined}
         isFavorite={isFavorite}
         onToggleFavorite={onToggleFavorite ? () => onToggleFavorite(id) : undefined}
