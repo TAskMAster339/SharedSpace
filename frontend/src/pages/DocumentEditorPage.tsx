@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, BookOpen, Moon, Sun, X } from 'lucide-react';
+import { Header } from '../components/Header';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { OfficeFrame, OfficeFrameHandle } from '../components/ui/OfficeFrame';
@@ -15,7 +16,7 @@ const DocumentEditorPage: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
   const frame = useRef<OfficeFrameHandle>(null);
   const changed = useRef(false);
-  const intent = useRef<'file' | 'theme'>('file');
+  const afterClose = useRef<(() => void) | null>(null);
   const [confirmTheme, setConfirmTheme] = useState(false);
   const [waitingForTheme, setWaitingForTheme] = useState(false);
   const [resuming, setResuming] = useState(false);
@@ -25,7 +26,6 @@ const DocumentEditorPage: React.FC = () => {
 
   function reopenInTheme() {
     changed.current = false;
-    intent.current = 'file';
     setWaitingForTheme(false);
     setResuming(true);
     toggleTheme();
@@ -33,83 +33,111 @@ const DocumentEditorPage: React.FC = () => {
 
   function requestThemeChange() {
     setConfirmTheme(false);
-    intent.current = 'theme';
     setWaitingForTheme(true);
-    if (!frame.current?.requestClose(true)) reopenInTheme();
+    afterClose.current = reopenInTheme;
+    if (!frame.current?.requestClose(true)) {
+      afterClose.current = null;
+      reopenInTheme();
+    }
+  }
+
+  function leaveEditor(action: () => void) {
+    setWaitingForTheme(false);
+    frame.current?.cancelDeferredClose();
+    afterClose.current = action;
+    if (!frame.current?.requestClose()) {
+      afterClose.current = null;
+      action();
+    }
   }
 
   function returnToFile(event: React.MouseEvent<HTMLAnchorElement>) {
-    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-    setWaitingForTheme(false);
-    frame.current?.cancelDeferredClose();
-    intent.current = 'file';
-    if (frame.current?.requestClose()) event.preventDefault();
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
+      return;
+    event.preventDefault();
+    leaveEditor(() => navigate(filePath));
+  }
+
+  function toggleEditorTheme() {
+    if (waitingForTheme) {
+      if (frame.current?.cancelDeferredClose()) {
+        afterClose.current = null;
+        setWaitingForTheme(false);
+      }
+    } else if (changed.current) {
+      setConfirmTheme(true);
+    } else {
+      requestThemeChange();
+    }
   }
 
   return (
-    <main className="flex h-screen supports-[height:100dvh]:h-[100dvh] min-w-0 flex-col bg-theme-primary">
+    <div className="flex h-screen supports-[height:100dvh]:h-[100dvh] min-w-0 flex-col bg-theme-primary">
       <SEOHead
         title={title ? `Редактирование — ${title}` : 'Редактирование файла'}
         description="Совместное редактирование офисных файлов"
         canonical={`https://shared-space.ru${filePath}`}
       />
-      <div className="flex shrink-0 items-center gap-3 border-b border-theme bg-theme-secondary px-2 py-1 sm:px-4">
-        <Link
-          to={filePath}
-          onClick={returnToFile}
-          className="inline-flex min-h-[44px] shrink-0 items-center gap-2 rounded-theme px-2 text-sm text-theme-secondary hover:bg-theme-hover hover:text-theme-primary"
-        >
-          <ArrowLeft size={16} aria-hidden="true" />К файлу
-        </Link>
-        <h1
-          title={title || undefined}
-          className="min-w-0 flex-1 truncate text-center text-sm font-medium text-theme-primary"
-        >
-          {title || 'Редактирование файла'}
-        </h1>
-        {waitingForTheme && (
-          <span role="status" className="shrink-0 text-xs text-theme-secondary">
-            Сохраняем…
-          </span>
-        )}
-        <Button
-          type="button"
-          variant="secondary"
-          aria-label={waitingForTheme ? 'Отменить смену темы' : themeLabel}
-          title={waitingForTheme ? 'Отменить смену темы' : themeLabel}
-          className="grid size-[44px] shrink-0 place-items-center p-0"
-          onClick={() => {
-            if (waitingForTheme) {
-              if (frame.current?.cancelDeferredClose()) {
-                intent.current = 'file';
-                setWaitingForTheme(false);
-              }
-            } else if (changed.current) setConfirmTheme(true);
-            else requestThemeChange();
-          }}
-        >
-          {waitingForTheme ? (
-            <X size={18} aria-hidden="true" />
-          ) : theme === 'dark' ? (
-            <Sun size={18} aria-hidden="true" />
-          ) : (
-            <Moon size={18} aria-hidden="true" />
-          )}
-        </Button>
-        {title.toLowerCase().endsWith('.docx') && (
-          <Link
-            to={filePath}
-            aria-label="Режим чтения"
-            title="Режим чтения"
-            onClick={returnToFile}
-            className="grid size-11 shrink-0 place-items-center rounded-theme text-theme-secondary hover:bg-theme-hover hover:text-theme-primary sm:hidden"
-          >
-            <BookOpen size={18} aria-hidden="true" />
-          </Link>
-        )}
-      </div>
+      <Header
+        workspace={{
+          nearLogo: (
+            <Link
+              to={filePath}
+              onClick={returnToFile}
+              aria-label="К файлу"
+              title="К файлу"
+              className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-theme border border-brand/30 bg-brand-light px-2.5 text-sm font-semibold text-brand-dark transition-colors hover:bg-brand hover:text-theme-on-brand dark:text-brand dark:hover:text-theme-on-brand sm:px-3"
+            >
+              <ArrowLeft size={18} aria-hidden="true" />
+              <span className="hidden sm:inline">К файлу</span>
+            </Link>
+          ),
+          themeButton: (
+            <Button
+              type="button"
+              variant="secondary"
+              aria-label={waitingForTheme ? 'Отменить смену темы' : themeLabel}
+              title={waitingForTheme ? 'Отменить смену темы' : themeLabel}
+              className="grid size-9 shrink-0 place-items-center p-0 sm:size-11"
+              onClick={toggleEditorTheme}
+            >
+              {waitingForTheme ? (
+                <X size={18} aria-hidden="true" />
+              ) : theme === 'dark' ? (
+                <Sun size={18} aria-hidden="true" />
+              ) : (
+                <Moon size={18} aria-hidden="true" />
+              )}
+            </Button>
+          ),
+          actions: (
+            <>
+              {waitingForTheme && (
+                <span
+                  role="status"
+                  className="sr-only sm:not-sr-only sm:text-xs sm:text-theme-secondary"
+                >
+                  Сохраняем…
+                </span>
+              )}
+              {title.toLowerCase().endsWith('.docx') && (
+                <Link
+                  to={filePath}
+                  aria-label="Режим чтения"
+                  title="Режим чтения"
+                  onClick={returnToFile}
+                  className="grid size-9 shrink-0 place-items-center rounded-theme text-theme-secondary hover:bg-theme-hover hover:text-theme-primary sm:hidden"
+                >
+                  <BookOpen size={18} aria-hidden="true" />
+                </Link>
+              )}
+            </>
+          ),
+          leave: leaveEditor,
+        }}
+      />
 
-      <div className="min-h-0 min-w-0 flex-1">
+      <main className="min-h-0 min-w-0 flex-1" aria-label="Рабочая область документа">
         {token && (
           <OfficeFrame
             ref={frame}
@@ -123,12 +151,14 @@ const DocumentEditorPage: React.FC = () => {
               changed.current = true;
             }}
             onRequestClose={() => {
-              if (intent.current === 'theme') reopenInTheme();
+              const action = afterClose.current;
+              afterClose.current = null;
+              if (action) action();
               else navigate(filePath);
             }}
           />
         )}
-      </div>
+      </main>
 
       <Modal
         native
@@ -149,7 +179,7 @@ const DocumentEditorPage: React.FC = () => {
           </Button>
         </div>
       </Modal>
-    </main>
+    </div>
   );
 };
 
