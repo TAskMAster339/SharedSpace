@@ -131,10 +131,15 @@ export function getFilePreviewUrl(accessToken: string, fileId: string): Promise<
   });
 }
 
-export function getFileContentUrl(accessToken: string, fileId: string): Promise<{ url: string }> {
+export function getFileContentUrl(
+  accessToken: string,
+  fileId: string,
+  signal?: AbortSignal,
+): Promise<{ url: string }> {
   return apiRequest<{ url: string }>(`/files/${fileId}/content`, {
     method: 'GET',
     token: accessToken,
+    signal,
   });
 }
 

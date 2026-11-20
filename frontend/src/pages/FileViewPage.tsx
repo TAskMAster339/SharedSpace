@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useId, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
+  BookOpen,
   Download,
   Share2,
   Star,
@@ -28,6 +29,9 @@ import { ApiError } from '../api/client';
 import { FileIcon } from '../components/ui/FileIcon';
 import { Button } from '../components/ui/Button';
 import { DocumentActions } from '../components/ui/DocumentActions';
+import { MobileDocxReader } from '../components/ui/MobileDocxReader';
+import { useReaderLayout } from '../components/Layout';
+import { usePhoneViewport } from '../hooks/usePhoneViewport';
 import { OfficeFrame } from '../components/ui/OfficeFrame';
 import { useRootTheme } from '../hooks/useTheme';
 import { canEditOfficeFile, canPreviewOfficeFile } from '../utils/officeFormats';
@@ -143,6 +147,27 @@ const FileViewPage: React.FC = () => {
   const [canPreview, setCanPreview] = useState(true);
   const [iframeError, setIframeError] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  const phone = usePhoneViewport();
+  const [standardPreviewFile, setStandardPreviewFile] = useState<string>();
+  const showMobileReader =
+    phone &&
+    !isLoading &&
+    !error &&
+    !!file &&
+    file.id === id &&
+    accessToken &&
+    file.filename.toLowerCase().endsWith('.docx') &&
+    standardPreviewFile !== id;
+  useReaderLayout(!!showMobileReader);
+
+  const loadReaderUrl = useCallback(
+    async (signal: AbortSignal) => {
+      if (!accessToken || !id) throw new Error('Файл недоступен');
+      return (await getFileContentUrl(accessToken, id, signal)).url;
+    },
+    [accessToken, id],
+  );
 
   // Определяем тип для предпросмотра на основе MIME-типа и расширения
   const determinePreviewType = useCallback((mimeType: string, extension: string): PreviewType => {
@@ -571,6 +596,27 @@ const FileViewPage: React.FC = () => {
     );
   }
 
+  if (showMobileReader && accessToken) {
+    return (
+      <>
+        <SEOHead
+          title={file.filename}
+          description="Чтение документа в SharedSpace"
+          canonical={`https://shared-space.ru/files/${file.id}`}
+        />
+        <MobileDocxReader
+          key={`${file.id}:${file.updated_at}`}
+          filename={file.filename}
+          size={file.size}
+          loadUrl={loadReaderUrl}
+          onBack={handleGoBack}
+          onStandardPreview={() => setStandardPreviewFile(file.id)}
+          privateFile={{ id: file.id, token: accessToken }}
+        />
+      </>
+    );
+  }
+
   const fileIconType = resolveFileIconType(file.mime_type, file.extension);
   const isFav = isFavorite(file.id);
 
@@ -619,6 +665,19 @@ const FileViewPage: React.FC = () => {
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-sm font-medium text-theme-secondary">Предпросмотр</h2>
               <div className="flex flex-wrap items-center gap-2">
+                {phone &&
+                  standardPreviewFile === id &&
+                  file.filename.toLowerCase().endsWith('.docx') && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      aria-label="Режим чтения"
+                      className="inline-grid size-9 shrink-0 place-items-center border border-theme p-0"
+                      onClick={() => setStandardPreviewFile(undefined)}
+                    >
+                      <BookOpen size={16} aria-hidden="true" />
+                    </Button>
+                  )}
                 {accessToken && canEditOfficeFile(file.filename) && (
                   <DocumentActions
                     key={file.id}

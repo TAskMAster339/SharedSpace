@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { createContext, useContext, useLayoutEffect, useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { GitFork } from 'lucide-react';
 import { Header } from './Header';
@@ -22,18 +22,31 @@ interface LayoutProps {
   fillViewport?: boolean;
 }
 
+const ReaderLayout = createContext<((active: boolean) => void) | null>(null);
+
+export function useReaderLayout(active: boolean) {
+  const setReader = useContext(ReaderLayout);
+  useLayoutEffect(() => {
+    if (!active || !setReader) return;
+    setReader(true);
+    return () => setReader(false);
+  }, [active, setReader]);
+}
+
 export const Layout: React.FC<LayoutProps> = ({ children, fillViewport = false }) => {
+  const [reader, setReader] = useState(false);
+  const workspace = fillViewport || reader;
   const { isAuthenticated } = useAuth();
   const location = useLocation();
   const isOnLandingPage = location.pathname === '/';
   const { toasts, removeToast } = useToastStore();
 
   return (
-    <div className={cn('bg-theme-primary flex flex-col', fillViewport ? 'h-dvh' : 'min-h-screen')}>
-      <Header />
+    <div className={cn('bg-theme-primary flex flex-col', workspace ? 'h-dvh' : 'min-h-screen')}>
+      {!reader && <Header />}
 
-      <div className={cn('flex flex-1 relative', fillViewport && 'min-h-0')}>
-        {isAuthenticated && !fillViewport && (
+      <div className={cn('flex flex-1 relative', workspace && 'min-h-0')}>
+        {isAuthenticated && !workspace && (
           <div className="sticky top-16 h-[calc(100vh-4rem)] shrink-0">
             <Sidebar />
           </div>
@@ -43,21 +56,23 @@ export const Layout: React.FC<LayoutProps> = ({ children, fillViewport = false }
           <div
             className={cn(
               'flex-1 min-w-0 flex flex-col',
-              fillViewport ? 'min-h-0 overflow-hidden' : 'overflow-y-auto overflow-x-clip',
+              workspace ? 'min-h-0 overflow-hidden' : 'overflow-y-auto overflow-x-clip',
             )}
           >
             <div
               className={cn(
                 'self-center w-full flex-1 flex flex-col',
-                fillViewport ? 'min-h-0' : 'max-w-6xl',
-                !fillViewport && !isOnLandingPage && 'p-4 sm:p-6',
-                !fillViewport && isAuthenticated && !isOnLandingPage && 'pb-24 md:pb-6',
+                workspace ? 'min-h-0' : 'max-w-6xl',
+                !workspace && !isOnLandingPage && 'p-4 sm:p-6',
+                !workspace && isAuthenticated && !isOnLandingPage && 'pb-24 md:pb-6',
               )}
             >
-              <ItemPropertiesProvider>{children ? children : <Outlet />}</ItemPropertiesProvider>
+              <ReaderLayout.Provider value={setReader}>
+                <ItemPropertiesProvider>{children ? children : <Outlet />}</ItemPropertiesProvider>
+              </ReaderLayout.Provider>
             </div>
           </div>
-          {!fillViewport && (
+          {!workspace && (
             <>
               <div
                 className={`md:hidden shrink-0 border-t border-theme px-4 py-3 text-center${isAuthenticated ? ' pb-20' : ''}`}
@@ -91,9 +106,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, fillViewport = false }
         </div>
       </div>
 
-      {isAuthenticated && !fillViewport && <MobileBottomNav />}
-      {isAuthenticated && <StorageUsageModal />}
-      {!fillViewport && <ScrollToTopButton />}
+      {isAuthenticated && !workspace && <MobileBottomNav />}
+      {isAuthenticated && !reader && <StorageUsageModal />}
+      {!workspace && <ScrollToTopButton />}
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );

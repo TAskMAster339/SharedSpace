@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useCallback, useId } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft,
+  BookOpen,
   Download,
   EyeOff,
   Image,
@@ -17,11 +18,13 @@ import {
   ShareLinkResolveResult,
   startSharedOfficePreview,
 } from '../api/sharelinks';
-import { Layout } from '../components/Layout';
+import { Layout, useReaderLayout } from '../components/Layout';
 import { cn } from '../utils/cn';
 import { ApiError } from '../api/client';
 import type { OfficeTheme } from '../api/documents';
 import { useRootTheme } from '../hooks/useTheme';
+import { MobileDocxReader } from '../components/ui/MobileDocxReader';
+import { usePhoneViewport } from '../hooks/usePhoneViewport';
 import { OfficeFrame } from '../components/ui/OfficeFrame';
 import { canPreviewOfficeFile } from '../utils/officeFormats';
 import { useAuthStore } from '../store/authStore';
@@ -129,6 +132,9 @@ interface SharedFileProps {
 
 const SharedFile = ({ token, expanded, setExpanded }: SharedFileProps) => {
   const previewId = useId();
+  const navigate = useNavigate();
+  const phone = usePhoneViewport();
+  const [standardPreview, setStandardPreview] = useState(false);
   const accessToken = useAuthStore((state) => state.accessToken);
   const officeTheme = useRootTheme();
 
@@ -146,6 +152,20 @@ const SharedFile = ({ token, expanded, setExpanded }: SharedFileProps) => {
   const showToast = useToastStore((s) => s.showToast);
 
   const previewType = file ? determinePreviewType(file) : 'unsupported';
+  const showMobileReader =
+    phone &&
+    !standardPreview &&
+    !expanded &&
+    !isLoading &&
+    !error &&
+    !!file?.url &&
+    file.filename.toLowerCase().endsWith('.docx');
+  useReaderLayout(showMobileReader);
+  const readerUrl = file?.url;
+  const loadReaderUrl = useCallback(async () => {
+    if (!readerUrl) throw new Error('Файл недоступен');
+    return readerUrl;
+  }, [readerUrl]);
   const loadOfficePreview = useCallback(
     (theme: OfficeTheme, signal: AbortSignal, compact: boolean) =>
       startSharedOfficePreview(token, accessToken, acceptedPassword, theme, signal, compact),
@@ -466,6 +486,26 @@ const SharedFile = ({ token, expanded, setExpanded }: SharedFileProps) => {
     );
   }
 
+  if (showMobileReader) {
+    return (
+      <>
+        <SEOHead
+          title={ogTitle}
+          description={ogDescription}
+          canonical={`https://shared-space.ru/share/${token}`}
+        />
+        <MobileDocxReader
+          filename={file.filename}
+          size={file.size}
+          loadUrl={loadReaderUrl}
+          onBack={() => navigate(accessToken ? '/dashboard' : '/')}
+          onStandardPreview={() => setStandardPreview(true)}
+          onDownload={handleDownload}
+        />
+      </>
+    );
+  }
+
   const fileIconType = resolveFileIconType(file.mime_type, file.extension);
 
   return (
@@ -507,6 +547,20 @@ const SharedFile = ({ token, expanded, setExpanded }: SharedFileProps) => {
                 {expanded ? file.filename : 'Предпросмотр'}
               </h2>
               <div className="flex shrink-0 items-center gap-2">
+                {phone && standardPreview && file.filename.toLowerCase().endsWith('.docx') && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    aria-label="Режим чтения"
+                    className="inline-grid size-9 shrink-0 place-items-center p-0"
+                    onClick={() => {
+                      setExpanded(false);
+                      setStandardPreview(false);
+                    }}
+                  >
+                    <BookOpen size={16} aria-hidden="true" />
+                  </Button>
+                )}
                 {previewType === 'office' && (
                   <Button
                     type="button"

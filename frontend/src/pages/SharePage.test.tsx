@@ -10,12 +10,14 @@ jest.mock(
   'react-router-dom',
   () => ({
     useParams: () => ({ token: 'shared-file' }),
+    useNavigate: () => jest.fn(),
     Link: 'a',
   }),
   { virtual: true },
 );
 
 jest.mock('../components/Layout', () => ({
+  useReaderLayout: jest.fn(),
   Layout: ({ children, fillViewport }: { children: React.ReactNode; fillViewport: boolean }) => (
     <div data-testid="share-layout" data-expanded={fillViewport}>
       {children}
