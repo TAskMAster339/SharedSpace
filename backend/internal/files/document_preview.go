@@ -29,7 +29,7 @@ type officePreviewGrant struct {
 	jwt.RegisteredClaims
 }
 
-func (s *DocumentService) StartPreview(ctx context.Context, fileID, user, username, theme string) (DocumentEditorSession, error) {
+func (s *DocumentService) StartPreview(ctx context.Context, fileID, user, username string, view OfficeViewOptions) (DocumentEditorSession, error) {
 	if !s.enabled {
 		return DocumentEditorSession{}, apperror.New("предпросмотр офисных файлов недоступен", "editor_disabled", http.StatusServiceUnavailable)
 	}
@@ -41,10 +41,10 @@ func (s *DocumentService) StartPreview(ctx context.Context, fileID, user, userna
 	grant := officePreviewGrant{
 		RegisteredClaims: jwt.RegisteredClaims{Issuer: previewGrantIssuer, Subject: user, ExpiresAt: jwt.NewNumericDate(expires)},
 	}
-	return s.startReadOnlyPreview(ctx, file, grant, user, username, theme)
+	return s.startReadOnlyPreview(ctx, file, grant, user, username, view)
 }
 
-func (s *DocumentService) StartSharedPreview(ctx context.Context, token, password string, authenticated bool, theme string) (DocumentEditorSession, error) {
+func (s *DocumentService) StartSharedPreview(ctx context.Context, token, password string, authenticated bool, view OfficeViewOptions) (DocumentEditorSession, error) {
 	if !s.enabled || s.shareLinks == nil {
 		return DocumentEditorSession{}, apperror.New("предпросмотр офисных файлов недоступен", "editor_disabled", http.StatusServiceUnavailable)
 	}
@@ -64,7 +64,7 @@ func (s *DocumentService) StartSharedPreview(ctx context.Context, token, passwor
 		LinkID: link.ID, LinkProof: link.Proof,
 		RegisteredClaims: jwt.RegisteredClaims{Issuer: sharedPreviewGrantIssuer, ExpiresAt: jwt.NewNumericDate(expires)},
 	}
-	return s.startReadOnlyPreview(ctx, file, grant, "", "", theme)
+	return s.startReadOnlyPreview(ctx, file, grant, "", "", view)
 }
 
 func (s *DocumentService) findSharedPreviewFile(ctx context.Context, id string) (fileRecord, error) {
@@ -75,7 +75,7 @@ func (s *DocumentService) findSharedPreviewFile(ctx context.Context, id string) 
 	return file, err
 }
 
-func (s *DocumentService) startReadOnlyPreview(ctx context.Context, file fileRecord, grant officePreviewGrant, user, username, theme string) (DocumentEditorSession, error) {
+func (s *DocumentService) startReadOnlyPreview(ctx context.Context, file fileRecord, grant officePreviewGrant, user, username string, view OfficeViewOptions) (DocumentEditorSession, error) {
 	extension := ExtractExtension(file.Filename)
 	if officeFormats[extension].documentType == "" {
 		return DocumentEditorSession{}, apperror.New("предпросмотр этого формата недоступен", "unsupported_document", http.StatusUnsupportedMediaType)
@@ -97,7 +97,7 @@ func (s *DocumentService) startReadOnlyPreview(ctx context.Context, file fileRec
 		cacheKey += ":" + grant.LinkID + ":" + grant.LinkProof
 	}
 	sum := sha256.Sum256([]byte(cacheKey))
-	return s.officeConfig(file, hex.EncodeToString(sum[:]), source, user, username, theme, false, grant.ExpiresAt.Time)
+	return s.officeConfig(file, hex.EncodeToString(sum[:]), source, user, username, view, false, grant.ExpiresAt.Time)
 }
 
 func (s *DocumentService) previewSourceFile(ctx context.Context, token string) (fileRecord, error) {

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"path/filepath"
 	"strings"
 	"time"
@@ -45,6 +46,10 @@ func NewService(pool *pgxpool.Pool, repo RepositoryInterface, storage, tmpStorag
 	return &Service{beginTx: beginTx, db: pool, repo: repo, storage: storage, tmpStorage: tmpStorage, accessChecker: accessChecker, shareLinkRepo: shareLinkRepo, previewDir: previewDir}
 }
 
+func uploadTooLarge(message string) error {
+	return apperror.New(message, "upload_too_large", http.StatusRequestEntityTooLarge)
+}
+
 func (s *Service) Upload(ctx context.Context, userID, directoryID string, uploads []FileUpload) (UploadFilesResponse, error) {
 	if len(uploads) == 0 {
 		return UploadFilesResponse{}, apperror.Validation("требуется хотя бы один файл")
@@ -54,8 +59,10 @@ func (s *Service) Upload(ctx context.Context, userID, directoryID string, upload
 	var totalSize int64
 	for _, u := range uploads {
 		if u.Size > maxFileSize {
-			return UploadFilesResponse{}, apperror.Validation(
-				fmt.Sprintf("файл %q превышает максимальный размер 100 МБ", u.Filename))
+			return UploadFilesResponse{}, uploadTooLarge(fmt.Sprintf("файл %q превышает максимальный размер 100 МиБ", u.Filename))
+		}
+		if u.Size > maxFileSize-totalSize {
+			return UploadFilesResponse{}, uploadTooLarge("общий размер файлов в одной загрузке превышает 100 МиБ")
 		}
 		totalSize += u.Size
 	}
@@ -67,6 +74,14 @@ func (s *Service) Upload(ctx context.Context, userID, directoryID string, upload
 	}
 	if !ok {
 		return UploadFilesResponse{}, apperror.Forbidden("доступ запрещён")
+	}
+
+	used, quota, err := s.repo.GetUserStorage(ctx, s.db, userID)
+	if err != nil {
+		return UploadFilesResponse{}, apperror.WrapInternal("получение данных о хранилище", err)
+	}
+	if totalSize > quota-used {
+		return UploadFilesResponse{}, apperror.Validation("превышен лимит хранилища")
 	}
 
 	// грузим объекты в MinIO; ключи копим для отката
@@ -101,12 +116,12 @@ func (s *Service) Upload(ctx context.Context, userID, directoryID string, upload
 		return UploadFilesResponse{}, apperror.WrapInternal("блокировка дерева директорий", err)
 	}
 
-	used, quota, err := s.repo.GetUserStorage(ctx, tx, userID)
+	used, quota, err = s.repo.GetUserStorage(ctx, tx, userID)
 	if err != nil {
 		s.cleanupObjects(uploadedKeys)
 		return UploadFilesResponse{}, apperror.WrapInternal("получение данных о хранилище", err)
 	}
-	if used+totalSize > quota {
+	if totalSize > quota-used {
 		s.cleanupObjects(uploadedKeys)
 		return UploadFilesResponse{}, apperror.Validation("превышен лимит хранилища")
 	}

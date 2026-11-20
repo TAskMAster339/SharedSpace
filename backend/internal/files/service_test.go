@@ -310,20 +310,26 @@ func TestServiceUpload_AccessDenied(t *testing.T) {
 }
 
 func TestServiceUpload_FileTooLarge(t *testing.T) {
-	repo := &mockRepo{
-		dir: directoryRecord{ID: "dir-1", OwnerID: "user-1"},
-	}
-	svc := newTestService(repo, &mockStorage{})
-
-	_, err := svc.Upload(context.Background(), "user-1", "dir-1", []FileUpload{
-		{Filename: "big.bin", Extension: "bin", MimeType: "application/octet-stream", Size: maxFileSize + 1, Content: bytes.NewReader([]byte("x"))},
-	})
-	if err == nil {
-		t.Fatal("expected error")
-	}
-	appErr, ok := apperror.From(err)
-	if !ok || appErr.Code() != apperror.CodeValidation {
-		t.Fatalf("unexpected error: %v", err)
+	for _, test := range []struct {
+		name  string
+		sizes []int64
+	}{
+		{name: "single file", sizes: []int64{maxFileSize + 1}},
+		{name: "batch", sizes: []int64{maxFileSize / 2, maxFileSize/2 + 1}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			store := &mockStorage{}
+			svc := newTestService(&mockRepo{}, store)
+			uploads := make([]FileUpload, 0, len(test.sizes))
+			for _, size := range test.sizes {
+				uploads = append(uploads, FileUpload{Filename: "big.bin", Size: size})
+			}
+			_, err := svc.Upload(context.Background(), "user-1", "dir-1", uploads)
+			assertDocumentError(t, err, "upload_too_large")
+			if store.uploadedKey != "" {
+				t.Fatal("oversized payload reached storage")
+			}
+		})
 	}
 }
 
@@ -333,7 +339,8 @@ func TestServiceUpload_QuotaExceeded(t *testing.T) {
 		storageUsed:  90,
 		storageQuota: 100,
 	}
-	svc := newTestService(repo, &mockStorage{})
+	store := &mockStorage{}
+	svc := newTestService(repo, store)
 
 	_, err := svc.Upload(context.Background(), "user-1", "dir-1", []FileUpload{
 		{Filename: "f.txt", Extension: "txt", MimeType: "text/plain", Size: 50, Content: bytes.NewReader([]byte("x"))},
@@ -344,6 +351,9 @@ func TestServiceUpload_QuotaExceeded(t *testing.T) {
 	appErr, ok := apperror.From(err)
 	if !ok || appErr.Code() != apperror.CodeValidation {
 		t.Fatalf("unexpected error: %v", err)
+	}
+	if store.uploadedKey != "" {
+		t.Fatal("quota was checked after writing to storage")
 	}
 }
 

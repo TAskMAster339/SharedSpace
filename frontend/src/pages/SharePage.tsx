@@ -147,8 +147,8 @@ const SharedFile = ({ token, expanded, setExpanded }: SharedFileProps) => {
 
   const previewType = file ? determinePreviewType(file) : 'unsupported';
   const loadOfficePreview = useCallback(
-    (theme: OfficeTheme, signal: AbortSignal) =>
-      startSharedOfficePreview(token, accessToken, acceptedPassword, theme, signal),
+    (theme: OfficeTheme, signal: AbortSignal, compact: boolean) =>
+      startSharedOfficePreview(token, accessToken, acceptedPassword, theme, signal, compact),
     [token, accessToken, acceptedPassword],
   );
 
@@ -515,7 +515,7 @@ const SharedFile = ({ token, expanded, setExpanded }: SharedFileProps) => {
                     aria-expanded={expanded}
                     aria-label={expanded ? 'Свернуть предпросмотр' : 'Развернуть предпросмотр'}
                     title={expanded ? 'Свернуть предпросмотр' : 'Развернуть предпросмотр'}
-                    className="size-9 p-0"
+                    className="inline-grid size-9 shrink-0 place-items-center p-0"
                     onClick={() => setExpanded(!expanded)}
                   >
                     {expanded ? (

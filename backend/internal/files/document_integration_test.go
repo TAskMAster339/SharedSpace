@@ -164,12 +164,16 @@ func TestDocumentCollaborationIntegration(t *testing.T) {
 	}
 	_, err = svc.History(ctx, file.ID, users[7])
 	assertDocumentError(t, err, "forbidden")
-	_, err = svc.StartSession(ctx, file.ID, users[6], "viewer", "light")
+	_, err = svc.StartSession(ctx, file.ID, users[6], "viewer", OfficeViewOptions{Theme: "light"})
 	assertDocumentError(t, err, "forbidden")
 
-	guest, err := svc.StartSharedPreview(ctx, legacyToken, "", false, "light")
+	guest, err := svc.StartSharedPreview(ctx, legacyToken, "", false, OfficeViewOptions{Theme: "light", Compact: true})
 	mustDocument(t, err)
 	guestConfig := guest.Config["editorConfig"].(map[string]any)
+	guestCustomization := guestConfig["customization"].(map[string]any)
+	if guestCustomization["compactToolbar"] != true || guestCustomization["hideRulers"] != true || guestCustomization["zoom"] != -2 {
+		t.Fatalf("unexpected compact document config: %+v", guestCustomization)
+	}
 	guestDoc := guest.Config["document"].(map[string]any)
 	anonymous := guestConfig["customization"].(map[string]any)["anonymous"].(map[string]bool)
 	if request, present := anonymous["request"]; !present || request {
@@ -200,7 +204,7 @@ func TestDocumentCollaborationIntegration(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			_, err := svc.StartSession(ctx, file.ID, users[i], fmt.Sprintf("editor%d", i), "light")
+			_, err := svc.StartSession(ctx, file.ID, users[i], fmt.Sprintf("editor%d", i), OfficeViewOptions{Theme: "light"})
 			results <- err
 		}()
 	}
@@ -218,13 +222,13 @@ func TestDocumentCollaborationIntegration(t *testing.T) {
 	}
 	var member string
 	mustDocument(t, db.QueryRow(ctx, "SELECT user_id FROM document_edit_members LIMIT 1").Scan(&member))
-	result, err := svc.StartSession(ctx, file.ID, member, "editor", "light")
+	result, err := svc.StartSession(ctx, file.ID, member, "editor", OfficeViewOptions{Theme: "light"})
 	mustDocument(t, err)
 	doc := result.Config["document"].(map[string]any)
 	key := doc["key"].(string)
 	before, err := repo.FindByID(ctx, db, file.ID)
 	mustDocument(t, err)
-	_, err = svc.StartSharedPreview(ctx, legacyToken, "", false, "dark")
+	_, err = svc.StartSharedPreview(ctx, legacyToken, "", false, OfficeViewOptions{Theme: "dark"})
 	mustDocument(t, err)
 
 	if before.ObjectKey != originalKey {
@@ -284,7 +288,7 @@ func TestDocumentCollaborationIntegration(t *testing.T) {
 	mustDocument(t, err)
 	_, err = svc.previewSourceFile(ctx, guestGrant)
 	assertDocumentError(t, err, "conflict")
-	updatedPreview, err := svc.StartSharedPreview(ctx, legacyToken, "", false, "light")
+	updatedPreview, err := svc.StartSharedPreview(ctx, legacyToken, "", false, OfficeViewOptions{Theme: "light"})
 	mustDocument(t, err)
 	updatedDoc := updatedPreview.Config["document"].(map[string]any)
 	if updatedDoc["key"] == guestDoc["key"] {
@@ -303,11 +307,11 @@ func TestDocumentCollaborationIntegration(t *testing.T) {
 	mustDocument(t, err)
 	_, err = svc.previewSourceFile(ctx, updatedURL.Query().Get("grant"))
 	assertDocumentError(t, err, "not_found")
-	_, err = svc.StartSharedPreview(ctx, legacyToken, "test password", false, "light")
+	_, err = svc.StartSharedPreview(ctx, legacyToken, "test password", false, OfficeViewOptions{Theme: "light"})
 	assertDocumentError(t, err, "unauthorized")
-	_, err = svc.StartSharedPreview(ctx, legacyToken, "wrong", true, "light")
+	_, err = svc.StartSharedPreview(ctx, legacyToken, "wrong", true, OfficeViewOptions{Theme: "light"})
 	assertDocumentError(t, err, "forbidden")
-	protected, err := svc.StartSharedPreview(ctx, legacyToken, "test password", true, "light")
+	protected, err := svc.StartSharedPreview(ctx, legacyToken, "test password", true, OfficeViewOptions{Theme: "light"})
 	mustDocument(t, err)
 	protectedURL, err := url.Parse(protected.Config["document"].(map[string]any)["url"].(string))
 	mustDocument(t, err)
@@ -318,13 +322,13 @@ func TestDocumentCollaborationIntegration(t *testing.T) {
 	mustDocument(t, err)
 	_, err = svc.previewSourceFile(ctx, protectedGrant)
 	assertDocumentError(t, err, "not_found")
-	_, err = svc.StartSharedPreview(ctx, legacyToken, "test password", true, "light")
+	_, err = svc.StartSharedPreview(ctx, legacyToken, "test password", true, OfficeViewOptions{Theme: "light"})
 	assertDocumentError(t, err, "not_found")
 	_, err = db.Exec(ctx, "UPDATE share_links SET expires_at=NULL, is_active=false WHERE id=$1", legacyLinkID)
 	mustDocument(t, err)
 	_, err = svc.previewSourceFile(ctx, protectedGrant)
 	assertDocumentError(t, err, "not_found")
-	_, err = svc.StartSharedPreview(ctx, legacyToken, "test password", true, "light")
+	_, err = svc.StartSharedPreview(ctx, legacyToken, "test password", true, OfficeViewOptions{Theme: "light"})
 	assertDocumentError(t, err, "not_found")
 
 	defer store.Delete(context.Background(), saved.ObjectKey)
@@ -350,7 +354,7 @@ func TestDocumentCollaborationIntegration(t *testing.T) {
 		t.Fatalf("restore did not reconcile storage and directory size: quota %d, dir %d, expected %d", used, size, file.Size)
 	}
 	// A callback from the previous folder must never overwrite the current file.
-	movedSession, err := svc.StartSession(ctx, file.ID, users[0], "owner", "light")
+	movedSession, err := svc.StartSession(ctx, file.ID, users[0], "owner", OfficeViewOptions{Theme: "light"})
 	mustDocument(t, err)
 	movedKey := movedSession.Config["document"].(map[string]any)["key"].(string)
 	mustDocument(t, svc.ProcessCallback(ctx, sign(officeEvent{Key: movedKey, Status: 1, Users: []string{users[0]}})))
@@ -396,7 +400,7 @@ func TestDocumentCollaborationIntegration(t *testing.T) {
 			mustDocument(t, err)
 			mustDocument(t, repo.AddUserStorageUsed(ctx, db, users[0], officeFile.Size))
 
-			preview, err := svc.StartPreview(ctx, officeFile.ID, users[6], "viewer", "dark")
+			preview, err := svc.StartPreview(ctx, officeFile.ID, users[6], "viewer", OfficeViewOptions{Theme: "dark"})
 			mustDocument(t, err)
 			if preview.ThemeBridgeURL != office.URL+"/sharedspace-theme/index.html" {
 				t.Fatal("theme synchronization URL must be served by the configured Document Server")
@@ -418,7 +422,7 @@ func TestDocumentCollaborationIntegration(t *testing.T) {
 			}
 			_, err = svc.sourceFile(ctx, grant)
 			assertDocumentError(t, err, "unauthorized")
-			_, err = svc.StartPreview(ctx, officeFile.ID, users[7], "outsider", "dark")
+			_, err = svc.StartPreview(ctx, officeFile.ID, users[7], "outsider", OfficeViewOptions{Theme: "dark"})
 			assertDocumentError(t, err, "forbidden")
 			_, err = activeDocumentSession(ctx, db, officeFile.ID)
 			if !errors.Is(err, pgx.ErrNoRows) {
@@ -430,8 +434,14 @@ func TestDocumentCollaborationIntegration(t *testing.T) {
 				t.Fatal("preview created a file version or granted editing rights")
 			}
 
-			editing, err := svc.StartSession(ctx, officeFile.ID, users[0], "owner", "light")
+			editing, err := svc.StartSession(ctx, officeFile.ID, users[0], "owner", OfficeViewOptions{Theme: "light", Compact: true})
 			mustDocument(t, err)
+			layout := editing.Config["editorConfig"].(map[string]any)["customization"].(map[string]any)
+			wantZoom := map[string]int{"xlsx": 75, "pptx": -1}[extension]
+			if layout["compactToolbar"] != true || layout["zoom"] != wantZoom {
+				t.Fatalf("unexpected compact %s config: %+v", extension, layout)
+			}
+
 			key := editing.Config["document"].(map[string]any)["key"].(string)
 			mustDocument(t, svc.ProcessCallback(ctx, sign(officeEvent{Key: key, Status: 1, Users: []string{users[0]}})))
 			mustDocument(t, svc.ProcessCallback(ctx, sign(officeEvent{Key: key, Status: 2, URL: office.URL + "/cache/files/output." + extension})))

@@ -1195,6 +1195,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/sharedspace_internal_apperror.Response"
                         }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
                     }
                 }
             }
@@ -1651,6 +1657,15 @@ const docTemplate = `{
                         "description": "Interface theme",
                         "name": "theme",
                         "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "compact"
+                        ],
+                        "type": "string",
+                        "description": "Compact toolbar and fit-to-screen zoom",
+                        "name": "layout",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1913,6 +1928,15 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Interface theme",
                         "name": "theme",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "compact"
+                        ],
+                        "type": "string",
+                        "description": "Compact toolbar and fit-to-screen zoom",
+                        "name": "layout",
                         "in": "query"
                     }
                 ],
@@ -2805,6 +2829,15 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Interface theme",
                         "name": "theme",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "compact"
+                        ],
+                        "type": "string",
+                        "description": "Compact toolbar and fit-to-screen zoom",
+                        "name": "layout",
                         "in": "query"
                     }
                 ],

@@ -96,13 +96,17 @@ export function startSharedOfficePreview(
   password: string,
   theme: OfficeTheme,
   signal: AbortSignal,
+  compact = false,
 ): Promise<DocumentEditorSession> {
-  return apiRequest<DocumentEditorSession>(`/s/${token}/preview-session?theme=${theme}`, {
-    method: 'POST',
-    signal,
-    ...(accessToken ? { token: accessToken } : {}),
-    ...(password ? { headers: { 'X-SharedLink-Password': encodeURIComponent(password) } } : {}),
-  });
+  return apiRequest<DocumentEditorSession>(
+    `/s/${token}/preview-session?theme=${theme}${compact ? '&layout=compact' : ''}`,
+    {
+      method: 'POST',
+      signal,
+      ...(accessToken ? { token: accessToken } : {}),
+      ...(password ? { headers: { 'X-SharedLink-Password': encodeURIComponent(password) } } : {}),
+    },
+  );
 }
 
 // ---- Directory share links ----

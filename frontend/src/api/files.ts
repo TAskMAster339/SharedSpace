@@ -44,6 +44,9 @@ export function getRecentFiles(accessToken: string, limit?: number): Promise<Rec
   });
 }
 
+const maxUploadBytes = 100 * 1024 * 1024;
+const uploadLimitMessage = 'Общий размер файлов в одной загрузке не должен превышать 100 МиБ';
+
 // Функция загрузки с прогрессом через XHR
 export function uploadFilesWithProgress(
   token: string,
@@ -51,6 +54,9 @@ export function uploadFilesWithProgress(
   files: FileList,
   onProgress: (progress: number) => void,
 ): Promise<UploadFilesResponse> {
+  if (Array.from(files).reduce((total, file) => total + file.size, 0) > maxUploadBytes) {
+    return Promise.reject(new Error(uploadLimitMessage));
+  }
   return new Promise((resolve, reject) => {
     const formData = new FormData();
     formData.append('directory_id', directoryId);
@@ -81,7 +87,11 @@ export function uploadFilesWithProgress(
           const error = JSON.parse(xhr.responseText);
           reject(new Error(error.error || 'Upload failed'));
         } catch (e) {
-          reject(new Error(`Upload failed with status ${xhr.status}`));
+          reject(
+            new Error(
+              xhr.status === 413 ? uploadLimitMessage : `Upload failed with status ${xhr.status}`,
+            ),
+          );
         }
       }
     });

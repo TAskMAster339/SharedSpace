@@ -36,13 +36,17 @@ export function startOfficeSession(
   mode: OfficeMode,
   theme: OfficeTheme,
   signal: AbortSignal,
+  compact = false,
 ) {
   const endpoint = mode === 'edit' ? 'editor-session' : 'preview-session';
-  return apiRequest<DocumentEditorSession>(`/files/${id}/${endpoint}?theme=${theme}`, {
-    token,
-    signal,
-    method: 'POST',
-  });
+  return apiRequest<DocumentEditorSession>(
+    `/files/${id}/${endpoint}?theme=${theme}${compact ? '&layout=compact' : ''}`,
+    {
+      token,
+      signal,
+      method: 'POST',
+    },
+  );
 }
 
 export function getDocumentVersionURL(token: string, id: string, number: number) {

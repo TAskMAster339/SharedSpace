@@ -1191,6 +1191,12 @@
                         "schema": {
                             "$ref": "#/definitions/sharedspace_internal_apperror.Response"
                         }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
                     }
                 }
             }
@@ -1647,6 +1653,15 @@
                         "description": "Interface theme",
                         "name": "theme",
                         "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "compact"
+                        ],
+                        "type": "string",
+                        "description": "Compact toolbar and fit-to-screen zoom",
+                        "name": "layout",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1909,6 +1924,15 @@
                         "type": "string",
                         "description": "Interface theme",
                         "name": "theme",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "compact"
+                        ],
+                        "type": "string",
+                        "description": "Compact toolbar and fit-to-screen zoom",
+                        "name": "layout",
                         "in": "query"
                     }
                 ],
@@ -2801,6 +2825,15 @@
                         "type": "string",
                         "description": "Interface theme",
                         "name": "theme",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "compact"
+                        ],
+                        "type": "string",
+                        "description": "Compact toolbar and fit-to-screen zoom",
+                        "name": "layout",
                         "in": "query"
                     }
                 ],

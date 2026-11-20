@@ -58,7 +58,14 @@ test('an anonymous recipient can preview a shared spreadsheet and still download
   showSharedFile();
 
   expect(await screen.findByRole('alert')).toHaveTextContent('Предпросмотр временно недоступен');
-  expect(preview).toHaveBeenCalledWith('shared-file', null, '', 'light', expect.any(AbortSignal));
+  expect(preview).toHaveBeenCalledWith(
+    'shared-file',
+    null,
+    '',
+    'light',
+    expect.any(AbortSignal),
+    false,
+  );
   expect(screen.getByRole('button', { name: 'Скачать файл' })).toBeVisible();
   expect(screen.queryByRole('link', { name: /редактировать/i })).toBeNull();
 });
@@ -84,6 +91,7 @@ test('a protected link only forwards a password after successful access verifica
       'test пароль +%',
       'light',
       expect.any(AbortSignal),
+      false,
     ),
   );
 });

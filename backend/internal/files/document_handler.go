@@ -16,6 +16,11 @@ import (
 	"sharedspace/internal/sharelinks"
 )
 
+func officeViewOptions(r *http.Request) OfficeViewOptions {
+	query := r.URL.Query()
+	return OfficeViewOptions{Theme: query.Get("theme"), Compact: query.Get("layout") == "compact"}
+}
+
 type DocumentHandler struct {
 	service     *DocumentService
 	tokenParser sharelinks.TokenParser
@@ -31,6 +36,7 @@ func NewDocumentHandler(service *DocumentService, tokenParser sharelinks.TokenPa
 // @Produce json
 // @Param id path string true "File ID"
 // @Param theme query string false "Interface theme" Enums(light,dark)
+// @Param layout query string false "Compact toolbar and fit-to-screen zoom" Enums(compact)
 // @Success 200 {object} DocumentEditorSession
 // @Failure 403 {object} apperror.Response
 // @Failure 404 {object} apperror.Response
@@ -43,7 +49,7 @@ func (h *DocumentHandler) Start(w http.ResponseWriter, r *http.Request) error {
 	if !ok {
 		return apperror.Unauthorized("не авторизован")
 	}
-	result, err := h.service.StartSession(r.Context(), chi.URLParam(r, "id"), claims.UserID, claims.Username, r.URL.Query().Get("theme"))
+	result, err := h.service.StartSession(r.Context(), chi.URLParam(r, "id"), claims.UserID, claims.Username, officeViewOptions(r))
 	if err != nil {
 		return err
 	}
@@ -57,6 +63,7 @@ func (h *DocumentHandler) Start(w http.ResponseWriter, r *http.Request) error {
 // @Produce json
 // @Param id path string true "File ID"
 // @Param theme query string false "Interface theme" Enums(light,dark)
+// @Param layout query string false "Compact toolbar and fit-to-screen zoom" Enums(compact)
 // @Success 200 {object} DocumentEditorSession
 // @Failure 403 {object} apperror.Response
 // @Failure 404 {object} apperror.Response
@@ -69,7 +76,7 @@ func (h *DocumentHandler) Preview(w http.ResponseWriter, r *http.Request) error 
 	if !ok {
 		return apperror.Unauthorized("не авторизован")
 	}
-	result, err := h.service.StartPreview(r.Context(), chi.URLParam(r, "id"), claims.UserID, claims.Username, r.URL.Query().Get("theme"))
+	result, err := h.service.StartPreview(r.Context(), chi.URLParam(r, "id"), claims.UserID, claims.Username, officeViewOptions(r))
 	if err != nil {
 		return err
 	}
@@ -83,6 +90,7 @@ func (h *DocumentHandler) Preview(w http.ResponseWriter, r *http.Request) error 
 // @Param token path string true "Share link token"
 // @Param X-SharedLink-Password header string false "Password for protected links"
 // @Param theme query string false "Interface theme" Enums(light,dark)
+// @Param layout query string false "Compact toolbar and fit-to-screen zoom" Enums(compact)
 // @Success 200 {object} DocumentEditorSession
 // @Failure 401 {object} apperror.Response
 // @Failure 403 {object} apperror.Response
@@ -94,7 +102,7 @@ func (h *DocumentHandler) Preview(w http.ResponseWriter, r *http.Request) error 
 func (h *DocumentHandler) SharedPreview(w http.ResponseWriter, r *http.Request) error {
 	password, authenticated := sharelinks.FileLinkCredentials(r, h.tokenParser)
 	w.Header().Set("Cache-Control", "no-store")
-	result, err := h.service.StartSharedPreview(r.Context(), chi.URLParam(r, "token"), password, authenticated, r.URL.Query().Get("theme"))
+	result, err := h.service.StartSharedPreview(r.Context(), chi.URLParam(r, "token"), password, authenticated, officeViewOptions(r))
 	if err != nil {
 		return err
 	}

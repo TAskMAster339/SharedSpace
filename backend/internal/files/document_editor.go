@@ -85,6 +85,11 @@ func NewDocumentService(db *pgxpool.Pool, repo *Repository, storage StorageClien
 	return s, nil
 }
 
+type OfficeViewOptions struct {
+	Theme   string
+	Compact bool
+}
+
 type DocumentEditorSession struct {
 	ScriptURL      string         `json:"script_url"`
 	ThemeBridgeURL string         `json:"theme_bridge_url,omitempty"`
@@ -124,7 +129,7 @@ func sessionByKey(ctx context.Context, tx dbTX, key string, lock bool) (document
 	return readDocumentSession(tx.QueryRow(ctx, sql, key))
 }
 
-func (s *DocumentService) StartSession(ctx context.Context, fileID, userID, username, theme string) (DocumentEditorSession, error) {
+func (s *DocumentService) StartSession(ctx context.Context, fileID, userID, username string, view OfficeViewOptions) (DocumentEditorSession, error) {
 	if !s.enabled {
 		return DocumentEditorSession{}, apperror.New("редактор недоступен", "editor_disabled", http.StatusServiceUnavailable)
 	}
@@ -182,7 +187,7 @@ func (s *DocumentService) StartSession(ctx context.Context, fileID, userID, user
 		SET reserved_until = EXCLUDED.reserved_until, username = EXCLUDED.username`, session.Key, userID, username, expires); err != nil {
 		return DocumentEditorSession{}, err
 	}
-	result, err := s.editorConfig(file, session.Key, userID, username, theme, expires)
+	result, err := s.editorConfig(file, session.Key, userID, username, view, expires)
 	if err != nil {
 		return DocumentEditorSession{}, err
 	}
@@ -194,7 +199,7 @@ type documentSourceGrant struct {
 	jwt.RegisteredClaims
 }
 
-func (s *DocumentService) editorConfig(file fileRecord, key, user, username, theme string, expires time.Time) (DocumentEditorSession, error) {
+func (s *DocumentService) editorConfig(file fileRecord, key, user, username string, view OfficeViewOptions, expires time.Time) (DocumentEditorSession, error) {
 	grant := documentSourceGrant{Session: key, RegisteredClaims: jwt.RegisteredClaims{
 		Issuer: "sharedspace-docx-source", Subject: user, ExpiresAt: jwt.NewNumericDate(expires),
 	}}
@@ -202,7 +207,7 @@ func (s *DocumentService) editorConfig(file fileRecord, key, user, username, the
 	if err != nil {
 		return DocumentEditorSession{}, err
 	}
-	return s.officeConfig(file, key, source, user, username, theme, true, expires)
+	return s.officeConfig(file, key, source, user, username, view, true, expires)
 }
 
 func (s *DocumentService) officeSource(route string, grant jwt.Claims) (string, error) {
@@ -215,13 +220,13 @@ func (s *DocumentService) officeSource(route string, grant jwt.Claims) (string, 
 	return source.String(), nil
 }
 
-func (s *DocumentService) officeConfig(file fileRecord, key, source, user, username, theme string, edit bool, expires time.Time) (DocumentEditorSession, error) {
+func (s *DocumentService) officeConfig(file fileRecord, key, source, user, username string, view OfficeViewOptions, edit bool, expires time.Time) (DocumentEditorSession, error) {
 	extension := ExtractExtension(file.Filename)
 	uiTheme := s.lightTheme
 	if uiTheme == "" {
 		uiTheme = "theme-white"
 	}
-	if theme == "dark" {
+	if view.Theme == "dark" {
 		uiTheme = s.darkTheme
 		if uiTheme == "" {
 			uiTheme = "theme-night"
@@ -231,9 +236,22 @@ func (s *DocumentService) officeConfig(file fileRecord, key, source, user, usern
 		"forcesave": false, "plugins": false, "macros": false,
 		"uiTheme": uiTheme, "hideRightMenu": true, "integrationMode": "embed",
 	}
-	if !edit && officeFormats[extension].documentType != "cell" {
+	documentType := officeFormats[extension].documentType
+	if !edit && documentType != "cell" {
 		customization["zoom"] = -2
 	}
+	if view.Compact {
+		customization["compactToolbar"] = true
+		switch documentType {
+		case "word":
+			customization["hideRulers"], customization["zoom"] = true, -2
+		case "slide":
+			customization["hideRulers"], customization["zoom"] = true, -1
+		case "cell":
+			customization["zoom"] = 75
+		}
+	}
+
 	editor := map[string]any{
 		"mode": "view", "lang": "ru",
 		"customization": customization,
@@ -250,7 +268,7 @@ func (s *DocumentService) officeConfig(file fileRecord, key, source, user, usern
 		editor["coEditing"] = map[string]any{"mode": "fast", "change": false}
 	}
 	config := jwt.MapClaims{
-		"documentType": officeFormats[extension].documentType, "type": "desktop",
+		"documentType": documentType, "type": "desktop",
 		"document": map[string]any{
 			"fileType": extension, "key": key, "title": file.Filename, "url": source,
 			"permissions": map[string]bool{"edit": edit, "comment": edit, "review": edit, "fillForms": edit, "chat": edit},

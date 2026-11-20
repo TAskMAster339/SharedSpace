@@ -82,7 +82,11 @@ type OfficeFrameProps = {
       mode: 'view';
       fileId?: never;
       token?: never;
-      loadPreview: (theme: OfficeTheme, signal: AbortSignal) => Promise<DocumentEditorSession>;
+      loadPreview: (
+        theme: OfficeTheme,
+        signal: AbortSignal,
+        compact: boolean,
+      ) => Promise<DocumentEditorSession>;
     }
 );
 
@@ -96,6 +100,7 @@ export const OfficeFrame = forwardRef<OfficeFrameHandle, OfficeFrameProps>(funct
   const closeAfterSave = useRef(false);
   const callbacks = useRef({ onTitle, onChanged, onRequestClose, token });
   const anchorId = useId();
+  const [compact] = useState(() => window.matchMedia?.('(max-width: 640px)').matches ?? false);
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<'loading' | 'saving' | 'ready'>('loading');
   const [error, setError] = useState('');
@@ -143,13 +148,14 @@ export const OfficeFrame = forwardRef<OfficeFrameHandle, OfficeFrameProps>(funct
     const open = async (retries: number) => {
       try {
         const session = loadPreview
-          ? await loadPreview(theme, controller.signal)
+          ? await loadPreview(theme, controller.signal, compact)
           : await startOfficeSession(
               callbacks.current.token ?? '',
               fileId,
               mode,
               theme,
               controller.signal,
+              compact,
             );
         const api = await loadOfficeScript(session.script_url);
         if (!active()) return;
@@ -234,7 +240,7 @@ export const OfficeFrame = forwardRef<OfficeFrameHandle, OfficeFrameProps>(funct
       editor.current = undefined;
       container.replaceChildren();
     };
-  }, [anchorId, attempt, editing, fileId, loadPreview, mode, theme, waitForSave]);
+  }, [anchorId, attempt, compact, editing, fileId, loadPreview, mode, theme, waitForSave]);
 
   return (
     <div className="relative size-full min-h-0 bg-theme-secondary">

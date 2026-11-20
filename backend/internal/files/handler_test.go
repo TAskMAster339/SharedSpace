@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
@@ -138,6 +140,41 @@ func TestHandlerUpload_Success(t *testing.T) {
 	}
 	if svc.uploadUserID != "user-1" || svc.uploadDirID != "dir-1" {
 		t.Fatalf("unexpected service args: user=%q dir=%q", svc.uploadUserID, svc.uploadDirID)
+	}
+}
+
+type uploadTestBytes struct{}
+
+func (uploadTestBytes) Read(buffer []byte) (int, error) {
+	clear(buffer)
+	return len(buffer), nil
+}
+
+func TestHandlerUploadRejectsOversizedBody(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		length int64
+	}{
+		{name: "known content length", length: maxRequestBytes + 1},
+		{name: "streamed body", length: -1},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			service := &mockService{}
+			prefix := "--fixture\r\nContent-Disposition: form-data; name=\"files\"; filename=\"item.txt\"\r\n\r\n"
+			body := io.MultiReader(strings.NewReader(prefix), io.LimitReader(uploadTestBytes{}, maxRequestBytes+1))
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/files", body)
+			req.ContentLength = test.length
+			req.Header.Set("Content-Type", "multipart/form-data; boundary=fixture")
+			req = req.WithContext(withClaims(req.Context(), "user-1"))
+			rec := httptest.NewRecorder()
+			middleware.AppError(NewHandler(service).Upload).ServeHTTP(rec, req)
+			if rec.Code != http.StatusRequestEntityTooLarge || !strings.Contains(rec.Body.String(), "upload_too_large") {
+				t.Fatalf("unexpected response: %d %s", rec.Code, rec.Body)
+			}
+			if service.uploadUserID != "" {
+				t.Fatal("oversized request reached the upload service")
+			}
+		})
 	}
 }
 

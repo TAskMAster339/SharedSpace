@@ -48,3 +48,22 @@ test('shared preview loads outside the private file API and retries in read-only
   expect(loadPreview.mock.calls[1][0]).toBe('dark');
   expect(start).not.toHaveBeenCalled();
 });
+
+test('chooses a compact layout once and keeps it through an orientation change', async () => {
+  const original = window.matchMedia;
+  const match = jest.fn().mockReturnValue({ matches: true });
+  window.matchMedia = match;
+  try {
+    const { rerender } = render(
+      <OfficeFrame fileId="file" token="token" mode="edit" theme="light" />,
+    );
+    await screen.findByRole('alert');
+    expect(start.mock.calls[0][5]).toBe(true);
+    match.mockReturnValue({ matches: false });
+    rerender(<OfficeFrame fileId="file" token="token" mode="edit" theme="dark" />);
+    await screen.findByRole('alert');
+    expect(start.mock.calls[1][5]).toBe(true);
+  } finally {
+    window.matchMedia = original;
+  }
+});
