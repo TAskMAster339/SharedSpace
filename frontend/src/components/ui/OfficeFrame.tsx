@@ -1,7 +1,13 @@
 import React, { forwardRef, useEffect, useId, useImperativeHandle, useRef, useState } from 'react';
 import { ApiError } from '../../api/client';
-import { OfficeMode, OfficeTheme, startOfficeSession } from '../../api/documents';
+import {
+  DocumentEditorSession,
+  OfficeMode,
+  OfficeTheme,
+  startOfficeSession,
+} from '../../api/documents';
 import { Button } from './Button';
+import { synchronizeOfficeTheme } from '../../utils/officeTheme';
 
 interface OfficeEditor {
   destroyEditor(): void;
@@ -64,23 +70,28 @@ export interface OfficeFrameHandle {
   cancelDeferredClose(): boolean;
 }
 
-interface OfficeFrameProps {
-  fileId: string;
-  token: string;
-  mode: OfficeMode;
+type OfficeFrameProps = {
   theme: OfficeTheme;
   waitForSave?: boolean;
   onTitle?: (title: string) => void;
   onChanged?: () => void;
   onRequestClose?: () => void;
-}
+} & (
+  | { fileId: string; token: string; mode: OfficeMode; loadPreview?: never }
+  | {
+      mode: 'view';
+      fileId?: never;
+      token?: never;
+      loadPreview: (theme: OfficeTheme, signal: AbortSignal) => Promise<DocumentEditorSession>;
+    }
+);
 
 export const OfficeFrame = forwardRef<OfficeFrameHandle, OfficeFrameProps>(function OfficeFrame(
-  { fileId, token, mode, theme, waitForSave, onTitle, onChanged, onRequestClose },
+  { fileId, token, mode, theme, loadPreview, waitForSave, onTitle, onChanged, onRequestClose },
   ref,
 ) {
   const mount = useRef<HTMLDivElement>(null);
-  const editor = useRef<OfficeEditor>();
+  const editor = useRef<OfficeEditor | undefined>(undefined);
   const unsaved = useRef(false);
   const closeAfterSave = useRef(false);
   const callbacks = useRef({ onTitle, onChanged, onRequestClose, token });
@@ -88,6 +99,7 @@ export const OfficeFrame = forwardRef<OfficeFrameHandle, OfficeFrameProps>(funct
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<'loading' | 'saving' | 'ready'>('loading');
   const [error, setError] = useState('');
+  const [themeSyncFailed, setThemeSyncFailed] = useState(false);
   const editing = mode === 'edit';
 
   useEffect(() => {
@@ -126,18 +138,31 @@ export const OfficeFrame = forwardRef<OfficeFrameHandle, OfficeFrameProps>(funct
     closeAfterSave.current = false;
     setState('loading');
     setError('');
+    setThemeSyncFailed(false);
 
     const open = async (retries: number) => {
       try {
-        const session = await startOfficeSession(
-          callbacks.current.token,
-          fileId,
-          mode,
-          theme,
-          controller.signal,
-        );
+        const session = loadPreview
+          ? await loadPreview(theme, controller.signal)
+          : await startOfficeSession(
+              callbacks.current.token ?? '',
+              fileId,
+              mode,
+              theme,
+              controller.signal,
+            );
         const api = await loadOfficeScript(session.script_url);
         if (!active()) return;
+        if (session.theme_bridge_url) {
+          const synced = await synchronizeOfficeTheme(
+            session.theme_bridge_url,
+            session.script_url,
+            session.config.editorConfig.customization.uiTheme,
+            controller.signal,
+          );
+          if (!active()) return;
+          setThemeSyncFailed(!synced);
+        }
         const filename = session.config.document.title;
         callbacks.current.onTitle?.(filename);
         const nameIframe = () => {
@@ -209,7 +234,7 @@ export const OfficeFrame = forwardRef<OfficeFrameHandle, OfficeFrameProps>(funct
       editor.current = undefined;
       container.replaceChildren();
     };
-  }, [anchorId, attempt, editing, fileId, mode, theme, waitForSave]);
+  }, [anchorId, attempt, editing, fileId, loadPreview, mode, theme, waitForSave]);
 
   return (
     <div className="relative size-full min-h-0 bg-theme-secondary">
@@ -225,6 +250,16 @@ export const OfficeFrame = forwardRef<OfficeFrameHandle, OfficeFrameProps>(funct
               : editing
                 ? 'Подключаем редактор…'
                 : 'Загружаем предпросмотр…'}
+          </p>
+        </div>
+      )}
+      {state === 'ready' && !error && themeSyncFailed && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-7 flex justify-center px-3">
+          <p
+            role="status"
+            className="rounded-theme border border-theme bg-theme-secondary px-3 py-2 text-sm text-theme-secondary"
+          >
+            Не удалось синхронизировать тему. Её можно выбрать в меню ONLYOFFICE.
           </p>
         </div>
       )}

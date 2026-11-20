@@ -16,6 +16,7 @@ export interface DocumentHistory {
 
 export interface DocumentEditorSession {
   script_url: string;
+  theme_bridge_url?: string;
   config: {
     document: { title: string };
     editorConfig: { customization: Record<string, unknown> };

@@ -51,6 +51,7 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 		if documentHandler != nil {
 			r.Get("/office/source", middleware.AppError(documentHandler.Source))
 			r.Get("/office/preview-source", middleware.AppError(documentHandler.PreviewSource))
+			r.Post("/s/{token}/preview-session", middleware.AppError(documentHandler.SharedPreview))
 			r.Post("/office/callback", middleware.AppError(documentHandler.Callback))
 		}
 

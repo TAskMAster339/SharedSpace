@@ -67,6 +67,7 @@ type Config struct {
 	OfficeJWTSecret   string
 	OfficeLightTheme  string
 	OfficeDarkTheme   string
+	OfficeThemeSync   bool
 }
 
 func Load() (*Config, error) {
@@ -157,6 +158,7 @@ func Load() (*Config, error) {
 		OfficeJWTSecret:   getEnv("OFFICE_JWT_SECRET", ""),
 		OfficeLightTheme:  getEnv("OFFICE_LIGHT_THEME", ""),
 		OfficeDarkTheme:   getEnv("OFFICE_DARK_THEME", ""),
+		OfficeThemeSync:   getEnv("OFFICE_THEME_SYNC", "false") == "true",
 	}, nil
 }
 

@@ -22,9 +22,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"golang.org/x/crypto/bcrypt"
 
 	"sharedspace/internal/apperror"
 	"sharedspace/internal/database"
+	"sharedspace/internal/sharelinks"
 	"sharedspace/internal/storage"
 )
 
@@ -101,6 +103,12 @@ func TestDocumentCollaborationIntegration(t *testing.T) {
 	mustDocument(t, err)
 	mustDocument(t, repo.AddUserStorageUsed(ctx, db, users[0], file.Size))
 
+	var legacyLinkID string
+	legacyToken := uuid.NewString()
+	err = db.QueryRow(ctx, `INSERT INTO share_links (file_id, token, access_type, created_by)
+		VALUES ($1, $2, 'public', $3) RETURNING id`, file.ID, legacyToken, users[0]).Scan(&legacyLinkID)
+	mustDocument(t, err)
+
 	var previousDir string
 	mustDocument(t, db.QueryRow(ctx, `INSERT INTO directories(owner_id,name)
 		VALUES($1,'Previous version') RETURNING id`, users[7]).Scan(&previousDir))
@@ -145,7 +153,8 @@ func TestDocumentCollaborationIntegration(t *testing.T) {
 	defer office.Close()
 	uploads := &documentTestStorage{StorageClient: store}
 	opts := DocumentEditorOptions{Enabled: true, PublicURL: office.URL, InternalURL: office.URL,
-		StorageURL: "https://sharedspace.example.test", Secret: "test-only-office-secret-minimum-length"}
+		StorageURL: "https://sharedspace.example.test", Secret: "test-only-office-secret-minimum-length", ThemeSync: true,
+		ShareLinks: sharelinks.NewService(db, sharelinks.NewRepository(), store, nil)}
 	svc, err := NewDocumentService(db, repo, uploads, opts)
 	mustDocument(t, err)
 	history, err := svc.History(ctx, file.ID, users[6])
@@ -157,6 +166,29 @@ func TestDocumentCollaborationIntegration(t *testing.T) {
 	assertDocumentError(t, err, "forbidden")
 	_, err = svc.StartSession(ctx, file.ID, users[6], "viewer", "light")
 	assertDocumentError(t, err, "forbidden")
+
+	guest, err := svc.StartSharedPreview(ctx, legacyToken, "", false, "light")
+	mustDocument(t, err)
+	guestConfig := guest.Config["editorConfig"].(map[string]any)
+	guestDoc := guest.Config["document"].(map[string]any)
+	if guestConfig["mode"] != "view" || guestConfig["callbackUrl"] != nil ||
+		guestDoc["permissions"].(map[string]bool)["edit"] || guestDoc["permissions"].(map[string]bool)["comment"] {
+		t.Fatal("share link granted more than read-only access")
+	}
+	guestURL, err := url.Parse(guestDoc["url"].(string))
+	mustDocument(t, err)
+	guestGrant := guestURL.Query().Get("grant")
+	guestFile, err := svc.previewSourceFile(ctx, guestGrant)
+	mustDocument(t, err)
+	if guestFile.ObjectKey != originalKey {
+		t.Fatal("share link did not open the last saved file")
+	}
+	_, err = svc.sourceFile(ctx, guestGrant)
+	assertDocumentError(t, err, "unauthorized")
+	_, err = activeDocumentSession(ctx, db, file.ID)
+	if !errors.Is(err, pgx.ErrNoRows) {
+		t.Fatalf("share link opened an editing session: %v", err)
+	}
 
 	var wg sync.WaitGroup
 	results := make(chan error, 6)
@@ -188,6 +220,9 @@ func TestDocumentCollaborationIntegration(t *testing.T) {
 	key := doc["key"].(string)
 	before, err := repo.FindByID(ctx, db, file.ID)
 	mustDocument(t, err)
+	_, err = svc.StartSharedPreview(ctx, legacyToken, "", false, "dark")
+	mustDocument(t, err)
+
 	if before.ObjectKey != originalKey {
 		t.Fatal("session creation replaced the original object")
 	}
@@ -243,6 +278,51 @@ func TestDocumentCollaborationIntegration(t *testing.T) {
 	}
 	saved, err := repo.FindByID(ctx, db, file.ID)
 	mustDocument(t, err)
+	_, err = svc.previewSourceFile(ctx, guestGrant)
+	assertDocumentError(t, err, "conflict")
+	updatedPreview, err := svc.StartSharedPreview(ctx, legacyToken, "", false, "light")
+	mustDocument(t, err)
+	updatedDoc := updatedPreview.Config["document"].(map[string]any)
+	if updatedDoc["key"] == guestDoc["key"] {
+		t.Fatal("publishing a new version did not change the share preview key")
+	}
+	updatedURL, err := url.Parse(updatedDoc["url"].(string))
+	mustDocument(t, err)
+	updatedFile, err := svc.previewSourceFile(ctx, updatedURL.Query().Get("grant"))
+	mustDocument(t, err)
+	if updatedFile.ObjectKey != saved.ObjectKey {
+		t.Fatal("share link did not follow the saved version")
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte("test password"), bcrypt.MinCost)
+	mustDocument(t, err)
+	_, err = db.Exec(ctx, "UPDATE share_links SET access_type='authenticated', password_hash=$2 WHERE id=$1", legacyLinkID, string(hash))
+	mustDocument(t, err)
+	_, err = svc.previewSourceFile(ctx, updatedURL.Query().Get("grant"))
+	assertDocumentError(t, err, "not_found")
+	_, err = svc.StartSharedPreview(ctx, legacyToken, "test password", false, "light")
+	assertDocumentError(t, err, "unauthorized")
+	_, err = svc.StartSharedPreview(ctx, legacyToken, "wrong", true, "light")
+	assertDocumentError(t, err, "forbidden")
+	protected, err := svc.StartSharedPreview(ctx, legacyToken, "test password", true, "light")
+	mustDocument(t, err)
+	protectedURL, err := url.Parse(protected.Config["document"].(map[string]any)["url"].(string))
+	mustDocument(t, err)
+	protectedGrant := protectedURL.Query().Get("grant")
+	_, err = svc.previewSourceFile(ctx, protectedGrant)
+	mustDocument(t, err)
+	_, err = db.Exec(ctx, "UPDATE share_links SET expires_at=now() - interval '1 minute' WHERE id=$1", legacyLinkID)
+	mustDocument(t, err)
+	_, err = svc.previewSourceFile(ctx, protectedGrant)
+	assertDocumentError(t, err, "not_found")
+	_, err = svc.StartSharedPreview(ctx, legacyToken, "test password", true, "light")
+	assertDocumentError(t, err, "not_found")
+	_, err = db.Exec(ctx, "UPDATE share_links SET expires_at=NULL, is_active=false WHERE id=$1", legacyLinkID)
+	mustDocument(t, err)
+	_, err = svc.previewSourceFile(ctx, protectedGrant)
+	assertDocumentError(t, err, "not_found")
+	_, err = svc.StartSharedPreview(ctx, legacyToken, "test password", true, "light")
+	assertDocumentError(t, err, "not_found")
+
 	defer store.Delete(context.Background(), saved.ObjectKey)
 	reader, err := store.Get(ctx, saved.ObjectKey)
 	mustDocument(t, err)
@@ -314,6 +394,9 @@ func TestDocumentCollaborationIntegration(t *testing.T) {
 
 			preview, err := svc.StartPreview(ctx, officeFile.ID, users[6], "viewer", "dark")
 			mustDocument(t, err)
+			if preview.ThemeBridgeURL != office.URL+"/sharedspace-theme/index.html" {
+				t.Fatal("theme synchronization URL must be served by the configured Document Server")
+			}
 			config := preview.Config["editorConfig"].(map[string]any)
 			doc := preview.Config["document"].(map[string]any)
 			if config["mode"] != "view" || config["callbackUrl"] != nil ||

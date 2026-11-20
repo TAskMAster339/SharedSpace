@@ -1,7 +1,16 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Download, EyeOff, Image, KeyRound, Eye, Copy, Check } from 'lucide-react';
-import { resolveShareLink, ShareLinkResolveResult } from '../api/sharelinks';
+import {
+  resolveShareLink,
+  ShareLinkResolveResult,
+  startSharedOfficePreview,
+} from '../api/sharelinks';
+import { ApiError } from '../api/client';
+import type { OfficeTheme } from '../api/documents';
+import { useRootTheme } from '../hooks/useTheme';
+import { OfficeFrame } from '../components/ui/OfficeFrame';
+import { canPreviewOfficeFile } from '../utils/officeFormats';
 import { useAuthStore } from '../store/authStore';
 import { useToastStore } from '../hooks/useToast';
 import SEOHead from '../components/SEOHead';
@@ -65,12 +74,12 @@ const CODE_EXTENSIONS = new Set([
   'sql',
 ]);
 
-const PROBLEMATIC_EXTENSIONS = new Set(['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx']);
+type PreviewType = 'office' | 'image' | 'video' | 'audio' | 'pdf' | 'text' | 'code' | 'unsupported';
 
-type PreviewType = 'image' | 'video' | 'audio' | 'pdf' | 'text' | 'code' | 'unsupported';
-
-function determinePreviewType(mimeType: string, extension: string): PreviewType {
-  const ext = extension.replace(/^\./, '').toLowerCase();
+function determinePreviewType(file: ShareLinkResolveResult): PreviewType {
+  if (canPreviewOfficeFile(file.filename)) return 'office';
+  const mimeType = file.mime_type;
+  const ext = file.extension.replace(/^\./, '').toLowerCase();
   if (mimeType.startsWith('image/')) return 'image';
   if (mimeType.startsWith('video/')) return 'video';
   if (mimeType.startsWith('audio/')) return 'audio';
@@ -87,49 +96,64 @@ function determinePreviewType(mimeType: string, extension: string): PreviewType 
 
 const SharePage: React.FC = () => {
   const { token } = useParams<{ token: string }>();
+  return token ? <SharedFile key={token} token={token} /> : null;
+};
+
+const SharedFile = ({ token }: { token: string }) => {
   const accessToken = useAuthStore((state) => state.accessToken);
+  const officeTheme = useRootTheme();
 
   const [file, setFile] = useState<ShareLinkResolveResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [previewType, setPreviewType] = useState<PreviewType>('unsupported');
-  const [canPreview, setCanPreview] = useState(false);
   const [iframeError, setIframeError] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [needsPassword, setNeedsPassword] = useState(false);
   const [password, setPassword] = useState('');
+  const [acceptedPassword, setAcceptedPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const showToast = useToastStore((s) => s.showToast);
 
+  const previewType = file ? determinePreviewType(file) : 'unsupported';
+  const loadOfficePreview = useCallback(
+    (theme: OfficeTheme, signal: AbortSignal) =>
+      startSharedOfficePreview(token, accessToken, acceptedPassword, theme, signal),
+    [token, accessToken, acceptedPassword],
+  );
+
   useEffect(() => {
-    if (!token) return;
+    const controller = new AbortController();
     setIsLoading(true);
     setError(null);
+    setFile(null);
+    setAcceptedPassword('');
+    setNeedsPassword(false);
     setIframeError(false);
 
-    resolveShareLink(token, accessToken)
+    resolveShareLink(token, accessToken, undefined, controller.signal)
       .then((data) => {
-        setFile(data);
-        const ext = data.extension.replace(/^\./, '').toLowerCase();
-        const preview = determinePreviewType(data.mime_type, data.extension);
-        setPreviewType(preview);
-        setCanPreview(preview !== 'unsupported' && !PROBLEMATIC_EXTENSIONS.has(ext));
+        if (!controller.signal.aborted) setFile(data);
       })
-      .catch((err: any) => {
-        if (err?.status === 404) {
+      .catch((err: unknown) => {
+        if (controller.signal.aborted) return;
+        const status = err instanceof ApiError ? err.status : 0;
+        if (status === 404) {
           setError('Ссылка не найдена или истёк срок действия');
-        } else if (err?.status === 401) {
+        } else if (status === 401) {
           setError('Для доступа к этому файлу необходимо войти в аккаунт');
-        } else if (err?.status === 403) {
+        } else if (status === 403) {
           setNeedsPassword(true);
         } else {
-          setError(err?.message || 'Не удалось загрузить файл');
+          setError(err instanceof Error ? err.message : 'Не удалось загрузить файл');
         }
       })
-      .finally(() => setIsLoading(false));
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoading(false);
+      });
+    return () => controller.abort();
   }, [token, accessToken]);
 
   const handleDownload = useCallback(async () => {
@@ -166,26 +190,23 @@ const SharePage: React.FC = () => {
 
   const handleIframeError = useCallback(() => {
     setIframeError(true);
-    setCanPreview(false);
   }, []);
 
   const handlePasswordSubmit = async () => {
-    if (!token || !password) return;
+    if (!password || isSubmittingPassword) return;
     setIsSubmittingPassword(true);
     setPasswordError(null);
     try {
       const data = await resolveShareLink(token, accessToken, password);
+      setAcceptedPassword(password);
+      setPassword('');
       setFile(data);
-      const ext = data.extension.replace(/^\./, '').toLowerCase();
-      const preview = determinePreviewType(data.mime_type, data.extension);
-      setPreviewType(preview);
-      setCanPreview(preview !== 'unsupported' && !PROBLEMATIC_EXTENSIONS.has(ext));
       setNeedsPassword(false);
-    } catch (err: any) {
-      if (err?.status === 403) {
+    } catch (err: unknown) {
+      if (err instanceof ApiError && err.status === 403) {
         setPasswordError('Неверный пароль');
       } else {
-        setPasswordError(err?.message || 'Ошибка');
+        setPasswordError(err instanceof Error ? err.message : 'Ошибка');
       }
     } finally {
       setIsSubmittingPassword(false);
@@ -209,9 +230,16 @@ const SharePage: React.FC = () => {
 
   const renderPreview = () => {
     if (!file) return null;
-    if (!canPreview || iframeError) return renderUnavailableMessage();
+    if (previewType === 'unsupported' || iframeError) return renderUnavailableMessage();
 
     switch (previewType) {
+      case 'office':
+        return (
+          <div className="h-[65dvh] min-h-[360px] overflow-hidden rounded-theme border border-theme">
+            <OfficeFrame mode="view" theme={officeTheme} loadPreview={loadOfficePreview} />
+          </div>
+        );
+
       case 'image':
         return (
           <div className="flex items-center justify-center bg-theme-tertiary rounded-theme overflow-hidden min-h-[400px]">
@@ -220,10 +248,7 @@ const SharePage: React.FC = () => {
                 src={file.url}
                 alt={file.filename}
                 className="max-w-full max-h-[70vh] object-contain"
-                onError={() => {
-                  setCanPreview(false);
-                  setIframeError(true);
-                }}
+                onError={handleIframeError}
               />
             ) : (
               <div className="flex flex-col items-center gap-4 py-12 text-theme-muted">
@@ -428,7 +453,7 @@ const SharePage: React.FC = () => {
       {/* Основной контент: 2 колонки (предпросмотр) + 1 колонка (информация) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Левая часть: предпросмотр (2/3) */}
-        <div className="lg:col-span-2">
+        <div className="min-w-0 lg:col-span-2">
           <div className="bg-theme-secondary border border-theme rounded-theme p-4 shadow-theme-card">
             <div className="mb-3 flex items-center justify-between gap-3">
               <h2 className="text-sm font-medium text-theme-secondary">Предпросмотр</h2>

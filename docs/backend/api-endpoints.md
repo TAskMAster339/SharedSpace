@@ -12,10 +12,19 @@
 | POST | `/api/v1/auth/refresh` | Обновление токенов |
 | POST | `/api/v1/auth/logout` | Выход (отзыв refresh токена) |
 | GET | `/api/v1/s/{token}` | Открыть файл по публичной ссылке |
+| POST | `/api/v1/s/{token}/preview-session` | Получить подписанную конфигурацию просмотра офисного файла по ссылке |
 | GET | `/api/v1/sd/{token}` | Открыть директорию по публичной ссылке |
 | GET | `/api/v1/og/share/{token}` | Open Graph мета-теги для файла |
 | GET | `/api/v1/og/share/dir/{token}` | Open Graph мета-теги для директории |
 | GET | `/api/v1/sitemap.xml` | Sitemap публичных ссылок |
+
+Предпросмотр по ссылке открывает последнюю сохранённую версию DOCX, XLSX, PPTX, DOC, XLS, PPT, ODT, ODS или ODP. Для ссылки с ограничением «Только авторизованные» нужен заголовок `Authorization: Bearer …`. Пароль защищённой ссылки передаётся в `X-SharedLink-Password` в URL-кодировке. Пример для открытой ссылки:
+
+```bash
+curl -fsS -X POST "http://localhost:8080/api/v1/s/${SHARE_TOKEN}/preview-session?theme=dark"
+```
+
+Ответ `200` содержит `script_url`, подписанную конфигурацию с `editorConfig.mode: "view"` и `document.permissions.edit: false`, а при настроенной синхронизации темы также `theme_bridge_url`. Истёкшая или отозванная ссылка возвращает `404`, неверный пароль — `403`, отсутствие входа для закрытой ссылки — `401`. Когда просмотрщик выключен, запрос возвращает `503`. Скачивание остаётся доступно через существующий `GET /api/v1/s/{token}`.
 
 ## Пользователи (`/api/v1/users`)
 
@@ -67,7 +76,7 @@ curl -fsS -H "Authorization: Bearer $ACCESS_TOKEN" \
 {"versions":[],"can_edit":true,"can_restore":false,"save_pending":false}
 ```
 
-`POST .../editor-session` возвращает `200` с полями `script_url` и `config`. Оба маршрута сессий принимают `theme=light` или `theme=dark`. Предпросмотр использует режим `view`, работает с последней сохранённой копией и не создаёт сессию редактирования или версию. Поддерживает `DOCX`, `XLSX`, `PPTX`, `DOC`, `XLS`, `PPT`, `ODT`, `ODS` и `ODP`. Шестой аккаунт получает `409 document_editor_limit`. Выключенный редактор возвращает `503 editor_disabled`, другой формат файла — `415 unsupported_document`. История и скачивание сохранённой копии доступны при выключенном редакторе. Подписанные маршруты `/api/v1/office/source`, `/api/v1/office/preview-source` и `/api/v1/office/callback` предназначены для Document Server.
+`POST .../editor-session` возвращает `200` с полями `script_url` и `config`. Оба маршрута сессий принимают `theme=light` или `theme=dark`. Если включена синхронизация темы, ответ также содержит `theme_bridge_url` на том же хосте, что `script_url`. Предпросмотр использует режим `view`, работает с последней сохранённой копией и не создаёт сессию редактирования или версию. Поддерживает `DOCX`, `XLSX`, `PPTX`, `DOC`, `XLS`, `PPT`, `ODT`, `ODS` и `ODP`. Шестой аккаунт получает `409 document_editor_limit`. Выключенный редактор возвращает `503 editor_disabled`, другой формат файла — `415 unsupported_document`. История и скачивание сохранённой копии доступны при выключенном редакторе. Подписанные маршруты `/api/v1/office/source`, `/api/v1/office/preview-source` и `/api/v1/office/callback` предназначены для Document Server.
 
 В запросе на предпросмотр `FILE_ID` — идентификатор доступной таблицы XLSX.
 

@@ -1,4 +1,5 @@
 import { apiRequest } from './client';
+import type { DocumentEditorSession, OfficeTheme } from './documents';
 
 export type ShareLinkAccess = 'public' | 'authenticated';
 
@@ -79,9 +80,26 @@ export function resolveShareLink(
   token: string,
   accessToken?: string | null,
   password?: string,
+  signal?: AbortSignal,
 ): Promise<ShareLinkResolveResult> {
   return apiRequest<ShareLinkResolveResult>(`/s/${token}`, {
     method: 'GET',
+    signal,
+    ...(accessToken ? { token: accessToken } : {}),
+    ...(password ? { headers: { 'X-SharedLink-Password': encodeURIComponent(password) } } : {}),
+  });
+}
+
+export function startSharedOfficePreview(
+  token: string,
+  accessToken: string | null,
+  password: string,
+  theme: OfficeTheme,
+  signal: AbortSignal,
+): Promise<DocumentEditorSession> {
+  return apiRequest<DocumentEditorSession>(`/s/${token}/preview-session?theme=${theme}`, {
+    method: 'POST',
+    signal,
     ...(accessToken ? { token: accessToken } : {}),
     ...(password ? { headers: { 'X-SharedLink-Password': encodeURIComponent(password) } } : {}),
   });

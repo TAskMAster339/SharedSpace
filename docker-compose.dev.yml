@@ -64,6 +64,7 @@ services:
       OFFICE_JWT_SECRET: ${OFFICE_JWT_SECRET:-}
       OFFICE_LIGHT_THEME: ${OFFICE_LIGHT_THEME:-theme-sharedspace-light}
       OFFICE_DARK_THEME: ${OFFICE_DARK_THEME:-theme-sharedspace-dark}
+      OFFICE_THEME_SYNC: ${OFFICE_THEME_SYNC:-true}
       DEV_LOG_EMAILS: "true"
       APP_URL: ${APP_URL:-http://localhost:3000}
     depends_on:
@@ -86,6 +87,9 @@ services:
     volumes:
       - ./onlyoffice/themes/sharedspace-light.json:/var/www/onlyoffice/documentserver/web-apps/apps/common/main/resources/themes/sharedspace-light.json:ro,z
       - ./onlyoffice/themes/sharedspace-dark.json:/var/www/onlyoffice/documentserver/web-apps/apps/common/main/resources/themes/sharedspace-dark.json:ro,z
+      - ./onlyoffice/theme-bridge/index.html:/var/www/onlyoffice/documentserver/sharedspace-theme/index.html:ro,z
+      - ./onlyoffice/theme-bridge/theme.js:/var/www/onlyoffice/documentserver/sharedspace-theme/theme.js:ro,z
+      - ./onlyoffice/theme-bridge/ds-sharedspace-theme.conf:/etc/nginx/includes/ds-sharedspace-theme.conf:ro,z
       - office-data:/var/www/onlyoffice/Data
       - office-lib:/var/lib/onlyoffice
       - office-db:/var/lib/postgresql

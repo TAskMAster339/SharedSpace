@@ -36,3 +36,15 @@ test('retries a failed editor configuration without reverting theme', async () =
   expect(start).toHaveBeenCalledTimes(2);
   expect(start.mock.calls[1].slice(0, 4)).toEqual(['token', 'slides', 'edit', 'dark']);
 });
+
+test('shared preview loads outside the private file API and retries in read-only mode', async () => {
+  const loadPreview = jest.fn().mockRejectedValue(new ApiError('Неверный пароль', 403));
+  const { rerender } = render(<OfficeFrame mode="view" theme="light" loadPreview={loadPreview} />);
+  expect(await screen.findByRole('alert')).toHaveTextContent('Неверный пароль');
+  const initialSignal = loadPreview.mock.calls[0][1];
+  rerender(<OfficeFrame mode="view" theme="dark" loadPreview={loadPreview} />);
+  await screen.findByRole('alert');
+  expect(initialSignal.aborted).toBe(true);
+  expect(loadPreview.mock.calls[1][0]).toBe('dark');
+  expect(start).not.toHaveBeenCalled();
+});

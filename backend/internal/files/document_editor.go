@@ -16,6 +16,7 @@ import (
 
 	"sharedspace/internal/access"
 	"sharedspace/internal/apperror"
+	"sharedspace/internal/sharelinks"
 )
 
 const (
@@ -31,6 +32,8 @@ type DocumentEditorOptions struct {
 	Secret      string
 	LightTheme  string
 	DarkTheme   string
+	ThemeSync   bool
+	ShareLinks  *sharelinks.Service
 }
 
 type DocumentService struct {
@@ -42,12 +45,14 @@ type DocumentService struct {
 	secret                     []byte
 	enabled                    bool
 	lightTheme, darkTheme      string
+	themeSync                  bool
+	shareLinks                 *sharelinks.Service
 }
 
 func NewDocumentService(db *pgxpool.Pool, repo *Repository, storage StorageClient, opts DocumentEditorOptions) (*DocumentService, error) {
 	s := &DocumentService{
-		db: db, files: repo, storage: storage, enabled: opts.Enabled,
-		secret: []byte(opts.Secret), lightTheme: opts.LightTheme, darkTheme: opts.DarkTheme,
+		db: db, files: repo, storage: storage, enabled: opts.Enabled, shareLinks: opts.ShareLinks,
+		secret: []byte(opts.Secret), lightTheme: opts.LightTheme, darkTheme: opts.DarkTheme, themeSync: opts.ThemeSync,
 		client: &http.Client{
 			Timeout:       45 * time.Second,
 			CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
@@ -81,8 +86,9 @@ func NewDocumentService(db *pgxpool.Pool, repo *Repository, storage StorageClien
 }
 
 type DocumentEditorSession struct {
-	ScriptURL string         `json:"script_url"`
-	Config    map[string]any `json:"config"`
+	ScriptURL      string         `json:"script_url"`
+	ThemeBridgeURL string         `json:"theme_bridge_url,omitempty"`
+	Config         map[string]any `json:"config"`
 }
 
 type documentSession struct {
@@ -230,9 +236,11 @@ func (s *DocumentService) officeConfig(file fileRecord, key, source, user, usern
 	}
 	editor := map[string]any{
 		"mode": "view", "lang": "ru",
-		"user":          map[string]string{"id": user, "name": username},
 		"customization": customization,
 		"coEditing":     map[string]any{"mode": "strict", "change": false},
+	}
+	if user != "" {
+		editor["user"] = map[string]string{"id": user, "name": username}
 	}
 	if edit {
 		editor["mode"] = "edit"
@@ -253,10 +261,14 @@ func (s *DocumentService) officeConfig(file fileRecord, key, source, user, usern
 		return DocumentEditorSession{}, err
 	}
 	config["token"] = signed
-	return DocumentEditorSession{
+	session := DocumentEditorSession{
 		ScriptURL: s.public.JoinPath("web-apps/apps/api/documents/api.js").String(),
 		Config:    config,
-	}, nil
+	}
+	if s.themeSync {
+		session.ThemeBridgeURL = s.public.JoinPath("sharedspace-theme/index.html").String()
+	}
+	return session, nil
 }
 
 func (s *DocumentService) parseOfficeToken(token string, claims jwt.Claims, opts ...jwt.ParserOption) error {

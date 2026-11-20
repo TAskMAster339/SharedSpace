@@ -13,14 +13,16 @@ import (
 
 	"sharedspace/internal/apperror"
 	"sharedspace/internal/auth"
+	"sharedspace/internal/sharelinks"
 )
 
 type DocumentHandler struct {
-	service *DocumentService
+	service     *DocumentService
+	tokenParser sharelinks.TokenParser
 }
 
-func NewDocumentHandler(service *DocumentService) *DocumentHandler {
-	return &DocumentHandler{service: service}
+func NewDocumentHandler(service *DocumentService, tokenParser sharelinks.TokenParser) *DocumentHandler {
+	return &DocumentHandler{service: service, tokenParser: tokenParser}
 }
 
 // @Summary Start a Office editing session
@@ -72,6 +74,30 @@ func (h *DocumentHandler) Preview(w http.ResponseWriter, r *http.Request) error 
 		return err
 	}
 	w.Header().Set("Cache-Control", "no-store")
+	return writeJSON(w, http.StatusOK, result)
+}
+
+// @Summary Start a read-only Office preview from a file share link
+// @Tags sharelinks
+// @Produce json
+// @Param token path string true "Share link token"
+// @Param X-SharedLink-Password header string false "Password for protected links"
+// @Param theme query string false "Interface theme" Enums(light,dark)
+// @Success 200 {object} DocumentEditorSession
+// @Failure 401 {object} apperror.Response
+// @Failure 403 {object} apperror.Response
+// @Failure 404 {object} apperror.Response
+// @Failure 409 {object} apperror.Response
+// @Failure 415 {object} apperror.Response
+// @Failure 503 {object} apperror.Response
+// @Router /api/v1/s/{token}/preview-session [post]
+func (h *DocumentHandler) SharedPreview(w http.ResponseWriter, r *http.Request) error {
+	password, authenticated := sharelinks.FileLinkCredentials(r, h.tokenParser)
+	w.Header().Set("Cache-Control", "no-store")
+	result, err := h.service.StartSharedPreview(r.Context(), chi.URLParam(r, "token"), password, authenticated, r.URL.Query().Get("theme"))
+	if err != nil {
+		return err
+	}
 	return writeJSON(w, http.StatusOK, result)
 }
 
