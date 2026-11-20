@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
+	"path/filepath"
 	"time"
 
 	"github.com/google/uuid"
@@ -16,10 +16,7 @@ import (
 	"sharedspace/internal/database"
 )
 
-const (
-	docxMIME     = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-	versionLimit = 10
-)
+const versionLimit = 10
 
 type DocumentVersion struct {
 	Number       int64     `json:"number"`
@@ -37,14 +34,22 @@ type DocumentHistory struct {
 
 type documentVersionRecord struct {
 	DocumentVersion
-	Key string
-}
-
-func isDOCX(file fileRecord) bool {
-	return strings.EqualFold(ExtractExtension(file.Filename), "docx")
+	Key    string
+	Format string
 }
 
 func (s *DocumentService) requireFile(ctx context.Context, db dbTX, id, user string, action access.Action) (fileRecord, error) {
+	file, err := s.requireAccessibleFile(ctx, db, id, user, action)
+	if err != nil {
+		return file, err
+	}
+	if !officeFormats[ExtractExtension(file.Filename)].editable() {
+		return file, apperror.New("действие доступно для DOCX, XLSX и PPTX", "unsupported_document", http.StatusUnsupportedMediaType)
+	}
+	return file, nil
+}
+
+func (s *DocumentService) requireAccessibleFile(ctx context.Context, db dbTX, id, user string, action access.Action) (fileRecord, error) {
 	if _, err := uuid.Parse(id); err != nil {
 		return fileRecord{}, apperror.Validation("некорректный ID файла")
 	}
@@ -57,9 +62,6 @@ func (s *DocumentService) requireFile(ctx context.Context, db dbTX, id, user str
 	}
 	if err := documentAccess(ctx, db, user, file.DirectoryID, action); err != nil {
 		return file, err
-	}
-	if !isDOCX(file) {
-		return file, apperror.New("действие доступно для DOCX", "unsupported_document", http.StatusUnsupportedMediaType)
 	}
 	return file, nil
 }
@@ -105,6 +107,12 @@ func (s *DocumentService) History(ctx context.Context, id, user string) (Documen
 		WHERE file_id = $1 AND (pending_key IS NOT NULL OR result_url IS NOT NULL) AND closed_at IS NULL)`, id).Scan(&result.SavePending); err != nil {
 		return result, err
 	}
+	matches, err := matchesDocumentHistory(ctx, tx, file)
+	if err != nil {
+		return result, err
+	}
+	result.CanEdit = result.CanEdit && matches
+	result.CanRestore = result.CanRestore && matches
 	rows, err := tx.Query(ctx, `SELECT number, size, created_at, contributors FROM file_versions
 		WHERE file_id = $1 ORDER BY number DESC`, id)
 	if err != nil {
@@ -130,14 +138,18 @@ func (s *DocumentService) DownloadVersion(ctx context.Context, id, user string, 
 	if err != nil {
 		return FileContentResponse{}, err
 	}
-	url, err := s.storage.PresignedDownloadURL(ctx, version.Key, time.Minute, file.Filename)
+	name := file.Filename
+	if version.Format != ExtractExtension(name) {
+		name = name[:len(name)-len(filepath.Ext(name))] + "." + version.Format
+	}
+	url, err := s.storage.PresignedDownloadURL(ctx, version.Key, time.Minute, name)
 	return FileContentResponse{URL: url}, err
 }
 
 func readDocumentVersion(ctx context.Context, db dbTX, id string, number int64) (documentVersionRecord, error) {
 	var version documentVersionRecord
-	err := db.QueryRow(ctx, `SELECT object_key, size FROM file_versions WHERE file_id = $1 AND number = $2`,
-		id, number).Scan(&version.Key, &version.Size)
+	err := db.QueryRow(ctx, `SELECT object_key, size, format FROM file_versions WHERE file_id = $1 AND number = $2`,
+		id, number).Scan(&version.Key, &version.Size, &version.Format)
 	if errors.Is(err, pgx.ErrNoRows) {
 		err = apperror.NotFound("версия не найдена")
 	}
@@ -181,6 +193,9 @@ func (s *DocumentService) RestoreVersion(ctx context.Context, id, user, username
 	if err != nil {
 		return err
 	}
+	if version.Format != ExtractExtension(file.Filename) {
+		return apperror.Conflict("расширение файла не совпадает с форматом версии")
+	}
 	if err := s.publishVersion(ctx, tx, file, version.Key, version.Size, []string{username}); err != nil {
 		return err
 	}
@@ -188,6 +203,7 @@ func (s *DocumentService) RestoreVersion(ctx context.Context, id, user, username
 }
 
 func (s *DocumentService) publishVersion(ctx context.Context, tx pgx.Tx, file fileRecord, key string, size int64, names []string) error {
+	extension := ExtractExtension(file.Filename)
 	used, quota, err := s.files.GetUserStorage(ctx, tx, file.OwnerID)
 	if err != nil {
 		return err
@@ -196,21 +212,21 @@ func (s *DocumentService) publishVersion(ctx context.Context, tx pgx.Tx, file fi
 	if delta > 0 && delta > quota-used {
 		return apperror.New("недостаточно места для сохранения документа", "document_quota_exceeded", http.StatusConflict)
 	}
-	if _, err := tx.Exec(ctx, `INSERT INTO file_versions (file_id, number, object_key, size, created_at)
-		SELECT $1, 1, $2, $3, $4 WHERE NOT EXISTS (SELECT 1 FROM file_versions WHERE file_id = $1)`,
-		file.ID, file.ObjectKey, file.Size, file.UpdatedAt); err != nil {
+	if _, err := tx.Exec(ctx, `INSERT INTO file_versions (file_id, number, object_key, size, created_at, format)
+		SELECT $1, 1, $2, $3, $4, $5 WHERE NOT EXISTS (SELECT 1 FROM file_versions WHERE file_id = $1)`,
+		file.ID, file.ObjectKey, file.Size, file.UpdatedAt, extension); err != nil {
 		return err
 	}
 	var number int64
 	if err := tx.QueryRow(ctx, `SELECT max(number) + 1 FROM file_versions WHERE file_id = $1`, file.ID).Scan(&number); err != nil {
 		return err
 	}
-	if _, err := tx.Exec(ctx, `INSERT INTO file_versions (file_id, number, object_key, size, contributors)
-		VALUES ($1, $2, $3, $4, $5)`, file.ID, number, key, size, names); err != nil {
+	if _, err := tx.Exec(ctx, `INSERT INTO file_versions (file_id, number, object_key, size, contributors, format)
+		VALUES ($1, $2, $3, $4, $5, $6)`, file.ID, number, key, size, names, extension); err != nil {
 		return err
 	}
 	if _, err := tx.Exec(ctx, `UPDATE files SET object_key = $2, size = $3, mime_type = $4, updated_at = now() WHERE id = $1`,
-		file.ID, key, size, docxMIME); err != nil {
+		file.ID, key, size, officeFormats[extension].mime); err != nil {
 		return err
 	}
 	if err := s.files.AddUserStorageUsed(ctx, tx, file.OwnerID, delta); err != nil {
@@ -220,4 +236,16 @@ func (s *DocumentService) publishVersion(ctx context.Context, tx pgx.Tx, file fi
 		return fmt.Errorf("trim document history: %w", err)
 	}
 	return nil
+}
+
+func matchesDocumentHistory(ctx context.Context, db dbTX, file fileRecord) (bool, error) {
+	extension := ExtractExtension(file.Filename)
+	if stored := file.Extension; officeFormats[stored].documentType != "" && stored != extension {
+		return false, nil
+	}
+	var matches bool
+	err := db.QueryRow(ctx, `SELECT COALESCE((SELECT format = $2 FROM file_versions
+		WHERE file_id = $1 ORDER BY number DESC LIMIT 1), true)`,
+		file.ID, ExtractExtension(file.Filename)).Scan(&matches)
+	return matches, err
 }

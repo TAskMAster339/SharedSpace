@@ -7,6 +7,7 @@ import { useGridItemMenu } from './useGridItemMenu';
 import { ItemActionsMenu } from './ItemActionsMenu';
 import { cn } from '../../utils/cn';
 import { FileIconType } from '../../utils/fileType';
+import { canEditOfficeFile } from '../../utils/officeFormats';
 
 interface FileGridItemProps {
   id: string;
@@ -80,7 +81,7 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
       <GridItemCaption name={name} size={size} />
 
       <ItemActionsMenu
-        documentId={showProperties && name.toLowerCase().endsWith('.docx') ? id : undefined}
+        documentId={showProperties && canEditOfficeFile(name) ? id : undefined}
         properties={showProperties ? { kind: 'file', id } : undefined}
         isFavorite={isFavorite}
         onToggleFavorite={onToggleFavorite ? () => onToggleFavorite(id) : undefined}

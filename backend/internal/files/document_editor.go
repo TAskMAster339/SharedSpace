@@ -29,6 +29,8 @@ type DocumentEditorOptions struct {
 	InternalURL string
 	StorageURL  string
 	Secret      string
+	LightTheme  string
+	DarkTheme   string
 }
 
 type DocumentService struct {
@@ -39,12 +41,13 @@ type DocumentService struct {
 	public, internal, callback *url.URL
 	secret                     []byte
 	enabled                    bool
+	lightTheme, darkTheme      string
 }
 
 func NewDocumentService(db *pgxpool.Pool, repo *Repository, storage StorageClient, opts DocumentEditorOptions) (*DocumentService, error) {
 	s := &DocumentService{
 		db: db, files: repo, storage: storage, enabled: opts.Enabled,
-		secret: []byte(opts.Secret),
+		secret: []byte(opts.Secret), lightTheme: opts.LightTheme, darkTheme: opts.DarkTheme,
 		client: &http.Client{
 			Timeout:       45 * time.Second,
 			CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
@@ -87,17 +90,18 @@ type documentSession struct {
 	FileID      *string
 	DirectoryID string
 	BaseKey     string
+	Format      string
 	ResultURL   *string
 	PendingKey  *string
 	PendingSize *int64
 	ClosedAt    *time.Time
 }
 
-const sessionColumns = "key, file_id, directory_id, base_object_key, result_url, pending_key, pending_size, closed_at"
+const sessionColumns = "key, file_id, directory_id, base_object_key, format, result_url, pending_key, pending_size, closed_at"
 
 func readDocumentSession(row pgx.Row) (documentSession, error) {
 	var session documentSession
-	err := row.Scan(&session.Key, &session.FileID, &session.DirectoryID, &session.BaseKey, &session.ResultURL, &session.PendingKey, &session.PendingSize, &session.ClosedAt)
+	err := row.Scan(&session.Key, &session.FileID, &session.DirectoryID, &session.BaseKey, &session.Format, &session.ResultURL, &session.PendingKey, &session.PendingSize, &session.ClosedAt)
 	return session, err
 }
 
@@ -114,7 +118,7 @@ func sessionByKey(ctx context.Context, tx dbTX, key string, lock bool) (document
 	return readDocumentSession(tx.QueryRow(ctx, sql, key))
 }
 
-func (s *DocumentService) StartSession(ctx context.Context, fileID, userID, username string) (DocumentEditorSession, error) {
+func (s *DocumentService) StartSession(ctx context.Context, fileID, userID, username, theme string) (DocumentEditorSession, error) {
 	if !s.enabled {
 		return DocumentEditorSession{}, apperror.New("редактор недоступен", "editor_disabled", http.StatusServiceUnavailable)
 	}
@@ -131,17 +135,26 @@ func (s *DocumentService) StartSession(ctx context.Context, fileID, userID, user
 		return DocumentEditorSession{}, err
 	}
 
+	extension := ExtractExtension(file.Filename)
+	matches, err := matchesDocumentHistory(ctx, tx, file)
+	if err != nil {
+		return DocumentEditorSession{}, err
+	}
+	if !matches {
+		return DocumentEditorSession{}, apperror.Conflict("расширение файла не совпадает с форматом сохранённых версий")
+	}
+
 	session, err := activeDocumentSession(ctx, tx, fileID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		session.Key = uuid.NewString()
-		session.DirectoryID, session.BaseKey = file.DirectoryID, file.ObjectKey
-		_, err = tx.Exec(ctx, `INSERT INTO document_edit_sessions (key, file_id, directory_id, base_object_key)
-			VALUES ($1, $2, $3, $4)`, session.Key, fileID, file.DirectoryID, file.ObjectKey)
+		session.DirectoryID, session.BaseKey, session.Format = file.DirectoryID, file.ObjectKey, extension
+		_, err = tx.Exec(ctx, `INSERT INTO document_edit_sessions (key, file_id, directory_id, base_object_key, format)
+			VALUES ($1, $2, $3, $4, $5)`, session.Key, fileID, file.DirectoryID, file.ObjectKey, extension)
 	}
 	if err != nil {
 		return DocumentEditorSession{}, err
 	}
-	if session.ResultURL != nil || session.PendingKey != nil || session.DirectoryID != file.DirectoryID || session.BaseKey != file.ObjectKey {
+	if session.ResultURL != nil || session.PendingKey != nil || session.DirectoryID != file.DirectoryID || session.BaseKey != file.ObjectKey || session.Format != extension {
 		return DocumentEditorSession{}, apperror.New("документ сохраняется, попробуйте позже", "document_saving", http.StatusConflict)
 	}
 	var occupied int
@@ -163,7 +176,7 @@ func (s *DocumentService) StartSession(ctx context.Context, fileID, userID, user
 		SET reserved_until = EXCLUDED.reserved_until, username = EXCLUDED.username`, session.Key, userID, username, expires); err != nil {
 		return DocumentEditorSession{}, err
 	}
-	result, err := s.editorConfig(file, session.Key, userID, username, expires)
+	result, err := s.editorConfig(file, session.Key, userID, username, theme, expires)
 	if err != nil {
 		return DocumentEditorSession{}, err
 	}
@@ -175,26 +188,65 @@ type documentSourceGrant struct {
 	jwt.RegisteredClaims
 }
 
-func (s *DocumentService) editorConfig(file fileRecord, key, user, username string, expires time.Time) (DocumentEditorSession, error) {
+func (s *DocumentService) editorConfig(file fileRecord, key, user, username, theme string, expires time.Time) (DocumentEditorSession, error) {
 	grant := documentSourceGrant{Session: key, RegisteredClaims: jwt.RegisteredClaims{
 		Issuer: "sharedspace-docx-source", Subject: user, ExpiresAt: jwt.NewNumericDate(expires),
 	}}
-	grantToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, grant).SignedString(s.secret)
+	source, err := s.officeSource("api/v1/office/source", grant)
 	if err != nil {
 		return DocumentEditorSession{}, err
 	}
-	source := s.callback.JoinPath("api/v1/office/source")
-	source.RawQuery = url.Values{"grant": {grantToken}}.Encode()
+	return s.officeConfig(file, key, source, user, username, theme, true, expires)
+}
+
+func (s *DocumentService) officeSource(route string, grant jwt.Claims) (string, error) {
+	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, grant).SignedString(s.secret)
+	if err != nil {
+		return "", err
+	}
+	source := s.callback.JoinPath(route)
+	source.RawQuery = url.Values{"grant": {token}}.Encode()
+	return source.String(), nil
+}
+
+func (s *DocumentService) officeConfig(file fileRecord, key, source, user, username, theme string, edit bool, expires time.Time) (DocumentEditorSession, error) {
+	extension := ExtractExtension(file.Filename)
+	uiTheme := s.lightTheme
+	if uiTheme == "" {
+		uiTheme = "theme-white"
+	}
+	if theme == "dark" {
+		uiTheme = s.darkTheme
+		if uiTheme == "" {
+			uiTheme = "theme-night"
+		}
+	}
+	customization := map[string]any{
+		"forcesave": false, "plugins": false, "macros": false,
+		"uiTheme": uiTheme, "hideRightMenu": true, "integrationMode": "embed",
+	}
+	if !edit && officeFormats[extension].documentType != "cell" {
+		customization["zoom"] = -2
+	}
+	editor := map[string]any{
+		"mode": "view", "lang": "ru",
+		"user":          map[string]string{"id": user, "name": username},
+		"customization": customization,
+		"coEditing":     map[string]any{"mode": "strict", "change": false},
+	}
+	if edit {
+		editor["mode"] = "edit"
+		editor["callbackUrl"] = s.callback.JoinPath("api/v1/office/callback").String()
+		editor["coEditing"] = map[string]any{"mode": "fast", "change": false}
+	}
 	config := jwt.MapClaims{
-		"documentType": "word", "type": "desktop",
-		"document": map[string]any{"fileType": "docx", "key": key, "title": file.Filename, "url": source.String()},
-		"editorConfig": map[string]any{
-			"mode": "edit", "lang": "ru", "callbackUrl": s.callback.JoinPath("api/v1/office/callback").String(),
-			"user":          map[string]string{"id": user, "name": username},
-			"customization": map[string]bool{"forcesave": false, "plugins": false, "macros": false},
-			"coEditing":     map[string]any{"mode": "fast", "change": false},
+		"documentType": officeFormats[extension].documentType, "type": "desktop",
+		"document": map[string]any{
+			"fileType": extension, "key": key, "title": file.Filename, "url": source,
+			"permissions": map[string]bool{"edit": edit, "comment": edit, "review": edit, "fillForms": edit, "chat": edit},
 		},
-		"exp": expires.Unix(),
+		"editorConfig": editor,
+		"exp":          expires.Unix(),
 	}
 	signed, err := jwt.NewWithClaims(jwt.SigningMethodHS256, config).SignedString(s.secret)
 	if err != nil {
@@ -235,7 +287,7 @@ func (s *DocumentService) sourceFile(ctx context.Context, token string) (fileRec
 	if err != nil {
 		return file, err
 	}
-	if file.DirectoryID != session.DirectoryID || file.ObjectKey != session.BaseKey {
+	if file.DirectoryID != session.DirectoryID || file.ObjectKey != session.BaseKey || ExtractExtension(file.Filename) != session.Format {
 		return file, apperror.Conflict("документ изменился")
 	}
 	return file, nil

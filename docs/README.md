@@ -16,7 +16,7 @@ git clone https://github.com/TAskMAster339/SharedSpace.git && cd SharedSpace
 make dev
 ```
 
-`make dev-office` добавляет редактор DOCX. `make env` готовит конфигурацию отдельно. Используйте `make dev-ps` для проверки состояния сервисов и `make dev-down` для остановки.
+`make dev-office` добавляет редактор DOCX, XLSX и PPTX. `make env` готовит конфигурацию отдельно. Используйте `make dev-ps` для проверки состояния сервисов и `make dev-down` для остановки.
 
 - **Фронтенд** — http://localhost:3000
 - **API бэкенда** — http://localhost:8080/api/v1

@@ -23,11 +23,12 @@ func NewDocumentHandler(service *DocumentService) *DocumentHandler {
 	return &DocumentHandler{service: service}
 }
 
-// @Summary Start a DOCX editing session
+// @Summary Start a Office editing session
 // @Tags files
 // @Security BearerAuth
 // @Produce json
 // @Param id path string true "File ID"
+// @Param theme query string false "Interface theme" Enums(light,dark)
 // @Success 200 {object} DocumentEditorSession
 // @Failure 403 {object} apperror.Response
 // @Failure 404 {object} apperror.Response
@@ -40,7 +41,7 @@ func (h *DocumentHandler) Start(w http.ResponseWriter, r *http.Request) error {
 	if !ok {
 		return apperror.Unauthorized("не авторизован")
 	}
-	result, err := h.service.StartSession(r.Context(), chi.URLParam(r, "id"), claims.UserID, claims.Username)
+	result, err := h.service.StartSession(r.Context(), chi.URLParam(r, "id"), claims.UserID, claims.Username, r.URL.Query().Get("theme"))
 	if err != nil {
 		return err
 	}
@@ -48,7 +49,33 @@ func (h *DocumentHandler) Start(w http.ResponseWriter, r *http.Request) error {
 	return writeJSON(w, http.StatusOK, result)
 }
 
-// @Summary List saved DOCX versions and editor permissions
+// @Summary Start a read-only Office file preview
+// @Tags files
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "File ID"
+// @Param theme query string false "Interface theme" Enums(light,dark)
+// @Success 200 {object} DocumentEditorSession
+// @Failure 403 {object} apperror.Response
+// @Failure 404 {object} apperror.Response
+// @Failure 409 {object} apperror.Response
+// @Failure 415 {object} apperror.Response
+// @Failure 503 {object} apperror.Response
+// @Router /api/v1/files/{id}/preview-session [post]
+func (h *DocumentHandler) Preview(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := auth.ClaimsFromCtx(r.Context())
+	if !ok {
+		return apperror.Unauthorized("не авторизован")
+	}
+	result, err := h.service.StartPreview(r.Context(), chi.URLParam(r, "id"), claims.UserID, claims.Username, r.URL.Query().Get("theme"))
+	if err != nil {
+		return err
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	return writeJSON(w, http.StatusOK, result)
+}
+
+// @Summary List saved Office versions and editor permissions
 // @Tags files
 // @Security BearerAuth
 // @Produce json
@@ -71,7 +98,7 @@ func (h *DocumentHandler) History(w http.ResponseWriter, r *http.Request) error 
 	return writeJSON(w, http.StatusOK, result)
 }
 
-// @Summary Get a temporary download URL for a DOCX version
+// @Summary Get a temporary download URL for an Office version
 // @Tags files
 // @Security BearerAuth
 // @Produce json
@@ -98,7 +125,7 @@ func (h *DocumentHandler) Download(w http.ResponseWriter, r *http.Request) error
 	return writeJSON(w, http.StatusOK, result)
 }
 
-// @Summary Restore a DOCX version as a new current version
+// @Summary Restore an Office version as a new current version
 // @Tags files
 // @Security BearerAuth
 // @Param id path string true "File ID"
@@ -137,13 +164,25 @@ func (h *DocumentHandler) Source(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	return h.serveOfficeFile(w, r, file)
+}
+
+func (h *DocumentHandler) PreviewSource(w http.ResponseWriter, r *http.Request) error {
+	file, err := h.service.previewSourceFile(r.Context(), r.URL.Query().Get("grant"))
+	if err != nil {
+		return err
+	}
+	return h.serveOfficeFile(w, r, file)
+}
+
+func (h *DocumentHandler) serveOfficeFile(w http.ResponseWriter, r *http.Request, file fileRecord) error {
 	reader, err := h.service.storage.Get(r.Context(), file.ObjectKey)
 	if err != nil {
 		return err
 	}
 	defer reader.Close()
 	w.Header().Set("Cache-Control", "private, no-store")
-	w.Header().Set("Content-Type", docxMIME)
+	w.Header().Set("Content-Type", officeFormats[ExtractExtension(file.Filename)].mime)
 	w.Header().Set("Content-Length", strconv.FormatInt(file.Size, 10))
 	w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": file.Filename}))
 	if _, err := io.Copy(w, reader); err != nil {

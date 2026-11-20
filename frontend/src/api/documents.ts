@@ -26,8 +26,18 @@ export function getDocumentHistory(token: string, id: string, signal?: AbortSign
   return apiRequest<DocumentHistory>(`/files/${id}/versions`, { token, signal });
 }
 
-export function startDocumentEditor(token: string, id: string, signal: AbortSignal) {
-  return apiRequest<DocumentEditorSession>(`/files/${id}/editor-session`, {
+export type OfficeMode = 'edit' | 'view';
+export type OfficeTheme = 'light' | 'dark';
+
+export function startOfficeSession(
+  token: string,
+  id: string,
+  mode: OfficeMode,
+  theme: OfficeTheme,
+  signal: AbortSignal,
+) {
+  const endpoint = mode === 'edit' ? 'editor-session' : 'preview-session';
+  return apiRequest<DocumentEditorSession>(`/files/${id}/${endpoint}?theme=${theme}`, {
     token,
     signal,
     method: 'POST',

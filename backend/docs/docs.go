@@ -1633,7 +1633,7 @@ const docTemplate = `{
                 "tags": [
                     "files"
                 ],
-                "summary": "Start a DOCX editing session",
+                "summary": "Start a Office editing session",
                 "parameters": [
                     {
                         "type": "string",
@@ -1641,6 +1641,16 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "enum": [
+                            "light",
+                            "dark"
+                        ],
+                        "type": "string",
+                        "description": "Interface theme",
+                        "name": "theme",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1866,6 +1876,79 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/files/{id}/preview-session": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Start a read-only Office file preview",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "File ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "light",
+                            "dark"
+                        ],
+                        "type": "string",
+                        "description": "Interface theme",
+                        "name": "theme",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_files.DocumentEditorSession"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "415": {
+                        "description": "Unsupported Media Type",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
                         "schema": {
                             "$ref": "#/definitions/sharedspace_internal_apperror.Response"
                         }
@@ -2115,7 +2198,7 @@ const docTemplate = `{
                 "tags": [
                     "files"
                 ],
-                "summary": "List saved DOCX versions and editor permissions",
+                "summary": "List saved Office versions and editor permissions",
                 "parameters": [
                     {
                         "type": "string",
@@ -2166,7 +2249,7 @@ const docTemplate = `{
                 "tags": [
                     "files"
                 ],
-                "summary": "Get a temporary download URL for a DOCX version",
+                "summary": "Get a temporary download URL for an Office version",
                 "parameters": [
                     {
                         "type": "string",
@@ -2215,7 +2298,7 @@ const docTemplate = `{
                 "tags": [
                     "files"
                 ],
-                "summary": "Restore a DOCX version as a new current version",
+                "summary": "Restore an Office version as a new current version",
                 "parameters": [
                     {
                         "type": "string",

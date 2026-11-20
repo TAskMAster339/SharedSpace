@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -30,7 +31,7 @@ import (
 func TestDocumentCollaborationIntegration(t *testing.T) {
 	dsn, endpoint := os.Getenv("TEST_DATABASE_URL"), os.Getenv("MINIO_ENDPOINT")
 	if dsn == "" || endpoint == "" {
-		t.Skip("set TEST_DATABASE_URL and MINIO_ENDPOINT for the DOCX integration test")
+		t.Skip("set TEST_DATABASE_URL and MINIO_ENDPOINT for the Office integration test")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
@@ -55,7 +56,7 @@ func TestDocumentCollaborationIntegration(t *testing.T) {
 	entries, err := os.ReadDir(migrations)
 	mustDocument(t, err)
 	for _, entry := range entries {
-		if filepath.Ext(entry.Name()) != ".sql" || entry.Name() >= "012" {
+		if filepath.Ext(entry.Name()) != ".sql" || entry.Name() >= "013" {
 			continue
 		}
 		data, err := os.ReadFile(filepath.Join(migrations, entry.Name()))
@@ -99,12 +100,42 @@ func TestDocumentCollaborationIntegration(t *testing.T) {
 		Extension: "docx", MimeType: docxMIME, ObjectKey: originalKey, Size: int64(len(original))})
 	mustDocument(t, err)
 	mustDocument(t, repo.AddUserStorageUsed(ctx, db, users[0], file.Size))
+
+	var previousDir string
+	mustDocument(t, db.QueryRow(ctx, `INSERT INTO directories(owner_id,name)
+		VALUES($1,'Previous version') RETURNING id`, users[7]).Scan(&previousDir))
+	previous, err := repo.Save(ctx, db, fileRecord{DirectoryID: previousDir, OwnerID: users[7],
+		Filename: "previous.docx", Extension: "docx", MimeType: docxMIME, ObjectKey: uuid.NewString(), Size: 1})
+	mustDocument(t, err)
+	_, err = db.Exec(ctx, `INSERT INTO file_versions(file_id,number,size,object_key)
+		VALUES($1,1,1,$2)`, previous.ID, previous.ObjectKey)
+	mustDocument(t, err)
+	previousSession := uuid.NewString()
+	_, err = db.Exec(ctx, `INSERT INTO document_edit_sessions(key,file_id,directory_id,base_object_key,closed_at)
+		VALUES($1,$2,$3,$4,now())`, previousSession, previous.ID, previousDir, previous.ObjectKey)
+	mustDocument(t, err)
+
 	mustDocument(t, database.Migrate(ctx, db, migrations))
+	versionBeforeUpdate, err := readDocumentVersion(ctx, db, previous.ID, 1)
+	mustDocument(t, err)
+	sessionBeforeUpdate, err := sessionByKey(ctx, db, previousSession, false)
+	mustDocument(t, err)
+	if versionBeforeUpdate.Format != "docx" || sessionBeforeUpdate.Format != "docx" || versionBeforeUpdate.Key != previous.ObjectKey {
+		t.Fatal("existing DOCX version or session did not survive the format migration")
+	}
 	mustDocument(t, database.Migrate(ctx, db, migrations))
 
+	newOfficeResults := map[string][]byte{
+		"xlsx": testOfficeResult(t, "xlsx", "Spreadsheet updated"),
+		"pptx": testOfficeResult(t, "pptx", "Presentation updated"),
+	}
 	var failDownload atomic.Bool
 	failDownload.Store(true)
 	office := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if result := newOfficeResults[strings.TrimPrefix(filepath.Ext(r.URL.Path), ".")]; result != nil {
+			_, _ = w.Write(result)
+			return
+		}
 		if r.URL.Path != "/cache/files/pilot/output.docx" || failDownload.Load() {
 			http.Error(w, "temporary editor failure", http.StatusServiceUnavailable)
 			return
@@ -124,7 +155,7 @@ func TestDocumentCollaborationIntegration(t *testing.T) {
 	}
 	_, err = svc.History(ctx, file.ID, users[7])
 	assertDocumentError(t, err, "forbidden")
-	_, err = svc.StartSession(ctx, file.ID, users[6], "viewer")
+	_, err = svc.StartSession(ctx, file.ID, users[6], "viewer", "light")
 	assertDocumentError(t, err, "forbidden")
 
 	var wg sync.WaitGroup
@@ -133,7 +164,7 @@ func TestDocumentCollaborationIntegration(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			_, err := svc.StartSession(ctx, file.ID, users[i], fmt.Sprintf("editor%d", i))
+			_, err := svc.StartSession(ctx, file.ID, users[i], fmt.Sprintf("editor%d", i), "light")
 			results <- err
 		}()
 	}
@@ -151,7 +182,7 @@ func TestDocumentCollaborationIntegration(t *testing.T) {
 	}
 	var member string
 	mustDocument(t, db.QueryRow(ctx, "SELECT user_id FROM document_edit_members LIMIT 1").Scan(&member))
-	result, err := svc.StartSession(ctx, file.ID, member, "editor")
+	result, err := svc.StartSession(ctx, file.ID, member, "editor", "light")
 	mustDocument(t, err)
 	doc := result.Config["document"].(map[string]any)
 	key := doc["key"].(string)
@@ -235,7 +266,7 @@ func TestDocumentCollaborationIntegration(t *testing.T) {
 		t.Fatalf("restore did not reconcile storage and directory size: quota %d, dir %d, expected %d", used, size, file.Size)
 	}
 	// A callback from the previous folder must never overwrite the current file.
-	movedSession, err := svc.StartSession(ctx, file.ID, users[0], "owner")
+	movedSession, err := svc.StartSession(ctx, file.ID, users[0], "owner", "light")
 	mustDocument(t, err)
 	movedKey := movedSession.Config["document"].(map[string]any)["key"].(string)
 	mustDocument(t, svc.ProcessCallback(ctx, sign(officeEvent{Key: movedKey, Status: 1, Users: []string{users[0]}})))
@@ -267,6 +298,80 @@ func TestDocumentCollaborationIntegration(t *testing.T) {
 			obj.Close()
 			t.Fatal("object from deleted document remained in MinIO")
 		}
+	}
+
+	for extension, expected := range newOfficeResults {
+		t.Run(extension, func(t *testing.T) {
+			format := officeFormats[extension]
+			initial := testOfficeResult(t, extension, "Before editing")
+			sourceKey := uuid.NewString()
+			mustDocument(t, store.Upload(ctx, sourceKey, bytes.NewReader(initial), int64(len(initial)), format.mime))
+			defer store.Delete(context.Background(), sourceKey)
+			officeFile, err := repo.Save(ctx, db, fileRecord{DirectoryID: dir, OwnerID: users[0],
+				Filename: "test." + extension, Extension: extension, MimeType: format.mime, ObjectKey: sourceKey, Size: int64(len(initial))})
+			mustDocument(t, err)
+			mustDocument(t, repo.AddUserStorageUsed(ctx, db, users[0], officeFile.Size))
+
+			preview, err := svc.StartPreview(ctx, officeFile.ID, users[6], "viewer", "dark")
+			mustDocument(t, err)
+			config := preview.Config["editorConfig"].(map[string]any)
+			doc := preview.Config["document"].(map[string]any)
+			if config["mode"] != "view" || config["callbackUrl"] != nil ||
+				doc["permissions"].(map[string]bool)["edit"] || preview.Config["documentType"] != format.documentType ||
+				config["customization"].(map[string]any)["uiTheme"] != "theme-night" {
+				t.Fatalf("unexpected preview configuration for %s", extension)
+			}
+			source, err := url.Parse(doc["url"].(string))
+			mustDocument(t, err)
+			grant := source.Query().Get("grant")
+			previewFile, err := svc.previewSourceFile(ctx, grant)
+			mustDocument(t, err)
+			if previewFile.ObjectKey != sourceKey {
+				t.Fatal("preview did not bind to the saved object")
+			}
+			_, err = svc.sourceFile(ctx, grant)
+			assertDocumentError(t, err, "unauthorized")
+			_, err = svc.StartPreview(ctx, officeFile.ID, users[7], "outsider", "dark")
+			assertDocumentError(t, err, "forbidden")
+			_, err = activeDocumentSession(ctx, db, officeFile.ID)
+			if !errors.Is(err, pgx.ErrNoRows) {
+				t.Fatalf("preview opened an editing session: %v", err)
+			}
+			history, err := svc.History(ctx, officeFile.ID, users[6])
+			mustDocument(t, err)
+			if len(history.Versions) != 0 || history.CanEdit {
+				t.Fatal("preview created a file version or granted editing rights")
+			}
+
+			editing, err := svc.StartSession(ctx, officeFile.ID, users[0], "owner", "light")
+			mustDocument(t, err)
+			key := editing.Config["document"].(map[string]any)["key"].(string)
+			mustDocument(t, svc.ProcessCallback(ctx, sign(officeEvent{Key: key, Status: 1, Users: []string{users[0]}})))
+			mustDocument(t, svc.ProcessCallback(ctx, sign(officeEvent{Key: key, Status: 2, URL: office.URL + "/cache/files/output." + extension})))
+
+			saved, err := repo.FindByID(ctx, db, officeFile.ID)
+			mustDocument(t, err)
+			defer store.Delete(context.Background(), saved.ObjectKey)
+			if saved.MimeType != format.mime || saved.Filename != officeFile.Filename {
+				t.Fatal("saving changed the file format")
+			}
+			reader, err := store.Get(ctx, saved.ObjectKey)
+			mustDocument(t, err)
+			data, err := io.ReadAll(reader)
+			reader.Close()
+			mustDocument(t, err)
+			if !bytes.Equal(data, expected) {
+				t.Fatal("saved bytes differ from the Office editor output")
+			}
+			_, err = svc.previewSourceFile(ctx, grant)
+			assertDocumentError(t, err, "conflict")
+			mustDocument(t, svc.RestoreVersion(ctx, officeFile.ID, users[0], "owner", 1))
+			current, err := repo.FindByID(ctx, db, officeFile.ID)
+			mustDocument(t, err)
+			if current.ObjectKey != sourceKey || current.MimeType != format.mime {
+				t.Fatal("restoring changed the source format")
+			}
+		})
 	}
 }
 
@@ -301,9 +406,14 @@ func TestDocumentResultURL(t *testing.T) {
 
 func testDOCX(t *testing.T, text string) []byte {
 	t.Helper()
+	return testOfficeResult(t, "docx", text)
+}
+
+func testOfficeResult(t *testing.T, extension, text string) []byte {
+	t.Helper()
 	var result bytes.Buffer
 	zw := zip.NewWriter(&result)
-	for _, name := range []string{"[Content_Types].xml", "word/document.xml"} {
+	for _, name := range []string{"[Content_Types].xml", officeFormats[extension].mainPart} {
 		file, err := zw.Create(name)
 		mustDocument(t, err)
 		_, err = io.WriteString(file, text)
@@ -325,5 +435,17 @@ func mustDocument(t *testing.T, err error) {
 	t.Helper()
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestOfficeResultDoesNotAcceptOtherFormats(t *testing.T) {
+	data := testOfficeResult(t, "xlsx", "test worksheet")
+	if err := validateOfficeResult(bytes.NewReader(data), int64(len(data)), "pptx"); err == nil {
+		t.Fatal("accepted spreadsheet content as a presentation")
+	}
+	for _, extension := range []string{"doc", "xls", "ppt", "odt", "ods", "odp"} {
+		if officeFormats[extension].documentType == "" || officeFormats[extension].editable() {
+			t.Errorf("%s should be available for preview only", extension)
+		}
 	}
 }

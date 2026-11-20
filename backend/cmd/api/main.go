@@ -133,6 +133,7 @@ func main() {
 	documentService, err := files.NewDocumentService(pool, filesRepository, store, files.DocumentEditorOptions{
 		Enabled: cfg.OfficeEnabled, PublicURL: cfg.OfficePublicURL, InternalURL: cfg.OfficeInternalURL,
 		StorageURL: cfg.OfficeStorageURL, Secret: cfg.OfficeJWTSecret,
+		LightTheme: cfg.OfficeLightTheme, DarkTheme: cfg.OfficeDarkTheme,
 	})
 	if err != nil {
 		log.Fatalf("document editor: %v", err)

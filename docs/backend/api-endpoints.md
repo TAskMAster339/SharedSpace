@@ -48,8 +48,9 @@
 | GET | `/{id}/share-links` | Список публичных ссылок |
 | POST | `/{id}/convert` | Конвертировать файл |
 | GET | `/{id}/conversions` | История конвертаций |
-| POST | `/{id}/editor-session` | Получить подписанную конфигурацию редактора DOCX |
-| GET | `/{id}/versions` | Получить историю DOCX и разрешённые действия |
+| POST | `/{id}/editor-session` | Получить подписанную конфигурацию редактора DOCX, XLSX или PPTX |
+| POST | `/{id}/preview-session` | Получить подписанную конфигурацию просмотра офисного файла |
+| GET | `/{id}/versions` | Получить историю офисного файла и разрешённые действия |
 | GET | `/{id}/versions/{number}/content` | Получить временный URL для скачивания версии |
 | POST | `/{id}/versions/{number}/restore` | Восстановить версию как новую текущую |
 
@@ -66,7 +67,16 @@ curl -fsS -H "Authorization: Bearer $ACCESS_TOKEN" \
 {"versions":[],"can_edit":true,"can_restore":false,"save_pending":false}
 ```
 
-`POST .../editor-session` возвращает `200` с полями `script_url` и `config`. Шестой аккаунт получает `409 document_editor_limit`. Выключенный редактор возвращает `503 editor_disabled`, другой формат файла — `415 unsupported_document`. История и скачивание сохранённой копии доступны при выключенном редакторе. Подписанные маршруты `/api/v1/office/source` и `/api/v1/office/callback` предназначены для Document Server.
+`POST .../editor-session` возвращает `200` с полями `script_url` и `config`. Оба маршрута сессий принимают `theme=light` или `theme=dark`. Предпросмотр использует режим `view`, работает с последней сохранённой копией и не создаёт сессию редактирования или версию. Поддерживает `DOCX`, `XLSX`, `PPTX`, `DOC`, `XLS`, `PPT`, `ODT`, `ODS` и `ODP`. Шестой аккаунт получает `409 document_editor_limit`. Выключенный редактор возвращает `503 editor_disabled`, другой формат файла — `415 unsupported_document`. История и скачивание сохранённой копии доступны при выключенном редакторе. Подписанные маршруты `/api/v1/office/source`, `/api/v1/office/preview-source` и `/api/v1/office/callback` предназначены для Document Server.
+
+В запросе на предпросмотр `FILE_ID` — идентификатор доступной таблицы XLSX.
+
+```bash
+curl -fsS -X POST -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "http://localhost:8080/api/v1/files/$FILE_ID/preview-session?theme=dark"
+```
+
+Ответ возвращает `200`, подписанные `script_url` и `config`. В конфигурации `documentType` равен `cell`, `editorConfig.mode` равен `view`, а `document.permissions.edit` равен `false`.
 
 ## Директории (`/api/v1/directories`)
 

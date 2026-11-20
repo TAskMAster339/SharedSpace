@@ -13,7 +13,7 @@ PROD_COMPOSE = $(DOCKER_COMPOSE) -f docker-compose.yml --env-file "$(ENV_FILE)"
 help:
 	@printf '%s\n' \
 		'make dev          Собрать и запустить локальный SharedSpace' \
-		'make dev-office   Собрать и запустить SharedSpace с редактором DOCX' \
+		'make dev-office   Собрать и запустить SharedSpace с офисным редактором' \
 		'make env          Создать или дополнить локальный .env' \
 		'make dev-ps       Показать состояние локальных сервисов' \
 		'make dev-logs     Открыть логи локальных сервисов' \

@@ -1,6 +1,17 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useId, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, Share2, Star, Image, EyeOff, Trash2, Pencil } from 'lucide-react';
+import {
+  ArrowLeft,
+  Download,
+  Share2,
+  Star,
+  Image,
+  EyeOff,
+  Trash2,
+  Pencil,
+  PanelRightClose,
+  PanelRightOpen,
+} from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import type { AuthState } from '../store/authStore';
 import { useFavorites } from '../hooks/useFavorites';
@@ -17,6 +28,9 @@ import { ApiError } from '../api/client';
 import { FileIcon } from '../components/ui/FileIcon';
 import { Button } from '../components/ui/Button';
 import { DocumentActions } from '../components/ui/DocumentActions';
+import { OfficeFrame } from '../components/ui/OfficeFrame';
+import { useRootTheme } from '../hooks/useTheme';
+import { canEditOfficeFile, canPreviewOfficeFile } from '../utils/officeFormats';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { RenameModal } from '../components/ui/RenameModal';
 import { ConvertModal } from '../components/ui/ConvertModal';
@@ -98,11 +112,14 @@ const CODE_EXTENSIONS = new Set([
 ]);
 
 // Расширения, которые часто блокируются браузером в iframe
-const PROBLEMATIC_EXTENSIONS = new Set(['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'go']);
+const PROBLEMATIC_EXTENSIONS = new Set(['go']);
 
 const FileViewPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const officeTheme = useRootTheme();
+  const [showDetails, setShowDetails] = useState(true);
+  const detailsId = useId();
   const accessToken = useAuthStore((state: AuthState) => state.accessToken);
   const user = useAuthStore((state: AuthState) => state.user);
   const { isFavorite, toggleFavorite } = useFavorites();
@@ -165,6 +182,8 @@ const FileViewPage: React.FC = () => {
     setCanPreview(true);
     setIframeError(false);
     setOwnerUsername(null);
+    setDirectory(null);
+    setFileUrl(null);
 
     const loadFileData = async () => {
       try {
@@ -190,21 +209,13 @@ const FileViewPage: React.FC = () => {
         const preview = determinePreviewType(fileData.mime_type, fileData.extension);
         setPreviewType(preview);
 
-        // Проверяем, поддерживается ли просмотр
-        const isViewable = preview !== 'unsupported';
-        setCanPreview(isViewable);
+        const nativePreview =
+          preview !== 'unsupported' &&
+          !isProblematicForIframe(fileData.filename) &&
+          !canPreviewOfficeFile(fileData.filename);
+        setCanPreview(nativePreview);
 
-        // Если файл проблемный для iframe, сразу помечаем как непросматриваемый
-        if (isProblematicForIframe(fileData.filename)) {
-          setCanPreview(false);
-          if (isMounted) {
-            setIsLoading(false);
-          }
-          return;
-        }
-
-        // Загружаем URL для предпросмотра (только для поддерживаемых типов)
-        if (isViewable) {
+        if (nativePreview) {
           try {
             const content = await getFileContentUrl(accessToken, id);
             if (isMounted) {
@@ -384,6 +395,20 @@ const FileViewPage: React.FC = () => {
   const renderPreview = () => {
     if (!file) return null;
 
+    if (accessToken && canPreviewOfficeFile(file.filename)) {
+      return (
+        <div className="h-[60dvh] min-h-[24rem] overflow-hidden rounded-theme border border-theme">
+          <OfficeFrame
+            key={`${file.id}:${file.updated_at}:${file.filename}`}
+            fileId={file.id}
+            token={accessToken}
+            mode="view"
+            theme={officeTheme}
+          />
+        </div>
+      );
+    }
+
     // Если файл не поддерживается для просмотра или произошла ошибка в iframe
     if (!canPreview || iframeError) {
       const ext = getFileExtension(file.filename);
@@ -556,8 +581,7 @@ const FileViewPage: React.FC = () => {
         description={`Файл · ${formatFileSize(file.size)} · ${file.mime_type}`}
         canonical={`https://shared-space.ru/files/${file.id}`}
       />
-      {/* Навигация назад */}
-      <div>
+      <div className="flex items-center justify-between gap-2">
         <button
           onClick={handleGoBack}
           className="inline-flex items-center gap-2 text-sm text-theme-secondary hover:text-theme-primary transition-colors"
@@ -565,17 +589,37 @@ const FileViewPage: React.FC = () => {
           <ArrowLeft size={16} />
           Вернуться к папке
         </button>
+        <Button
+          type="button"
+          variant="secondary"
+          aria-expanded={showDetails}
+          aria-controls={detailsId}
+          className="inline-flex items-center gap-2"
+          onClick={() => setShowDetails((visible) => !visible)}
+        >
+          {showDetails ? (
+            <PanelRightClose size={16} aria-hidden="true" />
+          ) : (
+            <PanelRightOpen size={16} aria-hidden="true" />
+          )}
+          {showDetails ? 'Скрыть сведения' : 'Сведения о файле'}
+        </Button>
       </div>
 
       {/* Основной контент: 2 колонки (предпросмотр) + 1 колонка (информация) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div
+        className={cn(
+          'grid grid-cols-1 gap-4',
+          showDetails && 'xl:grid-cols-[minmax(0,1fr)_18rem]',
+        )}
+      >
         {/* Левая часть: предпросмотр (2/3) */}
-        <div className="lg:col-span-2">
+        <div className="min-w-0">
           <div className="bg-theme-secondary border border-theme rounded-theme p-4 shadow-theme-card">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-sm font-medium text-theme-secondary">Предпросмотр</h2>
               <div className="flex flex-wrap items-center gap-2">
-                {accessToken && file.filename.toLowerCase().endsWith('.docx') && (
+                {accessToken && canEditOfficeFile(file.filename) && (
                   <DocumentActions
                     key={file.id}
                     id={file.id}
@@ -607,8 +651,12 @@ const FileViewPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Правая часть: информация о файле (1/3) */}
-        <div className="space-y-4">
+        <aside
+          id={detailsId}
+          hidden={!showDetails}
+          aria-label="Сведения о файле"
+          className="min-w-0 space-y-4"
+        >
           {/* Информация о файле */}
           <div className="bg-theme-secondary border border-theme rounded-theme p-5 shadow-theme-card">
             <h3 className="font-medium text-theme-primary mb-3">Информация о файле</h3>
@@ -767,7 +815,7 @@ const FileViewPage: React.FC = () => {
               onRename={handleRename}
             />
           </div>
-        </div>
+        </aside>
       </div>
     </div>
   );

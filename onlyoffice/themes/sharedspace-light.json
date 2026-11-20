@@ -1,0 +1,21 @@
+{
+  "id": "theme-sharedspace-light",
+  "name": "SharedSpace Light",
+  "type": "light",
+  "colors": {
+    "toolbar-header-document": "#2563eb",
+    "toolbar-header-spreadsheet": "#166534",
+    "toolbar-header-presentation": "#9a3412",
+    "background-normal": "#ffffff",
+    "background-toolbar": "#f8fafc",
+    "background-toolbar-additional": "#f1f5f9",
+    "background-primary-dialog-button": "#2563eb",
+    "background-accent-button": "#2563eb",
+    "highlight-button-hover": "#f1f5f9",
+    "highlight-button-pressed": "#dbeafe",
+    "border-toolbar": "#e2e8f0",
+    "border-divider": "#e2e8f0",
+    "text-normal": "#1e293b",
+    "canvas-background": "#f1f5f9"
+  }
+}

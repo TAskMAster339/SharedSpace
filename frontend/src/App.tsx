@@ -112,6 +112,15 @@ const App: React.FC = () => {
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         </Route>
 
+        <Route
+          path="/files/:id/edit"
+          element={
+            <ProtectedRoute>
+              <DocumentEditorPage />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Защищённые маршруты */}
         <Route
           element={
@@ -151,7 +160,6 @@ const App: React.FC = () => {
           <Route path="/directories" element={<SharedDirListPage />} />
           <Route path="/directories/:id/settings" element={<FolderSettingsPage />} />
           <Route path="/files/:id" element={<FileViewPage />} />
-          <Route path="/files/:id/edit" element={<DocumentEditorPage />} />
           <Route path="/shared/:id/settings" element={<SharedSettingsPage />} />
           <Route path="/links" element={<MyLinksPage />} />
           <Route path="/invitations" element={<InvitationsPage />} />

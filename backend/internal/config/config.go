@@ -65,6 +65,8 @@ type Config struct {
 	OfficeInternalURL string
 	OfficeStorageURL  string
 	OfficeJWTSecret   string
+	OfficeLightTheme  string
+	OfficeDarkTheme   string
 }
 
 func Load() (*Config, error) {
@@ -153,6 +155,8 @@ func Load() (*Config, error) {
 		OfficeInternalURL: getEnv("OFFICE_INTERNAL_URL", ""),
 		OfficeStorageURL:  getEnv("OFFICE_STORAGE_URL", ""),
 		OfficeJWTSecret:   getEnv("OFFICE_JWT_SECRET", ""),
+		OfficeLightTheme:  getEnv("OFFICE_LIGHT_THEME", ""),
+		OfficeDarkTheme:   getEnv("OFFICE_DARK_THEME", ""),
 	}, nil
 }
 

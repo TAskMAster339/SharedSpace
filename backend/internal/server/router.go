@@ -50,6 +50,7 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 	r.Route("/api/v1", func(r chi.Router) {
 		if documentHandler != nil {
 			r.Get("/office/source", middleware.AppError(documentHandler.Source))
+			r.Get("/office/preview-source", middleware.AppError(documentHandler.PreviewSource))
 			r.Post("/office/callback", middleware.AppError(documentHandler.Callback))
 		}
 
@@ -140,6 +141,7 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 						}
 						if documentHandler != nil {
 							r.Post("/{id}/editor-session", middleware.AppError(documentHandler.Start))
+							r.Post("/{id}/preview-session", middleware.AppError(documentHandler.Preview))
 							r.Get("/{id}/versions", middleware.AppError(documentHandler.History))
 							r.Get("/{id}/versions/{number}/content", middleware.AppError(documentHandler.Download))
 							r.Post("/{id}/versions/{number}/restore", middleware.AppError(documentHandler.Restore))

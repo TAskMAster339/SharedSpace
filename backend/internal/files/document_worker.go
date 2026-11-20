@@ -98,7 +98,7 @@ func (s *DocumentService) dropRevokedDocumentUsers(ctx context.Context, session 
 		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			return err
 		}
-		invalid = errors.Is(err, pgx.ErrNoRows) || !isDOCX(file) || file.DirectoryID != session.DirectoryID || file.ObjectKey != session.BaseKey
+		invalid = errors.Is(err, pgx.ErrNoRows) || ExtractExtension(file.Filename) != session.Format || file.DirectoryID != session.DirectoryID || file.ObjectKey != session.BaseKey
 	}
 	revoked := make([]string, 0, len(users))
 	for _, user := range users {

@@ -1,7 +1,6 @@
 package files
 
 import (
-	"archive/zip"
 	"context"
 	"errors"
 	"fmt"
@@ -168,7 +167,7 @@ func (s *DocumentService) stageDocument(ctx context.Context, session documentSes
 	if resp.StatusCode != http.StatusOK || resp.ContentLength > maxFileSize {
 		return fmt.Errorf("редактор вернул недоступный или слишком большой результат (HTTP %d)", resp.StatusCode)
 	}
-	tmp, err := os.CreateTemp("", "sharedspace-docx-*")
+	tmp, err := os.CreateTemp("", "sharedspace-office-*")
 	if err != nil {
 		return err
 	}
@@ -181,14 +180,14 @@ func (s *DocumentService) stageDocument(ctx context.Context, session documentSes
 	if size > maxFileSize {
 		return errors.New("документ превышает 100 МБ")
 	}
-	if err := validateDOCX(tmp, size); err != nil {
+	if err := validateOfficeResult(tmp, size, session.Format); err != nil {
 		return err
 	}
 	if _, err := tmp.Seek(0, io.SeekStart); err != nil {
 		return err
 	}
 	objectKey := documentObjectPrefix + uuid.NewString()
-	if err := s.storage.Upload(ctx, objectKey, tmp, size, docxMIME); err != nil {
+	if err := s.storage.Upload(ctx, objectKey, tmp, size, officeFormats[session.Format].mime); err != nil {
 		return err
 	}
 	// Each attempt uses a unique key. The orphan sweep handles interrupted
@@ -196,26 +195,6 @@ func (s *DocumentService) stageDocument(ctx context.Context, session documentSes
 	_, err = s.db.Exec(ctx, `UPDATE document_edit_sessions SET pending_key = $2, pending_size = $3, result_url = NULL
 		WHERE key = $1 AND closed_at IS NULL AND pending_key IS NULL`, session.Key, objectKey, size)
 	return err
-}
-
-func validateDOCX(file io.ReaderAt, size int64) error {
-	z, err := zip.NewReader(file, size)
-	if err != nil {
-		return fmt.Errorf("редактор вернул некорректный DOCX: %w", err)
-	}
-	var contentTypes, document bool
-	for _, entry := range z.File {
-		switch entry.Name {
-		case "[Content_Types].xml":
-			contentTypes = true
-		case "word/document.xml":
-			document = true
-		}
-	}
-	if !contentTypes || !document {
-		return errors.New("в результате отсутствуют обязательные части DOCX")
-	}
-	return nil
 }
 
 func (s *DocumentService) publishDocument(ctx context.Context, initial documentSession) error {
@@ -242,7 +221,7 @@ func (s *DocumentService) publishDocument(ctx context.Context, initial documentS
 	if err != nil || session.ClosedAt != nil || session.PendingKey == nil {
 		return err
 	}
-	if file.ID == "" || !isDOCX(file) || file.DirectoryID != session.DirectoryID || file.ObjectKey != session.BaseKey {
+	if file.ID == "" || ExtractExtension(file.Filename) != session.Format || file.DirectoryID != session.DirectoryID || file.ObjectKey != session.BaseKey {
 		// Retain the result for operator recovery when the original file was
 		// moved, removed, or replaced while the document was being saved.
 		if _, err := tx.Exec(ctx, `UPDATE document_edit_sessions SET closed_at = now() WHERE key = $1`, session.Key); err != nil {
