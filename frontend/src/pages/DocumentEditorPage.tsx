@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Moon, Sun, X } from 'lucide-react';
+import { ArrowLeft, BookOpen, Moon, Sun, X } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { OfficeFrame, OfficeFrameHandle } from '../components/ui/OfficeFrame';
@@ -38,6 +38,14 @@ const DocumentEditorPage: React.FC = () => {
     if (!frame.current?.requestClose(true)) reopenInTheme();
   }
 
+  function returnToFile(event: React.MouseEvent<HTMLAnchorElement>) {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    setWaitingForTheme(false);
+    frame.current?.cancelDeferredClose();
+    intent.current = 'file';
+    if (frame.current?.requestClose()) event.preventDefault();
+  }
+
   return (
     <main className="flex h-screen supports-[height:100dvh]:h-[100dvh] min-w-0 flex-col bg-theme-primary">
       <SEOHead
@@ -48,13 +56,7 @@ const DocumentEditorPage: React.FC = () => {
       <div className="flex shrink-0 items-center gap-3 border-b border-theme bg-theme-secondary px-2 py-1 sm:px-4">
         <Link
           to={filePath}
-          onClick={(event) => {
-            if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-            setWaitingForTheme(false);
-            frame.current?.cancelDeferredClose();
-            intent.current = 'file';
-            if (frame.current?.requestClose()) event.preventDefault();
-          }}
+          onClick={returnToFile}
           className="inline-flex min-h-[44px] shrink-0 items-center gap-2 rounded-theme px-2 text-sm text-theme-secondary hover:bg-theme-hover hover:text-theme-primary"
         >
           <ArrowLeft size={16} aria-hidden="true" />К файлу
@@ -94,6 +96,17 @@ const DocumentEditorPage: React.FC = () => {
             <Moon size={18} aria-hidden="true" />
           )}
         </Button>
+        {title.toLowerCase().endsWith('.docx') && (
+          <Link
+            to={filePath}
+            aria-label="Режим чтения"
+            title="Режим чтения"
+            onClick={returnToFile}
+            className="grid size-11 shrink-0 place-items-center rounded-theme text-theme-secondary hover:bg-theme-hover hover:text-theme-primary sm:hidden"
+          >
+            <BookOpen size={18} aria-hidden="true" />
+          </Link>
+        )}
       </div>
 
       <div className="min-h-0 min-w-0 flex-1">

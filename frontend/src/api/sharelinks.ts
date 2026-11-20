@@ -84,6 +84,7 @@ export function resolveShareLink(
 ): Promise<ShareLinkResolveResult> {
   return apiRequest<ShareLinkResolveResult>(`/s/${token}`, {
     method: 'GET',
+    cache: 'no-store',
     signal,
     ...(accessToken ? { token: accessToken } : {}),
     ...(password ? { headers: { 'X-SharedLink-Password': encodeURIComponent(password) } } : {}),

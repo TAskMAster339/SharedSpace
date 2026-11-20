@@ -6,7 +6,21 @@ import { getDocumentHistory } from '../../api/documents';
 import { loadDocxReader } from '../../utils/loadDocxReader';
 import { MobileDocxReader } from './MobileDocxReader';
 
-jest.mock('react-router-dom', () => ({ Link: 'a' }), { virtual: true });
+jest.mock(
+  'react-router-dom',
+  () => ({
+    Link: ({
+      to,
+      children,
+      ...props
+    }: { to: string } & React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
+      <a {...props} href={to}>
+        {children}
+      </a>
+    ),
+  }),
+  { virtual: true },
+);
 jest.mock('../../api/documents', () => ({ getDocumentHistory: jest.fn() }));
 jest.mock('../../utils/loadDocxReader', () => ({
   loadDocxReader: jest.fn(),
@@ -40,7 +54,8 @@ test('renders text immediately and offers editing only after a permission check'
   render(<MobileDocxReader {...props} privateFile={{ id: 'id', token: 'access' }} />);
 
   expect(await screen.findByText('Содержание')).toBeVisible();
-  expect(await screen.findByText('Редактировать')).toBeVisible();
+  const edit = await screen.findByRole('link', { name: 'Редактировать' });
+  expect(edit).toHaveAttribute('href', '/files/id/edit');
   expect(history).toHaveBeenCalledWith('access', 'id', expect.any(AbortSignal));
 });
 
@@ -48,7 +63,7 @@ test('a public file stays read-only and an oversized file can use standard previ
   render(<MobileDocxReader {...props} size={21 * 1024 * 1024} />);
 
   expect(await screen.findByRole('alert')).toBeVisible();
-  expect(screen.queryByText('Редактировать')).toBeNull();
+  expect(screen.queryByRole('link', { name: 'Редактировать' })).toBeNull();
   expect(load).not.toHaveBeenCalled();
   expect(history).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button', { name: 'Открыть обычный предпросмотр' }));

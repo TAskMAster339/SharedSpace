@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useId } from 'react';
+import React, { useEffect, useState, useCallback, useId, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -115,26 +115,28 @@ const SharePage: React.FC = () => {
   return token ? <SharedFileLayout key={token} token={token} /> : null;
 };
 
+type SharePreviewMode = 'default' | 'reader' | 'preview' | 'expanded';
+
 function SharedFileLayout({ token }: { token: string }) {
-  const [expanded, setExpanded] = useState(false);
+  const [mode, setMode] = useState<SharePreviewMode>('default');
   return (
-    <Layout fillViewport={expanded}>
-      <SharedFile token={token} expanded={expanded} setExpanded={setExpanded} />
+    <Layout fillViewport={mode === 'expanded'}>
+      <SharedFile token={token} mode={mode} setMode={setMode} />
     </Layout>
   );
 }
 
 interface SharedFileProps {
   token: string;
-  expanded: boolean;
-  setExpanded: (expanded: boolean) => void;
+  mode: SharePreviewMode;
+  setMode: (mode: SharePreviewMode) => void;
 }
 
-const SharedFile = ({ token, expanded, setExpanded }: SharedFileProps) => {
+const SharedFile = ({ token, mode, setMode }: SharedFileProps) => {
   const previewId = useId();
   const navigate = useNavigate();
   const phone = usePhoneViewport();
-  const [standardPreview, setStandardPreview] = useState(false);
+  const expanded = mode === 'expanded';
   const accessToken = useAuthStore((state) => state.accessToken);
   const officeTheme = useRootTheme();
 
@@ -144,7 +146,7 @@ const SharedFile = ({ token, expanded, setExpanded }: SharedFileProps) => {
   const [iframeError, setIframeError] = useState(false);
   const [needsPassword, setNeedsPassword] = useState(false);
   const [password, setPassword] = useState('');
-  const [acceptedPassword, setAcceptedPassword] = useState('');
+  const acceptedPassword = useRef<string | undefined>(undefined);
   const [showPassword, setShowPassword] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
@@ -152,37 +154,44 @@ const SharedFile = ({ token, expanded, setExpanded }: SharedFileProps) => {
   const showToast = useToastStore((s) => s.showToast);
 
   const previewType = file ? determinePreviewType(file) : 'unsupported';
+  const mobileDocx = phone && !!file?.url && file.filename.toLowerCase().endsWith('.docx');
   const showMobileReader =
-    phone &&
-    !standardPreview &&
-    !expanded &&
-    !isLoading &&
-    !error &&
-    !!file?.url &&
-    file.filename.toLowerCase().endsWith('.docx');
+    mobileDocx && !isLoading && !error && (mode === 'default' || mode === 'reader');
   useReaderLayout(showMobileReader);
   const readerUrl = file?.url;
-  const loadReaderUrl = useCallback(async () => {
-    if (!readerUrl) throw new Error('Файл недоступен');
-    return readerUrl;
-  }, [readerUrl]);
+  const loadReaderUrl = useCallback(
+    async (signal: AbortSignal) => {
+      if (mode === 'reader') {
+        const latest = await resolveShareLink(token, accessToken, acceptedPassword.current, signal);
+        return latest.url;
+      }
+      if (!readerUrl) throw new Error('Файл недоступен');
+      return readerUrl;
+    },
+    [mode, readerUrl, token, accessToken],
+  );
   const loadOfficePreview = useCallback(
     (theme: OfficeTheme, signal: AbortSignal, compact: boolean) =>
-      startSharedOfficePreview(token, accessToken, acceptedPassword, theme, signal, compact),
-    [token, accessToken, acceptedPassword],
+      startSharedOfficePreview(
+        token,
+        accessToken,
+        acceptedPassword.current ?? '',
+        theme,
+        signal,
+        compact,
+      ),
+    [token, accessToken],
   );
 
   useEffect(() => {
     const controller = new AbortController();
-    setExpanded(false);
     setIsLoading(true);
     setError(null);
     setFile(null);
-    setAcceptedPassword('');
     setNeedsPassword(false);
     setIframeError(false);
 
-    resolveShareLink(token, accessToken, undefined, controller.signal)
+    resolveShareLink(token, accessToken, acceptedPassword.current, controller.signal)
       .then((data) => {
         if (!controller.signal.aborted) setFile(data);
       })
@@ -194,6 +203,7 @@ const SharedFile = ({ token, expanded, setExpanded }: SharedFileProps) => {
         } else if (status === 401) {
           setError('Для доступа к этому файлу необходимо войти в аккаунт');
         } else if (status === 403) {
+          acceptedPassword.current = undefined;
           setNeedsPassword(true);
         } else {
           setError(err instanceof Error ? err.message : 'Не удалось загрузить файл');
@@ -203,7 +213,7 @@ const SharedFile = ({ token, expanded, setExpanded }: SharedFileProps) => {
         if (!controller.signal.aborted) setIsLoading(false);
       });
     return () => controller.abort();
-  }, [token, accessToken, setExpanded]);
+  }, [token, accessToken]);
 
   const handleDownload = useCallback(async () => {
     if (!file?.url) return;
@@ -247,7 +257,7 @@ const SharedFile = ({ token, expanded, setExpanded }: SharedFileProps) => {
     setPasswordError(null);
     try {
       const data = await resolveShareLink(token, accessToken, password);
-      setAcceptedPassword(password);
+      acceptedPassword.current = password;
       setPassword('');
       setFile(data);
       setNeedsPassword(false);
@@ -499,7 +509,7 @@ const SharedFile = ({ token, expanded, setExpanded }: SharedFileProps) => {
           size={file.size}
           loadUrl={loadReaderUrl}
           onBack={() => navigate(accessToken ? '/dashboard' : '/')}
-          onStandardPreview={() => setStandardPreview(true)}
+          onStandardPreview={() => setMode('preview')}
           onDownload={handleDownload}
         />
       </>
@@ -547,16 +557,14 @@ const SharedFile = ({ token, expanded, setExpanded }: SharedFileProps) => {
                 {expanded ? file.filename : 'Предпросмотр'}
               </h2>
               <div className="flex shrink-0 items-center gap-2">
-                {phone && standardPreview && file.filename.toLowerCase().endsWith('.docx') && (
+                {mobileDocx && (
                   <Button
                     type="button"
                     variant="secondary"
                     aria-label="Режим чтения"
                     className="inline-grid size-9 shrink-0 place-items-center p-0"
-                    onClick={() => {
-                      setExpanded(false);
-                      setStandardPreview(false);
-                    }}
+                    title="Режим чтения"
+                    onClick={() => setMode('reader')}
                   >
                     <BookOpen size={16} aria-hidden="true" />
                   </Button>
@@ -570,7 +578,7 @@ const SharedFile = ({ token, expanded, setExpanded }: SharedFileProps) => {
                     aria-label={expanded ? 'Свернуть предпросмотр' : 'Развернуть предпросмотр'}
                     title={expanded ? 'Свернуть предпросмотр' : 'Развернуть предпросмотр'}
                     className="inline-grid size-9 shrink-0 place-items-center p-0"
-                    onClick={() => setExpanded(!expanded)}
+                    onClick={() => setMode(expanded ? 'preview' : 'expanded')}
                   >
                     {expanded ? (
                       <Minimize size={16} aria-hidden="true" />

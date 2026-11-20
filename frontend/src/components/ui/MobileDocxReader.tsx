@@ -115,6 +115,16 @@ export function MobileDocxReader({
             <Moon size={18} aria-hidden="true" />
           )}
         </Button>
+        {canEdit && id && (
+          <Link
+            to={`/files/${id}/edit`}
+            aria-label="Редактировать"
+            title="Редактировать"
+            className={`${iconButton} rounded-theme text-brand hover:bg-theme-hover`}
+          >
+            <Pencil size={18} aria-hidden="true" />
+          </Link>
+        )}
         {onDownload && (
           <Button
             type="button"
@@ -137,7 +147,7 @@ export function MobileDocxReader({
           <FileText size={18} aria-hidden="true" />
         </Button>
       </header>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-24 pt-6 sm:px-6">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-6 sm:px-6">
         {status === 'loading' && (
           <p role="status" className="text-center text-sm text-theme-secondary">
             Подготавливаем документ…
@@ -161,15 +171,6 @@ export function MobileDocxReader({
           className="docx-reader mx-auto max-w-[64ch] text-theme-primary"
         />
       </div>
-      {canEdit && id && (
-        <Link
-          to={`/files/${id}/edit`}
-          className="absolute bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 inline-flex min-h-11 items-center gap-2 rounded-theme bg-brand px-4 text-sm font-medium text-theme-on-brand shadow-theme-dropdown hover:bg-brand-hover"
-        >
-          <Pencil size={17} aria-hidden="true" />
-          Редактировать
-        </Link>
-      )}
     </main>
   );
 }

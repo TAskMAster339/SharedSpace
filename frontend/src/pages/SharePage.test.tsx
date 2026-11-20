@@ -4,6 +4,7 @@ import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ApiError } from '../api/client';
 import { resolveShareLink, startSharedOfficePreview } from '../api/sharelinks';
+import { loadDocxReader } from '../utils/loadDocxReader';
 import SharePage from './SharePage';
 
 jest.mock(
@@ -30,6 +31,11 @@ jest.mock('../components/SEOHead', () => () => null);
 jest.mock('../api/sharelinks', () => ({
   resolveShareLink: jest.fn(),
   startSharedOfficePreview: jest.fn(),
+}));
+
+jest.mock('../utils/loadDocxReader', () => ({
+  loadDocxReader: jest.fn(),
+  maxReaderSize: 20 * 1024 * 1024,
 }));
 
 const resolve = jest.mocked(resolveShareLink);
@@ -111,4 +117,49 @@ test('expanding and collapsing preserves the Office session', async () => {
   fireEvent.click(collapse);
   expect(screen.getByTestId('share-layout')).toHaveAttribute('data-expanded', 'false');
   expect(preview).toHaveBeenCalledTimes(1);
+});
+
+test('a protected mobile DOCX can return to reading after repeated full preview transitions', async () => {
+  const originalMatchMedia = window.matchMedia;
+  window.matchMedia = jest.fn().mockReturnValue({
+    matches: true,
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+  });
+  localStorage.setItem('theme', 'light');
+  const doc = { ...spreadsheet, filename: 'Report.docx', extension: 'docx' };
+  const read = jest.mocked(loadDocxReader);
+  read.mockClear();
+  read.mockResolvedValue('<p>Текст отчёта</p>');
+  resolve.mockRejectedValueOnce(new ApiError('Нужен пароль', 403));
+  resolve.mockResolvedValueOnce(doc);
+  resolve.mockResolvedValueOnce({ ...doc, url: doc.url + '?second' });
+  resolve.mockResolvedValueOnce({ ...doc, url: doc.url + '?third' });
+  try {
+    showSharedFile();
+    fireEvent.change(await screen.findByPlaceholderText('Пароль'), { target: { value: 'pass' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Открыть файл' }));
+    expect(await screen.findByText('Текст отчёта')).toBeVisible();
+    expect(read).toHaveBeenCalledWith(doc.url, expect.any(AbortSignal));
+
+    for (const [index, suffix] of ['second', 'third'].entries()) {
+      fireEvent.click(screen.getByRole('button', { name: 'Обычный предпросмотр и сведения' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Развернуть предпросмотр' }));
+      if (index === 0)
+        fireEvent.click(screen.getByRole('button', { name: 'Свернуть предпросмотр' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Режим чтения' }));
+      expect(await screen.findByText('Текст отчёта')).toBeVisible();
+      expect(read).toHaveBeenLastCalledWith(doc.url + '?' + suffix, expect.any(AbortSignal));
+      expect(resolve).toHaveBeenLastCalledWith(
+        'shared-file',
+        null,
+        'pass',
+        expect.any(AbortSignal),
+      );
+      expect(screen.queryByRole('link', { name: 'Редактировать' })).toBeNull();
+      expect(screen.getByTestId('share-layout')).toHaveAttribute('data-expanded', 'false');
+    }
+  } finally {
+    window.matchMedia = originalMatchMedia;
+  }
 });
