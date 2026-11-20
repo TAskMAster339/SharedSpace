@@ -18,14 +18,16 @@ type StorageFolder struct {
 }
 
 type StorageUsageResponse struct {
-	UsedBytes       int64           `json:"used_bytes"`
-	QuotaBytes      int64           `json:"quota_bytes"`
-	TrashBytes      int64           `json:"trash_bytes"`
-	RootFilesBytes  int64           `json:"root_files_bytes"`
-	OtherFilesBytes int64           `json:"other_files_bytes"`
-	RootID          *string         `json:"root_id"`
-	FolderCount     int             `json:"folder_count"`
-	Folders         []StorageFolder `json:"folders"`
+	UsedBytes          int64           `json:"used_bytes"`
+	QuotaBytes         int64           `json:"quota_bytes"`
+	TrashBytes         int64           `json:"trash_bytes"`
+	RootFilesBytes     int64           `json:"root_files_bytes"`
+	OtherFilesBytes    int64           `json:"other_files_bytes"`
+	SharedFilesBytes   int64           `json:"shared_files_bytes"`
+	PersonalFilesBytes int64           `json:"personal_files_bytes"`
+	RootID             *string         `json:"root_id"`
+	FolderCount        int             `json:"folder_count"`
+	Folders            []StorageFolder `json:"folders"`
 }
 
 // This on-demand quota breakdown counts only files owned by the caller. Folder
@@ -41,6 +43,15 @@ func (r *Repository) FindStorageUsage(ctx context.Context, db dbTX, userID, sort
    SELECT d.id,d.id AS folder_id FROM directories d JOIN personal_root r ON d.parent_id=r.id WHERE d.deleted_at IS NULL
    UNION
    SELECT d.id,t.folder_id FROM directories d JOIN folder_tree t ON d.parent_id=t.id WHERE d.deleted_at IS NULL
+ ), shared_tree AS (
+   SELECT sd.directory_id FROM shared_directories sd
+   JOIN directories d ON d.id=sd.directory_id AND d.deleted_at IS NULL
+   WHERE sd.owner_id=$1 OR EXISTS(
+     SELECT 1 FROM shared_directory_members m WHERE m.shared_directory_id=sd.id AND m.user_id=$1
+   )
+   UNION
+   SELECT d.id FROM directories d JOIN shared_tree t ON d.parent_id=t.directory_id
+   WHERE d.deleted_at IS NULL AND NOT EXISTS(SELECT 1 FROM shared_directories sd WHERE sd.directory_id=d.id)
  ), own_files AS MATERIALIZED (
    SELECT directory_id,size,deleted_at FROM files WHERE owner_id=$1
  ), allocated AS (
@@ -61,12 +72,17 @@ func (r *Repository) FindStorageUsage(ctx context.Context, db dbTX, userID, sort
    COALESCE((SELECT SUM(size) FROM own_files WHERE deleted_at IS NULL AND directory_id=r.id),0),
    COALESCE((SELECT SUM(f.size) FROM own_files f WHERE f.deleted_at IS NULL
      AND f.directory_id IS DISTINCT FROM r.id AND NOT EXISTS(SELECT 1 FROM folder_tree t WHERE t.id=f.directory_id)),0),
+   COALESCE((SELECT SUM(f.size) FROM own_files f JOIN shared_tree t ON t.directory_id=f.directory_id WHERE f.deleted_at IS NULL),0),
+   COALESCE((SELECT SUM(f.size) FROM own_files f WHERE f.deleted_at IS NULL
+     AND (f.directory_id=r.id OR EXISTS(SELECT 1 FROM folder_tree t WHERE t.id=f.directory_id))
+     AND NOT EXISTS(SELECT 1 FROM shared_tree t WHERE t.directory_id=f.directory_id)),0),
    (SELECT COUNT(*) FROM folders),
    COALESCE((SELECT jsonb_agg(v ORDER BY CASE WHEN $2='size' THEN size_bytes END DESC,
      CASE WHEN $2='name' THEN name END ASC,name,id) FROM visible_folders v),'[]'::jsonb)
  FROM users u LEFT JOIN personal_root r ON true WHERE u.id=$1
  `, userID, sort).Scan(&result.UsedBytes, &result.QuotaBytes, &result.RootID, &result.TrashBytes,
-		&result.RootFilesBytes, &result.OtherFilesBytes, &result.FolderCount, &foldersJSON)
+		&result.RootFilesBytes, &result.OtherFilesBytes, &result.SharedFilesBytes, &result.PersonalFilesBytes,
+		&result.FolderCount, &foldersJSON)
 	if err != nil {
 		return StorageUsageResponse{}, err
 	}

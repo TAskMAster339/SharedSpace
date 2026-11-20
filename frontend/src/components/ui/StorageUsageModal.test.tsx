@@ -99,3 +99,19 @@ test('allows retry after a failed request', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Повторить' }));
   await screen.findByText(/Занято/);
 });
+
+test('uses the shared ownership total and accounts for own files outside the listed folders', async () => {
+  loadUsage.mockResolvedValue({
+    ...usage,
+    personal_files_bytes: 220,
+    shared_files_bytes: 310,
+  });
+  render(<StorageUsageModal />);
+  await screen.findByRole('list', { name: 'Содержимое хранилища' });
+  const rows = screen.getAllByRole('listitem');
+  expect(rows).toHaveLength(4);
+  expect(within(rows[0]).getByText('220.0 Б')).toBeVisible();
+  expect(within(rows[1]).getByText('310.0 Б')).toBeVisible();
+  expect(within(rows[3]).getByText('Другие расположения')).toBeVisible();
+  expect(within(rows[3]).getByText('70.0 Б')).toBeVisible();
+});

@@ -88,6 +88,8 @@ export interface StorageUsage {
   trash_bytes: number;
   root_files_bytes: number;
   other_files_bytes: number;
+  shared_files_bytes?: number;
+  personal_files_bytes?: number;
   root_id: string | null;
   folder_count: number;
   folders: { id: string; name: string; size_bytes: number }[];

@@ -5092,6 +5092,9 @@ const docTemplate = `{
                 "other_files_bytes": {
                     "type": "integer"
                 },
+                "personal_files_bytes": {
+                    "type": "integer"
+                },
                 "quota_bytes": {
                     "type": "integer"
                 },
@@ -5100,6 +5103,9 @@ const docTemplate = `{
                 },
                 "root_id": {
                     "type": "string"
+                },
+                "shared_files_bytes": {
+                    "type": "integer"
                 },
                 "trash_bytes": {
                     "type": "integer"

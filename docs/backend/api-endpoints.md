@@ -31,6 +31,7 @@ curl -fsS -X POST "http://localhost:8080/api/v1/s/${SHARE_TOKEN}/preview-session
 | Метод | Путь | Описание |
 |-------|------|----------|
 | GET | `/me` | Получить свой профиль |
+| GET | `/me/storage` | Получить распределение квоты по [личным и общим папкам](folder-sizes.md#окно-использования-хранилища) |
 | PATCH | `/me` | Обновить профиль |
 | PATCH | `/me/password` | Сменить пароль |
 | DELETE | `/me` | Удалить аккаунт |
