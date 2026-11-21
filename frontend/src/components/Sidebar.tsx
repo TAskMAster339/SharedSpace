@@ -28,8 +28,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ id, collapsed }) => {
       aria-busy={isLoading}
       onContextMenu={(event) => event.preventDefault()}
       className={cn(
-        'flex h-full flex-col overflow-y-auto border-r border-theme bg-theme-secondary py-2',
-        collapsed ? 'w-16 px-2' : 'w-64 px-4',
+        'flex h-full flex-col overflow-x-hidden overflow-y-auto border-r border-theme bg-theme-secondary p-2 motion-safe:transition-[width] motion-safe:duration-200 motion-safe:ease-out',
+        collapsed ? 'w-16' : 'w-64',
       )}
     >
       {isLoading ? (
@@ -43,11 +43,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ id, collapsed }) => {
       ) : (
         <>
           <div className="mt-2 flex flex-1 flex-col space-y-1">
-            {!collapsed && (
-              <div className="mb-2 px-3 text-sm font-medium uppercase tracking-wider text-theme-muted">
-                Меню
-              </div>
-            )}
             {menuItems.map((item) => {
               const isActive = isSidebarItemActive(item.path, currentPath, currentSection);
               return (
@@ -57,8 +52,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ id, collapsed }) => {
                   title={collapsed ? item.label : undefined}
                   aria-current={isActive ? 'page' : undefined}
                   className={cn(
-                    'group flex min-h-10 items-center rounded-theme text-sm font-medium transition-colors',
-                    collapsed ? 'justify-center' : 'gap-3 px-3 py-2.5',
+                    'group flex min-h-10 items-center gap-3 overflow-hidden whitespace-nowrap rounded-theme px-[14px] py-2.5 text-sm font-medium transition-colors',
                     isActive
                       ? 'bg-brand-light text-brand dark:bg-brand-light'
                       : 'text-theme-secondary hover:bg-theme-hover',

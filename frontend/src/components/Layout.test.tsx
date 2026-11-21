@@ -66,7 +66,8 @@ test('collapses the sidebar, keeps its actions accessible and restores the prefe
   const sidebar = screen.getByRole('navigation', { name: 'Боковое меню' });
   const collapse = screen.getByRole('button', { name: 'Свернуть боковое меню' });
   expect(collapse).toHaveAttribute('aria-controls', sidebar.id);
-  expect(sidebar).toHaveClass('w-64');
+  expect(sidebar).toHaveClass('w-64', 'motion-safe:transition-[width]');
+  expect(within(sidebar).queryByText('Меню')).toBeNull();
   fireEvent.click(collapse);
 
   expect(sidebar).toHaveClass('w-16');
