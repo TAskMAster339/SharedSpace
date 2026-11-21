@@ -182,3 +182,7 @@ test('calls onClick handler', async () => {
   expect(handleClick).toHaveBeenCalledTimes(1);
 });
 ```
+
+### Очередь обработки медиа
+
+Для интеграционных тестов укажите `TEST_DATABASE_URL` тестового PostgreSQL, `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY` и `MINIO_SECRET_KEY` изолированного MinIO. Установите ffmpeg. Из каталога `backend/` запустите `go test -v ./internal/files -run '^TestMediaWorkerIntegration$' -count=1`. Тест проверяет миграцию с 014, кэш превью, права и лимит очереди. Два воркера обрабатывают задачи, включая повторное выполнение после истечения аренды. Просроченная попытка не публикует файл, а успешная учитывает его в квоте один раз.

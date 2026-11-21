@@ -62,9 +62,10 @@ prod-deploy:
 		$(PROD_START) config --environment | grep -qE '^OFFICE_JWT_SECRET=.{32,}$$' || { echo "Configure OFFICE_JWT_SECRET before deploying ONLYOFFICE"; exit 1; }; \
 		test -f nginx/certs/office/onlyoffice.conf && test -f nginx/certs/office/fullchain.pem && test -f nginx/certs/office/privkey.pem || { echo "Install the ONLYOFFICE Nginx configuration and TLS certificate first"; exit 1; }; \
 	fi
-	$(PROD_START) build backend frontend
+	$(PROD_START) build backend frontend media-worker
 	@if [ -n "$(PROD_OFFICE_PROFILE)" ]; then $(PROD_START) up -d --wait --wait-timeout 420 onlyoffice; fi
 	$(PROD_START) up -d --no-build --wait --wait-timeout 120 postgres backend frontend
+	$(PROD_START) up -d --no-build --wait --wait-timeout 120 media-worker
 	$(PROD_START) run --rm --no-deps nginx nginx -t
 	$(PROD_START) up -d --no-build --no-deps --force-recreate nginx
 	$(PROD_START) ps

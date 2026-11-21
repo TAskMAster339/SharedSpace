@@ -64,44 +64,15 @@ export function useFileConversion(): UseFileConversionReturn {
         const normalizedFormat = normalizeFormat(format);
         const result = await convertAndDownload(accessToken, fileId, normalizedFormat);
 
-        const blob = await new Promise<Blob>((resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-          xhr.open('GET', result.download_url);
-          xhr.responseType = 'blob';
-
-          xhr.addEventListener('progress', (event) => {
-            if (event.lengthComputable) {
-              const realPct = event.loaded / event.total;
-              setConversionProgress((prev) =>
-                Math.max(prev, SIM_MAX + Math.round(realPct * (100 - SIM_MAX))),
-              );
-            }
-          });
-
-          xhr.addEventListener('load', () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-              resolve(xhr.response);
-            } else {
-              reject(new Error('Ошибка при скачивании сконвертированного файла'));
-            }
-          });
-
-          xhr.addEventListener('error', () => reject(new Error('Сетевая ошибка при скачивании')));
-          xhr.addEventListener('abort', () => reject(new Error('Скачивание прервано')));
-
-          xhr.send();
-        });
-
         setConversionProgress(100);
         const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
+        link.href = result.download_url;
         link.download = result.filename;
         document.body.appendChild(link);
         link.click();
-        document.body.removeChild(link);
-        setTimeout(() => URL.revokeObjectURL(link.href), 100);
+        link.remove();
 
-        showToast(`Файл «${filename}» сконвертирован и скачан`, 'success');
+        showToast(`Файл «${filename}» сконвертирован. Скачивание началось`, 'success');
       } catch (err) {
         const message = err instanceof ApiError ? err.message : 'Ошибка конвертации';
         setError(message);

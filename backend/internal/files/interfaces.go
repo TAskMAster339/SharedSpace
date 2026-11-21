@@ -20,7 +20,8 @@ type StorageClient interface {
 }
 
 type ServiceInterface interface {
-	GetPreviewURL(ctx context.Context, userID, fileID string) (FileContentResponse, error)
+	RequestPreview(ctx context.Context, userID, fileID string, async bool) (MediaJobResponse, error)
+	MediaJob(ctx context.Context, userID, id string) (MediaJobResponse, error)
 	Upload(ctx context.Context, userID, directoryID string, uploads []FileUpload) (UploadFilesResponse, error)
 	GetMetadata(ctx context.Context, userID, fileID string) (FileMetadataResponse, error)
 	GetContentURL(ctx context.Context, userID, fileID string) (FileContentResponse, error)
@@ -29,8 +30,7 @@ type ServiceInterface interface {
 	PermanentDelete(ctx context.Context, userID, fileID string) error
 	GetRecent(ctx context.Context, userID string, limit int, cursor string) (RecentFilesResponse, error)
 	Update(ctx context.Context, userID, fileID string, req UpdateFileRequest) (FileMetadataResponse, error)
-	ConvertAndSave(ctx context.Context, userID, fileID, target string) (ConversionResponse, error)
-	ConvertAndDownload(ctx context.Context, userID, fileID, target string) (downloadURL, filename string, err error)
+	RequestConversion(ctx context.Context, userID, fileID string, req ConvertRequest, async bool, key string) (MediaJobResponse, error)
 	ListConversions(ctx context.Context, userID, fileID string) (ConversionsListResponse, error)
 }
 

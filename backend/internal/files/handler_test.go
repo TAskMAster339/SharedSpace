@@ -42,8 +42,15 @@ func (m *mockService) GetMetadata(_ context.Context, userID, fileID string) (Fil
 	return FileMetadataResponse{}, nil
 }
 
-func (m *mockService) GetPreviewURL(_ context.Context, _, _ string) (FileContentResponse, error) {
-	return FileContentResponse{}, nil
+func (m *mockService) RequestPreview(_ context.Context, _, _ string, async bool) (MediaJobResponse, error) {
+	if async {
+		return MediaJobResponse{JobID: "job-1", State: "queued", RetryAfter: 2}, nil
+	}
+	return MediaJobResponse{Preview: &FileContentResponse{}}, nil
+}
+
+func (m *mockService) MediaJob(_ context.Context, _, _ string) (MediaJobResponse, error) {
+	return MediaJobResponse{JobID: "job-1", State: "running", RetryAfter: 2}, nil
 }
 
 func (m *mockService) GetContentURL(_ context.Context, userID, fileID string) (FileContentResponse, error) {
@@ -70,12 +77,14 @@ func (m *mockService) Update(_ context.Context, userID, fileID string, req Updat
 	return FileMetadataResponse{}, nil
 }
 
-func (m *mockService) ConvertAndSave(_ context.Context, userID, fileID, target string) (ConversionResponse, error) {
-	return ConversionResponse{}, nil
-}
-
-func (m *mockService) ConvertAndDownload(_ context.Context, _, _, _ string) (string, string, error) {
-	return "http://minio/tmp/file.webp?token=xxx", "photo.webp", nil
+func (m *mockService) RequestConversion(_ context.Context, _, _ string, req ConvertRequest, async bool, _ string) (MediaJobResponse, error) {
+	if async {
+		return MediaJobResponse{JobID: "job-1", State: "queued", RetryAfter: 2}, nil
+	}
+	if req.Save {
+		return MediaJobResponse{Conversion: &ConversionResponse{}}, nil
+	}
+	return MediaJobResponse{Download: &ConversionDownloadResponse{DownloadURL: "http://minio/tmp/file.webp?token=xxx", Filename: "photo.webp"}}, nil
 }
 
 func (m *mockService) ListConversions(_ context.Context, userID, fileID string) (ConversionsListResponse, error) {

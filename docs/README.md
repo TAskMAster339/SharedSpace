@@ -32,6 +32,8 @@ make dev
 cd backend
 cp -n ../.env.example .env  # настройте DATABASE_URL и MINIO_ENDPOINT=localhost:9000
 go run ./cmd/api
+# В другом терминале из backend/, когда API готов
+go run ./cmd/media-worker
 ```
 
 Для запуска без Docker подготовьте схему PostgreSQL заранее. Сервер ищет миграции в каталоге `migrations/` относительно рабочего каталога, поэтому приведённая команда из `backend/` сама их не применит. Для проверки обновления схемы используйте [dev-сборку через Compose](backend/migrations.md).

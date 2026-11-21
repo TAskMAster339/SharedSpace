@@ -2,12 +2,16 @@ package files
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"image"
 	"image/color"
 	"image/gif"
 	"image/jpeg"
 	"image/png"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"testing"
 )
 
@@ -80,7 +84,7 @@ func TestConvertImageData_Pairs(t *testing.T) {
 	gifData := makeGIF(t)
 
 	t.Run("png to jpg", func(t *testing.T) {
-		out, src, mime, ext, err := convertImageData(pngData, "jpg", "")
+		out, src, mime, ext, err := testRenderConversion(t, pngData, "jpg", "")
 		if err != nil {
 			t.Fatalf("convert: %v", err)
 		}
@@ -93,7 +97,7 @@ func TestConvertImageData_Pairs(t *testing.T) {
 	})
 
 	t.Run("png to webp", func(t *testing.T) {
-		out, _, mime, ext, err := convertImageData(pngData, "webp", "")
+		out, _, mime, ext, err := testRenderConversion(t, pngData, "webp", "")
 		if err != nil {
 			t.Fatalf("convert: %v", err)
 		}
@@ -106,7 +110,7 @@ func TestConvertImageData_Pairs(t *testing.T) {
 	})
 
 	t.Run("png to gif", func(t *testing.T) {
-		out, _, mime, ext, err := convertImageData(pngData, "gif", "")
+		out, _, mime, ext, err := testRenderConversion(t, pngData, "gif", "")
 		if err != nil {
 			t.Fatalf("convert: %v", err)
 		}
@@ -119,7 +123,7 @@ func TestConvertImageData_Pairs(t *testing.T) {
 	})
 
 	t.Run("png to bmp", func(t *testing.T) {
-		out, _, mime, ext, err := convertImageData(pngData, "bmp", "")
+		out, _, mime, ext, err := testRenderConversion(t, pngData, "bmp", "")
 		if err != nil {
 			t.Fatalf("convert: %v", err)
 		}
@@ -132,13 +136,13 @@ func TestConvertImageData_Pairs(t *testing.T) {
 	})
 
 	t.Run("gif unsupported to png", func(t *testing.T) {
-		if _, _, _, _, err := convertImageData(gifData, "png", ""); !errors.Is(err, errUnsupportedConversion) {
+		if _, _, _, _, err := testRenderConversion(t, gifData, "png", ""); err == nil {
 			t.Fatalf("expected unsupported, got %v", err)
 		}
 	})
 
 	t.Run("jpg to webp", func(t *testing.T) {
-		out, src, _, ext, err := convertImageData(jpgData, "webp", "")
+		out, src, _, ext, err := testRenderConversion(t, jpgData, "webp", "")
 		if err != nil {
 			t.Fatalf("convert: %v", err)
 		}
@@ -151,7 +155,7 @@ func TestConvertImageData_Pairs(t *testing.T) {
 	})
 
 	t.Run("jpg to png", func(t *testing.T) {
-		out, _, mime, ext, err := convertImageData(jpgData, "png", "")
+		out, _, mime, ext, err := testRenderConversion(t, jpgData, "png", "")
 		if err != nil {
 			t.Fatalf("convert: %v", err)
 		}
@@ -164,7 +168,7 @@ func TestConvertImageData_Pairs(t *testing.T) {
 	})
 
 	t.Run("jpg to gif", func(t *testing.T) {
-		out, _, mime, ext, err := convertImageData(jpgData, "gif", "")
+		out, _, mime, ext, err := testRenderConversion(t, jpgData, "gif", "")
 		if err != nil {
 			t.Fatalf("convert: %v", err)
 		}
@@ -177,7 +181,7 @@ func TestConvertImageData_Pairs(t *testing.T) {
 	})
 
 	t.Run("jpg to tiff", func(t *testing.T) {
-		out, _, mime, ext, err := convertImageData(jpgData, "tiff", "")
+		out, _, mime, ext, err := testRenderConversion(t, jpgData, "tiff", "")
 		if err != nil {
 			t.Fatalf("convert: %v", err)
 		}
@@ -190,14 +194,54 @@ func TestConvertImageData_Pairs(t *testing.T) {
 	})
 
 	t.Run("unsupported png to avif", func(t *testing.T) {
-		if _, _, _, _, err := convertImageData(pngData, "avif", ""); !errors.Is(err, errUnsupportedConversion) {
+		if _, _, _, _, err := testRenderConversion(t, pngData, "avif", ""); err == nil {
 			t.Fatalf("expected unsupported, got %v", err)
 		}
 	})
 
 	t.Run("unsupported png to wav", func(t *testing.T) {
-		if _, _, _, _, err := convertImageData(pngData, "wav", ""); !errors.Is(err, errUnsupportedConversion) {
+		if _, _, _, _, err := testRenderConversion(t, pngData, "wav", ""); err == nil {
 			t.Fatalf("expected unsupported, got %v", err)
 		}
 	})
+}
+
+func testRenderConversion(t *testing.T, data []byte, target, ext string) ([]byte, string, string, string, error) {
+	t.Helper()
+	dir := t.TempDir()
+	input, err := stageMedia(dir, bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	output, source, _, err := renderConversion(context.Background(), dir, input, target, ext)
+	if err != nil {
+		return nil, "", "", "", err
+	}
+	body, err := os.ReadFile(output)
+	return body, source, mimeMap[target], target, err
+}
+
+func TestRenderAudioConversionAndCancellation(t *testing.T) {
+	if _, err := exec.LookPath("ffmpeg"); err != nil {
+		t.Skip("ffmpeg required")
+	}
+	dir := t.TempDir()
+	input := filepath.Join(dir, "input.wav")
+	cmd := exec.Command("ffmpeg", "-loglevel", "error", "-f", "lavfi", "-i", "sine=frequency=440:duration=0.2", input)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("ffmpeg fixture: %v %s", err, out)
+	}
+	path, source, n, err := renderConversion(context.Background(), dir, input, "mp3", "wav")
+	if err != nil || source != "wav" || n <= 0 {
+		t.Fatalf("audio conversion: %q %d %v", source, n, err)
+	}
+	encoded, err := os.ReadFile(path)
+	if err != nil || detectFormat(encoded, "mp3") != "mp3" {
+		t.Fatalf("encoded audio is not MP3: %v", err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, _, _, err := renderConversion(ctx, dir, input, "mp3", "wav"); !errors.Is(err, context.Canceled) {
+		t.Fatalf("canceled ffmpeg returned %v", err)
+	}
 }

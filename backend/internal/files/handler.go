@@ -49,7 +49,7 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	if r.ContentLength > maxRequestBytes {
-		return uploadTooLarge("запрос загрузки превышает 101 МиБ")
+		return uploadTooLarge("запрос загрузки превышает 513 МиБ")
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBytes)
 	if err := r.ParseMultipartForm(maxMemory); err != nil {
@@ -388,7 +388,12 @@ func (h *Handler) PermanentDelete(w http.ResponseWriter, r *http.Request) error 
 // @Produce application/octet-stream
 // @Param id path string true "File ID"
 // @Param body body ConvertRequest true "Целевой формат и флаг сохранения"
-// @Success 200 {file} binary "Сконвертированный файл (при save=false)"
+// @Param async query bool false "Вернуть задачу без ожидания"
+// @Param Idempotency-Key header string false "UUID запроса конвертации"
+// @Success 200 {object} ConversionDownloadResponse "Ссылка (при save=false)"
+// @Success 202 {object} MediaJobResponse
+// @Failure 429 {object} apperror.Response
+// @Failure 504 {object} apperror.Response
 // @Success 201 {object} ConversionResponse "Запись о конверсии (при save=true)"
 // @Failure 400 {object} apperror.Response
 // @Failure 401 {object} apperror.Response
@@ -412,22 +417,63 @@ func (h *Handler) Convert(w http.ResponseWriter, r *http.Request) error {
 		return apperror.Validation("target_format обязателен")
 	}
 
-	if req.Save {
-		resp, err := h.service.ConvertAndSave(r.Context(), claims.UserID, fileID, req.TargetFormat)
-		if err != nil {
-			return err
-		}
-		return writeJSON(w, http.StatusCreated, resp)
+	async := r.URL.Query().Get("async") == "true"
+	resp, err := h.service.RequestConversion(r.Context(), claims.UserID, fileID, req, async, r.Header.Get("Idempotency-Key"))
+	if err != nil {
+		return mediaHTTPError(w, err)
 	}
+	if async {
+		return writeMediaAccepted(w, resp)
+	}
+	if req.Save {
+		return writeJSON(w, http.StatusCreated, resp.Conversion)
+	}
+	return writeJSON(w, http.StatusOK, resp.Download)
+}
 
-	downloadURL, filename, err := h.service.ConvertAndDownload(r.Context(), claims.UserID, fileID, req.TargetFormat)
+func mediaHTTPError(w http.ResponseWriter, err error) error {
+	if apiErr, ok := apperror.From(err); ok && apiErr.Code() == "media_capacity" {
+		w.Header().Set("Retry-After", "2")
+	}
+	return err
+}
+
+func writeMediaAccepted(w http.ResponseWriter, resp MediaJobResponse) error {
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Retry-After", "2")
+	w.Header().Set("Location", "/api/v1/files/jobs/"+resp.JobID)
+	return writeJSON(w, http.StatusAccepted, resp)
+}
+
+// @Summary Get a media job
+// @Tags files
+// @Security BearerAuth
+// @Produce json
+// @Param jobID path string true "Job ID"
+// @Success 200 {object} MediaJobResponse
+// @Failure 400 {object} apperror.Response
+// @Failure 401 {object} apperror.Response
+// @Failure 403 {object} apperror.Response
+// @Failure 404 {object} apperror.Response
+// @Failure 409 {object} apperror.Response
+// @Failure 410 {object} apperror.Response
+// @Failure 503 {object} apperror.Response
+// @Failure 504 {object} apperror.Response
+// @Router /api/v1/files/jobs/{jobID} [get]
+func (h *Handler) MediaJob(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := auth.ClaimsFromCtx(r.Context())
+	if !ok {
+		return apperror.Unauthorized("не авторизован")
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	resp, err := h.service.MediaJob(r.Context(), claims.UserID, chi.URLParam(r, "jobID"))
 	if err != nil {
 		return err
 	}
-	return writeJSON(w, http.StatusOK, ConversionDownloadResponse{
-		DownloadURL: downloadURL,
-		Filename:    filename,
-	})
+	if resp.RetryAfter > 0 {
+		w.Header().Set("Retry-After", "2")
+	}
+	return writeJSON(w, http.StatusOK, resp)
 }
 
 // ListConversions returns the conversion history for a file.
@@ -466,7 +512,11 @@ func (h *Handler) ListConversions(w http.ResponseWriter, r *http.Request) error 
 // @Security BearerAuth
 // @Produce json
 // @Param id path string true "File ID"
+// @Param async query bool false "Вернуть задачу без ожидания"
 // @Success 200 {object} FileContentResponse
+// @Success 202 {object} MediaJobResponse
+// @Failure 429 {object} apperror.Response
+// @Failure 504 {object} apperror.Response
 // @Failure 401 {object} apperror.Response
 // @Failure 403 {object} apperror.Response
 // @Failure 404 {object} apperror.Response
@@ -480,10 +530,13 @@ func (h *Handler) GetPreview(w http.ResponseWriter, r *http.Request) error {
 	if fileID == "" {
 		return apperror.Validation("id файла обязателен")
 	}
-	resp, err := h.service.GetPreviewURL(r.Context(), claims.UserID, fileID)
-	if err != nil {
-		return err
-	}
 	w.Header().Set("Cache-Control", "no-store")
-	return writeJSON(w, http.StatusOK, resp)
+	resp, err := h.service.RequestPreview(r.Context(), claims.UserID, fileID, r.URL.Query().Get("async") == "true")
+	if err != nil {
+		return mediaHTTPError(w, err)
+	}
+	if resp.Preview == nil {
+		return writeMediaAccepted(w, resp)
+	}
+	return writeJSON(w, http.StatusOK, resp.Preview)
 }
