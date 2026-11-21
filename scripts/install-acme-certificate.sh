@@ -12,7 +12,7 @@ case "$lineage" in
 esac
 
 cd "$project"
-mkdir -p "$target"
+install -d -m 0755 "$target"
 exec 9>/run/lock/sharedspace-tls.lock
 flock 9
 

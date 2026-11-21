@@ -49,7 +49,7 @@ sudo certbot certonly --webroot -w "$PWD/nginx/certs/acme" \
   --cert-name office.shared-space.ru -d office.shared-space.ru
 sudo env RENEWED_LINEAGE=/etc/letsencrypt/live/office.shared-space.ru \
   /etc/letsencrypt/renewal-hooks/deploy/sharedspace-tls
-sudo certbot renew --dry-run
+sudo certbot renew --dry-run --no-random-sleep-on-renew
 ```
 
 ## Офисный редактор
