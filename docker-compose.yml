@@ -76,6 +76,11 @@ services:
       retries: 30
       start_period: 60s
     volumes:
+      - ./onlyoffice/themes/sharedspace-light.json:/var/www/onlyoffice/documentserver/web-apps/apps/common/main/resources/themes/sharedspace-light.json:ro,z
+      - ./onlyoffice/themes/sharedspace-dark.json:/var/www/onlyoffice/documentserver/web-apps/apps/common/main/resources/themes/sharedspace-dark.json:ro,z
+      - ./onlyoffice/theme-bridge/index.html:/var/www/onlyoffice/documentserver/sharedspace-theme/index.html:ro,z
+      - ./onlyoffice/theme-bridge/theme.js:/var/www/onlyoffice/documentserver/sharedspace-theme/theme.js:ro,z
+      - ./onlyoffice/theme-bridge/ds-sharedspace-theme.prod.conf:/etc/nginx/includes/ds-sharedspace-theme.conf:ro,z
       - office-data:/var/www/onlyoffice/Data
       - office-lib:/var/lib/onlyoffice
       - office-db:/var/lib/postgresql
