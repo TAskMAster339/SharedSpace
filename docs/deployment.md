@@ -34,26 +34,21 @@ REACT_APP_API_BASE_URL=https://api.example.com/api/v1
 
 ### Docker Compose (production)
 
-```yaml
-# docker-compose.prod.yml
-services:
-  backend:
-    environment:
-      - JWT_SECRET=${JWT_SECRET}
-    restart: always
-
-  frontend:
-    build:
-      args:
-        - REACT_APP_API_BASE_URL=${REACT_APP_API_BASE_URL}
-    restart: always
-
-  # ... остальные сервисы
-```
+В корне проекта используются `docker-compose.yml` и существующий продовый `.env`. Для выкладки через SSH workflow вызывает `make prod-deploy`. Команда `make prod-ps` показывает состояние контейнеров.
 
 ## Офисный редактор
 
-Для пилота используйте отдельно развёрнутый ONLYOFFICE Docs. Для локального запуска используйте `make dev-office`. Команда готовит `.env` и включает профиль `office` с закреплённым образом. Образ 10.0.0 используется для воспроизводимости пилота. Перед публичной выкладкой выберите поддерживаемый образ с актуальными исправлениями и проверьте его совместимость с интеграцией. Проверьте условия редакции и ёмкость по общему числу вкладок, размеру документов и доступному месту хранения.
+Document Server можно запустить рядом с SharedSpace или на отдельном сервере. Для локальной разработки используйте `make dev-office`. Перед подключением к публичному хосту проверьте актуальность образа, условия редакции и ёмкость по общему числу вкладок, размерам документов и месту хранения. [Требования ONLYOFFICE Community](https://helpcenter.onlyoffice.com/docs/installation/community/docker/installing/install)
+
+### Document Server на продовом хосте
+
+1. Добавьте DNS-запись для `office.shared-space.ru` и выпустите сертификат на этот поддомен. В каталоге копии SharedSpace на сервере установите сертификат и ключ как `nginx/certs/office/fullchain.pem` и `nginx/certs/office/privkey.pem`. При продлении обновите эти файлы и выполните `docker compose exec -T nginx nginx -t && docker compose exec -T nginx nginx -s reload`.
+2. Установите [шаблон прокси](../nginx/onlyoffice.conf) как `nginx/certs/office/onlyoffice.conf`. Основной Nginx читает `*.conf` из этого каталога. Для другого поддомена измените имя сервера в шаблоне и в `OFFICE_PUBLIC_URL`.
+3. В продовом `.env` задайте `PROD_OFFICE_LOCAL=true`, `OFFICE_ENABLED=true`, `OFFICE_PUBLIC_URL=https://office.shared-space.ru`, `OFFICE_INTERNAL_URL=http://onlyoffice` и `OFFICE_STORAGE_URL=https://shared-space.ru`. Сгенерируйте `OFFICE_JWT_SECRET` через `openssl rand -hex 32`. Compose передаст его обоим сервисам. Оставьте `OFFICE_THEME_SYNC=false`, пока не подключите палитры и страницу синхронизации.
+4. При необходимости задайте `ONLYOFFICE_IMAGE` с точным тегом и digest проверенного образа. Убедитесь, что DNS и HTTPS доступны из браузера и что контейнер Document Server достигает `OFFICE_STORAGE_URL`. На отдельном Document Server оставьте `PROD_OFFICE_LOCAL=false`, укажите его адрес в `OFFICE_INTERNAL_URL` и используйте тот же JWT-секрет.
+5. После резервного копирования и слияния запустится деплой. Проверьте `curl -fsS https://office.shared-space.ru/healthcheck` и загрузку `/web-apps/apps/api/documents/api.js` с этого же хоста. На тестовых документах проверьте открытие, совместное редактирование и появление версии после закрытия редакторов.
+
+Compose сохраняет данные редактора в именованных томах и поднимает контейнер после перезагрузки Docker. Чтобы отключить новые сеансы, установите `OFFICE_ENABLED=false` и сохраните `PROD_OFFICE_LOCAL=true`, адреса, секрет и тома до завершения сохранений.
 
 | Переменная | Назначение |
 | --- | --- |
@@ -83,7 +78,7 @@ SharedSpace принимает до 100 МиБ файлов за загрузк�
 
 ### Выкладка и откат
 
-1. Сделайте согласованные резервные копии PostgreSQL и MinIO. Выпустите API с миграцией `012_docx_collaboration.up.sql` при выключенном флаге, затем фронтенд. Миграция добавляет таблицы без переписывания существующих объектов. Миграция `013_office_formats.up.sql` добавляет формат сессиям и версиям и сохраняет `docx` для прежних записей. Проверьте `/health` и скачивание ранее загруженного файла и публичной ссылки.
+1. Сделайте согласованные резервные копии PostgreSQL и MinIO. При готовом Document Server допустима выкладка с включённым флагом. Для раздельной выкладки выпустите API с миграцией `012_docx_collaboration.up.sql` при выключенном флаге, затем фронтенд. Миграция добавляет таблицы без переписывания существующих объектов. Миграция `013_office_formats.up.sql` добавляет формат сессиям и версиям и сохраняет `docx` для прежних записей. Проверьте `/health` и скачивание ранее загруженного файла и публичной ссылки.
 2. Разверните Document Server, проверьте его `/healthcheck` и свяжите сервисы по адресам и секрету из таблицы. Включите флаг для пилота. На синтетических DOCX, XLSX и PPTX проверьте предпросмотр, пять аккаунтов, отклонение шестого, появление версии после закрытия всех редакторов и восстановление. Проверьте, что прежняя публичная ссылка скачивает текущую версию после её восстановления.
 3. При сбое выключите `OFFICE_ENABLED`, сохранив все адреса, секрет и доступность Document Server. API продолжит принимать уведомления и повторять ожидающие сохранения. Оставьте тома редактора подключёнными. Ошибки сохранения содержат ключ сессии в журнале API. Для диагностики откройте `document_edit_sessions`. Поле `result_url` содержит адрес результата в редакторе, а `pending_key` указывает на уже скопированный объект MinIO. После перемещения файла или отзыва прав всех авторов несовместимый сохранённый результат может оставаться там до семи дней для восстановления администратором. Скопируйте его в отдельный файл через обычную загрузку после проверки доступа.
 4. При откате интерфейса оставьте таблицы и объекты версий. Возврат старого бинарника отложите до завершения сессий и проверки очереди сохранения. Старый API обслужит текущий DOCX через `files.object_key`, но доступ к истории и её очистка потребуют API с поддержкой версий. Миграцию вниз при рабочем откате с данными истории не запускайте.
@@ -112,20 +107,11 @@ SharedSpace принимает до 100 МиБ файлов за загрузк�
 
 ### Deploy (`.github/workflows/deploy.yml`)
 
-**Триггер:** push на `main`
+**Триггер:** push на `main`. Workflow последовательно обновляет продовую копию через SSH и выполняет `make prod-deploy`.
 
-```mermaid
-sequenceDiagram
-    GitHub->>Server: SSH + git pull
-    Server->>Server: go build (backend)
-    Server->>Server: systemctl restart sharedspace-backend
-    Server->>Server: npm install && npm run build (frontend)
-    Server->>Server: cp build → /var/www/sharedspace/
-    Server->>Server: nginx -s reload
-```
+Команда проверяет Compose и собирает образы API и фронтенда до пересоздания сервисов. Для локального Document Server она проверяет наличие TLS-файлов, поднимает редактор и ждёт успешного ответа проверки готовности. После запуска приложения она проверяет конфигурацию и пересоздаёт Nginx, чтобы он получил текущие адреса контейнеров. При пересоздании приложения и Nginx возможен короткий перерыв.
 
-**Переменные secrets (GitHub → Settings → Secrets):**
-- `SERVER_HOST`, `SERVER_USER`, `SERVER_SSH_KEY`, `SERVER_PORT`
+**Секреты GitHub Actions** — `SERVER_HOST`, `SERVER_USER`, `SERVER_SSH_KEY`, `SERVER_PORT`, `SERVER_DEPLOY_PATH`.
 
 ## Nginx
 

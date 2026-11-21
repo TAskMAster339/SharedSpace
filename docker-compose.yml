@@ -50,9 +50,37 @@ services:
       SMTP_FROM_NAME: ${SMTP_FROM_NAME:-SharedSpace}
       SMTP_USE_TLS: ${SMTP_USE_TLS:-true}
       APP_URL: ${APP_URL:-http://localhost:3000}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
     depends_on:
       postgres:
         condition: service_healthy
+
+  onlyoffice:
+    image: ${ONLYOFFICE_IMAGE:-onlyoffice/documentserver:10.0.0@sha256:bff1a9fd46f2b79ada776fd0447c3fccf66cbf44c1996ec9316efa8ac4ee3fd5}
+    profiles: [office]
+    restart: unless-stopped
+    stop_grace_period: 60s
+    environment:
+      JWT_ENABLED: "true"
+      JWT_SECRET: ${OFFICE_JWT_SECRET:-}
+      EXAMPLE_ENABLED: "false"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost/healthcheck | grep -qx true"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    volumes:
+      - office-data:/var/www/onlyoffice/Data
+      - office-lib:/var/lib/onlyoffice
+      - office-db:/var/lib/postgresql
+      - office-redis:/var/lib/redis
+      - office-rabbitmq:/var/lib/rabbitmq
 
   frontend:
     build:
@@ -79,3 +107,8 @@ services:
 
 volumes:
   pgdata:
+  office-data:
+  office-lib:
+  office-db:
+  office-redis:
+  office-rabbitmq:

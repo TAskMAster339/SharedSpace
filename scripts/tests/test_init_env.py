@@ -84,6 +84,24 @@ class InitEnvTest(unittest.TestCase):
         )
         self.assertIn("--profile office", output)
 
+    def test_prod_deploy_builds_before_replacing_services(self):
+        self.generate()
+        env = {**os.environ, "COMPOSE_PROFILES": "", "PROD_OFFICE_LOCAL": "false"}
+        for local in (False, True):
+            with self.subTest(local=local):
+                output = subprocess.check_output(
+                    ["make", "-n", "prod-deploy", f"ENV_FILE={self.path}"],
+                    cwd=ROOT,
+                    env={**env, "PROD_OFFICE_LOCAL": str(local).lower()},
+                    text=True,
+                )
+                self.assertEqual("--profile office" in output, local)
+                self.assertNotIn(" down", output)
+                self.assertLess(output.index("build backend frontend"), output.index("up -d --no-build --wait"))
+                self.assertLess(output.index("nginx nginx -t"), output.index("--force-recreate nginx"))
+                if local:
+                    self.assertLess(output.index("--wait-timeout 420 onlyoffice"), output.index("up -d --no-build --wait"))
+
     def test_existing_config_is_preserved_and_dsn_escaped(self):
         original = (
             b"# Keep comment\r\nPOSTGRES_USER=dev\r\nPOSTGRES_DB=my_database\r\n"

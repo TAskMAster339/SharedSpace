@@ -5,6 +5,10 @@ on:
     branches:
       - main
 
+concurrency:
+  group: sharedspace-production
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -22,9 +26,6 @@ jobs:
           script: |
             set -e
             cd ${{ secrets.SERVER_DEPLOY_PATH }}
-            git pull origin main
-            make prod-down
-            make prod-build
-            make prod-up
-            make prod-ps
+            git pull --ff-only origin main
+            make prod-deploy
             echo "✅ Deployment completed!"

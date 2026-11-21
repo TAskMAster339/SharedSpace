@@ -1,3 +1,4 @@
 .env
 .vscode/
 /PLAN.md
+/nginx/certs/
