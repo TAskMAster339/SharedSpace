@@ -1195,6 +1195,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/sharedspace_internal_apperror.Response"
                         }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
                     }
                 }
             }
@@ -1620,6 +1626,94 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/files/{id}/editor-session": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Start a Office editing session",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "File ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "light",
+                            "dark"
+                        ],
+                        "type": "string",
+                        "description": "Interface theme",
+                        "name": "theme",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "compact"
+                        ],
+                        "type": "string",
+                        "description": "Compact toolbar and fit-to-screen zoom",
+                        "name": "layout",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_files.DocumentEditorSession"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "415": {
+                        "description": "Unsupported Media Type",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/files/{id}/favorite": {
             "post": {
                 "security": [
@@ -1803,6 +1897,95 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/files/{id}/preview-session": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Start a read-only Office file preview",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "File ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "light",
+                            "dark"
+                        ],
+                        "type": "string",
+                        "description": "Interface theme",
+                        "name": "theme",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "compact",
+                            "reader"
+                        ],
+                        "type": "string",
+                        "description": "Compact toolbar or embedded reader for XLSX and PPTX",
+                        "name": "layout",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_files.DocumentEditorSession"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "415": {
+                        "description": "Unsupported Media Type",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
                         "schema": {
                             "$ref": "#/definitions/sharedspace_internal_apperror.Response"
                         }
@@ -2032,6 +2215,161 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/files/{id}/versions": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "List saved Office versions and editor permissions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "File ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_files.DocumentHistory"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "415": {
+                        "description": "Unsupported Media Type",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/files/{id}/versions/{number}/content": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Get a temporary download URL for an Office version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "File ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Version number",
+                        "name": "number",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_files.FileContentResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/files/{id}/versions/{number}/restore": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Restore an Office version as a new current version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "File ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Version number",
+                        "name": "number",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
                         "schema": {
                             "$ref": "#/definitions/sharedspace_internal_apperror.Response"
                         }
@@ -2347,6 +2685,72 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/office/lease": {
+            "post": {
+                "tags": [
+                    "files"
+                ],
+                "summary": "Renew or release a temporary Office capacity reservation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bearer lease_id from the Office session response",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "410": {
+                        "description": "Gone",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "files"
+                ],
+                "summary": "Renew or release a temporary Office capacity reservation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bearer lease_id from the Office session response",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "410": {
+                        "description": "Gone",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/og/share/dir/{token}": {
             "get": {
                 "produces": [
@@ -2466,6 +2870,102 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/s/{token}/preview-session": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sharelinks"
+                ],
+                "summary": "Start a read-only Office preview from a file share link",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Share link token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Password for protected links",
+                        "name": "X-SharedLink-Password",
+                        "in": "header"
+                    },
+                    {
+                        "enum": [
+                            "light",
+                            "dark"
+                        ],
+                        "type": "string",
+                        "description": "Interface theme",
+                        "name": "theme",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "compact",
+                            "reader"
+                        ],
+                        "type": "string",
+                        "description": "Compact toolbar or embedded reader for XLSX and PPTX",
+                        "name": "layout",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_files.DocumentEditorSession"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "415": {
+                        "description": "Unsupported Media Type",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
                         "schema": {
                             "$ref": "#/definitions/sharedspace_internal_apperror.Response"
                         }
@@ -3992,6 +4492,64 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_files.DocumentEditorSession": {
+            "type": "object",
+            "properties": {
+                "config": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "lease_id": {
+                    "type": "string"
+                },
+                "script_url": {
+                    "type": "string"
+                },
+                "theme_bridge_url": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_files.DocumentHistory": {
+            "type": "object",
+            "properties": {
+                "can_edit": {
+                    "type": "boolean"
+                },
+                "can_restore": {
+                    "type": "boolean"
+                },
+                "save_pending": {
+                    "type": "boolean"
+                },
+                "versions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_files.DocumentVersion"
+                    }
+                }
+            }
+        },
+        "internal_files.DocumentVersion": {
+            "type": "object",
+            "properties": {
+                "contributors": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "number": {
+                    "type": "integer"
+                },
+                "size": {
+                    "type": "integer"
+                }
+            }
+        },
         "internal_files.FileContentResponse": {
             "type": "object",
             "properties": {
@@ -4656,6 +5214,9 @@ const docTemplate = `{
                 "other_files_bytes": {
                     "type": "integer"
                 },
+                "personal_files_bytes": {
+                    "type": "integer"
+                },
                 "quota_bytes": {
                     "type": "integer"
                 },
@@ -4664,6 +5225,9 @@ const docTemplate = `{
                 },
                 "root_id": {
                     "type": "string"
+                },
+                "shared_files_bytes": {
+                    "type": "integer"
                 },
                 "trash_bytes": {
                     "type": "integer"

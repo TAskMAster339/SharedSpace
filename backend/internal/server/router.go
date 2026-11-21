@@ -32,7 +32,7 @@ func healthHandler(w http.ResponseWriter, _ *http.Request) {
 // NewRouter wires every HTTP route. The rateLimiter applies to the public
 // auth endpoints that are vulnerable to abuse (forgot-password,
 // resend-verification). Pass nil to disable rate limiting.
-func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHandler *users.Handler, dirsHandler *dirs.Handler, filesHandler *files.Handler, sharingHandler *sharing.Handler, favoritesHandler *favorites.Handler, trashHandler *trash.Handler, shareLinksHandler *sharelinks.Handler, mylinksHandler *mylinks.Handler) http.Handler {
+func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHandler *users.Handler, dirsHandler *dirs.Handler, filesHandler *files.Handler, sharingHandler *sharing.Handler, favoritesHandler *favorites.Handler, trashHandler *trash.Handler, shareLinksHandler *sharelinks.Handler, mylinksHandler *mylinks.Handler, documentHandler *files.DocumentHandler) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Recover)
@@ -48,6 +48,15 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 	publicAuthLimiter := middleware.NewRateLimiter(3, time.Minute)
 
 	r.Route("/api/v1", func(r chi.Router) {
+		if documentHandler != nil {
+			r.Get("/office/source", middleware.AppError(documentHandler.Source))
+			r.Get("/office/preview-source", middleware.AppError(documentHandler.PreviewSource))
+			r.Post("/s/{token}/preview-session", middleware.AppError(documentHandler.SharedPreview))
+			r.Post("/office/callback", middleware.AppError(documentHandler.Callback))
+			r.Post("/office/lease", middleware.AppError(documentHandler.ManageLease))
+			r.Delete("/office/lease", middleware.AppError(documentHandler.ManageLease))
+		}
+
 		if authHandler != nil {
 			// Public auth endpoints (no JWT required).
 			r.Route("/auth", func(r chi.Router) {
@@ -132,6 +141,13 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 						if shareLinksHandler != nil {
 							r.Post("/{id}/share-links", middleware.AppError(shareLinksHandler.Create))
 							r.Get("/{id}/share-links", middleware.AppError(shareLinksHandler.ListByFile))
+						}
+						if documentHandler != nil {
+							r.Post("/{id}/editor-session", middleware.AppError(documentHandler.Start))
+							r.Post("/{id}/preview-session", middleware.AppError(documentHandler.Preview))
+							r.Get("/{id}/versions", middleware.AppError(documentHandler.History))
+							r.Get("/{id}/versions/{number}/content", middleware.AppError(documentHandler.Download))
+							r.Post("/{id}/versions/{number}/restore", middleware.AppError(documentHandler.Restore))
 						}
 						r.Post("/{id}/convert", middleware.AppError(filesHandler.Convert))
 						r.Get("/{id}/conversions", middleware.AppError(filesHandler.ListConversions))

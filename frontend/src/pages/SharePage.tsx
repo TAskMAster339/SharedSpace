@@ -1,7 +1,33 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Download, EyeOff, Image, KeyRound, Eye, Copy, Check } from 'lucide-react';
-import { resolveShareLink, ShareLinkResolveResult } from '../api/sharelinks';
+import React, { useEffect, useState, useCallback, useId, useRef } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import {
+  ArrowLeft,
+  BookOpen,
+  Download,
+  EyeOff,
+  Image,
+  KeyRound,
+  Eye,
+  Copy,
+  Check,
+  Maximize,
+  Minimize,
+} from 'lucide-react';
+import {
+  resolveShareLink,
+  ShareLinkResolveResult,
+  startSharedOfficePreview,
+} from '../api/sharelinks';
+import { Layout, useReaderLayout } from '../components/Layout';
+import { cn } from '../utils/cn';
+import { ApiError } from '../api/client';
+import type { OfficeLayout, OfficeTheme } from '../api/documents';
+import { useRootTheme } from '../hooks/useTheme';
+import { MobileReaderLayout } from '../components/ui/MobileReaderLayout';
+import { MobileDocxReader } from '../components/ui/MobileDocxReader';
+import { usePhoneViewport } from '../hooks/usePhoneViewport';
+import { OfficeFrame } from '../components/ui/OfficeFrame';
+import { canPreviewOfficeFile, canUseMobileOfficeReader } from '../utils/officeFormats';
 import { useAuthStore } from '../store/authStore';
 import { useToastStore } from '../hooks/useToast';
 import SEOHead from '../components/SEOHead';
@@ -65,12 +91,12 @@ const CODE_EXTENSIONS = new Set([
   'sql',
 ]);
 
-const PROBLEMATIC_EXTENSIONS = new Set(['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx']);
+type PreviewType = 'office' | 'image' | 'video' | 'audio' | 'pdf' | 'text' | 'code' | 'unsupported';
 
-type PreviewType = 'image' | 'video' | 'audio' | 'pdf' | 'text' | 'code' | 'unsupported';
-
-function determinePreviewType(mimeType: string, extension: string): PreviewType {
-  const ext = extension.replace(/^\./, '').toLowerCase();
+function determinePreviewType(file: ShareLinkResolveResult): PreviewType {
+  if (canPreviewOfficeFile(file.filename)) return 'office';
+  const mimeType = file.mime_type;
+  const ext = file.extension.replace(/^\./, '').toLowerCase();
   if (mimeType.startsWith('image/')) return 'image';
   if (mimeType.startsWith('video/')) return 'video';
   if (mimeType.startsWith('audio/')) return 'audio';
@@ -87,49 +113,111 @@ function determinePreviewType(mimeType: string, extension: string): PreviewType 
 
 const SharePage: React.FC = () => {
   const { token } = useParams<{ token: string }>();
+  return token ? <SharedFileLayout key={token} token={token} /> : null;
+};
+
+type SharePreviewMode = 'default' | 'reader' | 'preview' | 'expanded';
+
+function SharedFileLayout({ token }: { token: string }) {
+  const [mode, setMode] = useState<SharePreviewMode>('default');
+  return (
+    <Layout fillViewport={mode === 'expanded'}>
+      <SharedFile token={token} mode={mode} setMode={setMode} />
+    </Layout>
+  );
+}
+
+interface SharedFileProps {
+  token: string;
+  mode: SharePreviewMode;
+  setMode: (mode: SharePreviewMode) => void;
+}
+
+const SharedFile = ({ token, mode, setMode }: SharedFileProps) => {
+  const previewId = useId();
+  const navigate = useNavigate();
+  const phone = usePhoneViewport();
+  const expanded = mode === 'expanded';
   const accessToken = useAuthStore((state) => state.accessToken);
+  const officeTheme = useRootTheme();
 
   const [file, setFile] = useState<ShareLinkResolveResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [previewType, setPreviewType] = useState<PreviewType>('unsupported');
-  const [canPreview, setCanPreview] = useState(false);
   const [iframeError, setIframeError] = useState(false);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
   const [needsPassword, setNeedsPassword] = useState(false);
   const [password, setPassword] = useState('');
+  const acceptedPassword = useRef<string | undefined>(undefined);
   const [showPassword, setShowPassword] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const showToast = useToastStore((s) => s.showToast);
 
+  const previewType = file ? determinePreviewType(file) : 'unsupported';
+  const mobileDocx = phone && !!file?.url && file.filename.toLowerCase().endsWith('.docx');
+  const mobileOffice = phone && !!file && canUseMobileOfficeReader(file.filename);
+  const showMobileReader =
+    (mobileDocx || mobileOffice) &&
+    !isLoading &&
+    !error &&
+    (mode === 'default' || mode === 'reader');
+  useReaderLayout(showMobileReader);
+  const readerUrl = file?.url;
+  const loadReaderUrl = useCallback(
+    async (signal: AbortSignal) => {
+      if (mode === 'reader') {
+        const latest = await resolveShareLink(token, accessToken, acceptedPassword.current, signal);
+        return latest.url;
+      }
+      if (!readerUrl) throw new Error('Файл недоступен');
+      return readerUrl;
+    },
+    [mode, readerUrl, token, accessToken],
+  );
+  const loadOfficePreview = useCallback(
+    (theme: OfficeTheme, signal: AbortSignal, layout?: OfficeLayout) =>
+      startSharedOfficePreview(
+        token,
+        accessToken,
+        acceptedPassword.current ?? '',
+        theme,
+        signal,
+        layout,
+      ),
+    [token, accessToken],
+  );
+
   useEffect(() => {
-    if (!token) return;
+    const controller = new AbortController();
     setIsLoading(true);
     setError(null);
+    setFile(null);
+    setNeedsPassword(false);
     setIframeError(false);
 
-    resolveShareLink(token, accessToken)
+    resolveShareLink(token, accessToken, acceptedPassword.current, controller.signal)
       .then((data) => {
-        setFile(data);
-        const ext = data.extension.replace(/^\./, '').toLowerCase();
-        const preview = determinePreviewType(data.mime_type, data.extension);
-        setPreviewType(preview);
-        setCanPreview(preview !== 'unsupported' && !PROBLEMATIC_EXTENSIONS.has(ext));
+        if (!controller.signal.aborted) setFile(data);
       })
-      .catch((err: any) => {
-        if (err?.status === 404) {
+      .catch((err: unknown) => {
+        if (controller.signal.aborted) return;
+        const status = err instanceof ApiError ? err.status : 0;
+        if (status === 404) {
           setError('Ссылка не найдена или истёк срок действия');
-        } else if (err?.status === 401) {
+        } else if (status === 401) {
           setError('Для доступа к этому файлу необходимо войти в аккаунт');
-        } else if (err?.status === 403) {
+        } else if (status === 403) {
+          acceptedPassword.current = undefined;
           setNeedsPassword(true);
         } else {
-          setError(err?.message || 'Не удалось загрузить файл');
+          setError(err instanceof Error ? err.message : 'Не удалось загрузить файл');
         }
       })
-      .finally(() => setIsLoading(false));
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoading(false);
+      });
+    return () => controller.abort();
   }, [token, accessToken]);
 
   const handleDownload = useCallback(async () => {
@@ -166,26 +254,23 @@ const SharePage: React.FC = () => {
 
   const handleIframeError = useCallback(() => {
     setIframeError(true);
-    setCanPreview(false);
   }, []);
 
   const handlePasswordSubmit = async () => {
-    if (!token || !password) return;
+    if (!password || isSubmittingPassword) return;
     setIsSubmittingPassword(true);
     setPasswordError(null);
     try {
       const data = await resolveShareLink(token, accessToken, password);
+      acceptedPassword.current = password;
+      setPassword('');
       setFile(data);
-      const ext = data.extension.replace(/^\./, '').toLowerCase();
-      const preview = determinePreviewType(data.mime_type, data.extension);
-      setPreviewType(preview);
-      setCanPreview(preview !== 'unsupported' && !PROBLEMATIC_EXTENSIONS.has(ext));
       setNeedsPassword(false);
-    } catch (err: any) {
-      if (err?.status === 403) {
+    } catch (err: unknown) {
+      if (err instanceof ApiError && err.status === 403) {
         setPasswordError('Неверный пароль');
       } else {
-        setPasswordError(err?.message || 'Ошибка');
+        setPasswordError(err instanceof Error ? err.message : 'Ошибка');
       }
     } finally {
       setIsSubmittingPassword(false);
@@ -209,9 +294,24 @@ const SharePage: React.FC = () => {
 
   const renderPreview = () => {
     if (!file) return null;
-    if (!canPreview || iframeError) return renderUnavailableMessage();
+    if (previewType === 'unsupported' || iframeError) return renderUnavailableMessage();
 
     switch (previewType) {
+      case 'office':
+        return (
+          <div
+            id={previewId}
+            className={cn(
+              'overflow-hidden',
+              expanded
+                ? 'min-h-0 flex-1'
+                : 'h-[65dvh] min-h-[360px] rounded-theme border border-theme',
+            )}
+          >
+            <OfficeFrame mode="view" theme={officeTheme} loadPreview={loadOfficePreview} />
+          </div>
+        );
+
       case 'image':
         return (
           <div className="flex items-center justify-center bg-theme-tertiary rounded-theme overflow-hidden min-h-[400px]">
@@ -220,10 +320,7 @@ const SharePage: React.FC = () => {
                 src={file.url}
                 alt={file.filename}
                 className="max-w-full max-h-[70vh] object-contain"
-                onError={() => {
-                  setCanPreview(false);
-                  setIframeError(true);
-                }}
+                onError={handleIframeError}
               />
             ) : (
               <div className="flex flex-col items-center gap-4 py-12 text-theme-muted">
@@ -291,7 +388,6 @@ const SharePage: React.FC = () => {
           <div className="bg-theme-tertiary rounded-theme overflow-hidden min-h-[400px]">
             {file.url ? (
               <iframe
-                ref={iframeRef}
                 src={file.url}
                 className="w-full h-[70vh]"
                 title={file.filename}
@@ -405,18 +501,55 @@ const SharePage: React.FC = () => {
     );
   }
 
+  if (showMobileReader) {
+    return (
+      <>
+        <SEOHead
+          title={ogTitle}
+          description={ogDescription}
+          canonical={`https://shared-space.ru/share/${token}`}
+        />
+        {mobileOffice ? (
+          <MobileReaderLayout
+            filename={file.filename}
+            onBack={() => navigate(accessToken ? '/dashboard' : '/')}
+            onStandardPreview={() => setMode('preview')}
+            onDownload={handleDownload}
+          >
+            <div className="min-h-0 flex-1 pb-[env(safe-area-inset-bottom)]">
+              <OfficeFrame
+                mode="view"
+                theme={officeTheme}
+                layout="reader"
+                loadPreview={loadOfficePreview}
+              />
+            </div>
+          </MobileReaderLayout>
+        ) : (
+          <MobileDocxReader
+            filename={file.filename}
+            size={file.size}
+            loadUrl={loadReaderUrl}
+            onBack={() => navigate(accessToken ? '/dashboard' : '/')}
+            onStandardPreview={() => setMode('preview')}
+            onDownload={handleDownload}
+          />
+        )}
+      </>
+    );
+  }
+
   const fileIconType = resolveFileIconType(file.mime_type, file.extension);
 
   return (
-    <div className="space-y-6">
+    <div className={cn(expanded ? 'flex min-h-0 flex-1 flex-col' : 'space-y-6')}>
       <SEOHead
         title={ogTitle}
         description={ogDescription}
         ogImage={ogImage}
         canonical={`https://shared-space.ru/share/${token}`}
       />
-      {/* Навигация назад */}
-      <div>
+      <div hidden={expanded}>
         <Link
           to={accessToken ? '/dashboard' : '/'}
           className="inline-flex items-center gap-2 text-sm text-theme-secondary hover:text-theme-primary transition-colors"
@@ -425,32 +558,77 @@ const SharePage: React.FC = () => {
           SharedSpace
         </Link>
       </div>
-      {/* Основной контент: 2 колонки (предпросмотр) + 1 колонка (информация) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Левая часть: предпросмотр (2/3) */}
-        <div className="lg:col-span-2">
-          <div className="bg-theme-secondary border border-theme rounded-theme p-4 shadow-theme-card">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <h2 className="text-sm font-medium text-theme-secondary">Предпросмотр</h2>
-              <button
-                onClick={handleDownload}
-                aria-label="Скачать файл"
-                title="Скачать файл"
-                className="group inline-flex h-9 w-9 items-center justify-center gap-2 rounded-theme border border-brand/30 bg-brand-light text-brand transition-colors hover:bg-brand hover:text-theme-on-brand sm:w-auto sm:px-3 sm:text-sm sm:font-medium"
-              >
-                <Download
-                  size={16}
-                  className="group-hover:[animation:ss-bounce-up_0.4s_ease-in-out]"
-                />
-                <span className="hidden sm:inline">Скачать</span>
-              </button>
+      <div
+        className={cn(expanded ? 'flex min-h-0 flex-1' : 'grid grid-cols-1 gap-6 lg:grid-cols-3')}
+      >
+        <div className={cn('min-w-0', expanded ? 'flex min-h-0 flex-1 flex-col' : 'lg:col-span-2')}>
+          <div
+            className={cn(
+              'bg-theme-secondary',
+              expanded
+                ? 'flex min-h-0 flex-1 flex-col'
+                : 'rounded-theme border border-theme p-4 shadow-theme-card',
+            )}
+          >
+            <div
+              className={cn(
+                'flex shrink-0 items-center justify-between gap-3',
+                expanded ? 'border-b border-theme px-3 py-2 sm:px-4' : 'mb-3',
+              )}
+            >
+              <h2 className="min-w-0 truncate text-sm font-medium text-theme-secondary">
+                {expanded ? file.filename : 'Предпросмотр'}
+              </h2>
+              <div className="flex shrink-0 items-center gap-2">
+                {(mobileDocx || mobileOffice) && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    aria-label="Режим чтения"
+                    className="inline-grid size-9 shrink-0 place-items-center p-0"
+                    title="Режим чтения"
+                    onClick={() => setMode('reader')}
+                  >
+                    <BookOpen size={16} aria-hidden="true" />
+                  </Button>
+                )}
+                {previewType === 'office' && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    aria-controls={previewId}
+                    aria-expanded={expanded}
+                    aria-label={expanded ? 'Свернуть предпросмотр' : 'Развернуть предпросмотр'}
+                    title={expanded ? 'Свернуть предпросмотр' : 'Развернуть предпросмотр'}
+                    className="inline-grid size-9 shrink-0 place-items-center p-0"
+                    onClick={() => setMode(expanded ? 'preview' : 'expanded')}
+                  >
+                    {expanded ? (
+                      <Minimize size={16} aria-hidden="true" />
+                    ) : (
+                      <Maximize size={16} aria-hidden="true" />
+                    )}
+                  </Button>
+                )}
+                <button
+                  onClick={handleDownload}
+                  aria-label="Скачать файл"
+                  title="Скачать файл"
+                  className="group inline-flex h-9 w-9 items-center justify-center gap-2 rounded-theme border border-brand/30 bg-brand-light text-brand transition-colors hover:bg-brand hover:text-theme-on-brand sm:w-auto sm:px-3 sm:text-sm sm:font-medium"
+                >
+                  <Download
+                    size={16}
+                    className="group-hover:[animation:ss-bounce-up_0.4s_ease-in-out]"
+                  />
+                  <span className="hidden sm:inline">Скачать</span>
+                </button>
+              </div>
             </div>
             {renderPreview()}
           </div>
         </div>
 
-        {/* Правая часть: информация (1/3) */}
-        <div className="space-y-4">
+        <div className={expanded ? 'hidden' : 'space-y-4'}>
           {/* Информация о файле */}
           <div className="bg-theme-secondary border border-theme rounded-theme p-5 shadow-theme-card">
             <h3 className="font-medium text-theme-primary mb-3">Информация о файле</h3>

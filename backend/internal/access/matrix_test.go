@@ -22,7 +22,8 @@ func TestCan(t *testing.T) {
 		{name: "admin_can_rename", role: RoleAdmin, action: ActionRename, expected: true},
 		{name: "admin_can_create_link", role: RoleAdmin, action: ActionCreateLink, expected: true},
 
-		// Editor — view, download, upload, create_folder
+		// Editor — read, upload and edit document content
+		{name: "editor_can_edit_content", role: RoleEditor, action: ActionEditContent, expected: true},
 		{name: "editor_can_view", role: RoleEditor, action: ActionView, expected: true},
 		{name: "editor_can_download", role: RoleEditor, action: ActionDownload, expected: true},
 		{name: "editor_can_upload", role: RoleEditor, action: ActionUpload, expected: true},
@@ -35,6 +36,7 @@ func TestCan(t *testing.T) {
 		{name: "editor_cannot_delete_directory", role: RoleEditor, action: ActionDeleteDir, expected: false},
 
 		// Viewer — view, download only
+		{name: "viewer_cannot_edit_content", role: RoleViewer, action: ActionEditContent, expected: false},
 		{name: "viewer_can_view", role: RoleViewer, action: ActionView, expected: true},
 		{name: "viewer_can_download", role: RoleViewer, action: ActionDownload, expected: true},
 		{name: "viewer_cannot_upload", role: RoleViewer, action: ActionUpload, expected: false},

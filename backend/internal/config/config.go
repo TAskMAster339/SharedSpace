@@ -59,6 +59,15 @@ type Config struct {
 	ResetPasswordTTL time.Duration
 
 	Port string
+
+	OfficeEnabled     bool
+	OfficePublicURL   string
+	OfficeInternalURL string
+	OfficeStorageURL  string
+	OfficeJWTSecret   string
+	OfficeLightTheme  string
+	OfficeDarkTheme   string
+	OfficeThemeSync   bool
 }
 
 func Load() (*Config, error) {
@@ -141,6 +150,15 @@ func Load() (*Config, error) {
 		ResetPasswordTTL: time.Duration(resetHours) * time.Hour,
 
 		Port: getEnv("PORT", "8080"),
+
+		OfficeEnabled:     getEnv("OFFICE_ENABLED", "false") == "true",
+		OfficePublicURL:   getEnv("OFFICE_PUBLIC_URL", ""),
+		OfficeInternalURL: getEnv("OFFICE_INTERNAL_URL", ""),
+		OfficeStorageURL:  getEnv("OFFICE_STORAGE_URL", ""),
+		OfficeJWTSecret:   getEnv("OFFICE_JWT_SECRET", ""),
+		OfficeLightTheme:  getEnv("OFFICE_LIGHT_THEME", ""),
+		OfficeDarkTheme:   getEnv("OFFICE_DARK_THEME", ""),
+		OfficeThemeSync:   getEnv("OFFICE_THEME_SYNC", "false") == "true",
 	}, nil
 }
 

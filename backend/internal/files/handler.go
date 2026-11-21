@@ -2,6 +2,7 @@ package files
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"mime/multipart"
 	"net/http"
@@ -15,7 +16,7 @@ import (
 
 const (
 	maxMemory       = 32 << 20
-	maxRequestBytes = 1 << 30
+	maxRequestBytes = maxFileSize + (1 << 20)
 )
 
 type Handler struct {
@@ -39,6 +40,7 @@ func NewHandler(service ServiceInterface) *Handler {
 // @Failure 401 {object} apperror.Response
 // @Failure 403 {object} apperror.Response
 // @Failure 404 {object} apperror.Response
+// @Failure 413 {object} apperror.Response
 // @Router /api/v1/files [post]
 func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) error {
 	claims, ok := auth.ClaimsFromCtx(r.Context())
@@ -46,9 +48,18 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) error {
 		return apperror.Unauthorized("не авторизован")
 	}
 
+	if r.ContentLength > maxRequestBytes {
+		return uploadTooLarge("запрос загрузки превышает 101 МиБ")
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBytes)
 	if err := r.ParseMultipartForm(maxMemory); err != nil {
+		var limit *http.MaxBytesError
+		if errors.As(err, &limit) || errors.Is(err, multipart.ErrMessageTooLarge) {
+			return uploadTooLarge("запрос загрузки превышает допустимые пределы")
+		}
 		return apperror.Validation("некорректная multipart-форма")
 	}
+	defer r.MultipartForm.RemoveAll()
 
 	directoryID := r.FormValue("directory_id")
 	if directoryID == "" {

@@ -1,6 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { MoreVertical, Star, Trash2, Move, Share2, Download, Image, Pencil } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { useNavigate } from 'react-router-dom';
+import { getDocumentHistory } from '../../api/documents';
+import { useAuthStore } from '../../store/authStore';
 import { ContextMenu } from './ContextMenu';
 import { ItemPropertiesAction, PropertiesTarget } from './ItemProperties';
 
@@ -14,6 +17,7 @@ interface ItemActionsMenuProps {
   onDownload?: () => void;
   onConvert?: () => void;
   properties?: PropertiesTarget;
+  documentId?: string;
   className?: string;
   iconSize?: number;
   contextAnchor?: React.RefObject<HTMLAnchorElement>;
@@ -21,6 +25,42 @@ interface ItemActionsMenuProps {
   onCloseMenu?: () => void;
   menuPosition?: { x: number; y: number } | null;
 }
+
+const EditDocumentMenuItem: React.FC<{ id: string; onSelect: () => void }> = ({ id, onSelect }) => {
+  const [canEdit, setCanEdit] = useState(false);
+  const token = useAuthStore((state) => state.accessToken);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!token) return;
+    const controller = new AbortController();
+    getDocumentHistory(token, id, controller.signal)
+      .then((history) => {
+        if (!controller.signal.aborted) setCanEdit(history.can_edit);
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [id, token]);
+
+  if (!canEdit) return null;
+
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onSelect();
+        navigate(`/files/${id}/edit`);
+      }}
+      className="group flex w-full items-center gap-3 px-4 py-3.5 text-base text-theme-secondary transition-colors hover:bg-theme-hover sm:px-3 sm:py-2 sm:text-sm"
+    >
+      <Pencil size={18} className="group-hover:text-brand transition-colors" aria-hidden="true" />
+      Редактировать
+    </button>
+  );
+};
 
 const MENU_WIDTH = 216;
 const GAP = 4;
@@ -35,6 +75,7 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
   onDownload,
   onConvert,
   properties,
+  documentId,
   className,
   iconSize = 18,
   contextAnchor,
@@ -84,6 +125,7 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
 
   const menuItems = (
     <div>
+      {isOpen && documentId && <EditDocumentMenuItem id={documentId} onSelect={handleClose} />}
       {onDownload && (
         <button
           type="button"

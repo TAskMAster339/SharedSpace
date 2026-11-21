@@ -12,16 +12,33 @@
 | POST | `/api/v1/auth/refresh` | Обновление токенов |
 | POST | `/api/v1/auth/logout` | Выход (отзыв refresh токена) |
 | GET | `/api/v1/s/{token}` | Открыть файл по публичной ссылке |
+| POST | `/api/v1/s/{token}/preview-session` | Получить подписанную конфигурацию просмотра офисного файла по ссылке |
 | GET | `/api/v1/sd/{token}` | Открыть директорию по публичной ссылке |
 | GET | `/api/v1/og/share/{token}` | Open Graph мета-теги для файла |
 | GET | `/api/v1/og/share/dir/{token}` | Open Graph мета-теги для директории |
 | GET | `/api/v1/sitemap.xml` | Sitemap публичных ссылок |
+
+Предпросмотр по ссылке открывает последнюю сохранённую версию DOCX, XLSX, PPTX, DOC, XLS, PPT, ODT, ODS или ODP. Для ссылки с ограничением «Только авторизованные» нужен заголовок `Authorization: Bearer …`. Пароль защищённой ссылки передаётся в `X-SharedLink-Password` в URL-кодировке. Пример для открытой ссылки:
+
+```bash
+curl -fsS -X POST "http://localhost:8080/api/v1/s/${SHARE_TOKEN}/preview-session?theme=dark"
+```
+
+Ответ `200` содержит `script_url`, подписанную конфигурацию с `editorConfig.mode: "view"` и `document.permissions.edit: false`, а при настроенной синхронизации темы также `theme_bridge_url`. Истёкшая или отозванная ссылка возвращает `404`, неверный пароль — `403`, отсутствие входа для закрытой ссылки — `401`. Когда просмотрщик выключен, запрос возвращает `503`. Скачивание остаётся доступно через существующий `GET /api/v1/s/{token}`.
+
+Параметр `layout=compact` доступен для публичного предпросмотра и обоих маршрутов офисных сессий в разделе «Файлы». Он включает компактную панель и начальный масштаб для узкого экрана. Без параметра применяется обычная раскладка. Для предпросмотра XLSX и PPTX оба маршрута просмотра принимают `layout=reader`. Проверка прав и пароля ссылки выполняется как при обычном предпросмотре. Для открытой ссылки на XLSX или PPTX следующий запрос возвращает JSON `{"type":"embedded","mode":"view"}`.
+
+```bash
+curl -fsS -X POST "http://localhost:8080/api/v1/s/${SHARE_TOKEN}/preview-session?layout=reader" \
+  | jq -c '.config | {type, mode: .editorConfig.mode}'
+```
 
 ## Пользователи (`/api/v1/users`)
 
 | Метод | Путь | Описание |
 |-------|------|----------|
 | GET | `/me` | Получить свой профиль |
+| GET | `/me/storage` | Получить распределение квоты по [личным и общим папкам](folder-sizes.md#окно-использования-хранилища) |
 | PATCH | `/me` | Обновить профиль |
 | PATCH | `/me/password` | Сменить пароль |
 | DELETE | `/me` | Удалить аккаунт |
@@ -48,6 +65,43 @@
 | GET | `/{id}/share-links` | Список публичных ссылок |
 | POST | `/{id}/convert` | Конвертировать файл |
 | GET | `/{id}/conversions` | История конвертаций |
+| POST | `/{id}/editor-session` | Получить подписанную конфигурацию редактора DOCX, XLSX или PPTX |
+| POST | `/{id}/preview-session` | Получить подписанную конфигурацию просмотра офисного файла |
+| GET | `/{id}/versions` | Получить историю офисного файла и разрешённые действия |
+| GET | `/{id}/versions/{number}/content` | Получить временный URL для скачивания версии |
+| POST | `/{id}/versions/{number}/restore` | Восстановить версию как новую текущую |
+
+Маршрутам редактора и истории требуется токен активированного аккаунта. Историю видят пользователи с правом просмотра папки. Владелец, администратор и редактор папки могут редактировать содержимое. Восстановление доступно владельцу и администратору. Оно возвращает `204` и создаёт новую запись. Для редактируемого или сохраняющегося документа восстановление вернёт `409`.
+
+```bash
+curl -fsS -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "http://localhost:8080/api/v1/files/$FILE_ID/versions"
+```
+
+До первого сохранения редактор папки получит пустой список версий.
+
+```json
+{"versions":[],"can_edit":true,"can_restore":false,"save_pending":false}
+```
+
+`POST .../editor-session` возвращает `200` с полями `script_url` и `config`. Оба маршрута сессий принимают `theme=light` или `theme=dark`. Если включена синхронизация темы, ответ также содержит `theme_bridge_url` на том же хосте, что `script_url`. Предпросмотр использует режим `view`, работает с последней сохранённой копией и не создаёт сессию редактирования или версию. Поддерживает `DOCX`, `XLSX`, `PPTX`, `DOC`, `XLS`, `PPT`, `ODT`, `ODS` и `ODP`. Шестой аккаунт в одном документе получает `409 document_editor_limit`. У SharedSpace есть общий лимит десять открытых окон ONLYOFFICE, включая приватный и публичный предпросмотр. Следующий запрос получает `429 office_capacity`. Успешный ответ содержит `lease_id`. Выключенный редактор возвращает `503 editor_disabled`, другой формат файла — `415 unsupported_document`. История и скачивание сохранённой копии доступны при выключенном редакторе. Подписанные маршруты `/api/v1/office/source`, `/api/v1/office/preview-source` и `/api/v1/office/callback` предназначены для Document Server.
+
+Чтобы продлить слот на пять минут, отправьте `POST /api/v1/office/lease`. При закрытии окна отправьте `DELETE` на тот же путь. Передайте `lease_id` из ответа сеанса через Bearer-заголовок. Истёкший слот при продлении возвращает `410 office_lease_expired`. Например, приведённый запрос освобождает слот и возвращает `204`.
+
+```bash
+curl -fsS -o /dev/null -w '%{http_code}\n' -X DELETE \
+  -H "Authorization: Bearer ${OFFICE_LEASE_ID}" \
+  http://localhost:8080/api/v1/office/lease
+```
+
+В запросе на предпросмотр `FILE_ID` — идентификатор доступной таблицы XLSX.
+
+```bash
+curl -fsS -X POST -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "http://localhost:8080/api/v1/files/$FILE_ID/preview-session?theme=dark"
+```
+
+Ответ возвращает `200`, подписанные `script_url` и `config`. В конфигурации `documentType` равен `cell`, `editorConfig.mode` равен `view`, а `document.permissions.edit` равен `false`.
 
 ## Директории (`/api/v1/directories`)
 

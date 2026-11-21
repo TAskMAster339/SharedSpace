@@ -284,16 +284,7 @@ func (h *Handler) Resolve(w http.ResponseWriter, r *http.Request) error {
 		return apperror.Validation("token обязателен")
 	}
 
-	password, _ := url.QueryUnescape(r.Header.Get("X-SharedLink-Password"))
-
-	authenticated := false
-	rawJWT := bearerToken(r)
-	if rawJWT != "" {
-		claims, err := h.tokenParser.ParseAccessToken(rawJWT)
-		if err == nil && claims != nil {
-			authenticated = true
-		}
-	}
+	password, authenticated := FileLinkCredentials(r, h.tokenParser)
 
 	resp, err := h.service.Resolve(r.Context(), token, password, authenticated)
 	if err != nil {
@@ -537,4 +528,13 @@ func writeJSON(w http.ResponseWriter, status int, payload any) error {
 		return apperror.WrapInternal("ошибка кодирования ответа", err)
 	}
 	return nil
+}
+
+func FileLinkCredentials(r *http.Request, parser TokenParser) (string, bool) {
+	password, _ := url.QueryUnescape(r.Header.Get("X-SharedLink-Password"))
+	if raw := bearerToken(r); raw != "" && parser != nil {
+		claims, err := parser.ParseAccessToken(raw)
+		return password, err == nil && claims != nil
+	}
+	return password, false
 }

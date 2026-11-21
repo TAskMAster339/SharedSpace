@@ -140,7 +140,12 @@ const PrivacyPolicyPage: React.FC = () => {
             {email}
           </a>{' '}
           Другие контакты оператора можно посмотреть на{' '}
-          <a className={linkClass} target="_blank" href={`${contact_site}`}>
+          <a
+            className={linkClass}
+            target="_blank"
+            rel="noopener noreferrer"
+            href={`${contact_site}`}
+          >
             {contact_site}
           </a>
           . Укажите, с какими данными связано обращение. Если нужна дополнительная проверка личности

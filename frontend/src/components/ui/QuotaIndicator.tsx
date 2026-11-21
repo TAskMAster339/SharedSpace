@@ -9,6 +9,7 @@ interface QuotaIndicatorProps {
   total: number;
   fullWidth?: boolean;
   className?: string;
+  detailsClassName?: string;
 }
 
 export const QuotaIndicator: React.FC<QuotaIndicatorProps> = ({
@@ -18,6 +19,7 @@ export const QuotaIndicator: React.FC<QuotaIndicatorProps> = ({
   total,
   fullWidth = false,
   className,
+  detailsClassName,
 }) => {
   const atLimit = total > 0 && used >= total;
 
@@ -31,9 +33,14 @@ export const QuotaIndicator: React.FC<QuotaIndicatorProps> = ({
       >
         <span className="flex items-center gap-1.5 text-sm font-medium">
           <Icon size={14} className="text-theme-muted group-hover:text-brand transition-colors" />
-          {label}
+          <span className={detailsClassName}>{label}</span>
         </span>
-        <span className="shrink-0 whitespace-nowrap text-xs font-semibold tabular-nums">
+        <span
+          className={cn(
+            'shrink-0 whitespace-nowrap text-xs font-semibold tabular-nums',
+            detailsClassName,
+          )}
+        >
           <span
             className={cn('transition-colors', atLimit ? 'text-danger' : 'group-hover:text-brand')}
           >

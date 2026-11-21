@@ -1,4 +1,5 @@
 import { apiRequest } from './client';
+import type { DocumentEditorSession, OfficeLayout, OfficeTheme } from './documents';
 
 export type ShareLinkAccess = 'public' | 'authenticated';
 
@@ -79,12 +80,34 @@ export function resolveShareLink(
   token: string,
   accessToken?: string | null,
   password?: string,
+  signal?: AbortSignal,
 ): Promise<ShareLinkResolveResult> {
   return apiRequest<ShareLinkResolveResult>(`/s/${token}`, {
     method: 'GET',
+    cache: 'no-store',
+    signal,
     ...(accessToken ? { token: accessToken } : {}),
     ...(password ? { headers: { 'X-SharedLink-Password': encodeURIComponent(password) } } : {}),
   });
+}
+
+export function startSharedOfficePreview(
+  token: string,
+  accessToken: string | null,
+  password: string,
+  theme: OfficeTheme,
+  signal: AbortSignal,
+  layout?: OfficeLayout,
+): Promise<DocumentEditorSession> {
+  return apiRequest<DocumentEditorSession>(
+    `/s/${token}/preview-session?theme=${theme}${layout ? `&layout=${layout}` : ''}`,
+    {
+      method: 'POST',
+      signal,
+      ...(accessToken ? { token: accessToken } : {}),
+      ...(password ? { headers: { 'X-SharedLink-Password': encodeURIComponent(password) } } : {}),
+    },
+  );
 }
 
 // ---- Directory share links ----

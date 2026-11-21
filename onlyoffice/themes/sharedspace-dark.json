@@ -1,0 +1,21 @@
+{
+  "id": "theme-sharedspace-dark",
+  "name": "SharedSpace Dark",
+  "type": "dark",
+  "colors": {
+    "toolbar-header-document": "#1e3a5f",
+    "toolbar-header-spreadsheet": "#14532d",
+    "toolbar-header-presentation": "#7c2d12",
+    "background-normal": "#1e293b",
+    "background-toolbar": "#1a2332",
+    "background-toolbar-additional": "#0f172a",
+    "background-primary-dialog-button": "#2563eb",
+    "background-accent-button": "#2563eb",
+    "highlight-button-hover": "#2d3a52",
+    "highlight-button-pressed": "#1e3a5f",
+    "border-toolbar": "#334155",
+    "border-divider": "#334155",
+    "text-normal": "#f1f5f9",
+    "canvas-background": "#0f172a"
+  }
+}

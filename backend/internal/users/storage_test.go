@@ -126,6 +126,56 @@ func TestStorageUsageOwnershipAndTrash(t *testing.T) {
 	if result.FolderCount != 108 || len(result.Folders) != 100 {
 		t.Fatalf("unbounded response: %d folders, count %d", len(result.Folders), result.FolderCount)
 	}
+	_, err = pool.Exec(ctx, `
+ UPDATE files SET size=6*1048576 WHERE object_key='usage/a';
+ UPDATE files SET size=4*1048576 WHERE object_key='usage/nested';
+ UPDATE files SET size=90*1048576 WHERE object_key='usage/foreign';
+ UPDATE users SET storage_used=10*1048576+300 WHERE id=md5('1')::uuid;
+ UPDATE users SET storage_used=90*1048576 WHERE id=md5('2')::uuid;
+ INSERT INTO shared_directories(id,directory_id,owner_id) VALUES
+ (md5('shared-zulu')::uuid,md5('11')::uuid,md5('1')::uuid),
+ (md5('shared-nested')::uuid,md5('14')::uuid,md5('1')::uuid),
+ (md5('shared-external')::uuid,md5('20')::uuid,md5('2')::uuid);
+ `)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err = svc.GetStorageUsage(ctx, userID, "size")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var sharedDirectoryBytes int64
+	if err := pool.QueryRow(ctx, `SELECT size_bytes FROM directories WHERE id=md5('11')::uuid`).Scan(&sharedDirectoryBytes); err != nil {
+		t.Fatal(err)
+	}
+	if sharedDirectoryBytes != 100*1048576 || result.SharedFilesBytes != 10*1048576 ||
+		result.PersonalFilesBytes != 150 || result.OtherFilesBytes != 150 ||
+		result.UsedBytes-result.SharedFilesBytes-result.PersonalFilesBytes-result.TrashBytes != 150 {
+		t.Fatalf("wrong allocation in shared directory of %d bytes: %+v", sharedDirectoryBytes, result)
+	}
+	_, err = pool.Exec(ctx, `
+ INSERT INTO shared_directory_members(shared_directory_id,user_id,role) VALUES
+ (md5('shared-external')::uuid,md5('1')::uuid,'editor'),
+ (md5('shared-zulu')::uuid,md5('2')::uuid,'editor');
+ `)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err = svc.GetStorageUsage(ctx, userID, "size")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.SharedFilesBytes != 10*1048576+150 || result.PersonalFilesBytes != 150 || result.OtherFilesBytes != 150 {
+		t.Fatalf("wrong shared ownership or changed legacy response: %+v", result)
+	}
+	other, err = svc.GetStorageUsage(ctx, otherID, "size")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if other.SharedFilesBytes != 90*1048576 || other.PersonalFilesBytes != 0 {
+		t.Fatalf("shared folder counted another member's files: %+v", other)
+	}
+
 }
 
 func TestStorageUsageRejectsInvalidSort(t *testing.T) {

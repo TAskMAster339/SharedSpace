@@ -31,7 +31,6 @@ const useIsMobile = () => {
 };
 
 export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onRemove }) => {
-  const mobileMoreOpen = useToastStore((s) => s.mobileMoreOpen);
   const toastMobileBottomPx = useToastStore((s) => s.toastMobileBottomPx);
   const isMobile = useIsMobile();
 

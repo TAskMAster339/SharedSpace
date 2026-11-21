@@ -19,6 +19,7 @@ import ProfileSettingsPage from './pages/ProfileSettingsPage';
 import SharedDirListPage from './pages/SharedDirListPage';
 import DirectoryPage from './pages/DirectoryPage';
 import FileViewPage from './pages/FileViewPage';
+import DocumentEditorPage from './pages/DocumentEditorPage';
 import SharedSettingsPage from './pages/SharedSettingsPage';
 import FolderSettingsPage from './pages/FolderSettingsPage';
 import InvitationsPage from './pages/InvitationsPage';
@@ -62,14 +63,7 @@ const App: React.FC = () => {
             </Layout>
           }
         />
-        <Route
-          path="/share/:token"
-          element={
-            <Layout>
-              <SharePage />
-            </Layout>
-          }
-        />
+        <Route path="/share/:token" element={<SharePage />} />
         <Route
           path="/share/dir/:token"
           element={
@@ -110,6 +104,15 @@ const App: React.FC = () => {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         </Route>
+
+        <Route
+          path="/files/:id/edit"
+          element={
+            <ProtectedRoute>
+              <DocumentEditorPage />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Защищённые маршруты */}
         <Route

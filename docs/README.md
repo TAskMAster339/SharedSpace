@@ -12,19 +12,17 @@ SharedSpace — это файловый хостинг с возможность
 # 1. Клонировать репозиторий
 git clone https://github.com/TAskMAster339/SharedSpace.git && cd SharedSpace
 
-# 2. Настроить переменные окружения
-cp .env.example .env
-
-# 3. Запустить все сервисы
-docker compose up --build
+# 2. Подготовить .env и запустить сервисы
+make dev
 ```
 
-Сервисы будут доступны:
-- **Фронтенд**: http://localhost:80
-- **API бэкенда**: http://localhost:8080
-- **Swagger UI**: http://localhost:8080/swagger
-- **MinIO Console**: http://localhost:9001
-- **PostgreSQL**: localhost:5432
+`make dev-office` добавляет редактор DOCX, XLSX и PPTX. `make env` готовит конфигурацию отдельно. Используйте `make dev-ps` для проверки состояния сервисов и `make dev-down` для остановки.
+
+- **Фронтенд** — http://localhost:3000
+- **API бэкенда** — http://localhost:8080/api/v1
+- **Swagger UI** — http://localhost:8080/swagger/
+- **MinIO Console** — http://localhost:9001
+- **PostgreSQL** — localhost:5432
 
 ### Локальный запуск (без Docker)
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Folder, Trash2, Users } from 'lucide-react';
+import { Files, Folder, Trash2, Users } from 'lucide-react';
 import { Link } from './Link';
 import { getStorageUsage, StorageUsage } from '../../api/users';
 import { useAuthStore } from '../../store/authStore';
@@ -41,21 +41,32 @@ export const StorageUsageModal: React.FC = () => {
   }, [isOpen, token, retryKey]);
 
   const retry = () => setRetryKey((key) => key + 1);
+  const sharedBytes = data?.shared_files_bytes ?? data?.other_files_bytes ?? 0;
+  const personalBytes =
+    data?.personal_files_bytes ??
+    Math.max(0, (data?.used_bytes ?? 0) - (data?.trash_bytes ?? 0) - sharedBytes);
+  const otherBytes = Math.max(
+    0,
+    (data?.used_bytes ?? 0) - (data?.trash_bytes ?? 0) - personalBytes - sharedBytes,
+  );
   const rows = data
     ? [
         {
           name: 'Личное хранилище',
-          bytes: Math.max(0, data.used_bytes - data.trash_bytes - data.other_files_bytes),
+          bytes: personalBytes,
           to: `/directories/${data.root_id ?? 'personal'}`,
           icon: Folder,
         },
         {
           name: 'Общие директории',
-          bytes: data.other_files_bytes,
+          bytes: sharedBytes,
           to: '/directories',
           icon: Users,
         },
         { name: 'Корзина', bytes: data.trash_bytes, to: '/trash', icon: Trash2 },
+        ...(otherBytes > 0
+          ? [{ name: 'Другие расположения', bytes: otherBytes, to: null, icon: Files }]
+          : []),
       ]
     : [];
   const percentage =
@@ -96,7 +107,7 @@ export const StorageUsageModal: React.FC = () => {
           <ul aria-label="Содержимое хранилища">
             {rows.map(({ name, bytes, to, icon: Icon }) => (
               <li
-                key={to}
+                key={name}
                 className={cn(
                   'storage-usage-row flex items-center gap-3 border-t border-theme px-2 py-3',
                   to === '/trash' && 'storage-usage-row-trash',
@@ -113,15 +124,17 @@ export const StorageUsageModal: React.FC = () => {
                     {formatFileSize(bytes)}
                   </p>
                 </div>
-                <Link
-                  to={to}
-                  onClick={close}
-                  variant="secondary"
-                  aria-label={`Открыть «${name}»`}
-                  className="shrink-0 rounded-theme border border-theme bg-theme-tertiary px-3 py-2 text-sm font-medium hover:bg-theme-hover"
-                >
-                  Открыть
-                </Link>
+                {to && (
+                  <Link
+                    to={to}
+                    onClick={close}
+                    variant="secondary"
+                    aria-label={`Открыть «${name}»`}
+                    className="shrink-0 rounded-theme border border-theme bg-theme-tertiary px-3 py-2 text-sm font-medium hover:bg-theme-hover"
+                  >
+                    Открыть
+                  </Link>
+                )}
               </li>
             ))}
           </ul>

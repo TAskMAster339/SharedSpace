@@ -1,6 +1,18 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useId, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, Share2, Star, Image, EyeOff, Trash2, Pencil } from 'lucide-react';
+import {
+  ArrowLeft,
+  BookOpen,
+  Download,
+  Share2,
+  Star,
+  Image,
+  EyeOff,
+  Trash2,
+  Pencil,
+  PanelRightClose,
+  PanelRightOpen,
+} from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import type { AuthState } from '../store/authStore';
 import { useFavorites } from '../hooks/useFavorites';
@@ -16,6 +28,18 @@ import { getUserById } from '../api/users';
 import { ApiError } from '../api/client';
 import { FileIcon } from '../components/ui/FileIcon';
 import { Button } from '../components/ui/Button';
+import { DocumentActions } from '../components/ui/DocumentActions';
+import { MobileReaderLayout } from '../components/ui/MobileReaderLayout';
+import { MobileDocxReader } from '../components/ui/MobileDocxReader';
+import { useReaderLayout } from '../components/Layout';
+import { usePhoneViewport } from '../hooks/usePhoneViewport';
+import { OfficeFrame } from '../components/ui/OfficeFrame';
+import { useRootTheme } from '../hooks/useTheme';
+import {
+  canEditOfficeFile,
+  canPreviewOfficeFile,
+  canUseMobileOfficeReader,
+} from '../utils/officeFormats';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { RenameModal } from '../components/ui/RenameModal';
 import { ConvertModal } from '../components/ui/ConvertModal';
@@ -97,11 +121,14 @@ const CODE_EXTENSIONS = new Set([
 ]);
 
 // Расширения, которые часто блокируются браузером в iframe
-const PROBLEMATIC_EXTENSIONS = new Set(['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'go']);
+const PROBLEMATIC_EXTENSIONS = new Set(['go']);
 
 const FileViewPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const officeTheme = useRootTheme();
+  const [showDetails, setShowDetails] = useState(true);
+  const detailsId = useId();
   const accessToken = useAuthStore((state: AuthState) => state.accessToken);
   const user = useAuthStore((state: AuthState) => state.user);
   const { isFavorite, toggleFavorite } = useFavorites();
@@ -125,6 +152,29 @@ const FileViewPage: React.FC = () => {
   const [canPreview, setCanPreview] = useState(true);
   const [iframeError, setIframeError] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  const phone = usePhoneViewport();
+  const [standardPreviewFile, setStandardPreviewFile] = useState<string>();
+  const mobileDocx = !!file?.filename.toLowerCase().endsWith('.docx');
+  const mobileOffice = !!file && canUseMobileOfficeReader(file.filename);
+  const showMobileReader =
+    phone &&
+    !isLoading &&
+    !error &&
+    !!file &&
+    file.id === id &&
+    accessToken &&
+    (mobileDocx || mobileOffice) &&
+    standardPreviewFile !== id;
+  useReaderLayout(!!showMobileReader);
+
+  const loadReaderUrl = useCallback(
+    async (signal: AbortSignal) => {
+      if (!accessToken || !id) throw new Error('Файл недоступен');
+      return (await getFileContentUrl(accessToken, id, signal)).url;
+    },
+    [accessToken, id],
+  );
 
   // Определяем тип для предпросмотра на основе MIME-типа и расширения
   const determinePreviewType = useCallback((mimeType: string, extension: string): PreviewType => {
@@ -164,6 +214,8 @@ const FileViewPage: React.FC = () => {
     setCanPreview(true);
     setIframeError(false);
     setOwnerUsername(null);
+    setDirectory(null);
+    setFileUrl(null);
 
     const loadFileData = async () => {
       try {
@@ -189,21 +241,13 @@ const FileViewPage: React.FC = () => {
         const preview = determinePreviewType(fileData.mime_type, fileData.extension);
         setPreviewType(preview);
 
-        // Проверяем, поддерживается ли просмотр
-        const isViewable = preview !== 'unsupported';
-        setCanPreview(isViewable);
+        const nativePreview =
+          preview !== 'unsupported' &&
+          !isProblematicForIframe(fileData.filename) &&
+          !canPreviewOfficeFile(fileData.filename);
+        setCanPreview(nativePreview);
 
-        // Если файл проблемный для iframe, сразу помечаем как непросматриваемый
-        if (isProblematicForIframe(fileData.filename)) {
-          setCanPreview(false);
-          if (isMounted) {
-            setIsLoading(false);
-          }
-          return;
-        }
-
-        // Загружаем URL для предпросмотра (только для поддерживаемых типов)
-        if (isViewable) {
+        if (nativePreview) {
           try {
             const content = await getFileContentUrl(accessToken, id);
             if (isMounted) {
@@ -383,6 +427,20 @@ const FileViewPage: React.FC = () => {
   const renderPreview = () => {
     if (!file) return null;
 
+    if (accessToken && canPreviewOfficeFile(file.filename)) {
+      return (
+        <div className="h-[60dvh] min-h-[24rem] overflow-hidden rounded-theme border border-theme">
+          <OfficeFrame
+            key={`${file.id}:${file.updated_at}:${file.filename}`}
+            fileId={file.id}
+            token={accessToken}
+            mode="view"
+            theme={officeTheme}
+          />
+        </div>
+      );
+    }
+
     // Если файл не поддерживается для просмотра или произошла ошибка в iframe
     if (!canPreview || iframeError) {
       const ext = getFileExtension(file.filename);
@@ -545,6 +603,48 @@ const FileViewPage: React.FC = () => {
     );
   }
 
+  if (showMobileReader && accessToken) {
+    return (
+      <>
+        <SEOHead
+          title={file.filename}
+          description="Чтение документа в SharedSpace"
+          canonical={`https://shared-space.ru/files/${file.id}`}
+        />
+        {mobileOffice ? (
+          <MobileReaderLayout
+            key={file.id}
+            filename={file.filename}
+            onBack={handleGoBack}
+            onStandardPreview={() => setStandardPreviewFile(file.id)}
+            privateFile={{ id: file.id, token: accessToken }}
+          >
+            <div className="min-h-0 flex-1 pb-[env(safe-area-inset-bottom)]">
+              <OfficeFrame
+                key={`${file.id}:${file.updated_at}:${file.filename}`}
+                fileId={file.id}
+                token={accessToken}
+                mode="view"
+                theme={officeTheme}
+                layout="reader"
+              />
+            </div>
+          </MobileReaderLayout>
+        ) : (
+          <MobileDocxReader
+            key={`${file.id}:${file.updated_at}`}
+            filename={file.filename}
+            size={file.size}
+            loadUrl={loadReaderUrl}
+            onBack={handleGoBack}
+            onStandardPreview={() => setStandardPreviewFile(file.id)}
+            privateFile={{ id: file.id, token: accessToken }}
+          />
+        )}
+      </>
+    );
+  }
+
   const fileIconType = resolveFileIconType(file.mime_type, file.extension);
   const isFav = isFavorite(file.id);
 
@@ -555,8 +655,7 @@ const FileViewPage: React.FC = () => {
         description={`Файл · ${formatFileSize(file.size)} · ${file.mime_type}`}
         canonical={`https://shared-space.ru/files/${file.id}`}
       />
-      {/* Навигация назад */}
-      <div>
+      <div className="flex items-center justify-between gap-2">
         <button
           onClick={handleGoBack}
           className="inline-flex items-center gap-2 text-sm text-theme-secondary hover:text-theme-primary transition-colors"
@@ -564,34 +663,85 @@ const FileViewPage: React.FC = () => {
           <ArrowLeft size={16} />
           Вернуться к папке
         </button>
+        <Button
+          type="button"
+          variant="secondary"
+          aria-expanded={showDetails}
+          aria-controls={detailsId}
+          className="inline-flex items-center gap-2"
+          onClick={() => setShowDetails((visible) => !visible)}
+        >
+          {showDetails ? (
+            <PanelRightClose size={16} aria-hidden="true" />
+          ) : (
+            <PanelRightOpen size={16} aria-hidden="true" />
+          )}
+          {showDetails ? 'Скрыть сведения' : 'Сведения о файле'}
+        </Button>
       </div>
 
       {/* Основной контент: 2 колонки (предпросмотр) + 1 колонка (информация) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div
+        className={cn(
+          'grid grid-cols-1 gap-4',
+          showDetails && 'xl:grid-cols-[minmax(0,1fr)_18rem]',
+        )}
+      >
         {/* Левая часть: предпросмотр (2/3) */}
-        <div className="lg:col-span-2">
+        <div className="min-w-0">
           <div className="bg-theme-secondary border border-theme rounded-theme p-4 shadow-theme-card">
-            <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-sm font-medium text-theme-secondary">Предпросмотр</h2>
-              <button
-                onClick={downloadFile}
-                aria-label="Скачать файл"
-                title="Скачать файл"
-                className="group inline-flex h-9 w-9 items-center justify-center gap-2 rounded-theme border border-brand/30 bg-brand-light text-brand transition-colors hover:bg-brand hover:text-theme-on-brand sm:w-auto sm:px-3 sm:text-sm sm:font-medium"
-              >
-                <Download
-                  size={16}
-                  className="group-hover:[animation:ss-bounce-up_0.4s_ease-in-out]"
-                />
-                <span className="hidden sm:inline">Скачать</span>
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                {phone && standardPreviewFile === id && (mobileDocx || mobileOffice) && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    aria-label="Режим чтения"
+                    className="inline-grid size-9 shrink-0 place-items-center border border-theme p-0"
+                    onClick={() => setStandardPreviewFile(undefined)}
+                  >
+                    <BookOpen size={16} aria-hidden="true" />
+                  </Button>
+                )}
+                {accessToken && canEditOfficeFile(file.filename) && (
+                  <DocumentActions
+                    key={file.id}
+                    id={file.id}
+                    token={accessToken}
+                    onRestored={() => {
+                      void getFileMetadata(accessToken, file.id)
+                        .then((updated) =>
+                          setFile((current) => (current?.id === updated.id ? updated : current)),
+                        )
+                        .catch(() => {});
+                    }}
+                  />
+                )}
+                <button
+                  onClick={downloadFile}
+                  aria-label="Скачать файл"
+                  title="Скачать файл"
+                  className="group inline-flex h-9 w-9 items-center justify-center gap-2 rounded-theme border border-brand/30 bg-brand-light text-brand transition-colors hover:bg-brand hover:text-theme-on-brand sm:w-auto sm:px-3 sm:text-sm sm:font-medium"
+                >
+                  <Download
+                    size={16}
+                    className="group-hover:[animation:ss-bounce-up_0.4s_ease-in-out]"
+                  />
+                  <span className="hidden sm:inline">Скачать</span>
+                </button>
+              </div>
             </div>
             {renderPreview()}
           </div>
         </div>
 
-        {/* Правая часть: информация о файле (1/3) */}
-        <div className="space-y-4">
+        <aside
+          id={detailsId}
+          hidden={!showDetails}
+          aria-label="Сведения о файле"
+          className="min-w-0 space-y-4"
+        >
           {/* Информация о файле */}
           <div className="bg-theme-secondary border border-theme rounded-theme p-5 shadow-theme-card">
             <h3 className="font-medium text-theme-primary mb-3">Информация о файле</h3>
@@ -750,7 +900,7 @@ const FileViewPage: React.FC = () => {
               onRename={handleRename}
             />
           </div>
-        </div>
+        </aside>
       </div>
     </div>
   );

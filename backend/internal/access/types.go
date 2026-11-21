@@ -11,6 +11,7 @@ const (
 type Action string
 
 const (
+	ActionEditContent  Action = "edit_content"
 	ActionView         Action = "view"
 	ActionDownload     Action = "download"
 	ActionUpload       Action = "upload"

@@ -7,6 +7,7 @@ import { useGridItemMenu } from './useGridItemMenu';
 import { ItemActionsMenu } from './ItemActionsMenu';
 import { cn } from '../../utils/cn';
 import { FileIconType } from '../../utils/fileType';
+import { canEditOfficeFile } from '../../utils/officeFormats';
 
 interface FileGridItemProps {
   id: string;
@@ -72,14 +73,21 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
         }}
         ref={menu.anchor}
         {...menu.handlers}
-        className="item-grid-preview cursor-pointer p-3 [-webkit-touch-callout:none]"
+        className="file-item-link item-grid-preview cursor-pointer p-3 [-webkit-touch-callout:none]"
       >
-        <FilePreview fileId={id} type={type} size={64} fill className="transition-colors" />
+        <FilePreview
+          fileId={id}
+          type={type}
+          size={64}
+          fill
+          className="file-item-icon transition-colors"
+        />
         <ItemStatusBadges grid favorite={isFavorite} shared={hasShareLinks} />
       </Link>
       <GridItemCaption name={name} size={size} />
 
       <ItemActionsMenu
+        documentId={showProperties && canEditOfficeFile(name) ? id : undefined}
         properties={showProperties ? { kind: 'file', id } : undefined}
         isFavorite={isFavorite}
         onToggleFavorite={onToggleFavorite ? () => onToggleFavorite(id) : undefined}

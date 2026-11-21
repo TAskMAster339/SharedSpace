@@ -130,7 +130,18 @@ func main() {
 	mylinksService := mylinks.NewService(pool, mylinksRepository)
 	mylinksHandler := mylinks.NewHandler(mylinksService)
 
-	router := server.NewRouter(authHandler, authService, usersHandler, dirsHandler, filesHandler, sharingHandler, favoritesHandler, trashHandler, shareLinksHandler, mylinksHandler)
+	documentService, err := files.NewDocumentService(pool, filesRepository, store, files.DocumentEditorOptions{
+		Enabled: cfg.OfficeEnabled, PublicURL: cfg.OfficePublicURL, InternalURL: cfg.OfficeInternalURL,
+		StorageURL: cfg.OfficeStorageURL, Secret: cfg.OfficeJWTSecret,
+		LightTheme: cfg.OfficeLightTheme, DarkTheme: cfg.OfficeDarkTheme, ThemeSync: cfg.OfficeThemeSync, ShareLinks: shareLinksService,
+	})
+	if err != nil {
+		log.Fatalf("document editor: %v", err)
+	}
+	documentService.StartWorker(ctx)
+	documentHandler := files.NewDocumentHandler(documentService, authService)
+
+	router := server.NewRouter(authHandler, authService, usersHandler, dirsHandler, filesHandler, sharingHandler, favoritesHandler, trashHandler, shareLinksHandler, mylinksHandler, documentHandler)
 
 	if err := server.New(cfg.Port, router).Run(); err != nil {
 		log.Fatalf("server: %v", err)
