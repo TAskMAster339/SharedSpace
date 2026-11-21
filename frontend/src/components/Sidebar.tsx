@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { HardDrive, Star, Trash2, Share2 } from 'lucide-react';
+import { Star, Trash2, Share2 } from 'lucide-react';
 import { useStorageUsageStore } from '../store/storageUsageStore';
 import { StorageIndicator } from './ui/StorageIndicator';
 import { QuotaIndicator } from './ui/QuotaIndicator';
@@ -20,6 +20,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ id, collapsed }) => {
   const currentSection = useDirectoryStore((s) => s.currentSection);
   const { menuItems, storageUsed, storageQuota, shareLinksUsed, shareLinksQuota, isLoading } =
     useSidebarMenu();
+
+  const detailsClassName = cn(
+    'motion-safe:transition-opacity motion-safe:duration-200 motion-safe:ease-out',
+    collapsed ? 'opacity-0' : 'opacity-100',
+  );
 
   return (
     <nav
@@ -86,43 +91,37 @@ export const Sidebar: React.FC<SidebarProps> = ({ id, collapsed }) => {
             })}
           </div>
 
-          <div
-            className={cn(
-              'mt-auto border-t border-theme',
-              collapsed ? 'mb-2 pt-2' : 'mb-6 space-y-3 pt-6',
-            )}
-          >
-            {!collapsed && (
-              <Link
-                to="/links"
-                className="group bg-theme-tertiary hover:bg-theme-hover rounded-theme px-4 py-2.5 shadow-theme-card border border-theme/50 transition-colors cursor-pointer block"
-              >
-                <QuotaIndicator
-                  fullWidth
-                  icon={Share2}
-                  label="Ссылки"
-                  used={shareLinksUsed}
-                  total={shareLinksQuota}
-                />
-              </Link>
-            )}
+          <div className="mt-auto space-y-3 border-t border-theme pt-4 pb-2">
+            <Link
+              to="/links"
+              aria-label="Ссылки"
+              title={collapsed ? 'Ссылки' : undefined}
+              className="group flex h-11 items-center overflow-hidden rounded-theme border border-theme/50 bg-theme-tertiary px-4 transition-colors hover:bg-theme-hover"
+            >
+              <QuotaIndicator
+                fullWidth
+                icon={Share2}
+                label="Ссылки"
+                used={shareLinksUsed}
+                total={shareLinksQuota}
+                className="min-w-[12.75rem]"
+                detailsClassName={detailsClassName}
+              />
+            </Link>
             <button
               type="button"
               onClick={openStorage}
               aria-label="Использование хранилища"
               title={collapsed ? 'Использование хранилища' : undefined}
-              className={cn(
-                'group w-full rounded-theme border border-theme/50 bg-theme-tertiary transition-colors hover:bg-theme-hover',
-                collapsed
-                  ? 'grid min-h-10 place-items-center text-theme-secondary hover:text-brand'
-                  : 'p-4 text-left shadow-theme-card',
-              )}
+              className="group relative flex h-11 w-full items-center overflow-hidden rounded-theme border border-theme/50 bg-theme-tertiary px-4 text-left transition-colors hover:bg-theme-hover"
             >
-              {collapsed ? (
-                <HardDrive size={18} aria-hidden="true" />
-              ) : (
-                <StorageIndicator used={storageUsed} total={storageQuota} />
-              )}
+              <StorageIndicator
+                used={storageUsed}
+                total={storageQuota}
+                className="min-w-[12.75rem]"
+                detailsClassName={detailsClassName}
+                barClassName="absolute bottom-0 inset-x-0 h-0.5 rounded-none"
+              />
             </button>
           </div>
         </>

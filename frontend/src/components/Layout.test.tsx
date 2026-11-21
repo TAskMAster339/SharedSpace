@@ -68,14 +68,25 @@ test('collapses the sidebar, keeps its actions accessible and restores the prefe
   expect(collapse).toHaveAttribute('aria-controls', sidebar.id);
   expect(sidebar).toHaveClass('w-64', 'motion-safe:transition-[width]');
   expect(within(sidebar).queryByText('Меню')).toBeNull();
+  const links = within(sidebar).getByRole('link', { name: 'Ссылки' });
+  const storage = within(sidebar).getByRole('button', { name: 'Использование хранилища' });
+  const linksQuota = within(links).getByText('из 100');
+  const storageQuota = within(storage).getByText('0.0 ГБ / 5 ГБ');
+  expect(linksQuota).toHaveClass('opacity-100');
+  expect(storageQuota).toHaveClass('opacity-100');
   fireEvent.click(collapse);
 
+  expect(within(sidebar).getByRole('link', { name: 'Ссылки' })).toBe(links);
+  expect(links).toHaveAttribute('href', '/links');
+  expect(linksQuota).toHaveClass('opacity-0');
+  expect(within(sidebar).getByRole('button', { name: 'Использование хранилища' })).toBe(storage);
+  expect(storageQuota).toHaveClass('opacity-0');
   expect(sidebar).toHaveClass('w-16');
   expect(within(sidebar).getByRole('link', { name: 'Дашборд' })).toHaveAttribute(
     'title',
     'Дашборд',
   );
-  fireEvent.click(within(sidebar).getByRole('button', { name: 'Использование хранилища' }));
+  fireEvent.click(storage);
   expect(useStorageUsageStore.getState().isOpen).toBe(true);
 
   unmount();
