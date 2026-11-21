@@ -87,7 +87,7 @@ const DocumentEditorPage: React.FC = () => {
               onClick={returnToFile}
               aria-label="К файлу"
               title="К файлу"
-              className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-theme border border-brand/30 bg-brand-light px-2.5 text-sm font-semibold text-brand-dark transition-colors hover:bg-brand hover:text-theme-on-brand dark:text-brand dark:hover:text-theme-on-brand sm:px-3"
+              className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-theme border border-theme bg-theme-secondary px-2.5 text-sm font-semibold text-theme-primary transition-colors hover:bg-theme-hover sm:px-3"
             >
               <ArrowLeft size={18} aria-hidden="true" />
               <span className="hidden sm:inline">К файлу</span>

@@ -78,6 +78,16 @@ Compose сохраняет данные редактора в именованн
 
 В dev при `OFFICE_ENABLED=true` в `.env` команды `make dev` и `make dev-up` автоматически включают профиль `office`. Если API работает, а SDK редактора недоступен, проверьте контейнер через `make dev-ps` и готовность по `curl -fsS http://localhost:8082/healthcheck`. После запуска Document Server можно повторить загрузку предпросмотра.
 
+Production Compose с профилем `office` подключает обе палитры и страницу синхронизации. Для `shared-space.ru` и `www.shared-space.ru` задайте в продовом `.env`:
+
+```dotenv
+OFFICE_LIGHT_THEME=theme-sharedspace-light
+OFFICE_DARK_THEME=theme-sharedspace-dark
+OFFICE_THEME_SYNC=true
+```
+
+Дождитесь завершения открытых сеансов редактирования и выполните `make prod-deploy` из корня проекта. Проверьте `nginx -t` внутри контейнера `onlyoffice` и убедитесь, что `/sharedspace-theme/index.html`, `/sharedspace-theme/theme.js` и обе палитры в `/web-apps/apps/common/main/resources/themes/` отвечают HTTP 200 с учётом перенаправлений. Откройте тестовый документ, переключите обе темы, сохраните правку и проверьте просмотр по публичной ссылке. Для возврата к штатным темам удалите значения обеих переменных палитр, задайте `OFFICE_THEME_SYNC=false` и примените настройки повторным запуском `make prod-deploy`.
+
 Dev Compose монтирует палитры из [onlyoffice/themes](../onlyoffice/themes/) в каталог тем Document Server. В отдельной установке их можно подключить по [инструкции ONLYOFFICE](https://api.onlyoffice.com/docs/docs-api/get-started/how-it-works/customizing-themes) и задать идентификаторы `theme-sharedspace-light` и `theme-sharedspace-dark`. Переключение темы в рабочей области переоткрывает редактор после штатного завершения редактирования в этой вкладке. При наличии правок интерфейс запрашивает подтверждение. При включённой синхронизации SharedSpace задаёт свою палитру при каждом открытии редактора или предпросмотра, включая профили, где раньше была выбрана другая тема в ONLYOFFICE.
 
 Dev Compose публикует файлы из [onlyoffice/theme-bridge](../onlyoffice/theme-bridge/) на том же адресе, что SDK редактора. Для отдельной установки добавьте `index.html` и `theme.js` по путям из `ds-sharedspace-theme.conf`. Подключите этот файл в серверном блоке Nginx для Document Server и укажите свой точный адрес SharedSpace в `frame-ancestors`. Проверьте `nginx -t`, перезагрузите Nginx и включите `OFFICE_THEME_SYNC=true`. При проверке откройте редактор в профиле, где ранее была вручную выбрана другая тема. Должна примениться тема SharedSpace. В режиме просмотра тема меняется при переключении оболочки. После обновления Document Server проверьте фактические цвета панелей обеих палитр, открытие просмотра по ссылке и сохранение правок при смене темы. При сбое синхронизации можно отключить `OFFICE_THEME_SYNC` и переоткрыть редактор.
