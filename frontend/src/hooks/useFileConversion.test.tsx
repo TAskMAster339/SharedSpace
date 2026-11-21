@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { convertAndDownload, convertAndSave, type ConversionResponse } from '../api/files';
 import type { AuthUser } from '../api/auth';
+import { ApiError } from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import { startFileConversion, useOnFileConverted } from './useFileConversion';
 import { useToastStore } from './useToast';
@@ -60,7 +61,12 @@ test('closing the queue notification keeps the job running and refreshes the mou
   expect(destination).toHaveBeenCalledTimes(1);
   expect(destination).toHaveBeenCalledWith(saved, expect.any(AbortSignal));
   expect(useAuthStore.getState().refreshUser).toHaveBeenCalledTimes(1);
-  expect(useToastStore.getState().toasts).toEqual([]);
+  expect(useToastStore.getState().toasts).toEqual([
+    expect.objectContaining({
+      variant: 'success',
+      message: expect.stringContaining('сконвертирован и сохранён'),
+    }),
+  ]);
 });
 
 test('downloads the completed conversion and removes its notification', async () => {
@@ -78,8 +84,36 @@ test('downloads the completed conversion and removes its notification', async ()
   try {
     await startFileConversion('source', 'picture.png', 'jpg', 'download');
     expect(linkClick).toHaveBeenCalledTimes(1);
-    expect(useToastStore.getState().toasts).toEqual([]);
+    expect(useToastStore.getState().toasts).toEqual([
+      expect.objectContaining({
+        variant: 'success',
+        message: expect.stringContaining('Скачивание началось'),
+      }),
+    ]);
   } finally {
     linkClick.mockRestore();
   }
 });
+
+test.each([
+  { accepted: false, status: 429, reason: 'Очередь обработки заполнена' },
+  { accepted: true, status: 400, reason: 'Не удалось обработать файл' },
+])(
+  'reports a failed conversion with the reason (accepted=$accepted)',
+  async ({ accepted, status, reason }) => {
+    jest.mocked(convertAndSave).mockImplementation(async (_token, _id, _format, options) => {
+      if (accepted) options?.onAccepted?.();
+      throw new ApiError(reason, status);
+    });
+
+    await startFileConversion('source', 'picture.png', 'webp', 'save');
+
+    expect(useToastStore.getState().toasts).toEqual([
+      expect.objectContaining({
+        variant: 'error',
+        message: `Не удалось конвертировать файл «picture.png». ${reason}`,
+      }),
+    ]);
+    expect(useAuthStore.getState().refreshUser).not.toHaveBeenCalled();
+  },
+);

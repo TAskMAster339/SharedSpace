@@ -57,6 +57,7 @@ export async function startFileConversion(
       if (!sameUser()) return;
       listeners.forEach((listener) => listener(result));
       void useAuthStore.getState().refreshUser();
+      showToast(`Файл «${filename}» сконвертирован и сохранён`, 'success');
     } else {
       const result = await convertAndDownload(accessToken, fileId, target, options);
       if (!sameUser()) return;
@@ -66,11 +67,12 @@ export async function startFileConversion(
       document.body.appendChild(link);
       link.click();
       link.remove();
+      showToast(`Файл «${filename}» сконвертирован. Скачивание началось.`, 'success');
     }
   } catch (error) {
     if (sameUser()) {
-      const message = error instanceof ApiError ? error.message : 'Не удалось конвертировать файл';
-      showToast(message, 'error');
+      const message = `Не удалось конвертировать файл «${filename}».`;
+      showToast(error instanceof ApiError ? `${message} ${error.message}` : message, 'error');
     }
   } finally {
     unsubscribe();

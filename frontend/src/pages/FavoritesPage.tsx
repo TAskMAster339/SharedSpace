@@ -362,7 +362,6 @@ const FavoritesPage: React.FC = () => {
       {convertFileData && (
         <ConvertModal
           key={convertFileData.id}
-          isOpen={true}
           onClose={() => setConvertFileData(null)}
           fileId={convertFileData.id}
           fileName={convertFileData.filename}

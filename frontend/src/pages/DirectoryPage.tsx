@@ -1480,7 +1480,6 @@ const DirectoryPage: React.FC = () => {
 
       {convertFileData && (
         <ConvertModal
-          isOpen={true}
           onClose={() => setConvertFileData(null)}
           fileId={convertFileData.id}
           fileName={convertFileData.filename}

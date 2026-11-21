@@ -24,16 +24,15 @@ test('closes the format picker before the background conversion completes', () =
 
   function TestScreen() {
     const [open, setOpen] = useState(true);
-    return (
+    return open ? (
       <ConvertModal
-        isOpen={open}
         onClose={() => setOpen(false)}
         fileId="file"
         fileName="photo.png"
         mimeType="image/png"
         extension="png"
       />
-    );
+    ) : null;
   }
 
   render(<TestScreen />);

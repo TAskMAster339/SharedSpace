@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useState } from 'react';
+import React, { useId, useState } from 'react';
 import { AlertCircle, Download, Save } from 'lucide-react';
 import { Button } from './Button';
 import { Modal } from './Modal';
@@ -7,7 +7,6 @@ import { getAvailableConvertFormats, isConvertSupported } from '../../constants/
 import { startFileConversion } from '../../hooks/useFileConversion';
 
 interface ConvertModalProps {
-  isOpen: boolean;
   onClose: () => void;
   fileId: string;
   fileName: string;
@@ -16,7 +15,6 @@ interface ConvertModalProps {
 }
 
 export const ConvertModal: React.FC<ConvertModalProps> = ({
-  isOpen,
   onClose,
   fileId,
   fileName,
@@ -27,17 +25,10 @@ export const ConvertModal: React.FC<ConvertModalProps> = ({
   const [action, setAction] = useState<'download' | 'save'>('download');
   const formatId = useId();
 
-  useEffect(() => {
-    if (isOpen) {
-      setFormat('');
-      setAction('download');
-    }
-  }, [isOpen, fileId]);
-
   const supported = isConvertSupported(mimeType, extension);
 
   return (
-    <Modal native isOpen={isOpen} onClose={onClose} title="Конвертация файла">
+    <Modal native isOpen blurBackdrop={false} onClose={onClose} title="Конвертация файла">
       <form
         className="space-y-4"
         onSubmit={(event) => {

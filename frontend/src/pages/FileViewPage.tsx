@@ -832,14 +832,16 @@ const FileViewPage: React.FC = () => {
               </button>
             </div>
 
-            <ConvertModal
-              isOpen={isConvertModalOpen}
-              onClose={() => setIsConvertModalOpen(false)}
-              fileId={file.id}
-              fileName={file.filename}
-              mimeType={file.mime_type}
-              extension={file.extension}
-            />
+            {isConvertModalOpen && (
+              <ConvertModal
+                key={file.id}
+                onClose={() => setIsConvertModalOpen(false)}
+                fileId={file.id}
+                fileName={file.filename}
+                mimeType={file.mime_type}
+                extension={file.extension}
+              />
+            )}
 
             {accessToken && (
               <ShareLinkModal
