@@ -20,13 +20,14 @@ func getEnvOr(key, def string) string {
 func newTestStorage(t *testing.T) *Storage {
 	t.Helper()
 	ctx := context.Background()
+	endpoint := getEnvOr("MINIO_ENDPOINT", "localhost:9000")
 	s, err := New(
 		ctx,
-		getEnvOr("MINIO_ENDPOINT", "localhost:9000"),
+		endpoint,
 		getEnvOr("MINIO_ACCESS_KEY", "minioadmin"),
 		getEnvOr("MINIO_SECRET_KEY", "minioadmin"),
 		"test-bucket",
-		"localhost:9000",
+		endpoint,
 		false,
 		false,
 		"",

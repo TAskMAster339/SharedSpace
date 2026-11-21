@@ -34,6 +34,8 @@ type officeCallbackClaims struct {
 	jwt.RegisteredClaims
 }
 
+const maxOfficeResultSize = 100 * 1024 * 1024
+
 func (s *DocumentService) ProcessCallback(ctx context.Context, token string) error {
 	var claims officeCallbackClaims
 	if err := s.parseOfficeToken(token, &claims); err != nil {
@@ -164,7 +166,7 @@ func (s *DocumentService) stageDocument(ctx context.Context, session documentSes
 		return errors.New("не удалось скачать результат из редактора")
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK || resp.ContentLength > maxFileSize {
+	if resp.StatusCode != http.StatusOK || resp.ContentLength > maxOfficeResultSize {
 		return fmt.Errorf("редактор вернул недоступный или слишком большой результат (HTTP %d)", resp.StatusCode)
 	}
 	tmp, err := os.CreateTemp("", "sharedspace-office-*")
@@ -173,11 +175,11 @@ func (s *DocumentService) stageDocument(ctx context.Context, session documentSes
 	}
 	defer os.Remove(tmp.Name())
 	defer tmp.Close()
-	size, err := io.Copy(tmp, io.LimitReader(resp.Body, maxFileSize+1))
+	size, err := io.Copy(tmp, io.LimitReader(resp.Body, maxOfficeResultSize+1))
 	if err != nil {
 		return err
 	}
-	if size > maxFileSize {
+	if size > maxOfficeResultSize {
 		return errors.New("документ превышает 100 МБ")
 	}
 	if err := validateOfficeResult(tmp, size, session.Format); err != nil {

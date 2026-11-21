@@ -14,13 +14,17 @@ import (
 )
 
 func NewPool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
+	return NewBoundedPool(ctx, dsn, 2, 10)
+}
+
+func NewBoundedPool(ctx context.Context, dsn string, minConns, maxConns int32) (*pgxpool.Pool, error) {
 	cfg, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
 		return nil, fmt.Errorf("parse dsn: %w", err)
 	}
 
-	cfg.MaxConns = 10
-	cfg.MinConns = 2
+	cfg.MaxConns = maxConns
+	cfg.MinConns = minConns
 
 	connCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()

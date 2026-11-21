@@ -71,6 +71,14 @@ type Config struct {
 }
 
 func Load() (*Config, error) {
+	return load(false)
+}
+
+func LoadWorker() (*Config, error) {
+	return load(true)
+}
+
+func load(worker bool) (*Config, error) {
 	if envFile := findEnvFile(); envFile != "" {
 		godotenv.Load(envFile)
 	}
@@ -90,7 +98,7 @@ func Load() (*Config, error) {
 	}
 
 	secret := getEnv("JWT_SECRET", "")
-	if secret == "" {
+	if secret == "" && !worker {
 		return nil, fmt.Errorf("JWT_SECRET is required")
 	}
 
@@ -110,7 +118,7 @@ func Load() (*Config, error) {
 	}
 
 	appURL := strings.TrimRight(getEnv("APP_URL", ""), "/")
-	if appURL == "" {
+	if appURL == "" && !worker {
 		return nil, fmt.Errorf("APP_URL is required")
 	}
 

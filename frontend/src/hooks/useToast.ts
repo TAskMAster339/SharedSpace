@@ -9,7 +9,7 @@ interface ToastStore {
     variant?: ToastVariant,
     actionLabel?: string,
     onAction?: () => void,
-  ) => void;
+  ) => string;
   removeToast: (id: string) => void;
   toastMobileBottomPx: number;
   setToastMobileBottomPx: (px: number) => void;
@@ -22,6 +22,7 @@ export const useToastStore = create<ToastStore>((set) => ({
     set((state) => ({
       toasts: [...state.toasts, { id, message, variant, actionLabel, onAction }],
     }));
+    return id;
   },
   removeToast: (id) => {
     set((state) => ({

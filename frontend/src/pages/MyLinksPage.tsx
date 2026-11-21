@@ -19,7 +19,6 @@ import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { RenameModal } from '../components/ui/RenameModal';
 import { ShareLinkModal } from '../components/ui/ShareLinkModal';
 import { ConvertModal } from '../components/ui/ConvertModal';
-import { useFileConversion } from '../hooks/useFileConversion';
 import { formatFileSize, formatDate } from '../utils/format';
 import { useToastStore } from '../hooks/useToast';
 import SEOHead from '../components/SEOHead';
@@ -33,8 +32,6 @@ const MyLinksPage: React.FC = () => {
   const refreshUser = useAuthStore((state) => state.refreshUser);
   const showToast = useToastStore((s) => s.showToast);
   const { toggleFavorite } = useFavorites();
-  const { isConverting, conversionProgress, convertAndDownload, convertAndSave } =
-    useFileConversion();
 
   const [items, setItems] = useState<LinkItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -225,28 +222,6 @@ const MyLinksPage: React.FC = () => {
       });
     },
     [items],
-  );
-
-  const handleConvertAndDownload = useCallback(
-    (format: string) => {
-      if (!convertFileData) return Promise.reject('No file');
-      return convertAndDownload(convertFileData.id, format, convertFileData.filename);
-    },
-    [convertFileData, convertAndDownload],
-  );
-
-  const handleConvertAndSave = useCallback(
-    async (format: string) => {
-      if (!convertFileData) return null;
-      const resultFileId = await convertAndSave(
-        convertFileData.id,
-        format,
-        convertFileData.filename,
-      );
-      loadLinks();
-      return resultFileId;
-    },
-    [convertFileData, convertAndSave, loadLinks],
   );
 
   const handleRename = useCallback(
@@ -470,16 +445,11 @@ const MyLinksPage: React.FC = () => {
       {convertFileData && (
         <ConvertModal
           key={convertFileData.id}
-          isOpen={true}
           onClose={() => setConvertFileData(null)}
           fileId={convertFileData.id}
           fileName={convertFileData.filename}
           mimeType={convertFileData.mimeType}
           extension={convertFileData.extension}
-          onConvertAndDownload={handleConvertAndDownload}
-          onConvertAndSave={handleConvertAndSave}
-          isConverting={isConverting}
-          conversionProgress={conversionProgress}
         />
       )}
 

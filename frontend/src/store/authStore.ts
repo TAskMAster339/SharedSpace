@@ -113,11 +113,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   refreshUser: async () => {
-    const { accessToken } = get();
+    const { accessToken, user: currentUser } = get();
     if (!accessToken) return;
     try {
       const user = await getMe(accessToken);
-      set({ user, isActivated: deriveActivated(user) });
+      if (get().user?.id === currentUser?.id) {
+        set({ user, isActivated: deriveActivated(user) });
+      }
     } catch {
       return;
     }

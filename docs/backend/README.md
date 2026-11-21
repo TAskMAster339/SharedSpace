@@ -8,13 +8,14 @@
 - **База данных**: PostgreSQL (pgx/v5)
 - **Объектное хранилище**: MinIO (minio-go/v7)
 - **Аутентификация**: JWT (HS256, access + refresh токены)
-- **Конвертация файлов**: ffmpeg (u2takey/ffmpeg-go)
+- **Конвертация файлов**: ffmpeg в отдельном воркере
 
 ## Структура проекта
 
 ```
 backend/
-  cmd/api/main.go              — точка входа
+  cmd/api/main.go              — HTTP API
+  cmd/media-worker/main.go     — воркер превью и конвертации
   internal/
     access/                    — контроль доступа (RBAC)
     apperror/                  — стандартизированные ошибки API
@@ -40,7 +41,7 @@ backend/
 - Go 1.26+
 - PostgreSQL 15+
 - MinIO
-- ffmpeg (для конвертации файлов)
+- ffmpeg (для запуска `go run ./cmd/media-worker` и тестов медиа)
 
 ## Запуск
 
@@ -105,7 +106,6 @@ make fmt   # gofmt -s + goimports
 | `github.com/swaggo/http-swagger/v2` | Swagger UI для go-chi |
 | `github.com/swaggo/swag` | Генерация Swagger-спецификации из аннотаций |
 | `github.com/HugoSmits86/nativewebp` | Конвертация изображений в WebP (нативный C) |
-| `github.com/u2takey/ffmpeg-go` | Обёртка для ffmpeg (конвертация медиафайлов) |
 | `golang.org/x/image` | Дополнительные кодеки изображений |
 | `golang.org/x/sync` | Синхронизация (errgroup для конкурентных операций) |
 

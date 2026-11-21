@@ -33,8 +33,12 @@ func (s *Service) CleanupTmp(ctx context.Context) {
 // CleanupPreviews returns the last processed key so the next run can resume.
 // Failed deletions are retried on the next full scan.
 func (s *Service) CleanupPreviews(ctx context.Context, cursor string, cutoff time.Time) string {
+	return s.cleanupMediaObjects(ctx, previewPrefix, cursor, cutoff)
+}
+
+func (s *Service) cleanupMediaObjects(ctx context.Context, prefix, cursor string, cutoff time.Time) string {
 	for ctx.Err() == nil {
-		keys, last, err := s.storage.ListOldObjectPage(ctx, previewPrefix, cursor, cutoff, previewBatchSize)
+		keys, last, err := s.storage.ListOldObjectPage(ctx, prefix, cursor, cutoff, previewBatchSize)
 		if err != nil {
 			log.Printf("preview cleanup: list: %v", err)
 			return cursor
@@ -44,9 +48,12 @@ func (s *Service) CleanupPreviews(ctx context.Context, cursor string, cutoff tim
 		}
 		if len(keys) > 0 {
 			var liveKeys []string
-			err := s.db.QueryRow(ctx, `
-				SELECT ARRAY(SELECT object_key FROM file_previews WHERE object_key = ANY($1::text[]))
-			`, keys).Scan(&liveKeys)
+			query := `SELECT ARRAY(SELECT object_key FROM file_previews WHERE object_key = ANY($1::text[]))`
+			if prefix == savedMediaPrefix {
+				query = `SELECT ARRAY(SELECT object_key FROM files WHERE object_key = ANY($1::text[])
+                    UNION SELECT object_key FROM file_versions WHERE object_key = ANY($1::text[]))`
+			}
+			err := s.db.QueryRow(ctx, query, keys).Scan(&liveKeys)
 			if err != nil {
 				log.Printf("preview cleanup: lookup: %v", err)
 				return cursor
@@ -79,7 +86,7 @@ func (s *Service) StartCleanupWorker(ctx context.Context) {
 	go func() {
 		ticker := time.NewTicker(cleanupPeriod)
 		defer ticker.Stop()
-		var previewCursor string
+		var previewCursor, convertedCursor string
 		for {
 			select {
 			case <-ticker.C:
@@ -90,6 +97,9 @@ func (s *Service) StartCleanupWorker(ctx context.Context) {
 				previewCtx, cancelPreview := context.WithTimeout(ctx, cleanupTimeout)
 				previewCursor = s.CleanupPreviews(previewCtx, previewCursor, time.Now().Add(-previewMaxAge))
 				cancelPreview()
+				convCtx, cancelConv := context.WithTimeout(ctx, cleanupTimeout)
+				convertedCursor = s.cleanupMediaObjects(convCtx, savedMediaPrefix, convertedCursor, time.Now().Add(-previewMaxAge))
+				cancelConv()
 			case <-ctx.Done():
 				return
 			}

@@ -15,8 +15,6 @@ import { StorageUsageModal } from './ui/StorageUsageModal';
 import { Footer } from './Footer';
 import { MobileBottomNav } from './MobileBottomNav';
 import { ScrollToTopButton } from './ScrollToTopButton';
-import { ToastContainer } from './ui/ToastContainer';
-import { useToastStore } from '../hooks/useToast';
 import { useAuth } from '../hooks/useAuth';
 import { cn } from '../utils/cn';
 import { PRIVACY_POLICY_PATH } from '../constants/privacy';
@@ -54,7 +52,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, fillViewport = false }
   const location = useLocation();
   const showSidebar = isAuthenticated && !workspace;
   const isOnLandingPage = location.pathname === '/';
-  const { toasts, removeToast } = useToastStore();
 
   return (
     <div className={cn('bg-theme-primary flex flex-col', workspace ? 'h-dvh' : 'min-h-screen')}>
@@ -132,7 +129,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, fillViewport = false }
       {isAuthenticated && !workspace && <MobileBottomNav />}
       {isAuthenticated && !reader && <StorageUsageModal />}
       {!workspace && <ScrollToTopButton />}
-      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );
 };

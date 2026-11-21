@@ -19,6 +19,10 @@ services:
       dockerfile: Dockerfile
     restart: on-failure
     environment:
+      JOB_QUEUE_LIMIT: ${JOB_QUEUE_LIMIT:-200}
+      MEDIA_PREVIEW_QUEUE_LIMIT: ${MEDIA_PREVIEW_QUEUE_LIMIT:-150}
+      MEDIA_CONVERSION_QUEUE_LIMIT: ${MEDIA_CONVERSION_QUEUE_LIMIT:-50}
+      MEDIA_CONVERSION_USER_LIMIT: ${MEDIA_CONVERSION_USER_LIMIT:-4}
       DATABASE_URL: ${DATABASE_URL}
       MINIO_ENDPOINT: ${MINIO_ENDPOINT}
       MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT}
@@ -58,6 +62,38 @@ services:
       start_period: 10s
     depends_on:
       postgres:
+        condition: service_healthy
+
+  media-worker:
+    build:
+      context: ./backend
+      target: media-worker
+    restart: unless-stopped
+    init: true
+    cpus: "${MEDIA_WORKER_CPUS:-1}"
+    mem_limit: ${MEDIA_WORKER_MEMORY:-512m}
+    stop_grace_period: 15s
+    ulimits:
+      fsize: 536870913
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT}
+      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT}
+      MINIO_USE_SSL: ${MINIO_USE_SSL}
+      MINIO_PUBLIC_USE_SSL: ${MINIO_PUBLIC_USE_SSL}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_BUCKET: ${MINIO_BUCKET}
+      MINIO_TMP_BUCKET: ${MINIO_TMP_BUCKET}
+      MINIO_REGION: ${MINIO_REGION}
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /app/media-work/.healthy && find /app/media-work/.healthy -mmin -1 | grep -q ."]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 10s
+    depends_on:
+      backend:
         condition: service_healthy
 
   onlyoffice:

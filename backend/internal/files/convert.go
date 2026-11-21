@@ -1,16 +1,18 @@
 package files
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
-
-	ffmpeg "github.com/u2takey/ffmpeg-go"
 )
 
-var errUnsupportedConversion = errors.New("unsupported conversion")
+const mediaDemuxers = "aac,apng,asf,avi,bmp_pipe,dv,flac,flv,gif,ico,j2k_pipe,jpeg_pipe,jpegxl_pipe,matroska,mjpeg,mov,mp3,mpeg,mpegts,mpegvideo,ogg,png_pipe,psd_pipe,qoi_pipe,rm,svg_pipe,tiff_pipe,wav,webp_pipe"
 
 var allowedConversions = map[string]map[string]bool{
 	"png":  {"jpg": true, "webp": true, "gif": true, "bmp": true, "tiff": true},
@@ -67,83 +69,70 @@ var mimeMap = map[string]string{
 	"aac":  "audio/aac",
 }
 
-func convertImageData(data []byte, target string, fileExt string) (out []byte, sourceFormat, mimeType, ext string, err error) {
-	target = strings.ToLower(target)
-	if target == "jpeg" {
-		target = "jpg"
-	}
-
-	sourceFormat = detectFormat(data, fileExt)
-	if sourceFormat == "jpeg" {
-		sourceFormat = "jpg"
-	}
-	if sourceFormat == "" {
-		return nil, "", "", "", fmt.Errorf("неизвестный формат исходного файла")
-	}
-	if !allowedConversions[sourceFormat][target] {
-		return nil, "", "", "", errUnsupportedConversion
-	}
-
-	inPath, err := writeTempFile(data, "convert_in_*."+sourceFormat)
+func renderConversion(ctx context.Context, dir, input, target, extension string) (string, string, int64, error) {
+	file, err := os.Open(input)
 	if err != nil {
-		return nil, "", "", "", err
+		return "", "", 0, err
 	}
-	defer os.Remove(inPath)
+	var header [64]byte
+	n, err := io.ReadFull(file, header[:])
+	file.Close()
+	if err != nil && !errors.Is(err, io.EOF) && !errors.Is(err, io.ErrUnexpectedEOF) {
+		return "", "", 0, err
+	}
+	source := detectFormat(header[:n], extension)
+	if source == "jpeg" {
+		source = "jpg"
+	}
+	if !allowedConversions[source][target] {
+		return "", "", 0, invalidMedia("неподдерживаемая пара форматов")
+	}
 
-	outFile, err := os.CreateTemp("", "convert_out_*."+target)
+	out, err := os.CreateTemp(dir, "media-output-*."+target)
 	if err != nil {
-		return nil, "", "", "", fmt.Errorf("create temp output: %w", err)
+		return "", "", 0, err
 	}
-	outPath := outFile.Name()
-	outFile.Close()
-	defer os.Remove(outPath)
-
-	args := ffmpeg.KwArgs{}
+	output := out.Name()
+	if err := out.Close(); err != nil {
+		os.Remove(output)
+		return "", "", 0, err
+	}
+	args := []string{"-nostdin", "-v", "error", "-xerror", "-filter_threads", "1", "-filter_complex_threads", "1",
+		"-threads", "1", "-max_alloc", "67108864", "-protocol_whitelist", "file", "-format_whitelist", mediaDemuxers, "-i", input, "-threads", "1",
+		"-fs", strconv.Itoa(maxFileSize + 1), "-y"}
 	if codec, ok := videoCodecMap[target]; ok {
-		args["c:v"] = codec
+		args = append(args, "-c:v", codec)
 	}
 	if codec, ok := audioCodecMap[target]; ok {
-		args["c:a"] = codec
+		args = append(args, "-c:a", codec)
 	}
 	if audioTargets[target] {
-		args["vn"] = ""
+		args = append(args, "-vn")
 	}
-
-	if err := ffmpeg.Input(inPath).
-		Output(outPath, args).
-		OverWriteOutput().
-		Run(); err != nil {
-		return nil, "", "", "", fmt.Errorf("ffmpeg: %w", err)
+	if err := exec.CommandContext(ctx, "ffmpeg", append(args, output)...).Run(); err != nil {
+		os.Remove(output)
+		return "", "", 0, ffmpegFailure(ctx, err)
 	}
-
-	out, err = os.ReadFile(outPath)
-	if err != nil {
-		return nil, "", "", "", fmt.Errorf("read output: %w", err)
+	info, err := os.Stat(output)
+	if err != nil || info.Size() == 0 || info.Size() > maxFileSize {
+		os.Remove(output)
+		if err != nil {
+			return "", "", 0, err
+		}
+		return "", "", 0, invalidMedia("Результат пуст или превышает 512 МиБ")
 	}
-
-	mimeType = mimeMap[target]
-	if mimeType == "" {
-		mimeType = "application/octet-stream"
-	}
-	ext = target
-	return out, sourceFormat, mimeType, ext, nil
+	return output, source, info.Size(), nil
 }
 
-func writeTempFile(data []byte, pattern string) (string, error) {
-	f, err := os.CreateTemp("", pattern)
-	if err != nil {
-		return "", fmt.Errorf("create temp: %w", err)
+func ffmpegFailure(ctx context.Context, err error) error {
+	if ctx.Err() != nil {
+		return ctx.Err()
 	}
-	if _, err := f.Write(data); err != nil {
-		f.Close()
-		os.Remove(f.Name())
-		return "", fmt.Errorf("write temp: %w", err)
+	var exit *exec.ExitError
+	if errors.As(err, &exit) && exit.ExitCode() >= 0 {
+		return invalidMedia("Не удалось обработать файл")
 	}
-	if err := f.Close(); err != nil {
-		os.Remove(f.Name())
-		return "", fmt.Errorf("close temp: %w", err)
-	}
-	return f.Name(), nil
+	return fmt.Errorf("ffmpeg: %w", err)
 }
 
 func detectFormat(data []byte, ext string) string {
@@ -180,7 +169,7 @@ func detectFormat(data []byte, ext string) string {
 		return "wav"
 	}
 	if data[0] == 0x1A && data[1] == 0x45 && data[2] == 0xDF && data[3] == 0xA3 {
-		if len(data) > 64 && strings.Contains(strings.ToLower(string(data[:64])), "webm") {
+		if len(data) >= 64 && strings.Contains(strings.ToLower(string(data[:64])), "webm") {
 			return "webm"
 		}
 		return "mkv"

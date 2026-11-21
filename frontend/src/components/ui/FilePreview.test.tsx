@@ -14,7 +14,7 @@ test('loads a media preview and falls back to the icon if the image fails', asyn
   getPreview.mockResolvedValue({ url: 'https://storage.example/preview.jpg' });
   render(<FilePreview fileId="photo" type="img" />);
   const preview = await screen.findByAltText('');
-  expect(getPreview).toHaveBeenCalledWith('access-token', 'photo');
+  expect(getPreview).toHaveBeenCalledWith('access-token', 'photo', expect.any(AbortSignal));
   fireEvent.error(preview);
   expect(screen.queryByAltText('')).toBeNull();
 });

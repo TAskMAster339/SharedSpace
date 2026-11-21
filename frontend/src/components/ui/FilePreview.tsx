@@ -48,16 +48,16 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
   useEffect(() => {
     setUrl(null);
     if (!media || !visible || !token) return;
-    let active = true;
-    getFilePreviewUrl(token, fileId)
+    const controller = new AbortController();
+    getFilePreviewUrl(token, fileId, controller.signal)
       .then((result) => {
-        if (active) setUrl(result.url);
+        if (!controller.signal.aborted) setUrl(result.url);
       })
       .catch(() => {
         /* Keep the file icon for unsupported or damaged media. */
       });
     return () => {
-      active = false;
+      controller.abort();
     };
   }, [fileId, media, visible, token]);
 

@@ -44,6 +44,10 @@ services:
     ports:
       - "8080:8080"
     environment:
+      JOB_QUEUE_LIMIT: ${JOB_QUEUE_LIMIT:-200}
+      MEDIA_PREVIEW_QUEUE_LIMIT: ${MEDIA_PREVIEW_QUEUE_LIMIT:-150}
+      MEDIA_CONVERSION_QUEUE_LIMIT: ${MEDIA_CONVERSION_QUEUE_LIMIT:-50}
+      MEDIA_CONVERSION_USER_LIMIT: ${MEDIA_CONVERSION_USER_LIMIT:-4}
       DATABASE_URL: ${DATABASE_URL}
       MINIO_ENDPOINT: minio:9000
       MINIO_PUBLIC_ENDPOINT: localhost
@@ -67,10 +71,49 @@ services:
       OFFICE_THEME_SYNC: ${OFFICE_THEME_SYNC:-true}
       DEV_LOG_EMAILS: "true"
       APP_URL: ${APP_URL:-http://localhost:3000}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
     depends_on:
       postgres:
         condition: service_healthy
       minio:
+        condition: service_healthy
+    networks:
+      - sharedspace-net
+
+  media-worker:
+    build:
+      context: ./backend
+      target: media-worker
+    restart: unless-stopped
+    init: true
+    cpus: "${MEDIA_WORKER_CPUS:-1}"
+    mem_limit: ${MEDIA_WORKER_MEMORY:-512m}
+    stop_grace_period: 15s
+    ulimits:
+      fsize: 536870913
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      MINIO_ENDPOINT: minio:9000
+      MINIO_PUBLIC_ENDPOINT: localhost
+      MINIO_USE_SSL: "false"
+      MINIO_PUBLIC_USE_SSL: "false"
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_TMP_BUCKET: tmp
+      MINIO_BUCKET: ${MINIO_BUCKET}
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /app/media-work/.healthy && find /app/media-work/.healthy -mmin -1 | grep -q ."]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 10s
+    depends_on:
+      backend:
         condition: service_healthy
     networks:
       - sharedspace-net

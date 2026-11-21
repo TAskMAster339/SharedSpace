@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import { Layout } from './components/Layout';
+import { ToastContainer } from './components/ui/ToastContainer';
 import { DropZoneWrapper } from './components/DropZoneWrapper';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicRoute from './components/PublicRoute';
@@ -176,6 +177,7 @@ const App: React.FC = () => {
           пока пользователь не подтвердит почту (по ссылке из письма) или не
           выйдет из аккаунта. */}
       <EmailVerificationModal />
+      <ToastContainer />
     </Router>
   );
 };

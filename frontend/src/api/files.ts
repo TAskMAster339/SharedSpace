@@ -1,4 +1,4 @@
-import { apiRequest } from './client';
+import { ApiError, apiRequest } from './client';
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api/v1';
 
 export interface FileUploadResponse {
@@ -44,8 +44,8 @@ export function getRecentFiles(accessToken: string, limit?: number): Promise<Rec
   });
 }
 
-const maxUploadBytes = 100 * 1024 * 1024;
-const uploadLimitMessage = 'Общий размер файлов в одной загрузке не должен превышать 100 МиБ';
+const maxUploadBytes = 512 * 1024 * 1024;
+const uploadLimitMessage = 'Общий размер файлов в одной загрузке не должен превышать 512 МиБ';
 
 // Функция загрузки с прогрессом через XHR
 export function uploadFilesWithProgress(
@@ -124,11 +124,80 @@ export function getFileMetadata(
   });
 }
 
-export function getFilePreviewUrl(accessToken: string, fileId: string): Promise<{ url: string }> {
-  return apiRequest<{ url: string }>(`/files/${fileId}/preview`, {
-    method: 'GET',
-    token: accessToken,
+type MediaJob = {
+  job_id: string;
+  state: 'queued' | 'running' | 'succeeded' | 'failed';
+  retry_after?: number;
+  preview?: { url: string };
+  conversion?: ConversionResponse;
+  download?: ConversionDownloadResponse;
+  failure?: { message: string; code: string; status: number };
+};
+
+function waitForMediaPoll(delay: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) throw new DOMException('Запрос отменён', 'AbortError');
+    const timer = window.setTimeout(() => {
+      signal?.removeEventListener('abort', abort);
+      resolve();
+    }, delay);
+    function abort() {
+      window.clearTimeout(timer);
+      reject(new DOMException('Запрос отменён', 'AbortError'));
+    }
+    signal?.addEventListener('abort', abort, { once: true });
   });
+}
+
+async function pollMediaJob(
+  token: string,
+  accepted: MediaJob,
+  timeout: number | undefined,
+  signal?: AbortSignal,
+): Promise<MediaJob> {
+  const deadline = timeout === undefined ? Infinity : Date.now() + timeout;
+  let delay = (accepted.retry_after ?? 2) * 1000;
+  while (Date.now() < deadline) {
+    await waitForMediaPoll(delay + Math.random() * 350, signal);
+    try {
+      const job = await apiRequest<MediaJob>(`/files/jobs/${accepted.job_id}`, {
+        token,
+        cache: 'no-store',
+        signal,
+      });
+      if (job.state === 'succeeded') return job;
+      if (job.state === 'failed') {
+        const failure = job.failure;
+        throw new ApiError(
+          failure?.message ?? 'Ошибка обработки файла',
+          failure?.status ?? 503,
+          failure?.code ?? 'media_failed',
+        );
+      }
+      delay = Math.min(10_000, Math.max((job.retry_after ?? 2) * 1000, delay * 1.5));
+    } catch (error) {
+      const gatewayError =
+        error instanceof ApiError && !error.code && [502, 503, 504].includes(error.status);
+      if (!(error instanceof TypeError) && !gatewayError) throw error;
+      delay = Math.min(10_000, delay * 2);
+    }
+  }
+  throw new ApiError('Обработка продолжается в очереди', 504, 'media_pending');
+}
+
+export async function getFilePreviewUrl(
+  accessToken: string,
+  fileId: string,
+  signal?: AbortSignal,
+): Promise<{ url: string }> {
+  const response = await apiRequest<{ url: string } | MediaJob>(
+    `/files/${fileId}/preview?async=true`,
+    { token: accessToken, signal },
+  );
+  if ('url' in response) return response;
+  const job = await pollMediaJob(accessToken, response, 60_000, signal);
+  if (!job.preview) throw new ApiError('Превью недоступно', 404);
+  return job.preview;
 }
 
 export function getFileContentUrl(
@@ -217,41 +286,73 @@ export interface ConversionDownloadResponse {
   filename: string;
 }
 
-// Конвертация с сохранением в директорию
-export function convertAndSave(
-  accessToken: string,
-  fileId: string,
-  targetFormat: string,
-  directoryId?: string,
-): Promise<ConversionResponse> {
-  const body: ConvertRequest = {
-    target_format: targetFormat,
-    save: true,
-  };
-
-  if (directoryId) {
-    body.directory_id = directoryId;
-  }
-
-  return apiRequest<ConversionResponse>(`/files/${fileId}/convert`, {
-    method: 'POST',
-    token: accessToken,
-    body: JSON.stringify(body),
-  });
+interface ConversionOptions {
+  onAccepted?: () => void;
+  signal?: AbortSignal;
 }
 
-// Конвертация с скачиванием (без сохранения)
-export function convertAndDownload(
+async function requestConversion(
+  token: string,
+  fileId: string,
+  body: ConvertRequest,
+  { onAccepted, signal }: ConversionOptions,
+): Promise<MediaJob | ConversionResponse | ConversionDownloadResponse> {
+  const path = `/files/${fileId}/convert?async=true`;
+  const options = {
+    method: 'POST',
+    token,
+    headers: { 'Idempotency-Key': crypto.randomUUID() },
+    signal,
+    body: JSON.stringify(body),
+  };
+  let response: MediaJob | ConversionResponse | ConversionDownloadResponse;
+  try {
+    response = await apiRequest(path, options);
+  } catch (error) {
+    if (!(error instanceof TypeError)) throw error;
+    response = await apiRequest(path, options);
+  }
+  if (!('job_id' in response)) return response;
+  if (response.state === 'queued' || response.state === 'running') onAccepted?.();
+  return pollMediaJob(token, response, undefined, signal);
+}
+
+export async function convertAndSave(
   accessToken: string,
   fileId: string,
   targetFormat: string,
+  options: ConversionOptions = {},
+): Promise<ConversionResponse> {
+  const response = await requestConversion(
+    accessToken,
+    fileId,
+    {
+      target_format: targetFormat,
+      save: true,
+    },
+    options,
+  );
+  if ('result_file_id' in response) return response;
+  if ('conversion' in response && response.conversion) return response.conversion;
+  throw new ApiError('Результат конвертации недоступен', 503);
+}
+
+export async function convertAndDownload(
+  accessToken: string,
+  fileId: string,
+  targetFormat: string,
+  options: ConversionOptions = {},
 ): Promise<ConversionDownloadResponse> {
-  return apiRequest<ConversionDownloadResponse>(`/files/${fileId}/convert`, {
-    method: 'POST',
-    token: accessToken,
-    body: JSON.stringify({
+  const response = await requestConversion(
+    accessToken,
+    fileId,
+    {
       target_format: targetFormat,
       save: false,
-    }),
-  });
+    },
+    options,
+  );
+  if ('download_url' in response) return response;
+  if ('download' in response && response.download) return response.download;
+  throw new ApiError('Результат конвертации недоступен', 503);
 }

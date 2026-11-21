@@ -8,6 +8,7 @@ import (
 	"image/color"
 	"image/jpeg"
 	"image/png"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -92,7 +93,7 @@ func TestPreviewDeniedBeforeStorage(t *testing.T) {
 	storage := &mockStorage{}
 	svc := newTestService(&mockRepo{file: fileRecord{MimeType: "image/png", DirectoryID: "dir"}}, storage)
 	svc.accessChecker = &mockAccessChecker{canFn: func(context.Context, string, string, access.Action) (bool, error) { return false, nil }}
-	if _, err := svc.GetPreviewURL(context.Background(), "user", "file"); err == nil {
+	if _, err := svc.RequestPreview(context.Background(), "user", "file", false); err == nil {
 		t.Fatal("expected forbidden")
 	}
 }
@@ -100,10 +101,10 @@ func TestPreviewDeniedBeforeStorage(t *testing.T) {
 func TestPreviewCached(t *testing.T) {
 	storage := &mockStorage{getErr: errors.New("must not read source")}
 	svc := newTestService(&mockRepo{file: fileRecord{MimeType: "image/png", DirectoryID: "dir"}}, storage)
-	db := &previewDB{rows: []previewRow{{value: fileRecord{DirectoryID: "dir"}}, {value: previewPrefix + "cached.jpg"}}}
-	svc.beginTx = func(context.Context, pgx.TxOptions) (transaction, error) { return db, nil }
-	resp, err := svc.GetPreviewURL(context.Background(), "user", "file")
-	if err != nil || resp.URL == "" {
+	db := &previewDB{rows: []previewRow{{value: previewPrefix + "cached.jpg"}}}
+	svc.db = db
+	resp, err := svc.RequestPreview(context.Background(), "user", "file", false)
+	if err != nil || (resp.Preview == nil || resp.Preview.URL == "") {
 		t.Fatalf("cached preview: %+v, %v", resp, err)
 	}
 	if storage.uploadedKey != "" {
@@ -114,8 +115,8 @@ func TestPreviewCached(t *testing.T) {
 func TestPreviewDeletedWhileWaiting(t *testing.T) {
 	svc := newTestService(&mockRepo{file: fileRecord{MimeType: "image/png"}}, &mockStorage{})
 	db := &previewDB{rows: []previewRow{{err: pgx.ErrNoRows}}}
-	svc.beginTx = func(context.Context, pgx.TxOptions) (transaction, error) { return db, nil }
-	if _, err := svc.GetPreviewURL(context.Background(), "user", "file"); err == nil {
+	svc.db = db
+	if _, err := svc.RequestPreview(context.Background(), "user", "file", false); err == nil {
 		t.Fatal("deleted file accepted")
 	}
 }
@@ -343,25 +344,33 @@ func TestPreviewTrashAccess(t *testing.T) {
 				t.Fatal("trash access must use file ownership, including deleted parent directories")
 				return false, nil
 			}}
-			db := &previewDB{rows: []previewRow{{value: file}, {value: previewPrefix + "cached.jpg"}}}
-			svc.beginTx = func(context.Context, pgx.TxOptions) (transaction, error) { return db, nil }
-			resp, err := svc.GetPreviewURL(context.Background(), "user", "file")
+			db := &previewDB{rows: []previewRow{{value: previewPrefix + "cached.jpg"}}}
+			svc.db = db
+			resp, err := svc.RequestPreview(context.Background(), "user", "file", false)
 			if (err != nil) != tc.wantErr {
 				t.Fatalf("response=%+v error=%v", resp, err)
 			}
-			if !tc.wantErr && resp.URL == "" {
+			if !tc.wantErr && (resp.Preview == nil || resp.Preview.URL == "") {
 				t.Fatal("missing preview URL")
 			}
 		})
 	}
 }
 
-func TestPreviewRechecksAccessWhenMovedToTrash(t *testing.T) {
-	deleted := time.Now()
+func TestPreviewDoesNotReturnCacheWhenFileStateChanged(t *testing.T) {
 	svc := newTestService(&mockRepo{file: fileRecord{DirectoryID: "dir", OwnerID: "other", MimeType: "image/png"}}, &mockStorage{})
-	db := &previewDB{rows: []previewRow{{value: fileRecord{DirectoryID: "dir", OwnerID: "other", DeletedAt: &deleted}}}}
-	svc.beginTx = func(context.Context, pgx.TxOptions) (transaction, error) { return db, nil }
-	if _, err := svc.GetPreviewURL(context.Background(), "user", "file"); err == nil {
+	db := &previewDB{rows: []previewRow{{err: pgx.ErrNoRows}}}
+	svc.db = db
+	if _, err := svc.RequestPreview(context.Background(), "user", "file", false); err == nil {
 		t.Fatal("non-owner saw media deleted while waiting for lock")
 	}
+}
+
+func renderPreview(ctx context.Context, dir string, source io.Reader) ([]byte, error) {
+	input, err := stageMedia(dir, source)
+	if err != nil {
+		return nil, err
+	}
+	defer os.Remove(input)
+	return renderPreviewFile(ctx, input)
 }

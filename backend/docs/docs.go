@@ -1249,6 +1249,87 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/files/jobs/{jobID}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Get a media job",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Job ID",
+                        "name": "jobID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_files.MediaJobResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "410": {
+                        "description": "Gone",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/files/recent": {
             "get": {
                 "security": [
@@ -1584,19 +1665,37 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/internal_files.ConvertRequest"
                         }
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Вернуть задачу без ожидания",
+                        "name": "async",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "UUID запроса конвертации",
+                        "name": "Idempotency-Key",
+                        "in": "header"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Сконвертированный файл (при save=false)",
+                        "description": "Ссылка (при save=false)",
                         "schema": {
-                            "type": "file"
+                            "$ref": "#/definitions/internal_files.ConversionDownloadResponse"
                         }
                     },
                     "201": {
                         "description": "Запись о конверсии (при save=true)",
                         "schema": {
                             "$ref": "#/definitions/internal_files.ConversionResponse"
+                        }
+                    },
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/internal_files.MediaJobResponse"
                         }
                     },
                     "400": {
@@ -1619,6 +1718,18 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
                         "schema": {
                             "$ref": "#/definitions/sharedspace_internal_apperror.Response"
                         }
@@ -1874,6 +1985,12 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Вернуть задачу без ожидания",
+                        "name": "async",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1881,6 +1998,12 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/internal_files.FileContentResponse"
+                        }
+                    },
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/internal_files.MediaJobResponse"
                         }
                     },
                     "401": {
@@ -1897,6 +2020,18 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
                         "schema": {
                             "$ref": "#/definitions/sharedspace_internal_apperror.Response"
                         }
@@ -4444,6 +4579,17 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_files.ConversionDownloadResponse": {
+            "type": "object",
+            "properties": {
+                "download_url": {
+                    "type": "string"
+                },
+                "filename": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_files.ConversionResponse": {
             "type": "object",
             "properties": {
@@ -4592,6 +4738,32 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_files.MediaJobResponse": {
+            "type": "object",
+            "properties": {
+                "conversion": {
+                    "$ref": "#/definitions/internal_files.ConversionResponse"
+                },
+                "download": {
+                    "$ref": "#/definitions/internal_files.ConversionDownloadResponse"
+                },
+                "failure": {
+                    "$ref": "#/definitions/sharedspace_internal_jobqueue.Failure"
+                },
+                "job_id": {
+                    "type": "string"
+                },
+                "preview": {
+                    "$ref": "#/definitions/internal_files.FileContentResponse"
+                },
+                "retry_after": {
+                    "type": "integer"
+                },
+                "state": {
                     "type": "string"
                 }
             }
@@ -5344,6 +5516,20 @@ const docTemplate = `{
                 },
                 "error": {
                     "type": "string"
+                }
+            }
+        },
+        "sharedspace_internal_jobqueue.Failure": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
                 }
             }
         }
