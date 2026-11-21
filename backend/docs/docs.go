@@ -1699,6 +1699,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/sharedspace_internal_apperror.Response"
                         }
                     },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
                     "503": {
                         "description": "Service Unavailable",
                         "schema": {
@@ -1968,6 +1974,12 @@ const docTemplate = `{
                     },
                     "415": {
                         "description": "Unsupported Media Type",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
                         "schema": {
                             "$ref": "#/definitions/sharedspace_internal_apperror.Response"
                         }
@@ -2673,6 +2685,72 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/office/lease": {
+            "post": {
+                "tags": [
+                    "files"
+                ],
+                "summary": "Renew or release a temporary Office capacity reservation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bearer lease_id from the Office session response",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "410": {
+                        "description": "Gone",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "files"
+                ],
+                "summary": "Renew or release a temporary Office capacity reservation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bearer lease_id from the Office session response",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "410": {
+                        "description": "Gone",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/og/share/dir/{token}": {
             "get": {
                 "produces": [
@@ -2876,6 +2954,12 @@ const docTemplate = `{
                     },
                     "415": {
                         "description": "Unsupported Media Type",
+                        "schema": {
+                            "$ref": "#/definitions/sharedspace_internal_apperror.Response"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
                         "schema": {
                             "$ref": "#/definitions/sharedspace_internal_apperror.Response"
                         }
@@ -4414,6 +4498,9 @@ const docTemplate = `{
                 "config": {
                     "type": "object",
                     "additionalProperties": {}
+                },
+                "lease_id": {
+                    "type": "string"
                 },
                 "script_url": {
                     "type": "string"

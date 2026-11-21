@@ -15,6 +15,7 @@ export interface DocumentHistory {
 }
 
 export interface DocumentEditorSession {
+  lease_id?: string;
   script_url: string;
   theme_bridge_url?: string;
   config: {
@@ -48,6 +49,22 @@ export function startOfficeSession(
       method: 'POST',
     },
   );
+}
+
+export function renewOfficeLease(id: string, signal: AbortSignal) {
+  return apiRequest<void>('/office/lease', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${id}` },
+    signal,
+  });
+}
+
+export function releaseOfficeLease(id: string) {
+  return apiRequest<void>('/office/lease', {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${id}` },
+    keepalive: true,
+  });
 }
 
 export function getDocumentVersionURL(token: string, id: string, number: number) {

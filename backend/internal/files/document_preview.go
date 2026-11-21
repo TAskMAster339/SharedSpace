@@ -87,6 +87,16 @@ func (s *DocumentService) startReadOnlyPreview(ctx context.Context, file fileRec
 	if !matches {
 		return DocumentEditorSession{}, apperror.Conflict("расширение файла не совпадает с форматом сохранённой версии")
 	}
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return DocumentEditorSession{}, err
+	}
+	defer tx.Rollback(ctx)
+	lease, err := admitOfficeSession(ctx, tx, "", "")
+	if err != nil {
+		return DocumentEditorSession{}, err
+	}
+	grant.ID = lease
 	grant.FileID, grant.Key, grant.Format = file.ID, file.ObjectKey, extension
 	source, err := s.officeSource("api/v1/office/preview-source", grant)
 	if err != nil {
@@ -97,12 +107,20 @@ func (s *DocumentService) startReadOnlyPreview(ctx context.Context, file fileRec
 		cacheKey += ":" + grant.LinkID + ":" + grant.LinkProof
 	}
 	sum := sha256.Sum256([]byte(cacheKey))
-	return s.officeConfig(file, hex.EncodeToString(sum[:]), source, user, username, view, false, grant.ExpiresAt.Time)
+	result, err := s.officeConfig(file, hex.EncodeToString(sum[:]), source, user, username, view, false, grant.ExpiresAt.Time)
+	if err != nil {
+		return DocumentEditorSession{}, err
+	}
+	result.LeaseID = lease
+	return result, tx.Commit(ctx)
 }
 
 func (s *DocumentService) previewSourceFile(ctx context.Context, token string) (fileRecord, error) {
 	var grant officePreviewGrant
 	if err := s.parseOfficeToken(token, &grant, jwt.WithExpirationRequired()); err != nil {
+		return fileRecord{}, err
+	}
+	if err := s.checkOfficeLease(ctx, grant.ID); err != nil {
 		return fileRecord{}, err
 	}
 	var file fileRecord

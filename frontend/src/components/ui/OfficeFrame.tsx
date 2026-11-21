@@ -5,10 +5,12 @@ import {
   OfficeLayout,
   OfficeMode,
   OfficeTheme,
+  releaseOfficeLease,
   startOfficeSession,
 } from '../../api/documents';
 import { Button } from './Button';
 import { synchronizeOfficeTheme } from '../../utils/officeTheme';
+import { trackOfficeLease } from '../../utils/officeLease';
 
 interface OfficeEditor {
   destroyEditor(): void;
@@ -155,6 +157,14 @@ export const OfficeFrame = forwardRef<OfficeFrameHandle, OfficeFrameProps>(funct
     container.replaceChildren(anchor);
     let loadTimeout: number | undefined;
     let retryTimeout: number | undefined;
+    let closeLease: (() => void) | undefined;
+    const dispose = () => {
+      const current = editor.current;
+      editor.current = undefined;
+      current?.destroyEditor();
+      closeLease?.();
+      closeLease = undefined;
+    };
     unsaved.current = false;
     closeAfterSave.current = false;
     setState('loading');
@@ -173,6 +183,19 @@ export const OfficeFrame = forwardRef<OfficeFrameHandle, OfficeFrameProps>(funct
               controller.signal,
               sessionLayout,
             );
+        const lease = session.lease_id;
+        if (!active()) {
+          if (lease) void releaseOfficeLease(lease).catch(() => {});
+          return;
+        }
+        if (lease) {
+          closeLease = trackOfficeLease(lease, () => {
+            if (!active() || editing) return;
+            window.clearTimeout(loadTimeout);
+            dispose();
+            setError('Сеанс просмотра завершён. Откройте файл снова.');
+          });
+        }
         const api = await loadOfficeScript(session.script_url);
         if (!active()) return;
         if (session.theme_bridge_url) {
@@ -193,10 +216,10 @@ export const OfficeFrame = forwardRef<OfficeFrameHandle, OfficeFrameProps>(funct
             iframe.title = `${editing ? 'Редактор' : 'Предпросмотр'} документа ${filename}`;
           }
         };
-        loadTimeout = window.setTimeout(
-          () => setError('Не удалось открыть документ вовремя.'),
-          45000,
-        );
+        loadTimeout = window.setTimeout(() => {
+          dispose();
+          setError('Не удалось открыть документ вовремя.');
+        }, 45000);
         editor.current = new api.DocEditor(anchor.id, {
           ...session.config,
           width: '100%',
@@ -225,6 +248,7 @@ export const OfficeFrame = forwardRef<OfficeFrameHandle, OfficeFrameProps>(funct
             onError: () => {
               if (!active()) return;
               window.clearTimeout(loadTimeout);
+              if (!editing) dispose();
               setError(
                 editing
                   ? 'Редактор не смог продолжить работу с файлом.'
@@ -241,6 +265,7 @@ export const OfficeFrame = forwardRef<OfficeFrameHandle, OfficeFrameProps>(funct
           retryTimeout = window.setTimeout(() => void open(retries - 1), 1500);
           return;
         }
+        dispose();
         setError(
           reason instanceof ApiError ? reason.message : 'Не удалось подключиться к ONLYOFFICE.',
         );
@@ -252,8 +277,7 @@ export const OfficeFrame = forwardRef<OfficeFrameHandle, OfficeFrameProps>(funct
       controller.abort();
       window.clearTimeout(loadTimeout);
       window.clearTimeout(retryTimeout);
-      editor.current?.destroyEditor();
-      editor.current = undefined;
+      dispose();
       container.replaceChildren();
     };
   }, [anchorId, attempt, editing, fileId, loadPreview, mode, sessionLayout, theme, waitForSave]);

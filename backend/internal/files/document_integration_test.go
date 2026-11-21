@@ -235,6 +235,100 @@ func TestDocumentCollaborationIntegration(t *testing.T) {
 		t.Fatal("session creation replaced the original object")
 	}
 
+	t.Run("shared capacity for editing and previews", func(t *testing.T) {
+		type attempt struct {
+			session DocumentEditorSession
+			err     error
+		}
+		responses := make(chan attempt, 6)
+		for i := 0; i < cap(responses); i++ {
+			go func() {
+				var reply attempt
+				if i%2 == 0 {
+					reply.session, reply.err = svc.StartPreview(ctx, file.ID, users[6], "viewer", OfficeViewOptions{})
+				} else {
+					reply.session, reply.err = svc.StartSharedPreview(ctx, legacyToken, "", false, OfficeViewOptions{})
+				}
+				responses <- reply
+			}()
+		}
+		var admitted []string
+		for i := 0; i < cap(responses); i++ {
+			reply := <-responses
+			if reply.err != nil {
+				assertDocumentError(t, reply.err, "office_capacity")
+			} else {
+				admitted = append(admitted, reply.session.LeaseID)
+				t.Cleanup(func() { mustDocument(t, svc.releaseOfficeLease(ctx, reply.session.LeaseID)) })
+			}
+		}
+		if len(admitted) != 2 {
+			t.Fatalf("admitted %d additional viewers alongside eight open sessions, want 2", len(admitted))
+		}
+		_, err := svc.StartSession(ctx, previous.ID, users[7], "owner", OfficeViewOptions{})
+		assertDocumentError(t, err, "office_capacity")
+		_, err = svc.StartPreview(ctx, file.ID, users[6], "viewer", OfficeViewOptions{})
+		assertDocumentError(t, err, "office_capacity")
+		_, err = svc.StartSharedPreview(ctx, legacyToken, "", false, OfficeViewOptions{})
+		assertDocumentError(t, err, "office_capacity")
+
+		handler := NewDocumentHandler(svc, nil)
+		call := func(method, lease string) (int, error) {
+			r := httptest.NewRequest(method, "/api/v1/office/lease", nil)
+			r.Header.Set("Authorization", "Bearer "+lease)
+			response := httptest.NewRecorder()
+			err := handler.ManageLease(response, r)
+			return response.Code, err
+		}
+		_, err = db.Exec(ctx, "UPDATE office_session_leases SET expires_at=now() + interval '1 minute' WHERE id=$1", admitted[0])
+		mustDocument(t, err)
+		code, err := call(http.MethodPost, admitted[0])
+		mustDocument(t, err)
+		if code != http.StatusNoContent {
+			t.Fatalf("renew status %d", code)
+		}
+		var renewed bool
+		mustDocument(t, db.QueryRow(ctx, "SELECT expires_at > now() + interval '4 minutes' FROM office_session_leases WHERE id=$1", admitted[0]).Scan(&renewed))
+		if !renewed {
+			t.Fatal("renewal did not extend the lease")
+		}
+
+		code, err = call(http.MethodDelete, admitted[0])
+		mustDocument(t, err)
+		if code != http.StatusNoContent {
+			t.Fatalf("release status %d", code)
+		}
+		_, err = call(http.MethodPost, admitted[0])
+		assertDocumentError(t, err, "office_lease_expired")
+
+		_, err = db.Exec(ctx, "UPDATE document_edit_sessions SET closed_at=NULL WHERE key=$1", previousSession)
+		mustDocument(t, err)
+		_, err = db.Exec(ctx, `INSERT INTO document_edit_members (session_key, user_id, username, reserved_until, connected)
+			VALUES ($1, $2, 'legacy editor', now(), true)`, previousSession, users[7])
+		mustDocument(t, err)
+		_, err = svc.StartPreview(ctx, file.ID, users[6], "viewer", OfficeViewOptions{})
+		assertDocumentError(t, err, "office_capacity")
+		legacyEditor, err := svc.StartSession(ctx, previous.ID, users[7], "owner", OfficeViewOptions{})
+		mustDocument(t, err)
+		mustDocument(t, svc.releaseOfficeLease(ctx, legacyEditor.LeaseID))
+		_, err = svc.StartPreview(ctx, file.ID, users[6], "viewer", OfficeViewOptions{})
+		assertDocumentError(t, err, "office_capacity")
+		_, err = db.Exec(ctx, "UPDATE document_edit_sessions SET closed_at=now() WHERE key=$1", previousSession)
+		mustDocument(t, err)
+
+		reopened, err := svc.StartPreview(ctx, file.ID, users[6], "viewer", OfficeViewOptions{})
+		mustDocument(t, err)
+		t.Cleanup(func() { mustDocument(t, svc.releaseOfficeLease(ctx, reopened.LeaseID)) })
+
+		_, err = db.Exec(ctx, "UPDATE office_session_leases SET expires_at=now() - interval '1 second' WHERE id=$1", admitted[1])
+		mustDocument(t, err)
+		_, err = call(http.MethodPost, admitted[1])
+		assertDocumentError(t, err, "office_lease_expired")
+		shared, err := svc.StartSharedPreview(ctx, legacyToken, "", false, OfficeViewOptions{})
+		mustDocument(t, err)
+		t.Cleanup(func() { mustDocument(t, svc.releaseOfficeLease(ctx, shared.LeaseID)) })
+	})
+
 	sign := func(event officeEvent) string {
 		t.Helper()
 		token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, officeCallbackClaims{Payload: event}).SignedString([]byte(opts.Secret))

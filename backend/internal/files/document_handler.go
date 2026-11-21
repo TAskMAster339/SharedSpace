@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 
 	"sharedspace/internal/apperror"
 	"sharedspace/internal/auth"
@@ -43,6 +44,7 @@ func NewDocumentHandler(service *DocumentService, tokenParser sharelinks.TokenPa
 // @Failure 404 {object} apperror.Response
 // @Failure 409 {object} apperror.Response
 // @Failure 415 {object} apperror.Response
+// @Failure 429 {object} apperror.Response
 // @Failure 503 {object} apperror.Response
 // @Router /api/v1/files/{id}/editor-session [post]
 func (h *DocumentHandler) Start(w http.ResponseWriter, r *http.Request) error {
@@ -70,6 +72,7 @@ func (h *DocumentHandler) Start(w http.ResponseWriter, r *http.Request) error {
 // @Failure 404 {object} apperror.Response
 // @Failure 409 {object} apperror.Response
 // @Failure 415 {object} apperror.Response
+// @Failure 429 {object} apperror.Response
 // @Failure 503 {object} apperror.Response
 // @Router /api/v1/files/{id}/preview-session [post]
 func (h *DocumentHandler) Preview(w http.ResponseWriter, r *http.Request) error {
@@ -98,6 +101,7 @@ func (h *DocumentHandler) Preview(w http.ResponseWriter, r *http.Request) error 
 // @Failure 404 {object} apperror.Response
 // @Failure 409 {object} apperror.Response
 // @Failure 415 {object} apperror.Response
+// @Failure 429 {object} apperror.Response
 // @Failure 503 {object} apperror.Response
 // @Router /api/v1/s/{token}/preview-session [post]
 func (h *DocumentHandler) SharedPreview(w http.ResponseWriter, r *http.Request) error {
@@ -108,6 +112,33 @@ func (h *DocumentHandler) SharedPreview(w http.ResponseWriter, r *http.Request) 
 		return err
 	}
 	return writeJSON(w, http.StatusOK, result)
+}
+
+// @Summary Renew or release a temporary Office capacity reservation
+// @Tags files
+// @Param Authorization header string true "Bearer lease_id from the Office session response"
+// @Success 204
+// @Failure 400 {object} apperror.Response
+// @Failure 410 {object} apperror.Response
+// @Router /api/v1/office/lease [post]
+// @Router /api/v1/office/lease [delete]
+func (h *DocumentHandler) ManageLease(w http.ResponseWriter, r *http.Request) error {
+	id := bearerToken(r.Header.Get("Authorization"))
+	if _, err := uuid.Parse(id); err != nil {
+		return apperror.Validation("некорректный идентификатор офисного сеанса")
+	}
+	var err error
+	if r.Method == http.MethodDelete {
+		err = h.service.releaseOfficeLease(r.Context(), id)
+	} else {
+		err = h.service.renewOfficeLease(r.Context(), id)
+	}
+	if err != nil {
+		return err
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusNoContent)
+	return nil
 }
 
 // @Summary List saved Office versions and editor permissions

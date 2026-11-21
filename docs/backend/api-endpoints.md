@@ -84,7 +84,15 @@ curl -fsS -H "Authorization: Bearer $ACCESS_TOKEN" \
 {"versions":[],"can_edit":true,"can_restore":false,"save_pending":false}
 ```
 
-`POST .../editor-session` возвращает `200` с полями `script_url` и `config`. Оба маршрута сессий принимают `theme=light` или `theme=dark`. Если включена синхронизация темы, ответ также содержит `theme_bridge_url` на том же хосте, что `script_url`. Предпросмотр использует режим `view`, работает с последней сохранённой копией и не создаёт сессию редактирования или версию. Поддерживает `DOCX`, `XLSX`, `PPTX`, `DOC`, `XLS`, `PPT`, `ODT`, `ODS` и `ODP`. Шестой аккаунт получает `409 document_editor_limit`. Выключенный редактор возвращает `503 editor_disabled`, другой формат файла — `415 unsupported_document`. История и скачивание сохранённой копии доступны при выключенном редакторе. Подписанные маршруты `/api/v1/office/source`, `/api/v1/office/preview-source` и `/api/v1/office/callback` предназначены для Document Server.
+`POST .../editor-session` возвращает `200` с полями `script_url` и `config`. Оба маршрута сессий принимают `theme=light` или `theme=dark`. Если включена синхронизация темы, ответ также содержит `theme_bridge_url` на том же хосте, что `script_url`. Предпросмотр использует режим `view`, работает с последней сохранённой копией и не создаёт сессию редактирования или версию. Поддерживает `DOCX`, `XLSX`, `PPTX`, `DOC`, `XLS`, `PPT`, `ODT`, `ODS` и `ODP`. Шестой аккаунт в одном документе получает `409 document_editor_limit`. У SharedSpace есть общий лимит десять открытых окон ONLYOFFICE, включая приватный и публичный предпросмотр. Следующий запрос получает `429 office_capacity`. Успешный ответ содержит `lease_id`. Выключенный редактор возвращает `503 editor_disabled`, другой формат файла — `415 unsupported_document`. История и скачивание сохранённой копии доступны при выключенном редакторе. Подписанные маршруты `/api/v1/office/source`, `/api/v1/office/preview-source` и `/api/v1/office/callback` предназначены для Document Server.
+
+Чтобы продлить слот на пять минут, отправьте `POST /api/v1/office/lease`. При закрытии окна отправьте `DELETE` на тот же путь. Передайте `lease_id` из ответа сеанса через Bearer-заголовок. Истёкший слот при продлении возвращает `410 office_lease_expired`. Например, приведённый запрос освобождает слот и возвращает `204`.
+
+```bash
+curl -fsS -o /dev/null -w '%{http_code}\n' -X DELETE \
+  -H "Authorization: Bearer ${OFFICE_LEASE_ID}" \
+  http://localhost:8080/api/v1/office/lease
+```
 
 В запросе на предпросмотр `FILE_ID` — идентификатор доступной таблицы XLSX.
 

@@ -53,6 +53,8 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 			r.Get("/office/preview-source", middleware.AppError(documentHandler.PreviewSource))
 			r.Post("/s/{token}/preview-session", middleware.AppError(documentHandler.SharedPreview))
 			r.Post("/office/callback", middleware.AppError(documentHandler.Callback))
+			r.Post("/office/lease", middleware.AppError(documentHandler.ManageLease))
+			r.Delete("/office/lease", middleware.AppError(documentHandler.ManageLease))
 		}
 
 		if authHandler != nil {

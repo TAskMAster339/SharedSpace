@@ -92,6 +92,7 @@ type OfficeViewOptions struct {
 }
 
 type DocumentEditorSession struct {
+	LeaseID        string         `json:"lease_id,omitempty"`
 	ScriptURL      string         `json:"script_url"`
 	ThemeBridgeURL string         `json:"theme_bridge_url,omitempty"`
 	Config         map[string]any `json:"config"`
@@ -179,6 +180,10 @@ func (s *DocumentService) StartSession(ctx context.Context, fileID, userID, user
 	if occupied >= editorLimit && !ownPlace {
 		return DocumentEditorSession{}, apperror.New("документ уже редактируют пять участников", "document_editor_limit", http.StatusConflict)
 	}
+	lease, err := admitOfficeSession(ctx, tx, session.Key, userID)
+	if err != nil {
+		return DocumentEditorSession{}, err
+	}
 	if _, err := tx.Exec(ctx, `UPDATE document_edit_sessions SET last_grant_at=now() WHERE key=$1`, session.Key); err != nil {
 		return DocumentEditorSession{}, err
 	}
@@ -188,10 +193,11 @@ func (s *DocumentService) StartSession(ctx context.Context, fileID, userID, user
 		SET reserved_until = EXCLUDED.reserved_until, username = EXCLUDED.username`, session.Key, userID, username, expires); err != nil {
 		return DocumentEditorSession{}, err
 	}
-	result, err := s.editorConfig(file, session.Key, userID, username, view, expires)
+	result, err := s.editorConfig(file, session.Key, userID, username, lease, view, expires)
 	if err != nil {
 		return DocumentEditorSession{}, err
 	}
+	result.LeaseID = lease
 	return result, tx.Commit(ctx)
 }
 
@@ -200,9 +206,9 @@ type documentSourceGrant struct {
 	jwt.RegisteredClaims
 }
 
-func (s *DocumentService) editorConfig(file fileRecord, key, user, username string, view OfficeViewOptions, expires time.Time) (DocumentEditorSession, error) {
+func (s *DocumentService) editorConfig(file fileRecord, key, user, username, lease string, view OfficeViewOptions, expires time.Time) (DocumentEditorSession, error) {
 	grant := documentSourceGrant{Session: key, RegisteredClaims: jwt.RegisteredClaims{
-		Issuer: "sharedspace-docx-source", Subject: user, ExpiresAt: jwt.NewNumericDate(expires),
+		Issuer: "sharedspace-docx-source", ID: lease, Subject: user, ExpiresAt: jwt.NewNumericDate(expires),
 	}}
 	source, err := s.officeSource("api/v1/office/source", grant)
 	if err != nil {
@@ -313,6 +319,9 @@ func (s *DocumentService) sourceFile(ctx context.Context, token string) (fileRec
 	}
 	if _, err := uuid.Parse(grant.Session); err != nil {
 		return fileRecord{}, apperror.Unauthorized("недействительная ссылка редактора")
+	}
+	if err := s.checkOfficeLease(ctx, grant.ID); err != nil {
+		return fileRecord{}, err
 	}
 	session, err := sessionByKey(ctx, s.db, grant.Session, false)
 	if errors.Is(err, pgx.ErrNoRows) || (err == nil && (session.FileID == nil || session.ClosedAt != nil)) {
