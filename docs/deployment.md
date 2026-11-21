@@ -36,13 +36,29 @@ REACT_APP_API_BASE_URL=https://api.example.com/api/v1
 
 В корне проекта используются `docker-compose.yml` и существующий продовый `.env`. Для выкладки через SSH workflow вызывает `make prod-deploy`. Команда `make prod-ps` показывает состояние контейнеров.
 
+## Сертификаты Let's Encrypt
+
+Nginx обслуживает HTTP-01 на порту 80 из `nginx/certs/acme` через [отдельный конфиг](../nginx/acme.conf). Для остальных HTTP-запросов действует переадресация на HTTPS. DNS каждого имени сертификата должен указывать на сервер.
+
+На продовом сервере `certbot.timer` запускает продление. При успешном продлении хук `/etc/letsencrypt/renewal-hooks/deploy/sharedspace-tls` вызывает [скрипт установки](../scripts/install-acme-certificate.sh) с путём к рабочей копии. Скрипт берёт основной сертификат из `/etc/letsencrypt/live/shared-space.ru`, офисный из `/etc/letsencrypt/live/office.shared-space.ru`, проверяет конфигурацию Nginx и перечитывает её. При ошибке скрипт возвращает прежние файлы.
+
+Для выпуска отдельного сертификата офиса после настройки DNS выполните из корня продовой копии:
+
+```bash
+sudo certbot certonly --webroot -w "$PWD/nginx/certs/acme" \
+  --cert-name office.shared-space.ru -d office.shared-space.ru
+sudo env RENEWED_LINEAGE=/etc/letsencrypt/live/office.shared-space.ru \
+  /etc/letsencrypt/renewal-hooks/deploy/sharedspace-tls
+sudo certbot renew --dry-run
+```
+
 ## Офисный редактор
 
 Document Server можно запустить рядом с SharedSpace или на отдельном сервере. Для локальной разработки используйте `make dev-office`. Перед подключением к публичному хосту проверьте актуальность образа, условия редакции и ёмкость по общему числу вкладок, размерам документов и месту хранения. [Требования ONLYOFFICE Community](https://helpcenter.onlyoffice.com/docs/installation/community/docker/installing/install)
 
 ### Document Server на продовом хосте
 
-1. Добавьте DNS-запись для `office.shared-space.ru` и выпустите сертификат на этот поддомен. В каталоге копии SharedSpace на сервере установите сертификат и ключ как `nginx/certs/office/fullchain.pem` и `nginx/certs/office/privkey.pem`. При продлении обновите эти файлы и выполните `docker compose exec -T nginx nginx -t && docker compose exec -T nginx nginx -s reload`.
+1. Добавьте DNS-запись для `office.shared-space.ru` и выпустите сертификат на этот поддомен. В каталоге копии SharedSpace на сервере установите сертификат и ключ как `nginx/certs/office/fullchain.pem` и `nginx/certs/office/privkey.pem`. Для Let’s Encrypt эти файлы обновляет [хук Certbot](#сертификаты-lets-encrypt).
 2. Установите [шаблон прокси](../nginx/onlyoffice.conf) как `nginx/certs/office/onlyoffice.conf`. Основной Nginx читает `*.conf` из этого каталога. Для другого поддомена измените имя сервера в шаблоне и в `OFFICE_PUBLIC_URL`.
 3. В продовом `.env` задайте `PROD_OFFICE_LOCAL=true`, `OFFICE_ENABLED=true`, `OFFICE_PUBLIC_URL=https://office.shared-space.ru`, `OFFICE_INTERNAL_URL=http://onlyoffice` и `OFFICE_STORAGE_URL=https://shared-space.ru`. Сгенерируйте `OFFICE_JWT_SECRET` через `openssl rand -hex 32`. Compose передаст его обоим сервисам. Оставьте `OFFICE_THEME_SYNC=false`, пока не подключите палитры и страницу синхронизации.
 4. При необходимости задайте `ONLYOFFICE_IMAGE` с точным тегом и digest проверенного образа. Убедитесь, что DNS и HTTPS доступны из браузера и что контейнер Document Server достигает `OFFICE_STORAGE_URL`. На отдельном Document Server оставьте `PROD_OFFICE_LOCAL=false`, укажите его адрес в `OFFICE_INTERNAL_URL` и используйте тот же JWT-секрет.
