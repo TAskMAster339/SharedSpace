@@ -64,6 +64,26 @@ class InitEnvTest(unittest.TestCase):
         self.assertTrue(all(len(value) >= 32 for value in secrets))
         self.assertTrue(all(secret not in "".join(results) for secret in secrets))
 
+    def test_dev_start_selects_office_profile_from_compose_environment(self):
+        self.generate()
+        original = self.path.read_text()
+        env = {**os.environ, "COMPOSE_PROFILES": ""}
+        env.pop("OFFICE_ENABLED", None)
+        for name in ("dev", "dev-up"):
+            for enabled in ("true", "false"):
+                with self.subTest(target=name, office=enabled):
+                    self.path.write_text(original.replace("OFFICE_ENABLED=false", f"OFFICE_ENABLED={enabled}"))
+                    output = subprocess.check_output(
+                        ["make", "-n", name, f"ENV_FILE={self.path}"], cwd=ROOT, env=env, text=True
+                    )
+                    self.assertEqual("--profile office" in output, enabled == "true")
+
+        output = subprocess.check_output(
+            ["make", "-n", "dev-up", f"ENV_FILE={self.path}"],
+            cwd=ROOT, env={**env, "OFFICE_ENABLED": "true"}, text=True,
+        )
+        self.assertIn("--profile office", output)
+
     def test_existing_config_is_preserved_and_dsn_escaped(self):
         original = (
             b"# Keep comment\r\nPOSTGRES_USER=dev\r\nPOSTGRES_DB=my_database\r\n"

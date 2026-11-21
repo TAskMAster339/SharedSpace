@@ -5,6 +5,7 @@ PYTHON ?= python3
 DOCKER_COMPOSE ?= docker compose
 DEV_COMPOSE = $(DOCKER_COMPOSE) -f docker-compose.dev.yml --env-file "$(ENV_FILE)"
 DEV_OFFICE_COMPOSE = $(DEV_COMPOSE) --profile office
+DEV_START = $(DEV_COMPOSE) $(shell $(DEV_COMPOSE) config --environment | sed -n 's/^OFFICE_ENABLED=true$$/--profile office/p')
 PROD_COMPOSE = $(DOCKER_COMPOSE) -f docker-compose.yml --env-file "$(ENV_FILE)"
 
 .PHONY: help env dev dev-office dev-up dev-down dev-build dev-restart dev-logs dev-ps \
@@ -25,13 +26,13 @@ env:
 	$(PYTHON) scripts/init-env.py --output "$(ENV_FILE)"
 
 dev: env
-	$(DEV_COMPOSE) up --build -d
+	$(DEV_START) up --build -d
 
 dev-office: env
 	OFFICE_ENABLED=true $(DEV_OFFICE_COMPOSE) up --build -d
 
 dev-up: env
-	$(DEV_COMPOSE) up -d
+	$(DEV_START) up -d
 
 dev-build: env
 	$(DEV_COMPOSE) build

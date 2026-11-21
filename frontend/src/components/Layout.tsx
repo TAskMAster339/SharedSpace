@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useLayoutEffect, useState } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useState,
+} from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { GitFork } from 'lucide-react';
 import { Header } from './Header';
@@ -36,19 +43,35 @@ export function useReaderLayout(active: boolean) {
 export const Layout: React.FC<LayoutProps> = ({ children, fillViewport = false }) => {
   const [reader, setReader] = useState(false);
   const workspace = fillViewport || reader;
+  const sidebarId = useId();
+  const [collapsed, setCollapsed] = useState(
+    () => localStorage.getItem('sharedspace-sidebar-collapsed') === 'true',
+  );
+  useEffect(() => {
+    localStorage.setItem('sharedspace-sidebar-collapsed', String(collapsed));
+  }, [collapsed]);
   const { isAuthenticated } = useAuth();
   const location = useLocation();
+  const showSidebar = isAuthenticated && !workspace;
   const isOnLandingPage = location.pathname === '/';
   const { toasts, removeToast } = useToastStore();
 
   return (
     <div className={cn('bg-theme-primary flex flex-col', workspace ? 'h-dvh' : 'min-h-screen')}>
-      {!reader && <Header />}
+      {!reader && (
+        <Header
+          sidebar={
+            showSidebar
+              ? { id: sidebarId, collapsed, onToggle: () => setCollapsed((current) => !current) }
+              : undefined
+          }
+        />
+      )}
 
       <div className={cn('flex flex-1 relative', workspace && 'min-h-0')}>
-        {isAuthenticated && !workspace && (
-          <div className="sticky top-16 h-[calc(100vh-4rem)] shrink-0">
-            <Sidebar />
+        {showSidebar && (
+          <div className="sticky top-16 hidden h-[calc(100vh-4rem)] shrink-0 md:block">
+            <Sidebar id={sidebarId} collapsed={collapsed} />
           </div>
         )}
 

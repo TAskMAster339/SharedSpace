@@ -1,6 +1,15 @@
 import React, { useState, useRef, useEffect, useId } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Settings, LogOut, ChevronDown, MoonStar, Search, X } from 'lucide-react';
+import {
+  Settings,
+  LogOut,
+  ChevronDown,
+  MoonStar,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Search,
+  X,
+} from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { UserSearch } from './UserSearch';
@@ -14,6 +23,15 @@ interface WorkspaceHeader {
   themeButton: React.ReactNode;
   actions?: React.ReactNode;
   leave: (action: () => void) => void;
+}
+
+interface HeaderProps {
+  workspace?: WorkspaceHeader;
+  sidebar?: {
+    id: string;
+    collapsed: boolean;
+    onToggle: () => void;
+  };
 }
 
 function HeaderThemeButton() {
@@ -30,11 +48,12 @@ function HeaderThemeButton() {
   );
 }
 
-export const Header: React.FC<{ workspace?: WorkspaceHeader }> = ({ workspace }) => {
+export const Header: React.FC<HeaderProps> = ({ workspace, sidebar }) => {
   const { isAuthenticated, user, firstName, lastName, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const isOnLandingPage = location.pathname === '/';
+  const sidebarLabel = sidebar?.collapsed ? 'Развернуть боковое меню' : 'Свернуть боковое меню';
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const mobileSearchId = useId();
@@ -112,7 +131,12 @@ export const Header: React.FC<{ workspace?: WorkspaceHeader }> = ({ workspace })
         workspace ? 'gap-2 px-2' : 'px-4',
       )}
     >
-      <div className={cn('flex min-w-0 items-center gap-2', workspace ? 'lg:gap-4' : 'sm:gap-8')}>
+      <div
+        className={cn(
+          'flex min-w-0 items-center gap-2',
+          workspace || sidebar ? 'lg:gap-4' : 'sm:gap-8',
+        )}
+      >
         {isOnLandingPage ? (
           <div className="flex items-center gap-2 shrink-0">
             <img src={logo} alt="SharedSpace" className="w-8 h-8 rounded-theme shadow-theme-card" />
@@ -141,6 +165,23 @@ export const Header: React.FC<{ workspace?: WorkspaceHeader }> = ({ workspace })
           </Link>
         )}
 
+        {sidebar && (
+          <button
+            type="button"
+            aria-label={sidebarLabel}
+            title={sidebarLabel}
+            aria-controls={sidebar.id}
+            aria-expanded={!sidebar.collapsed}
+            onClick={sidebar.onToggle}
+            className="hidden size-9 shrink-0 place-items-center rounded-theme border border-theme text-theme-secondary transition-colors hover:bg-theme-hover hover:text-brand md:grid"
+          >
+            {sidebar.collapsed ? (
+              <PanelLeftOpen size={18} aria-hidden="true" />
+            ) : (
+              <PanelLeftClose size={18} aria-hidden="true" />
+            )}
+          </button>
+        )}
         {workspace?.nearLogo}
 
         {!isAuthenticated && (
