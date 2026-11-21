@@ -43,7 +43,6 @@ import {
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { RenameModal } from '../components/ui/RenameModal';
 import { ConvertModal } from '../components/ui/ConvertModal';
-import { useFileConversion } from '../hooks/useFileConversion';
 import { ShareLinkModal } from '../components/ui/ShareLinkModal';
 import { resolveFileIconType, getFileTypeDisplay } from '../utils/fileType';
 import { formatFileSize, formatDate } from '../utils/format';
@@ -132,8 +131,6 @@ const FileViewPage: React.FC = () => {
   const accessToken = useAuthStore((state: AuthState) => state.accessToken);
   const user = useAuthStore((state: AuthState) => state.user);
   const { isFavorite, toggleFavorite } = useFavorites();
-  const { isConverting, conversionProgress, convertAndDownload, convertAndSave } =
-    useFileConversion();
   const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -381,22 +378,6 @@ const FileViewPage: React.FC = () => {
     setIframeError(true);
     setCanPreview(false);
   }, []);
-
-  const handleConvertAndDownload = useCallback(
-    (format: string) => {
-      if (!file) return Promise.reject('No file');
-      return convertAndDownload(file.id, format, file.filename);
-    },
-    [convertAndDownload, file],
-  );
-
-  const handleConvertAndSave = useCallback(
-    (format: string) => {
-      if (!file) return Promise.reject('No file');
-      return convertAndSave(file.id, format, file.filename);
-    },
-    [convertAndSave, file],
-  );
 
   const handleRename = async (newName: string) => {
     if (!file || !accessToken) return;
@@ -858,10 +839,6 @@ const FileViewPage: React.FC = () => {
               fileName={file.filename}
               mimeType={file.mime_type}
               extension={file.extension}
-              onConvertAndDownload={handleConvertAndDownload}
-              onConvertAndSave={handleConvertAndSave}
-              isConverting={isConverting}
-              conversionProgress={conversionProgress}
             />
 
             {accessToken && (

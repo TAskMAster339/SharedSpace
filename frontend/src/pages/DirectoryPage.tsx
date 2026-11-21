@@ -31,7 +31,7 @@ import { MoveFileModal } from '../components/ui/MoveFileModal';
 import { RenameModal } from '../components/ui/RenameModal';
 import { ShareLinkModal } from '../components/ui/ShareLinkModal';
 import { ConvertModal } from '../components/ui/ConvertModal';
-import { useFileConversion } from '../hooks/useFileConversion';
+import { useOnFileConverted } from '../hooks/useFileConversion';
 import {
   getDirectoryContents,
   getDirectoryById,
@@ -47,6 +47,8 @@ import {
   File as DirectoryFile,
 } from '../api/directories';
 import {
+  getFileMetadata,
+  type ConversionResponse,
   uploadFilesWithProgress,
   softDeleteFile,
   restoreFile,
@@ -97,8 +99,6 @@ const DirectoryPage: React.FC = () => {
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const { isFavorite, toggleFavorite } = useFavorites();
   const showToast = useToastStore((state) => state.showToast);
-  const { isConverting, conversionProgress, convertAndDownload, convertAndSave } =
-    useFileConversion();
   const [isShared, setIsShared] = useState(false);
   const [isDirectlyShared, setIsDirectlyShared] = useState(false);
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
@@ -613,28 +613,19 @@ const DirectoryPage: React.FC = () => {
     [allFiles],
   );
 
-  const handleConvertAndDownload = useCallback(
-    (format: string) => {
-      if (!convertFileData) return Promise.reject('No file');
-      return convertAndDownload(convertFileData.id, format, convertFileData.filename);
-    },
-    [convertFileData, convertAndDownload],
-  );
-
-  const handleConvertAndSave = useCallback(
-    async (format: string) => {
-      if (!convertFileData) return null;
-      const resultFileId = await convertAndSave(
-        convertFileData.id,
-        format,
-        convertFileData.filename,
-      );
-      if (actualId) {
-        await loadDirectory(actualId, true);
-      }
-      return resultFileId;
-    },
-    [convertFileData, convertAndSave, actualId, loadDirectory],
+  useOnFileConverted(
+    useCallback(
+      (result: ConversionResponse, signal: AbortSignal) => {
+        if (!accessToken || !actualId) return;
+        void getFileMetadata(accessToken, result.result_file_id, signal)
+          .then((file) => {
+            if (signal.aborted || file.directory_id !== actualId) return;
+            setAllFiles((files) => [file, ...files.filter((item) => item.id !== file.id)]);
+          })
+          .catch(() => {});
+      },
+      [accessToken, actualId],
+    ),
   );
 
   const loadMoreDirs = useCallback(() => {
@@ -1495,10 +1486,6 @@ const DirectoryPage: React.FC = () => {
           fileName={convertFileData.filename}
           mimeType={convertFileData.mimeType}
           extension={convertFileData.extension}
-          onConvertAndDownload={handleConvertAndDownload}
-          onConvertAndSave={handleConvertAndSave}
-          isConverting={isConverting}
-          conversionProgress={conversionProgress}
         />
       )}
 

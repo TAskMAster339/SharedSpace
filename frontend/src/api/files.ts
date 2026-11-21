@@ -152,10 +152,10 @@ function waitForMediaPoll(delay: number, signal?: AbortSignal): Promise<void> {
 async function pollMediaJob(
   token: string,
   accepted: MediaJob,
-  timeout: number,
+  timeout: number | undefined,
   signal?: AbortSignal,
 ): Promise<MediaJob> {
-  const deadline = Date.now() + timeout;
+  const deadline = timeout === undefined ? Infinity : Date.now() + timeout;
   let delay = (accepted.retry_after ?? 2) * 1000;
   while (Date.now() < deadline) {
     await waitForMediaPoll(delay + Math.random() * 350, signal);
@@ -286,16 +286,23 @@ export interface ConversionDownloadResponse {
   filename: string;
 }
 
+interface ConversionOptions {
+  onAccepted?: () => void;
+  signal?: AbortSignal;
+}
+
 async function requestConversion(
   token: string,
   fileId: string,
   body: ConvertRequest,
+  { onAccepted, signal }: ConversionOptions,
 ): Promise<MediaJob | ConversionResponse | ConversionDownloadResponse> {
   const path = `/files/${fileId}/convert?async=true`;
   const options = {
     method: 'POST',
     token,
     headers: { 'Idempotency-Key': crypto.randomUUID() },
+    signal,
     body: JSON.stringify(body),
   };
   let response: MediaJob | ConversionResponse | ConversionDownloadResponse;
@@ -305,20 +312,26 @@ async function requestConversion(
     if (!(error instanceof TypeError)) throw error;
     response = await apiRequest(path, options);
   }
-  return 'job_id' in response ? pollMediaJob(token, response, 10 * 60_000) : response;
+  if (!('job_id' in response)) return response;
+  if (response.state === 'queued' || response.state === 'running') onAccepted?.();
+  return pollMediaJob(token, response, undefined, signal);
 }
 
 export async function convertAndSave(
   accessToken: string,
   fileId: string,
   targetFormat: string,
-  directoryId?: string,
+  options: ConversionOptions = {},
 ): Promise<ConversionResponse> {
-  const response = await requestConversion(accessToken, fileId, {
-    target_format: targetFormat,
-    save: true,
-    directory_id: directoryId,
-  });
+  const response = await requestConversion(
+    accessToken,
+    fileId,
+    {
+      target_format: targetFormat,
+      save: true,
+    },
+    options,
+  );
   if ('result_file_id' in response) return response;
   if ('conversion' in response && response.conversion) return response.conversion;
   throw new ApiError('Результат конвертации недоступен', 503);
@@ -328,11 +341,17 @@ export async function convertAndDownload(
   accessToken: string,
   fileId: string,
   targetFormat: string,
+  options: ConversionOptions = {},
 ): Promise<ConversionDownloadResponse> {
-  const response = await requestConversion(accessToken, fileId, {
-    target_format: targetFormat,
-    save: false,
-  });
+  const response = await requestConversion(
+    accessToken,
+    fileId,
+    {
+      target_format: targetFormat,
+      save: false,
+    },
+    options,
+  );
   if ('download_url' in response) return response;
   if ('download' in response && response.download) return response.download;
   throw new ApiError('Результат конвертации недоступен', 503);

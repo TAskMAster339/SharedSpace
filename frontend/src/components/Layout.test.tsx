@@ -50,7 +50,6 @@ jest.mock('./UserSearch', () => ({ UserSearch: () => null }));
 jest.mock('./Footer', () => ({ Footer: () => null }));
 jest.mock('./MobileBottomNav', () => ({ MobileBottomNav: () => null }));
 jest.mock('./ScrollToTopButton', () => ({ ScrollToTopButton: () => null }));
-jest.mock('./ui/ToastContainer', () => ({ ToastContainer: () => null }));
 jest.mock('./ui/StorageUsageModal', () => ({ StorageUsageModal: () => null }));
 jest.mock('./ui/ItemProperties', () => ({
   ItemPropertiesProvider: ({ children }: { children: React.ReactNode }) => children,

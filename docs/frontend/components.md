@@ -108,8 +108,8 @@
 **Когда использовать:** Пустые списки (нет файлов, нет результатов поиска).
 
 ### `Toast` + `ToastContainer`
-**Варианты:** `success`, `error`, `info`, `undo`, `favorite`, `move`
-**Особенности:** Прогресс-бар обратного отсчёта, кнопка действия (undo)
+**Варианты:** `success`, `error`, `info`, `undo`, `favorite`, `move`, `pending`
+**Особенности:** Обратный отсчёт для кратких уведомлений и кнопка действия для отмены. Уведомление `pending` остаётся до завершения задачи или ручного закрытия.
 **Когда использовать:** Уведомления о результатах операций.
 
 ### `Avatar`
@@ -195,11 +195,11 @@
 - Фильтрация директорий с ролью `viewer` (нельзя перемещать туда файлы)
 
 ### `ConvertModal`
-**Пропсы:** `fileId`, `fileName`, `mimeType`, `extension`, `onConvertAndDownload`, `onConvertAndSave`
+**Пропсы:** `fileId`, `fileName`, `mimeType`, `extension`
 **Функциональность:**
 - Выбор целевого формата (из `ALLOWED_CONVERT_FORMATS`)
 - Выбор действия: сохранить в директорию или скачать
-- Прогресс-бар конвертации
+- Запуск фоновой задачи и закрытие окна. Статус показывает общий `ToastContainer`.
 
 ### `UserSearch`
 **Пропсы:** `className?`
@@ -244,7 +244,7 @@
 Управление тёмной/светлой темой. Сохраняет в localStorage, инициализирует из `prefers-color-scheme`. Возвращает: `theme`, `toggleTheme`.
 
 ### `useToast`
-Управление toast-уведомлениями (Zustand store, используемый как хук). Методы: `showToast(message, variant?, actionLabel?, onAction?)`, `removeToast(id)`.
+Управление toast-уведомлениями (Zustand store, используемый как хук). `showToast(message, variant?, actionLabel?, onAction?)` возвращает идентификатор уведомления. `removeToast(id)` удаляет уведомление.
 
 ---
 
