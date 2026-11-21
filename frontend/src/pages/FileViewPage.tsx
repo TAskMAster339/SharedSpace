@@ -29,12 +29,17 @@ import { ApiError } from '../api/client';
 import { FileIcon } from '../components/ui/FileIcon';
 import { Button } from '../components/ui/Button';
 import { DocumentActions } from '../components/ui/DocumentActions';
+import { MobileReaderLayout } from '../components/ui/MobileReaderLayout';
 import { MobileDocxReader } from '../components/ui/MobileDocxReader';
 import { useReaderLayout } from '../components/Layout';
 import { usePhoneViewport } from '../hooks/usePhoneViewport';
 import { OfficeFrame } from '../components/ui/OfficeFrame';
 import { useRootTheme } from '../hooks/useTheme';
-import { canEditOfficeFile, canPreviewOfficeFile } from '../utils/officeFormats';
+import {
+  canEditOfficeFile,
+  canPreviewOfficeFile,
+  canUseMobileOfficeReader,
+} from '../utils/officeFormats';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { RenameModal } from '../components/ui/RenameModal';
 import { ConvertModal } from '../components/ui/ConvertModal';
@@ -150,6 +155,8 @@ const FileViewPage: React.FC = () => {
 
   const phone = usePhoneViewport();
   const [standardPreviewFile, setStandardPreviewFile] = useState<string>();
+  const mobileDocx = !!file?.filename.toLowerCase().endsWith('.docx');
+  const mobileOffice = !!file && canUseMobileOfficeReader(file.filename);
   const showMobileReader =
     phone &&
     !isLoading &&
@@ -157,7 +164,7 @@ const FileViewPage: React.FC = () => {
     !!file &&
     file.id === id &&
     accessToken &&
-    file.filename.toLowerCase().endsWith('.docx') &&
+    (mobileDocx || mobileOffice) &&
     standardPreviewFile !== id;
   useReaderLayout(!!showMobileReader);
 
@@ -604,15 +611,36 @@ const FileViewPage: React.FC = () => {
           description="Чтение документа в SharedSpace"
           canonical={`https://shared-space.ru/files/${file.id}`}
         />
-        <MobileDocxReader
-          key={`${file.id}:${file.updated_at}`}
-          filename={file.filename}
-          size={file.size}
-          loadUrl={loadReaderUrl}
-          onBack={handleGoBack}
-          onStandardPreview={() => setStandardPreviewFile(file.id)}
-          privateFile={{ id: file.id, token: accessToken }}
-        />
+        {mobileOffice ? (
+          <MobileReaderLayout
+            key={file.id}
+            filename={file.filename}
+            onBack={handleGoBack}
+            onStandardPreview={() => setStandardPreviewFile(file.id)}
+            privateFile={{ id: file.id, token: accessToken }}
+          >
+            <div className="min-h-0 flex-1 pb-[env(safe-area-inset-bottom)]">
+              <OfficeFrame
+                key={`${file.id}:${file.updated_at}:${file.filename}`}
+                fileId={file.id}
+                token={accessToken}
+                mode="view"
+                theme={officeTheme}
+                layout="reader"
+              />
+            </div>
+          </MobileReaderLayout>
+        ) : (
+          <MobileDocxReader
+            key={`${file.id}:${file.updated_at}`}
+            filename={file.filename}
+            size={file.size}
+            loadUrl={loadReaderUrl}
+            onBack={handleGoBack}
+            onStandardPreview={() => setStandardPreviewFile(file.id)}
+            privateFile={{ id: file.id, token: accessToken }}
+          />
+        )}
       </>
     );
   }
@@ -665,19 +693,17 @@ const FileViewPage: React.FC = () => {
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-sm font-medium text-theme-secondary">Предпросмотр</h2>
               <div className="flex flex-wrap items-center gap-2">
-                {phone &&
-                  standardPreviewFile === id &&
-                  file.filename.toLowerCase().endsWith('.docx') && (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      aria-label="Режим чтения"
-                      className="inline-grid size-9 shrink-0 place-items-center border border-theme p-0"
-                      onClick={() => setStandardPreviewFile(undefined)}
-                    >
-                      <BookOpen size={16} aria-hidden="true" />
-                    </Button>
-                  )}
+                {phone && standardPreviewFile === id && (mobileDocx || mobileOffice) && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    aria-label="Режим чтения"
+                    className="inline-grid size-9 shrink-0 place-items-center border border-theme p-0"
+                    onClick={() => setStandardPreviewFile(undefined)}
+                  >
+                    <BookOpen size={16} aria-hidden="true" />
+                  </Button>
+                )}
                 {accessToken && canEditOfficeFile(file.filename) && (
                   <DocumentActions
                     key={file.id}

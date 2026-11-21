@@ -29,6 +29,7 @@ export function getDocumentHistory(token: string, id: string, signal?: AbortSign
 
 export type OfficeMode = 'edit' | 'view';
 export type OfficeTheme = 'light' | 'dark';
+export type OfficeLayout = 'compact' | 'reader';
 
 export function startOfficeSession(
   token: string,
@@ -36,11 +37,11 @@ export function startOfficeSession(
   mode: OfficeMode,
   theme: OfficeTheme,
   signal: AbortSignal,
-  compact = false,
+  layout?: OfficeLayout,
 ) {
   const endpoint = mode === 'edit' ? 'editor-session' : 'preview-session';
   return apiRequest<DocumentEditorSession>(
-    `/files/${id}/${endpoint}?theme=${theme}${compact ? '&layout=compact' : ''}`,
+    `/files/${id}/${endpoint}?theme=${theme}${layout ? `&layout=${layout}` : ''}`,
     {
       token,
       signal,

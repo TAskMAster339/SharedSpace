@@ -13,3 +13,8 @@ export function canEditOfficeFile(filename: string) {
 export function canPreviewOfficeFile(filename: string) {
   return canEditOfficeFile(filename) || viewOnly.has(extension(filename));
 }
+
+export function canUseMobileOfficeReader(filename: string) {
+  const ext = extension(filename);
+  return ext === 'xlsx' || ext === 'pptx';
+}

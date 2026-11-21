@@ -8,6 +8,7 @@ import { OfficeFrame, OfficeFrameHandle } from '../components/ui/OfficeFrame';
 import SEOHead from '../components/SEOHead';
 import { useTheme } from '../hooks/useTheme';
 import { useAuthStore } from '../store/authStore';
+import { canEditOfficeFile } from '../utils/officeFormats';
 
 const DocumentEditorPage: React.FC = () => {
   const { id = '' } = useParams();
@@ -120,7 +121,7 @@ const DocumentEditorPage: React.FC = () => {
                   Сохраняем…
                 </span>
               )}
-              {title.toLowerCase().endsWith('.docx') && (
+              {canEditOfficeFile(title) && (
                 <Link
                   to={filePath}
                   aria-label="Режим чтения"

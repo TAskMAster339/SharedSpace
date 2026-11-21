@@ -412,6 +412,13 @@ func TestDocumentCollaborationIntegration(t *testing.T) {
 				config["customization"].(map[string]any)["uiTheme"] != "theme-night" {
 				t.Fatalf("unexpected preview configuration for %s", extension)
 			}
+			readerSession, err := svc.StartPreview(ctx, officeFile.ID, users[6], "viewer", OfficeViewOptions{Reader: true})
+			mustDocument(t, err)
+			readerConfig := readerSession.Config["editorConfig"].(map[string]any)
+			if readerSession.Config["type"] != "embedded" || readerConfig["mode"] != "view" || readerConfig["callbackUrl"] != nil {
+				t.Fatalf("unexpected reader configuration for %s", extension)
+			}
+
 			source, err := url.Parse(doc["url"].(string))
 			mustDocument(t, err)
 			grant := source.Query().Get("grant")

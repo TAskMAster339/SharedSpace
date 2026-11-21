@@ -1932,10 +1932,11 @@ const docTemplate = `{
                     },
                     {
                         "enum": [
-                            "compact"
+                            "compact",
+                            "reader"
                         ],
                         "type": "string",
-                        "description": "Compact toolbar and fit-to-screen zoom",
+                        "description": "Compact toolbar or embedded reader for XLSX and PPTX",
                         "name": "layout",
                         "in": "query"
                     }
@@ -2833,10 +2834,11 @@ const docTemplate = `{
                     },
                     {
                         "enum": [
-                            "compact"
+                            "compact",
+                            "reader"
                         ],
                         "type": "string",
-                        "description": "Compact toolbar and fit-to-screen zoom",
+                        "description": "Compact toolbar or embedded reader for XLSX and PPTX",
                         "name": "layout",
                         "in": "query"
                     }

@@ -88,6 +88,7 @@ func NewDocumentService(db *pgxpool.Pool, repo *Repository, storage StorageClien
 type OfficeViewOptions struct {
 	Theme   string
 	Compact bool
+	Reader  bool
 }
 
 type DocumentEditorSession struct {
@@ -240,7 +241,8 @@ func (s *DocumentService) officeConfig(file fileRecord, key, source, user, usern
 	if !edit && documentType != "cell" {
 		customization["zoom"] = -2
 	}
-	if view.Compact {
+	reader := view.Reader && !edit && (extension == "xlsx" || extension == "pptx")
+	if view.Compact || reader {
 		customization["compactToolbar"] = true
 		switch documentType {
 		case "word":
@@ -267,8 +269,12 @@ func (s *DocumentService) officeConfig(file fileRecord, key, source, user, usern
 		editor["callbackUrl"] = s.callback.JoinPath("api/v1/office/callback").String()
 		editor["coEditing"] = map[string]any{"mode": "fast", "change": false}
 	}
+	displayType := "desktop"
+	if reader {
+		displayType = "embedded"
+	}
 	config := jwt.MapClaims{
-		"documentType": documentType, "type": "desktop",
+		"documentType": documentType, "type": displayType,
 		"document": map[string]any{
 			"fileType": extension, "key": key, "title": file.Filename, "url": source,
 			"permissions": map[string]bool{"edit": edit, "comment": edit, "review": edit, "fillForms": edit, "chat": edit},

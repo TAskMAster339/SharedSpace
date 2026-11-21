@@ -2,6 +2,7 @@ import React, { forwardRef, useEffect, useId, useImperativeHandle, useRef, useSt
 import { ApiError } from '../../api/client';
 import {
   DocumentEditorSession,
+  OfficeLayout,
   OfficeMode,
   OfficeTheme,
   startOfficeSession,
@@ -73,6 +74,7 @@ export interface OfficeFrameHandle {
 type OfficeFrameProps = {
   theme: OfficeTheme;
   waitForSave?: boolean;
+  layout?: OfficeLayout;
   onTitle?: (title: string) => void;
   onChanged?: () => void;
   onRequestClose?: () => void;
@@ -85,13 +87,24 @@ type OfficeFrameProps = {
       loadPreview: (
         theme: OfficeTheme,
         signal: AbortSignal,
-        compact: boolean,
+        layout?: OfficeLayout,
       ) => Promise<DocumentEditorSession>;
     }
 );
 
 export const OfficeFrame = forwardRef<OfficeFrameHandle, OfficeFrameProps>(function OfficeFrame(
-  { fileId, token, mode, theme, loadPreview, waitForSave, onTitle, onChanged, onRequestClose },
+  {
+    fileId,
+    token,
+    mode,
+    theme,
+    loadPreview,
+    layout,
+    waitForSave,
+    onTitle,
+    onChanged,
+    onRequestClose,
+  },
   ref,
 ) {
   const mount = useRef<HTMLDivElement>(null);
@@ -100,7 +113,10 @@ export const OfficeFrame = forwardRef<OfficeFrameHandle, OfficeFrameProps>(funct
   const closeAfterSave = useRef(false);
   const callbacks = useRef({ onTitle, onChanged, onRequestClose, token });
   const anchorId = useId();
-  const [compact] = useState(() => window.matchMedia?.('(max-width: 640px)').matches ?? false);
+  const [defaultLayout] = useState(() =>
+    window.matchMedia?.('(max-width: 640px)').matches ? 'compact' : undefined,
+  );
+  const sessionLayout = layout ?? defaultLayout;
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<'loading' | 'saving' | 'ready'>('loading');
   const [error, setError] = useState('');
@@ -148,14 +164,14 @@ export const OfficeFrame = forwardRef<OfficeFrameHandle, OfficeFrameProps>(funct
     const open = async (retries: number) => {
       try {
         const session = loadPreview
-          ? await loadPreview(theme, controller.signal, compact)
+          ? await loadPreview(theme, controller.signal, sessionLayout)
           : await startOfficeSession(
               callbacks.current.token ?? '',
               fileId,
               mode,
               theme,
               controller.signal,
-              compact,
+              sessionLayout,
             );
         const api = await loadOfficeScript(session.script_url);
         if (!active()) return;
@@ -240,7 +256,7 @@ export const OfficeFrame = forwardRef<OfficeFrameHandle, OfficeFrameProps>(funct
       editor.current = undefined;
       container.replaceChildren();
     };
-  }, [anchorId, attempt, compact, editing, fileId, loadPreview, mode, theme, waitForSave]);
+  }, [anchorId, attempt, editing, fileId, loadPreview, mode, sessionLayout, theme, waitForSave]);
 
   return (
     <div className="relative size-full min-h-0 bg-theme-secondary">

@@ -1,5 +1,5 @@
 import { apiRequest } from './client';
-import type { DocumentEditorSession, OfficeTheme } from './documents';
+import type { DocumentEditorSession, OfficeLayout, OfficeTheme } from './documents';
 
 export type ShareLinkAccess = 'public' | 'authenticated';
 
@@ -97,10 +97,10 @@ export function startSharedOfficePreview(
   password: string,
   theme: OfficeTheme,
   signal: AbortSignal,
-  compact = false,
+  layout?: OfficeLayout,
 ): Promise<DocumentEditorSession> {
   return apiRequest<DocumentEditorSession>(
-    `/s/${token}/preview-session?theme=${theme}${compact ? '&layout=compact' : ''}`,
+    `/s/${token}/preview-session?theme=${theme}${layout ? `&layout=${layout}` : ''}`,
     {
       method: 'POST',
       signal,

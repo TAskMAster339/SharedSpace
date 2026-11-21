@@ -1,50 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowLeft, Download, FileText, Moon, Pencil, Sun } from 'lucide-react';
-import { getDocumentHistory } from '../../api/documents';
-import { useTheme } from '../../hooks/useTheme';
 import { Button } from './Button';
+import { MobileReaderLayout, MobileReaderLayoutProps } from './MobileReaderLayout';
 
-interface MobileDocxReaderProps {
-  filename: string;
+interface MobileDocxReaderProps extends MobileReaderLayoutProps {
   size: number;
   loadUrl: (signal: AbortSignal) => Promise<string>;
-  onBack: () => void;
-  onStandardPreview: () => void;
-  onDownload?: () => void;
-  privateFile?: { id: string; token: string };
 }
 
-const iconButton = 'inline-grid size-11 shrink-0 place-items-center p-0';
-
-export function MobileDocxReader({
-  filename,
-  size,
-  loadUrl,
-  onBack,
-  onStandardPreview,
-  onDownload,
-  privateFile,
-}: MobileDocxReaderProps) {
+export function MobileDocxReader({ size, loadUrl, ...layout }: MobileDocxReaderProps) {
   const content = useRef<HTMLElement>(null);
-  const { theme, toggleTheme } = useTheme();
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
-  const [canEdit, setCanEdit] = useState(false);
-  const id = privateFile?.id;
-  const token = privateFile?.token;
-
-  useEffect(() => {
-    const controller = new AbortController();
-    setCanEdit(false);
-    if (id && token) {
-      getDocumentHistory(token, id, controller.signal)
-        .then(({ can_edit }) => {
-          if (!controller.signal.aborted) setCanEdit(can_edit);
-        })
-        .catch(() => {});
-    }
-    return () => controller.abort();
-  }, [id, token]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -85,68 +50,7 @@ export function MobileDocxReader({
   }, [loadUrl, size]);
 
   return (
-    <main className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-theme-primary">
-      <header className="flex shrink-0 items-center gap-1 border-b border-theme bg-theme-secondary px-2 pt-[env(safe-area-inset-top)]">
-        <Button
-          type="button"
-          variant="secondary"
-          aria-label="Назад"
-          className={iconButton}
-          onClick={onBack}
-        >
-          <ArrowLeft size={20} aria-hidden="true" />
-        </Button>
-        <h1
-          className="min-w-0 flex-1 truncate text-sm font-semibold text-theme-primary"
-          title={filename}
-        >
-          {filename}
-        </h1>
-        <Button
-          type="button"
-          variant="secondary"
-          aria-label="Переключить тему"
-          className={iconButton}
-          onClick={toggleTheme}
-        >
-          {theme === 'dark' ? (
-            <Sun size={18} aria-hidden="true" />
-          ) : (
-            <Moon size={18} aria-hidden="true" />
-          )}
-        </Button>
-        {canEdit && id && (
-          <Link
-            to={`/files/${id}/edit`}
-            aria-label="Редактировать"
-            title="Редактировать"
-            className={`${iconButton} rounded-theme text-brand hover:bg-theme-hover`}
-          >
-            <Pencil size={18} aria-hidden="true" />
-          </Link>
-        )}
-        {onDownload && (
-          <Button
-            type="button"
-            variant="secondary"
-            aria-label="Скачать файл"
-            className={iconButton}
-            onClick={onDownload}
-          >
-            <Download size={18} aria-hidden="true" />
-          </Button>
-        )}
-        <Button
-          type="button"
-          variant="secondary"
-          aria-label="Обычный предпросмотр и сведения"
-          title="Обычный предпросмотр и сведения"
-          className={iconButton}
-          onClick={onStandardPreview}
-        >
-          <FileText size={18} aria-hidden="true" />
-        </Button>
-      </header>
+    <MobileReaderLayout {...layout}>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-6 sm:px-6">
         {status === 'loading' && (
           <p role="status" className="text-center text-sm text-theme-secondary">
@@ -159,7 +63,7 @@ export function MobileDocxReader({
             className="mx-auto max-w-xs space-y-3 text-center text-sm text-theme-secondary"
           >
             <p>Не удалось подготовить документ для мобильного чтения.</p>
-            <Button type="button" variant="secondary" onClick={onStandardPreview}>
+            <Button type="button" variant="secondary" onClick={layout.onStandardPreview}>
               Открыть обычный предпросмотр
             </Button>
           </div>
@@ -171,6 +75,6 @@ export function MobileDocxReader({
           className="docx-reader mx-auto max-w-[64ch] text-theme-primary"
         />
       </div>
-    </main>
+    </MobileReaderLayout>
   );
 }

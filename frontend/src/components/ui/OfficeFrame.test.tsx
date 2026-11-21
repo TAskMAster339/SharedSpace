@@ -58,11 +58,11 @@ test('chooses a compact layout once and keeps it through an orientation change',
       <OfficeFrame fileId="file" token="token" mode="edit" theme="light" />,
     );
     await screen.findByRole('alert');
-    expect(start.mock.calls[0][5]).toBe(true);
+    expect(start.mock.calls[0][5]).toBe('compact');
     match.mockReturnValue({ matches: false });
     rerender(<OfficeFrame fileId="file" token="token" mode="edit" theme="dark" />);
     await screen.findByRole('alert');
-    expect(start.mock.calls[1][5]).toBe(true);
+    expect(start.mock.calls[1][5]).toBe('compact');
   } finally {
     window.matchMedia = original;
   }

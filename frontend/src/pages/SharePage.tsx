@@ -21,12 +21,13 @@ import {
 import { Layout, useReaderLayout } from '../components/Layout';
 import { cn } from '../utils/cn';
 import { ApiError } from '../api/client';
-import type { OfficeTheme } from '../api/documents';
+import type { OfficeLayout, OfficeTheme } from '../api/documents';
 import { useRootTheme } from '../hooks/useTheme';
+import { MobileReaderLayout } from '../components/ui/MobileReaderLayout';
 import { MobileDocxReader } from '../components/ui/MobileDocxReader';
 import { usePhoneViewport } from '../hooks/usePhoneViewport';
 import { OfficeFrame } from '../components/ui/OfficeFrame';
-import { canPreviewOfficeFile } from '../utils/officeFormats';
+import { canPreviewOfficeFile, canUseMobileOfficeReader } from '../utils/officeFormats';
 import { useAuthStore } from '../store/authStore';
 import { useToastStore } from '../hooks/useToast';
 import SEOHead from '../components/SEOHead';
@@ -155,8 +156,12 @@ const SharedFile = ({ token, mode, setMode }: SharedFileProps) => {
 
   const previewType = file ? determinePreviewType(file) : 'unsupported';
   const mobileDocx = phone && !!file?.url && file.filename.toLowerCase().endsWith('.docx');
+  const mobileOffice = phone && !!file && canUseMobileOfficeReader(file.filename);
   const showMobileReader =
-    mobileDocx && !isLoading && !error && (mode === 'default' || mode === 'reader');
+    (mobileDocx || mobileOffice) &&
+    !isLoading &&
+    !error &&
+    (mode === 'default' || mode === 'reader');
   useReaderLayout(showMobileReader);
   const readerUrl = file?.url;
   const loadReaderUrl = useCallback(
@@ -171,14 +176,14 @@ const SharedFile = ({ token, mode, setMode }: SharedFileProps) => {
     [mode, readerUrl, token, accessToken],
   );
   const loadOfficePreview = useCallback(
-    (theme: OfficeTheme, signal: AbortSignal, compact: boolean) =>
+    (theme: OfficeTheme, signal: AbortSignal, layout?: OfficeLayout) =>
       startSharedOfficePreview(
         token,
         accessToken,
         acceptedPassword.current ?? '',
         theme,
         signal,
-        compact,
+        layout,
       ),
     [token, accessToken],
   );
@@ -504,14 +509,32 @@ const SharedFile = ({ token, mode, setMode }: SharedFileProps) => {
           description={ogDescription}
           canonical={`https://shared-space.ru/share/${token}`}
         />
-        <MobileDocxReader
-          filename={file.filename}
-          size={file.size}
-          loadUrl={loadReaderUrl}
-          onBack={() => navigate(accessToken ? '/dashboard' : '/')}
-          onStandardPreview={() => setMode('preview')}
-          onDownload={handleDownload}
-        />
+        {mobileOffice ? (
+          <MobileReaderLayout
+            filename={file.filename}
+            onBack={() => navigate(accessToken ? '/dashboard' : '/')}
+            onStandardPreview={() => setMode('preview')}
+            onDownload={handleDownload}
+          >
+            <div className="min-h-0 flex-1 pb-[env(safe-area-inset-bottom)]">
+              <OfficeFrame
+                mode="view"
+                theme={officeTheme}
+                layout="reader"
+                loadPreview={loadOfficePreview}
+              />
+            </div>
+          </MobileReaderLayout>
+        ) : (
+          <MobileDocxReader
+            filename={file.filename}
+            size={file.size}
+            loadUrl={loadReaderUrl}
+            onBack={() => navigate(accessToken ? '/dashboard' : '/')}
+            onStandardPreview={() => setMode('preview')}
+            onDownload={handleDownload}
+          />
+        )}
       </>
     );
   }
@@ -557,7 +580,7 @@ const SharedFile = ({ token, mode, setMode }: SharedFileProps) => {
                 {expanded ? file.filename : 'Предпросмотр'}
               </h2>
               <div className="flex shrink-0 items-center gap-2">
-                {mobileDocx && (
+                {(mobileDocx || mobileOffice) && (
                   <Button
                     type="button"
                     variant="secondary"

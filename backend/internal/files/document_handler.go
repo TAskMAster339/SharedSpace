@@ -18,7 +18,8 @@ import (
 
 func officeViewOptions(r *http.Request) OfficeViewOptions {
 	query := r.URL.Query()
-	return OfficeViewOptions{Theme: query.Get("theme"), Compact: query.Get("layout") == "compact"}
+	layout := query.Get("layout")
+	return OfficeViewOptions{Theme: query.Get("theme"), Compact: layout == "compact", Reader: layout == "reader"}
 }
 
 type DocumentHandler struct {
@@ -63,7 +64,7 @@ func (h *DocumentHandler) Start(w http.ResponseWriter, r *http.Request) error {
 // @Produce json
 // @Param id path string true "File ID"
 // @Param theme query string false "Interface theme" Enums(light,dark)
-// @Param layout query string false "Compact toolbar and fit-to-screen zoom" Enums(compact)
+// @Param layout query string false "Compact toolbar or embedded reader for XLSX and PPTX" Enums(compact,reader)
 // @Success 200 {object} DocumentEditorSession
 // @Failure 403 {object} apperror.Response
 // @Failure 404 {object} apperror.Response
@@ -90,7 +91,7 @@ func (h *DocumentHandler) Preview(w http.ResponseWriter, r *http.Request) error 
 // @Param token path string true "Share link token"
 // @Param X-SharedLink-Password header string false "Password for protected links"
 // @Param theme query string false "Interface theme" Enums(light,dark)
-// @Param layout query string false "Compact toolbar and fit-to-screen zoom" Enums(compact)
+// @Param layout query string false "Compact toolbar or embedded reader for XLSX and PPTX" Enums(compact,reader)
 // @Success 200 {object} DocumentEditorSession
 // @Failure 401 {object} apperror.Response
 // @Failure 403 {object} apperror.Response

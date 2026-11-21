@@ -72,7 +72,7 @@ test('an anonymous recipient can preview a shared spreadsheet and still download
     '',
     'light',
     expect.any(AbortSignal),
-    false,
+    undefined,
   );
   expect(screen.getByRole('button', { name: 'Скачать файл' })).toBeVisible();
   expect(screen.queryByRole('link', { name: /редактировать/i })).toBeNull();
@@ -99,7 +99,7 @@ test('a protected link only forwards a password after successful access verifica
       'test пароль +%',
       'light',
       expect.any(AbortSignal),
-      false,
+      undefined,
     ),
   );
 });
@@ -163,3 +163,57 @@ test('a protected mobile DOCX can return to reading after repeated full preview 
     window.matchMedia = originalMatchMedia;
   }
 });
+
+test.each(['xlsx', 'pptx'])(
+  'a protected mobile %s uses the reader and can reopen it',
+  async (format) => {
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = jest.fn().mockReturnValue({
+      matches: true,
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+    });
+    const filename = `Mobile.${format}`;
+    resolve.mockRejectedValueOnce(new ApiError('Нужен пароль', 403));
+    resolve.mockResolvedValueOnce({ ...spreadsheet, filename, extension: format });
+    try {
+      showSharedFile();
+      fireEvent.change(await screen.findByPlaceholderText('Пароль'), { target: { value: 'pass' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Открыть файл' }));
+      expect(await screen.findByRole('heading', { name: filename })).toBeVisible();
+      expect(preview).toHaveBeenLastCalledWith(
+        'shared-file',
+        null,
+        'pass',
+        'light',
+        expect.any(AbortSignal),
+        'reader',
+      );
+      expect(screen.queryByRole('link', { name: 'Редактировать' })).toBeNull();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Обычный предпросмотр и сведения' }));
+      expect(await screen.findByRole('heading', { name: 'Предпросмотр' })).toBeVisible();
+      expect(preview).toHaveBeenLastCalledWith(
+        'shared-file',
+        null,
+        'pass',
+        'light',
+        expect.any(AbortSignal),
+        'compact',
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'Режим чтения' }));
+      expect(await screen.findByRole('heading', { name: filename })).toBeVisible();
+      expect(preview).toHaveBeenLastCalledWith(
+        'shared-file',
+        null,
+        'pass',
+        'light',
+        expect.any(AbortSignal),
+        'reader',
+      );
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  },
+);
