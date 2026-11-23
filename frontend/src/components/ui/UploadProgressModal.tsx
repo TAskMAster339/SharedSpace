@@ -1,6 +1,11 @@
 import React from 'react';
 import { AlertCircle, CheckCircle2, Loader2, Minimize2, RotateCcw, X } from 'lucide-react';
-import { useUploadStore, selectErrorCount, selectSuccessCount, selectActiveCount } from '../../store/uploadStore';
+import {
+  useUploadStore,
+  selectErrorCount,
+  selectSuccessCount,
+  selectActiveCount,
+} from '../../store/uploadStore';
 import { formatFileSize, formatCountWord } from '../../utils/format';
 import { resolveFileIconType } from '../../utils/fileType';
 import { cn } from '../../utils/cn';

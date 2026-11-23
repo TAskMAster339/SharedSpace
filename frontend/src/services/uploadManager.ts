@@ -5,10 +5,7 @@ import { useUploadStore } from '../store/uploadStore';
 import { useToastStore } from '../hooks/useToast';
 import { useDragDropStore } from '../store/dragDropStore';
 import { useFavoritesStore } from '../store/favoritesStore';
-import {
-  buildSingleFileSuccessMessage,
-  buildSingleFileErrorMessage,
-} from '../utils/uploadMessage';
+import { buildSingleFileSuccessMessage, buildSingleFileErrorMessage } from '../utils/uploadMessage';
 
 const CONCURRENCY = 3;
 const PENDING_TOAST_LIMIT = 3;

@@ -190,9 +190,7 @@ export function uploadSingleFile(
           fail(new Error(error.error || 'Не удалось загрузить файл'));
         } catch {
           fail(
-            new Error(
-              xhr.status === 413 ? uploadLimitMessage : `Ошибка загрузки (${xhr.status})`,
-            ),
+            new Error(xhr.status === 413 ? uploadLimitMessage : `Ошибка загрузки (${xhr.status})`),
           );
         }
       }

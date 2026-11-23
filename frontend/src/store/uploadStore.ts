@@ -101,7 +101,10 @@ export const useUploadStore = create<UploadState>((set, get) => ({
       const order: string[] = [];
       for (const id of state.order) {
         const task = state.tasks[id];
-        if (task && (task.status === 'pending' || task.status === 'uploading' || task.status === 'error')) {
+        if (
+          task &&
+          (task.status === 'pending' || task.status === 'uploading' || task.status === 'error')
+        ) {
           tasks[id] = task;
           order.push(id);
         }
