@@ -2,7 +2,15 @@ import React from 'react';
 import { Button } from './Button';
 import { FileIcon } from './FileIcon';
 import { preventModalContextMenu } from './preventModalContextMenu';
-import { AlertCircle, CheckCircle2, Loader2, Minimize2, RotateCcw, X } from 'lucide-react';
+import {
+  AlertCircle,
+  CheckCircle2,
+  ChevronUp,
+  Loader2,
+  Minimize2,
+  RotateCcw,
+  X,
+} from 'lucide-react';
 import {
   useUploadStore,
   selectActiveCount,
@@ -14,6 +22,7 @@ import { formatFileSize, formatCountWord } from '../../utils/format';
 import { resolveFileIconType } from '../../utils/fileType';
 import { cn } from '../../utils/cn';
 import { usePhoneViewport } from '../../hooks/usePhoneViewport';
+import { useToastStore } from '../../hooks/useToast';
 
 const iconButtonClasses =
   'inline-grid size-10 place-items-center p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand';
@@ -110,6 +119,7 @@ export const UploadProgressModal: React.FC = () => {
   const retryableErrorCount = useUploadStore(selectRetryableErrorCount);
   const successCount = useUploadStore(selectSuccessCount);
   const isPhone = usePhoneViewport();
+  const mobileBottom = useToastStore((s) => s.toastMobileBottomPx);
 
   const total = order.length;
   const overallProgress = useUploadStore((s) => {
@@ -136,16 +146,19 @@ export const UploadProgressModal: React.FC = () => {
   const handleClose = () => {
     if (!canClose) return;
     clearCompleted();
-    closeModal();
+    if (retryableErrorCount > 0) minimize();
+    else closeModal();
   };
 
   if (!isOpen) {
     if (!isMinimized) return null;
     return (
-      <button
+      <Button
         type="button"
+        variant="secondary"
         onClick={expand}
-        className="fixed bottom-4 right-4 z-[70] flex items-center gap-3 rounded-theme border border-theme bg-theme-secondary px-4 py-3 shadow-theme-dropdown hover:bg-theme-hover transition-colors"
+        className="fixed bottom-[var(--upload-summary-bottom)] right-4 z-[70] inline-flex h-11 items-center gap-2 border border-theme bg-theme-secondary text-theme-primary shadow-theme-dropdown focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand md:bottom-4"
+        style={{ '--upload-summary-bottom': `${mobileBottom}px` } as React.CSSProperties}
       >
         {activeCount > 0 ? (
           <Loader2 size={18} className="animate-spin text-brand" />
@@ -154,14 +167,15 @@ export const UploadProgressModal: React.FC = () => {
         ) : (
           <CheckCircle2 size={18} className="text-[color:var(--success)]" />
         )}
-        <span className="text-sm text-theme-primary">
+        <span>
           {activeCount > 0
             ? `Загрузка ${activeCount}…`
             : errorCount > 0
               ? `Ошибок: ${errorCount}`
               : `Загружено: ${successCount}`}
         </span>
-      </button>
+        <ChevronUp size={16} aria-hidden="true" className="text-theme-secondary" />
+      </Button>
     );
   }
 

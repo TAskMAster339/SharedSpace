@@ -1,6 +1,7 @@
 import React from 'react';
 import { Toast, ToastVariant } from './Toast';
 import { useToastStore } from '../../hooks/useToast';
+import { useUploadStore } from '../../store/uploadStore';
 
 export type { ToastVariant };
 
@@ -21,6 +22,10 @@ export const ToastContainer: React.FC = () => {
   const toasts = useToastStore((state) => state.toasts);
   const onRemove = useToastStore((state) => state.removeToast);
   const toastMobileBottomPx = useToastStore((s) => s.toastMobileBottomPx);
+  const uploadsMinimized = useUploadStore((s) => s.isMinimized);
+  const bottomClass = uploadsMinimized
+    ? 'bottom-[calc(var(--toast-bottom)+3.25rem)] md:bottom-[4.25rem]'
+    : 'bottom-[var(--toast-bottom)] md:bottom-4';
 
   const stack = React.useRef<ToastPopover>(null);
   const shown = toasts.length > 0;
@@ -46,7 +51,7 @@ export const ToastContainer: React.FC = () => {
         {...(supportsPopover ? { popover: 'manual' } : {})}
         role="region"
         aria-label="Уведомления"
-        className={`pointer-events-none fixed m-0 max-w-none top-auto right-4 left-4 md:left-auto z-[60] flex-col gap-2 md:w-96 border-0 bg-transparent p-0 max-h-[min(50dvh,24rem)] overflow-y-auto bottom-[var(--toast-bottom)] md:bottom-4 ${shown ? 'flex' : 'hidden'}`}
+        className={`pointer-events-none fixed m-0 max-w-none top-auto right-4 left-4 md:left-auto z-[60] flex-col gap-2 md:w-96 border-0 bg-transparent p-0 max-h-[min(50dvh,24rem)] overflow-y-auto ${bottomClass} ${shown ? 'flex' : 'hidden'}`}
         style={{ '--toast-bottom': `${toastMobileBottomPx}px` } as React.CSSProperties}
       >
         {toasts.map((toast) => (
