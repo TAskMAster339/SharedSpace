@@ -1,4 +1,3 @@
-// src/components/ui/FileIcon.tsx
 import React from 'react';
 import {
   Image,

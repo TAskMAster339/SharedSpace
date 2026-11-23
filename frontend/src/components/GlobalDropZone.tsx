@@ -4,68 +4,41 @@ import { Upload } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useDirectoryStore } from '../store/directoryStore';
 import { useDragDropStore } from '../store/dragDropStore';
-import { useFavorites } from '../hooks/useFavorites';
-import { uploadFilesWithProgress } from '../api/files';
-import { addFavorite } from '../api/favorites';
-import { buildUploadSuccessMessage, buildUploadErrorMessage } from '../utils/uploadMessage';
+import { useUploadStore } from '../store/uploadStore';
 import { cn } from '../utils/cn';
 
 interface GlobalDropZoneProps {
   children: React.ReactNode;
-  onUploadStart?: () => void;
-  onUploadEnd?: () => void;
-  onFileUploaded?: (file: File, success: boolean, error?: string) => void;
 }
 
-export const GlobalDropZone: React.FC<GlobalDropZoneProps> = ({
-  children,
-  onUploadStart,
-  onUploadEnd,
-  onFileUploaded,
-}) => {
+export const GlobalDropZone: React.FC<GlobalDropZoneProps> = ({ children }) => {
   const location = useLocation();
   const accessToken = useAuthStore((state) => state.accessToken);
   const { personalStorageId } = useDirectoryStore();
-  const { targetDirectoryId, triggerUploadComplete } = useDragDropStore();
-  const { toggleFavorite } = useFavorites();
+  const { targetDirectoryId } = useDragDropStore();
+  const addTasks = useUploadStore((s) => s.addTasks);
 
   const [isDragging, setIsDragging] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [currentDirectoryId, setCurrentDirectoryId] = useState<string | null>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
-  // Определяем целевую директорию
   const getTargetDirectory = useCallback(() => {
-    // Если задана директория через store (из DirectoryPage) - используем её
-    if (targetDirectoryId) {
-      return targetDirectoryId;
-    }
-
+    if (targetDirectoryId) return targetDirectoryId;
     const path = location.pathname;
-
-    // Если на странице директории - используем ID из URL
     if (path.startsWith('/directories/')) {
       const id = path.split('/directories/')[1];
-      if (id && id !== 'personal') {
-        return id;
-      }
+      if (id && id !== 'personal') return id;
     }
-
-    // Для всех остальных - личное хранилище
     return personalStorageId;
   }, [location.pathname, personalStorageId, targetDirectoryId]);
 
-  // Обновляем текущую директорию
   useEffect(() => {
-    const dirId = getTargetDirectory();
-    setCurrentDirectoryId(dirId);
+    setCurrentDirectoryId(getTargetDirectory());
   }, [getTargetDirectory]);
 
   const handleDragEnter = useCallback((e: DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-
     if (e.dataTransfer?.types.includes('Files')) {
       setIsDragging(true);
     }
@@ -85,7 +58,7 @@ export const GlobalDropZone: React.FC<GlobalDropZoneProps> = ({
   }, []);
 
   const handleDrop = useCallback(
-    async (e: DragEvent) => {
+    (e: DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
       setIsDragging(false);
@@ -94,68 +67,17 @@ export const GlobalDropZone: React.FC<GlobalDropZoneProps> = ({
       if (!files || files.length === 0 || !accessToken) return;
 
       const targetDirId = currentDirectoryId || personalStorageId;
-      if (!targetDirId || targetDirId === 'personal') {
-        onFileUploaded?.(files[0], false, 'Личное хранилище не найдено');
-        return;
-      }
+      if (!targetDirId || targetDirId === 'personal') return;
 
-      setIsUploading(true);
-      setUploadProgress(0);
-      onUploadStart?.();
-
-      try {
-        const result = await uploadFilesWithProgress(
-          accessToken,
-          targetDirId,
-          files,
-          (progress) => {
-            setUploadProgress(progress);
-          },
-        );
-
-        const isOnFavorites = location.pathname === '/favorites';
-        if (isOnFavorites && result.files.length > 0) {
-          for (const file of result.files) {
-            try {
-              await addFavorite(accessToken, file.id);
-              toggleFavorite(file.id);
-            } catch (err) {
-              console.warn('Failed to add to favorites:', err);
-            }
-          }
-        }
-
-        onFileUploaded?.(files[0], true, buildUploadSuccessMessage(files, isOnFavorites));
-
-        // Триггерим обновление страницы
-        triggerUploadComplete();
-      } catch (err) {
-        const reason = err instanceof Error ? err.message : undefined;
-        onFileUploaded?.(files[0], false, buildUploadErrorMessage(files, reason));
-      } finally {
-        setIsUploading(false);
-        setUploadProgress(0);
-        onUploadEnd?.();
-      }
+      const isOnFavorites = location.pathname === '/favorites';
+      addTasks(Array.from(files), targetDirId, { toFavorites: isOnFavorites });
     },
-    [
-      accessToken,
-      currentDirectoryId,
-      personalStorageId,
-      location.pathname,
-      toggleFavorite,
-      onFileUploaded,
-      onUploadStart,
-      onUploadEnd,
-      triggerUploadComplete,
-    ],
+    [accessToken, currentDirectoryId, personalStorageId, location.pathname, addTasks],
   );
 
   useEffect(() => {
     const handleDragLeaveDocument = (e: DragEvent) => {
-      if (e.relatedTarget === null) {
-        setIsDragging(false);
-      }
+      if (e.relatedTarget === null) setIsDragging(false);
     };
 
     document.addEventListener('dragenter', handleDragEnter);
@@ -177,55 +99,26 @@ export const GlobalDropZone: React.FC<GlobalDropZoneProps> = ({
     <div ref={dropZoneRef} className="relative w-full h-full flex flex-col">
       {children}
 
-      {/* Оверлей загрузки (показывается пока файлы загружаются) */}
-      {isUploading && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-theme-primary/80 backdrop-blur-[2px] transition-opacity duration-200 opacity-100">
-          <div className="w-[420px] max-w-[90vw] p-12 rounded-theme text-center border-2 border-dashed border-brand bg-theme-secondary shadow-theme-dropdown transition-all duration-200 scale-100">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-theme bg-brand-light flex items-center justify-center">
-              <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-[50%] animate-spin" />
-            </div>
-            <p className="text-sm font-medium text-theme-primary">Загрузка...</p>
-            <div className="mt-3 w-full h-2 bg-theme-border rounded-theme overflow-hidden">
-              <div
-                className="h-full bg-brand rounded-theme transition-all duration-300"
-                style={{ width: `${uploadProgress}%` }}
-              />
-            </div>
-            <p className="text-xs text-theme-muted mt-1.5">{uploadProgress}%</p>
-            <p className="text-xs text-theme-muted mt-2">
-              {currentDirectoryId ? 'Загрузка в текущую папку' : 'Загрузка...'}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Оверлей drag (только до начала загрузки) */}
-      {isDragging && !isUploading && (
+      {isDragging && (
         <div
           className={cn(
             'fixed inset-0 z-[100] flex items-center justify-center',
             'bg-theme-primary/80 backdrop-blur-[2px]',
-            'transition-opacity duration-200',
-            isDragging ? 'opacity-100' : 'opacity-0 pointer-events-none',
+            'transition-opacity duration-200 opacity-100',
           )}
         >
           <div
             className={cn(
               'w-[420px] max-w-[90vw] p-12 rounded-theme text-center',
               'border-2 border-dashed border-brand',
-              'bg-theme-secondary',
-              'shadow-theme-dropdown',
-              'transition-all duration-200',
-              isDragging ? 'scale-100' : 'scale-95',
+              'bg-theme-secondary shadow-theme-dropdown',
             )}
           >
             <div className="w-20 h-20 mx-auto mb-4 rounded-theme bg-brand-light flex items-center justify-center">
               <Upload size={36} className="text-brand" />
             </div>
-            <p className="text-lg font-semibold text-theme-primary">Отпустите файл для загрузки</p>
-            <p className="text-sm text-theme-muted mt-1">
-              Отпустите файл в любом месте этой области
-            </p>
+            <p className="text-lg font-semibold text-theme-primary">Отпустите файлы для загрузки</p>
+            <p className="text-sm text-theme-muted mt-1">Загрузка начнётся сразу после этого</p>
           </div>
         </div>
       )}

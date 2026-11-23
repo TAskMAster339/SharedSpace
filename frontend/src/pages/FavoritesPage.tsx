@@ -83,7 +83,6 @@ const FavoritesPage: React.FC = () => {
     loadFavorites();
   }, [accessToken, loadFavorites]);
 
-  // Регистрируем callback для обновления после загрузки через DnD
   useEffect(() => {
     setOnUploadComplete(() => {
       loadFavorites();

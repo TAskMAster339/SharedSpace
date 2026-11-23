@@ -18,6 +18,7 @@ import { ScrollToTopButton } from './ScrollToTopButton';
 import { useAuth } from '../hooks/useAuth';
 import { cn } from '../utils/cn';
 import { PRIVACY_POLICY_PATH } from '../constants/privacy';
+import { UploadProgressModal } from './ui/UploadProgressModal';
 
 const GITHUB_URL = 'https://github.com/TAskMAster339/SharedSpace';
 const CURRENT_YEAR = new Date().getFullYear();
@@ -128,6 +129,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, fillViewport = false }
 
       {isAuthenticated && !workspace && <MobileBottomNav />}
       {isAuthenticated && !reader && <StorageUsageModal />}
+      {isAuthenticated && <UploadProgressModal />}
       {!workspace && <ScrollToTopButton />}
     </div>
   );

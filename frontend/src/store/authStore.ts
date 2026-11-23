@@ -47,12 +47,6 @@ export interface AuthState {
   changePassword: (oldPassword: string, newPassword: string) => Promise<void>;
   deleteAccount: () => Promise<void>;
   resendVerification: () => Promise<void>;
-  /**
-   * Verifies an email using a single-use token. If the caller is currently
-   * authenticated (i.e. they opened the link in the same browser session),
-   * we refresh the token pair so the next API call carries activated=true.
-   * Returns the verified user ID.
-   */
   verifyEmailAndRefresh: (token: string) => Promise<string>;
 }
 
@@ -80,8 +74,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     useFavoritesStore.getState().reset();
     await useDirectoryStore.getState().fetchPersonalStorageId(result.tokens.access_token);
 
-    // Автоматически отправляем письмо подтверждения для неактивированных
-    // пользователей — модал будет показывать актуальный статус.
     if (!result.user.activated) {
       resendVerificationEmailRequest(result.tokens.access_token).catch(() => {});
     }
@@ -95,21 +87,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       second_name: data.lastName,
       password: data.password,
     });
-    // Регистрация не возвращает токены, поэтому логинимся сразу после неё.
-    // Логин разрешён для неподтверждённых пользователей — модал подтверждения
-    // почты появится глобально после редиректа на /dashboard.
     await get().login(data.email, data.password);
   },
 
   logout: async () => {
     const refreshToken = getCookie(REFRESH_COOKIE);
-    if (refreshToken) {
-      await logoutRequest(refreshToken).catch(() => undefined);
-    }
     removeCookie(REFRESH_COOKIE);
     set({ user: null, accessToken: null, isAuthenticated: false, isActivated: false });
     useDirectoryStore.getState().reset();
     useFavoritesStore.getState().reset();
+    if (refreshToken) {
+      await logoutRequest(refreshToken).catch(() => undefined);
+    }
   },
 
   refreshUser: async () => {
@@ -204,9 +193,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   verifyEmailAndRefresh: async (token) => {
     const result = await verifyEmailRequest(token);
-    // If the user is currently logged in on this device, rotate the token
-    // pair so the next request carries activated=true. Otherwise the caller
-    // will be redirected to /login.
     const { accessToken } = get();
     if (accessToken && result.user_id) {
       try {
@@ -223,21 +209,31 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           isAuthenticated: true,
           isActivated: deriveActivated(user),
         });
-      } catch {
-        // Token rotation failed — not fatal, the user can log in fresh.
-      }
+      } catch {}
     }
     return result.user_id || '';
   },
 }));
 
+let sessionVersion = 0;
+useAuthStore.subscribe((state, previous) => {
+  if (state.user?.id !== previous.user?.id) sessionVersion += 1;
+});
+
 setAuthHandlers({
+  getSessionVersion: () => sessionVersion,
+  getRefreshToken: () => getCookie(REFRESH_COOKIE),
+  getAccessToken: () => useAuthStore.getState().accessToken,
   refresh: async () => {
     const refreshToken = getCookie(REFRESH_COOKIE);
     if (!refreshToken) {
       throw new Error('No refresh token');
     }
+    const version = sessionVersion;
     const result = await refresh(refreshToken);
+    if (version !== sessionVersion || getCookie(REFRESH_COOKIE) !== refreshToken) {
+      throw new DOMException('Сеанс завершён', 'AbortError');
+    }
     setCookie(REFRESH_COOKIE, result.tokens.refresh_token, result.tokens.refresh_expires_in);
     useAuthStore.setState({
       accessToken: result.tokens.access_token,

@@ -1,4 +1,3 @@
-// components/ui/EmptyState.tsx
 import React from 'react';
 import { cn } from '../../utils/cn';
 
@@ -32,7 +31,6 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
     md: 32,
   };
 
-  // Создаем иконку с правильным размером
   const renderIcon = () => {
     if (!icon) return null;
 

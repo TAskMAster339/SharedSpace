@@ -1,12 +1,9 @@
 import React, { useCallback, useState } from 'react';
-import { Upload, File, X } from 'lucide-react';
+import { Upload, File } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
 interface DropZoneProps {
   onFilesDrop: (files: FileList) => void;
-  isUploading?: boolean;
-  uploadProgress?: number;
-  uploadError?: string | null;
   className?: string;
   multiple?: boolean;
   accept?: string;
@@ -14,9 +11,6 @@ interface DropZoneProps {
 
 export const DropZone: React.FC<DropZoneProps> = ({
   onFilesDrop,
-  isUploading = false,
-  uploadProgress = 0,
-  uploadError = null,
   className,
   multiple = true,
   accept,
@@ -46,11 +40,8 @@ export const DropZone: React.FC<DropZoneProps> = ({
       e.preventDefault();
       e.stopPropagation();
       setIsDragging(false);
-
       const files = e.dataTransfer.files;
-      if (files.length > 0) {
-        onFilesDrop(files);
-      }
+      if (files.length > 0) onFilesDrop(files);
     },
     [onFilesDrop],
   );
@@ -58,30 +49,23 @@ export const DropZone: React.FC<DropZoneProps> = ({
   const handleFileSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = e.target.files;
-      if (files && files.length > 0) {
-        onFilesDrop(files);
-      }
+      if (files && files.length > 0) onFilesDrop(files);
       e.target.value = '';
     },
     [onFilesDrop],
   );
 
   const handleClick = useCallback(() => {
-    if (!isUploading) {
-      fileInputRef.current?.click();
-    }
-  }, [isUploading]);
+    fileInputRef.current?.click();
+  }, []);
 
   return (
     <div
       className={cn(
-        'relative border-2 border-dashed rounded-theme p-8 transition-all text-center',
+        'relative border-2 border-dashed rounded-theme p-8 transition-all text-center cursor-pointer',
         isDragging
           ? 'border-brand bg-brand-light/20'
-          : uploadError
-            ? 'border-danger bg-danger-light/10'
-            : 'border-theme-dashed bg-theme-tertiary hover:border-brand/50',
-        isUploading && 'pointer-events-none opacity-70',
+          : 'border-theme-dashed bg-theme-tertiary hover:border-brand/50',
         className,
       )}
       onDragEnter={handleDragEnter}
@@ -97,66 +81,28 @@ export const DropZone: React.FC<DropZoneProps> = ({
         multiple={multiple}
         accept={accept}
         onChange={handleFileSelect}
-        disabled={isUploading}
       />
 
-      {isUploading ? (
-        <div className="py-8">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-theme bg-brand-light flex items-center justify-center">
-            <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-[50%] animate-spin" />
-          </div>
-          <p className="text-sm font-medium text-theme-primary">Загрузка...</p>
-          <div className="mt-3 w-full max-w-xs mx-auto h-2 bg-theme-border rounded-theme overflow-hidden">
-            <div
-              className="h-full bg-brand rounded-theme transition-all duration-300"
-              style={{ width: `${uploadProgress}%` }}
-            />
-          </div>
-          <p className="text-xs text-theme-muted mt-1.5">{uploadProgress}%</p>
-        </div>
-      ) : uploadError ? (
-        <div className="py-8">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-theme bg-danger-light/20 flex items-center justify-center">
-            <X size={28} className="text-danger" />
-          </div>
-          <p className="text-sm font-medium text-danger">{uploadError}</p>
-          <button
-            type="button"
-            className="mt-4 text-sm text-brand hover:text-brand-hover font-medium"
-            onClick={(e) => {
-              e.stopPropagation();
-              fileInputRef.current?.click();
-            }}
-          >
-            Попробовать снова
-          </button>
-        </div>
-      ) : (
-        <>
-          <div className="w-16 h-16 mx-auto mb-4 rounded-theme bg-brand-light flex items-center justify-center">
-            <Upload size={28} className="text-brand" />
-          </div>
-          <p className="text-sm text-theme-secondary">
-            Перетащите файл сюда
-            <br />
-            или
-          </p>
-          <button
-            type="button"
-            className="mt-2 inline-flex items-center gap-2 px-4 py-2 bg-brand text-theme-on-brand rounded-theme hover:bg-brand-hover transition-colors text-sm font-medium"
-            onClick={(e) => {
-              e.stopPropagation();
-              fileInputRef.current?.click();
-            }}
-          >
-            <File size={16} />
-            Выбрать файл
-          </button>
-          {multiple && (
-            <p className="text-xs text-theme-muted mt-3">Можно выбрать несколько файлов</p>
-          )}
-        </>
-      )}
+      <div className="w-16 h-16 mx-auto mb-4 rounded-theme bg-brand-light flex items-center justify-center">
+        <Upload size={28} className="text-brand" />
+      </div>
+      <p className="text-sm text-theme-secondary">
+        Перетащите файл сюда
+        <br />
+        или
+      </p>
+      <button
+        type="button"
+        className="mt-2 inline-flex items-center gap-2 px-4 py-2 bg-brand text-theme-on-brand rounded-theme hover:bg-brand-hover transition-colors text-sm font-medium"
+        onClick={(e) => {
+          e.stopPropagation();
+          fileInputRef.current?.click();
+        }}
+      >
+        <File size={16} />
+        Выбрать файл
+      </button>
+      {multiple && <p className="text-xs text-theme-muted mt-3">Можно выбрать несколько файлов</p>}
     </div>
   );
 };

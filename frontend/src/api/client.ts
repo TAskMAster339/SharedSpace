@@ -24,14 +24,23 @@ type AuthFailureHandler = () => void;
 // при 401 без прямой зависимости от store (избегаем циклического импорта).
 let refreshHandler: RefreshHandler | null = null;
 let onAuthFailure: AuthFailureHandler | null = null;
-let refreshPromise: Promise<string> | null = null;
+let getRefreshToken: (() => string | null | undefined) | null = null;
+let getSessionVersion: (() => number) | null = null;
+let getAccessToken: (() => string | null) | null = null;
+let pendingRefresh: { token: string; promise: Promise<string> } | null = null;
 
 export function setAuthHandlers(handlers: {
   refresh: RefreshHandler;
   onAuthFailure: AuthFailureHandler;
+  getRefreshToken: () => string | null | undefined;
+  getAccessToken: () => string | null;
+  getSessionVersion: () => number;
 }): void {
   refreshHandler = handlers.refresh;
   onAuthFailure = handlers.onAuthFailure;
+  getRefreshToken = handlers.getRefreshToken;
+  getAccessToken = handlers.getAccessToken;
+  getSessionVersion = handlers.getSessionVersion;
 }
 
 // Эндпоинты самой авторизации не должны провоцировать повторный refresh.
@@ -88,27 +97,54 @@ function toApiError(response: Response, data: unknown): ApiError {
   );
 }
 
+export function refreshAccessToken(rejectedToken: string): Promise<string> {
+  const currentToken = getAccessToken?.();
+  if (currentToken && currentToken !== rejectedToken) return Promise.resolve(currentToken);
+
+  const refreshToken = getRefreshToken?.();
+  if (!refreshHandler || !refreshToken) {
+    onAuthFailure?.();
+    return Promise.reject(new ApiError('Сеанс завершён', 401));
+  }
+  if (pendingRefresh?.token === refreshToken) return pendingRefresh.promise;
+
+  const sessionVersion = getSessionVersion?.();
+  const promise = refreshHandler()
+    .catch((error) => {
+      if (getSessionVersion?.() === sessionVersion && getRefreshToken?.() === refreshToken) {
+        onAuthFailure?.();
+      }
+      throw error;
+    })
+    .finally(() => {
+      if (pendingRefresh?.promise === promise) pendingRefresh = null;
+    });
+  pendingRefresh = { token: refreshToken, promise };
+  return promise;
+}
+
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { token } = options;
+  const sessionVersion = getSessionVersion?.();
   const { response, data } = await rawRequest<T>(path, options);
 
-  if (response.status === 401 && token && refreshHandler && !NO_RETRY_PATHS.includes(path)) {
-    try {
-      if (!refreshPromise) {
-        refreshPromise = refreshHandler().finally(() => {
-          refreshPromise = null;
-        });
-      }
-      const newToken = await refreshPromise;
-      const retried = await rawRequest<T>(path, { ...options, token: newToken });
-      if (!retried.response.ok) {
-        throw toApiError(retried.response, retried.data);
-      }
-      return retried.data as T;
-    } catch (err) {
-      onAuthFailure?.();
-      throw err;
+  if (
+    response.status === 401 &&
+    token &&
+    refreshHandler &&
+    !NO_RETRY_PATHS.includes(path) &&
+    getSessionVersion?.() === sessionVersion &&
+    !options.signal?.aborted
+  ) {
+    const newToken = await refreshAccessToken(token);
+    if (getSessionVersion?.() !== sessionVersion || options.signal?.aborted) {
+      throw new DOMException('Запрос отменён', 'AbortError');
     }
+    const retried = await rawRequest<T>(path, { ...options, token: newToken });
+    if (!retried.response.ok) {
+      throw toApiError(retried.response, retried.data);
+    }
+    return retried.data as T;
   }
 
   if (!response.ok) {
