@@ -44,81 +44,19 @@ export function getRecentFiles(accessToken: string, limit?: number): Promise<Rec
   });
 }
 
-const maxUploadBytes = 512 * 1024 * 1024;
-const uploadLimitMessage = 'Общий размер файлов в одной загрузке не должен превышать 512 МиБ';
-export const MAX_UPLOAD_BYTES = maxUploadBytes;
-export const UPLOAD_LIMIT_MESSAGE = uploadLimitMessage;
-
-// Функция загрузки с прогрессом через XHR
-export function uploadFilesWithProgress(
-  token: string,
-  directoryId: string,
-  files: FileList,
-  onProgress: (progress: number) => void,
-): Promise<UploadFilesResponse> {
-  if (Array.from(files).reduce((total, file) => total + file.size, 0) > maxUploadBytes) {
-    return Promise.reject(new Error(uploadLimitMessage));
+export class NonRetryableUploadError extends Error {
+  readonly retryable = false;
+  constructor(message: string) {
+    super(message);
+    this.name = 'NonRetryableUploadError';
   }
-  return new Promise((resolve, reject) => {
-    const formData = new FormData();
-    formData.append('directory_id', directoryId);
-
-    for (let i = 0; i < files.length; i++) {
-      formData.append('files', files[i]);
-    }
-
-    const xhr = new XMLHttpRequest();
-
-    xhr.upload.addEventListener('progress', (event) => {
-      if (event.lengthComputable) {
-        const progress = Math.round((event.loaded / event.total) * 100);
-        onProgress(progress);
-      }
-    });
-
-    xhr.addEventListener('load', () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        try {
-          const response = JSON.parse(xhr.responseText);
-          resolve(response);
-        } catch (e) {
-          reject(new Error('Invalid response format'));
-        }
-      } else {
-        try {
-          const error = JSON.parse(xhr.responseText);
-          reject(new Error(error.error || 'Upload failed'));
-        } catch (e) {
-          reject(
-            new Error(
-              xhr.status === 413 ? uploadLimitMessage : `Upload failed with status ${xhr.status}`,
-            ),
-          );
-        }
-      }
-    });
-
-    xhr.addEventListener('error', () => {
-      reject(new Error('Network error during upload'));
-    });
-
-    xhr.addEventListener('abort', () => {
-      reject(new Error('Upload aborted'));
-    });
-
-    const url = `${process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api/v1'}/files`;
-    xhr.open('POST', url);
-    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-    // Не устанавливаем Content-Type - браузер сам добавит с boundary
-    xhr.send(formData);
-  });
 }
 
-/**
- * Загрузка одного файла с прогрессом.
- * Используется фоновым менеджером загрузок — по одному файлу за запрос,
- * чтобы можно было отслеживать прогресс, ретраить и показывать статус per-file.
- */
+const maxUploadBytes = 512 * 1024 * 1024;
+const uploadLimitMessage = 'Общий размер файлов в одной загрузке не должен превышать 512 МиБ';
+
+const PROGRESS_MIN_INTERVAL_MS = 100;
+
 export function uploadSingleFile(
   token: string,
   directoryId: string,
@@ -127,7 +65,7 @@ export function uploadSingleFile(
   signal?: AbortSignal,
 ): Promise<FileUploadResponse> {
   if (file.size > maxUploadBytes) {
-    return Promise.reject(new Error(uploadLimitMessage));
+    return Promise.reject(new NonRetryableUploadError(uploadLimitMessage));
   }
   if (signal?.aborted) {
     return Promise.reject(new DOMException('Загрузка отменена', 'AbortError'));
@@ -139,6 +77,8 @@ export function uploadSingleFile(
 
     const xhr = new XMLHttpRequest();
     let settled = false;
+    let lastPercent = -1;
+    let lastEmit = 0;
 
     const cleanup = () => {
       signal?.removeEventListener('abort', onAbort);
@@ -166,9 +106,14 @@ export function uploadSingleFile(
     }
 
     xhr.upload.addEventListener('progress', (event) => {
-      if (event.lengthComputable) {
-        onProgress(Math.round((event.loaded / event.total) * 100));
-      }
+      if (!event.lengthComputable) return;
+      const percent = Math.round((event.loaded / event.total) * 100);
+      if (percent === lastPercent) return;
+      const now = Date.now();
+      if (now - lastEmit < PROGRESS_MIN_INTERVAL_MS && percent < 100) return;
+      lastPercent = percent;
+      lastEmit = now;
+      onProgress(percent);
     });
 
     xhr.addEventListener('load', () => {
@@ -190,7 +135,9 @@ export function uploadSingleFile(
           fail(new Error(error.error || 'Не удалось загрузить файл'));
         } catch {
           fail(
-            new Error(xhr.status === 413 ? uploadLimitMessage : `Ошибка загрузки (${xhr.status})`),
+            xhr.status === 413
+              ? new NonRetryableUploadError(uploadLimitMessage)
+              : new Error(`Ошибка загрузки (${xhr.status})`),
           );
         }
       }
@@ -201,8 +148,7 @@ export function uploadSingleFile(
 
     if (signal) signal.addEventListener('abort', onAbort, { once: true });
 
-    const url = `${API_BASE_URL}/files`;
-    xhr.open('POST', url);
+    xhr.open('POST', `${API_BASE_URL}/files`);
     xhr.setRequestHeader('Authorization', `Bearer ${token}`);
     xhr.send(formData);
   });

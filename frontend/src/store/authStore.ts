@@ -18,6 +18,7 @@ import {
 } from '../api/users';
 import { setAuthHandlers } from '../api/client';
 import { getCookie, setCookie, removeCookie } from '../utils/cookies';
+import { stopUploadManager } from '../services/uploadManager';
 
 const REFRESH_COOKIE = 'refresh_token';
 
@@ -47,12 +48,6 @@ export interface AuthState {
   changePassword: (oldPassword: string, newPassword: string) => Promise<void>;
   deleteAccount: () => Promise<void>;
   resendVerification: () => Promise<void>;
-  /**
-   * Verifies an email using a single-use token. If the caller is currently
-   * authenticated (i.e. they opened the link in the same browser session),
-   * we refresh the token pair so the next API call carries activated=true.
-   * Returns the verified user ID.
-   */
   verifyEmailAndRefresh: (token: string) => Promise<string>;
 }
 
@@ -80,8 +75,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     useFavoritesStore.getState().reset();
     await useDirectoryStore.getState().fetchPersonalStorageId(result.tokens.access_token);
 
-    // Автоматически отправляем письмо подтверждения для неактивированных
-    // пользователей — модал будет показывать актуальный статус.
     if (!result.user.activated) {
       resendVerificationEmailRequest(result.tokens.access_token).catch(() => {});
     }
@@ -95,9 +88,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       second_name: data.lastName,
       password: data.password,
     });
-    // Регистрация не возвращает токены, поэтому логинимся сразу после неё.
-    // Логин разрешён для неподтверждённых пользователей — модал подтверждения
-    // почты появится глобально после редиректа на /dashboard.
     await get().login(data.email, data.password);
   },
 
@@ -106,6 +96,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (refreshToken) {
       await logoutRequest(refreshToken).catch(() => undefined);
     }
+    stopUploadManager();
     removeCookie(REFRESH_COOKIE);
     set({ user: null, accessToken: null, isAuthenticated: false, isActivated: false });
     useDirectoryStore.getState().reset();
@@ -190,6 +181,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
 
     await deleteAccountRequest(accessToken, { current_refresh_token: refreshToken });
+    stopUploadManager();
     removeCookie(REFRESH_COOKIE);
     set({ user: null, accessToken: null, isAuthenticated: false, isActivated: false });
   },
@@ -204,9 +196,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   verifyEmailAndRefresh: async (token) => {
     const result = await verifyEmailRequest(token);
-    // If the user is currently logged in on this device, rotate the token
-    // pair so the next request carries activated=true. Otherwise the caller
-    // will be redirected to /login.
     const { accessToken } = get();
     if (accessToken && result.user_id) {
       try {
@@ -223,9 +212,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           isAuthenticated: true,
           isActivated: deriveActivated(user),
         });
-      } catch {
-        // Token rotation failed — not fatal, the user can log in fresh.
-      }
+      } catch {}
     }
     return result.user_id || '';
   },

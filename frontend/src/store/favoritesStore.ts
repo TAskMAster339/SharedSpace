@@ -75,9 +75,6 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
     return makeFavorite;
   },
 
-  // Локально помечает файл избранным без похода в API.
-  // Используется фоновым uploadManager-ом: он уже вызвал addFavorite сам,
-  // и здесь нужно лишь синхронизировать Set, чтобы звёздочка загорелась.
   addFavoriteId: (fileId) => {
     set((state) => {
       if (state.favoriteIds.has(fileId)) return state;

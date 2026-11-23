@@ -2,17 +2,97 @@ import React from 'react';
 import { AlertCircle, CheckCircle2, Loader2, Minimize2, RotateCcw, X } from 'lucide-react';
 import {
   useUploadStore,
+  selectActiveCount,
   selectErrorCount,
   selectSuccessCount,
-  selectActiveCount,
+  selectRetryableErrorCount,
 } from '../../store/uploadStore';
 import { formatFileSize, formatCountWord } from '../../utils/format';
 import { resolveFileIconType } from '../../utils/fileType';
 import { cn } from '../../utils/cn';
 import { usePhoneViewport } from '../../hooks/usePhoneViewport';
 
+interface TaskRowProps {
+  id: string;
+  onRemove: (id: string) => void;
+  onRetry: (id: string) => void;
+}
+
+const TaskRow = React.memo<TaskRowProps>(({ id, onRemove, onRetry }) => {
+  const task = useUploadStore((s) => s.tasks[id]);
+  if (!task) return null;
+
+  const ext = task.file.name.split('.').pop() ?? '';
+  const iconType = resolveFileIconType(task.file.type, ext);
+
+  return (
+    <div className="flex items-start gap-3 px-3 py-2.5 rounded-theme hover:bg-theme-hover">
+      <div className="w-9 h-9 shrink-0 rounded-theme bg-theme-tertiary flex items-center justify-center text-theme-secondary text-xs font-semibold uppercase">
+        {ext.slice(0, 4) || iconType}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <p className="text-sm text-theme-primary truncate flex-1">{task.file.name}</p>
+          <span className="shrink-0">
+            {task.status === 'uploading' && (
+              <Loader2 size={18} className="animate-spin text-brand" />
+            )}
+            {task.status === 'success' && <CheckCircle2 size={18} className="text-emerald-500" />}
+            {task.status === 'error' && <AlertCircle size={18} className="text-danger" />}
+          </span>
+        </div>
+        <p className="text-xs text-theme-muted mt-0.5 truncate">
+          {formatFileSize(task.file.size)}
+          {task.status === 'uploading' ? ` · ${task.progress}%` : ''}
+          {task.status === 'error' && task.error ? ` · ${task.error}` : ''}
+        </p>
+        {task.status === 'uploading' && (
+          <div className="mt-1.5 w-full h-1 bg-theme-border rounded-theme overflow-hidden">
+            <div
+              className="h-full bg-brand transition-all duration-200"
+              style={{ width: `${task.progress}%` }}
+            />
+          </div>
+        )}
+      </div>
+      <div className="flex shrink-0 items-center gap-0.5">
+        {task.status === 'error' && task.retryable && (
+          <button
+            type="button"
+            onClick={() => onRetry(id)}
+            aria-label="Повторить загрузку файла"
+            className="p-1 text-theme-muted hover:text-brand"
+          >
+            <RotateCcw size={14} />
+          </button>
+        )}
+        {task.status === 'error' && (
+          <button
+            type="button"
+            onClick={() => onRemove(id)}
+            aria-label="Убрать из списка"
+            className="p-1 text-theme-muted hover:text-theme-primary"
+          >
+            <X size={14} />
+          </button>
+        )}
+        {task.status === 'success' && (
+          <button
+            type="button"
+            onClick={() => onRemove(id)}
+            aria-label="Убрать из списка"
+            className="p-1 text-theme-muted hover:text-theme-primary"
+          >
+            <X size={14} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+});
+TaskRow.displayName = 'TaskRow';
+
 export const UploadProgressModal: React.FC = () => {
-  const tasks = useUploadStore((s) => s.tasks);
   const order = useUploadStore((s) => s.order);
   const isOpen = useUploadStore((s) => s.isModalOpen);
   const isMinimized = useUploadStore((s) => s.isMinimized);
@@ -23,25 +103,24 @@ export const UploadProgressModal: React.FC = () => {
   const clearCompleted = useUploadStore((s) => s.clearCompleted);
   const removeTask = useUploadStore((s) => s.removeTask);
 
-  const isPhone = usePhoneViewport();
-
   const activeCount = useUploadStore(selectActiveCount);
   const errorCount = useUploadStore(selectErrorCount);
+  const retryableErrorCount = useUploadStore(selectRetryableErrorCount);
   const successCount = useUploadStore(selectSuccessCount);
-  const total = order.length;
+  const isPhone = usePhoneViewport();
 
-  const overallProgress =
-    total === 0
-      ? 0
-      : Math.round(
-          order.reduce((sum, id) => {
-            const t = tasks[id];
-            if (!t) return sum;
-            if (t.status === 'success') return sum + 100;
-            if (t.status === 'uploading') return sum + t.progress;
-            return sum;
-          }, 0) / total,
-        );
+  const total = order.length;
+  const overallProgress = useUploadStore((s) => {
+    if (s.order.length === 0) return 0;
+    let sum = 0;
+    for (const id of s.order) {
+      const t = s.tasks[id];
+      if (!t) continue;
+      if (t.status === 'success') sum += 100;
+      else if (t.status === 'uploading') sum += t.progress;
+    }
+    return Math.round(sum / s.order.length);
+  });
 
   const canClose = activeCount === 0;
 
@@ -53,15 +132,12 @@ export const UploadProgressModal: React.FC = () => {
         : 'Загрузка завершена';
 
   const handleClose = () => {
-    if (canClose) {
-      clearCompleted();
-      if (errorCount === 0) closeModal();
-      else closeModal(); // оставляем ошибки в сторе, но модалку закрываем — плавающий бейдж
-    }
+    if (!canClose) return;
+    clearCompleted();
+    closeModal();
   };
 
   if (!isOpen) {
-    // Плавающая мини-панель при сворачивании
     if (!isMinimized) return null;
     return (
       <button
@@ -103,7 +179,6 @@ export const UploadProgressModal: React.FC = () => {
           isPhone ? 'max-h-[85dvh]' : 'max-w-xl max-h-[80vh]',
         )}
       >
-        {/* Заголовок */}
         <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-theme">
           <div className="min-w-0">
             <h2 className="text-base font-semibold text-theme-primary truncate">{headerTitle}</h2>
@@ -138,7 +213,6 @@ export const UploadProgressModal: React.FC = () => {
           </div>
         </div>
 
-        {/* Общий прогресс */}
         <div className="px-5 pt-3">
           <div className="w-full h-1.5 bg-theme-border rounded-theme overflow-hidden">
             <div
@@ -148,77 +222,25 @@ export const UploadProgressModal: React.FC = () => {
           </div>
         </div>
 
-        {/* Список файлов */}
         <div className="flex-1 overflow-y-auto px-2 py-2">
-          {order.map((id) => {
-            const task = tasks[id];
-            if (!task) return null;
-            const ext = task.file.name.split('.').pop() ?? '';
-            const iconType = resolveFileIconType(task.file.type, ext);
-            return (
-              <div
-                key={id}
-                className="flex items-start gap-3 px-3 py-2.5 rounded-theme hover:bg-theme-hover"
-              >
-                <div className="w-9 h-9 shrink-0 rounded-theme bg-theme-tertiary flex items-center justify-center text-theme-secondary text-xs font-semibold uppercase">
-                  {ext.slice(0, 4) || iconType}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm text-theme-primary truncate flex-1">{task.file.name}</p>
-                    <span className="shrink-0">
-                      {task.status === 'uploading' && (
-                        <Loader2 size={18} className="animate-spin text-brand" />
-                      )}
-                      {task.status === 'success' && (
-                        <CheckCircle2 size={18} className="text-emerald-500" />
-                      )}
-                      {task.status === 'error' && <AlertCircle size={18} className="text-danger" />}
-                    </span>
-                  </div>
-                  <p className="text-xs text-theme-muted mt-0.5 truncate">
-                    {formatFileSize(task.file.size)}
-                    {task.status === 'uploading' ? ` · ${task.progress}%` : ''}
-                    {task.status === 'error' && task.error ? ` · ${task.error}` : ''}
-                  </p>
-                  {task.status === 'uploading' && (
-                    <div className="mt-1.5 w-full h-1 bg-theme-border rounded-theme overflow-hidden">
-                      <div
-                        className="h-full bg-brand transition-all duration-200"
-                        style={{ width: `${task.progress}%` }}
-                      />
-                    </div>
-                  )}
-                </div>
-                {task.status === 'success' && (
-                  <button
-                    type="button"
-                    onClick={() => removeTask(id)}
-                    aria-label="Убрать из списка"
-                    className="shrink-0 p-1 text-theme-muted hover:text-theme-primary"
-                  >
-                    <X size={14} />
-                  </button>
-                )}
-              </div>
-            );
-          })}
+          {order.map((id) => (
+            <TaskRow key={id} id={id} onRemove={removeTask} onRetry={retryFailed} />
+          ))}
         </div>
 
-        {/* Футер */}
         <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 border-t border-theme">
           <span className="text-xs text-theme-muted">
             Всего: {total} · {formatCountWord(total, 'файл', 'файла', 'файлов')}
           </span>
           <div className="flex items-center gap-2">
-            {errorCount > 0 && (
+            {retryableErrorCount > 0 && (
               <button
                 type="button"
-                onClick={retryFailed}
+                onClick={() => retryFailed()}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-theme bg-brand text-theme-on-brand hover:bg-brand-hover text-sm font-medium"
               >
                 <RotateCcw size={14} />
-                Повторить ({errorCount})
+                Повторить всё ({retryableErrorCount})
               </button>
             )}
             {successCount > 0 && activeCount === 0 && (

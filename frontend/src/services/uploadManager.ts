@@ -1,4 +1,4 @@
-import { uploadSingleFile } from '../api/files';
+import { NonRetryableUploadError, uploadSingleFile } from '../api/files';
 import { addFavorite } from '../api/favorites';
 import { useAuthStore } from '../store/authStore';
 import { useUploadStore } from '../store/uploadStore';
@@ -14,8 +14,10 @@ const REFRESH_DEBOUNCE_MS = 400;
 let running = 0;
 const controllers = new Map<string, AbortController>();
 let started = false;
-let unsubscribeAuth: (() => void) | null = null;
+let unsubAuth: (() => void) | null = null;
+let unsubUploads: (() => void) | null = null;
 let refreshTimer: number | undefined;
+let lastUserId: string | null = null;
 
 function acquireSlot(): boolean {
   if (running >= CONCURRENCY) return false;
@@ -68,6 +70,17 @@ function scheduleRefresh() {
   }, REFRESH_DEBOUNCE_MS);
 }
 
+function abortAll() {
+  for (const controller of controllers.values()) {
+    try {
+      controller.abort();
+    } catch {
+      /* noop */
+    }
+  }
+  controllers.clear();
+}
+
 async function runOne(taskId: string) {
   const store = useUploadStore.getState();
   const task = store.tasks[taskId];
@@ -78,10 +91,17 @@ async function runOne(taskId: string) {
 
   const { accessToken, user } = useAuthStore.getState();
   if (!accessToken || !user) {
+    store.updateTask(taskId, {
+      status: 'error',
+      error: 'Сеанс завершён',
+      progress: 0,
+      retryable: true,
+    });
     releaseSlot();
     return;
   }
 
+  const userId = user.id;
   const controller = new AbortController();
   controllers.set(taskId, controller);
   store.updateTask(taskId, { status: 'uploading', progress: 0, error: undefined });
@@ -98,8 +118,11 @@ async function runOne(taskId: string) {
     );
 
     const currentUser = useAuthStore.getState().user;
-    if (!currentUser || currentUser.id !== user.id) {
-      useUploadStore.getState().updateTask(taskId, { status: 'error', error: 'Сеанс завершён' });
+    if (!currentUser || currentUser.id !== userId) {
+      useUploadStore.getState().updateTask(taskId, {
+        status: 'error',
+        error: 'Сеанс завершён',
+      });
       return;
     }
 
@@ -130,14 +153,20 @@ async function runOne(taskId: string) {
     scheduleRefresh();
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') {
-      useUploadStore.getState().removeTask(taskId);
+      useUploadStore.getState().updateTask(taskId, {
+        status: 'error',
+        error: 'Загрузка отменена',
+        retryable: true,
+      });
       return;
     }
+    const retryable = !(err instanceof NonRetryableUploadError);
     const reason = err instanceof Error ? err.message : undefined;
     useUploadStore.getState().updateTask(taskId, {
       status: 'error',
       error: reason || 'Не удалось загрузить файл',
       progress: 0,
+      retryable,
     });
 
     const { updateToast, showToast } = useToastStore.getState();
@@ -161,58 +190,65 @@ async function runOne(taskId: string) {
 }
 
 function pump() {
+  let dispatched = 0;
   while (running < CONCURRENCY) {
     const nextId = pickNextPendingId();
     if (!nextId) break;
     if (!acquireSlot()) break;
+    dispatched += 1;
     void runOne(nextId);
   }
   ensurePendingToasts();
+  if (dispatched === 0) return;
+}
+void pump;
+
+function handleUserChange(nextUserId: string | null) {
+  if (nextUserId === lastUserId) return;
+  lastUserId = nextUserId;
+
+  abortAll();
+
+  const { tasks, order } = useUploadStore.getState();
+  for (const id of order) {
+    const task = tasks[id];
+    if (task && (task.status === 'pending' || task.status === 'uploading')) {
+      useUploadStore.getState().updateTask(id, {
+        status: 'error',
+        error: 'Сеанс завершён',
+        progress: 0,
+        retryable: true,
+      });
+    }
+  }
 }
 
 export function startUploadManager() {
   if (started) return;
   started = true;
+  lastUserId = useAuthStore.getState().user?.id ?? null;
 
-  useUploadStore.subscribe((state, prev) => {
-    if (state.tasks !== prev.tasks) {
-      pump();
-    }
+  unsubUploads = useUploadStore.subscribe((state, prev) => {
+    if (state.tasks !== prev.tasks) pump();
   });
 
-  let lastUserId = useAuthStore.getState().user?.id ?? null;
-  unsubscribeAuth = useAuthStore.subscribe((state) => {
-    const userId = state.user?.id ?? null;
-    if (userId !== lastUserId) {
-      lastUserId = userId;
-      for (const controller of controllers.values()) {
-        try {
-          controller.abort();
-        } catch {
-          /* noop */
-        }
-      }
-      controllers.clear();
-    }
+  unsubAuth = useAuthStore.subscribe((state) => {
+    handleUserChange(state.user?.id ?? null);
   });
 
   pump();
 }
 
 export function stopUploadManager() {
+  if (!started) return;
   started = false;
-  unsubscribeAuth?.();
-  unsubscribeAuth = null;
+  unsubAuth?.();
+  unsubUploads?.();
+  unsubAuth = null;
+  unsubUploads = null;
   if (refreshTimer) {
     window.clearTimeout(refreshTimer);
     refreshTimer = undefined;
   }
-  for (const controller of controllers.values()) {
-    try {
-      controller.abort();
-    } catch {
-      /* noop */
-    }
-  }
-  controllers.clear();
+  abortAll();
 }

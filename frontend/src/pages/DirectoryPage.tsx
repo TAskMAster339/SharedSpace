@@ -57,6 +57,7 @@ import {
   getFileContentUrl,
 } from '../api/files';
 import { createShareLink, createDirectoryShareLink } from '../api/sharelinks';
+import { ApiError } from '../api/client';
 import { formatFileSize, formatDate } from '../utils/format';
 import { useFavorites } from '../hooks/useFavorites';
 import { useToastStore } from '../hooks/useToast';
@@ -241,7 +242,8 @@ const DirectoryPage: React.FC = () => {
         }
       } catch (err) {
         console.error('Failed to load directory:', err);
-        if (err instanceof Error && err.message?.includes('404')) {
+        const notFound = err instanceof ApiError && err.status === 404;
+        if (notFound) {
           navigate('/dashboard', { replace: true });
         } else {
           setError('Не удалось загрузить содержимое директории');
@@ -277,10 +279,9 @@ const DirectoryPage: React.FC = () => {
     if (redirectDone.current || !accessToken) return;
 
     if (id === 'personal') {
-      const rootId = personalStorageId || localStorage.getItem('rootDirectoryId');
-      if (rootId && rootId !== 'personal') {
+      if (personalStorageId && personalStorageId !== 'personal') {
         redirectDone.current = true;
-        navigate(`/directories/${rootId}`, { replace: true });
+        navigate(`/directories/${personalStorageId}`, { replace: true });
       }
     } else if (id) {
       redirectDone.current = true;

@@ -24,23 +24,13 @@ export const useDirectoryStore = create<DirectoryState>((set) => ({
 
   fetchPersonalStorageId: async (accessToken: string) => {
     try {
-      // Проверяем localStorage
-      const savedId = localStorage.getItem('rootDirectoryId');
-      if (savedId) {
-        // Проверяем, что ID валидный (не 'personal')
-        if (savedId !== 'personal') {
-          set({ personalStorageId: savedId, isLoading: false });
-          return;
-        }
-      }
-
-      // Запрашиваем через API
       const contents = await getRootDirectoryContents(accessToken);
       const rootId = contents.id;
       localStorage.setItem('rootDirectoryId', rootId);
       set({ personalStorageId: rootId, isLoading: false });
     } catch (error) {
       console.error('Failed to get root directory:', error);
+      localStorage.removeItem('rootDirectoryId');
       set({ personalStorageId: 'personal', isLoading: false });
     }
   },
