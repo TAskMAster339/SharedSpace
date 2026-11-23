@@ -1,4 +1,5 @@
 import React, { useEffect, useId, useLayoutEffect, useRef } from 'react';
+import { preventModalContextMenu } from './preventModalContextMenu';
 import { X } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
@@ -96,6 +97,7 @@ export const Modal: React.FC<ModalProps> = ({
     return (
       <dialog
         ref={dialogRef}
+        onContextMenu={preventModalContextMenu}
         aria-labelledby={titleId}
         {...{ closedby: 'any' }}
         onClose={onClose}
@@ -110,7 +112,10 @@ export const Modal: React.FC<ModalProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+    <div
+      onContextMenu={preventModalContextMenu}
+      className="fixed inset-0 z-50 flex items-center justify-center px-4"
+    >
       <div className="fixed inset-0 bg-black/50" onClick={onClose} />
       <div className={cn('relative flex w-full', panelClassName)}>{content}</div>
     </div>

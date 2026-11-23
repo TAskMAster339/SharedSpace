@@ -289,7 +289,6 @@ const ProfileSettingsPage: React.FC = () => {
         title={user?.username ? `Настройки — ${user.username}` : 'Настройки профиля'}
         description="Редактирование личных данных, смена пароля и управление аккаунтом."
       />
-      {/* Предупреждение о неподтверждённой почте */}
       {!isActivated && (
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-theme border border-warning/30 bg-warning/10 p-4">
           <ShieldAlert size={20} className="text-warning shrink-0" />
@@ -310,7 +309,6 @@ const ProfileSettingsPage: React.FC = () => {
           </Button>
         </div>
       )}
-      {/* Hero-блок профиля */}
       <Card className="relative overflow-hidden p-0">
         <div className="h-20 sm:h-24 bg-gradient-to-r from-brand to-brand-dark" />
         <div className="px-4 sm:px-6 pb-5 sm:pb-6 -mt-10 sm:-mt-12 flex flex-col sm:flex-row sm:items-end gap-4">
@@ -340,7 +338,6 @@ const ProfileSettingsPage: React.FC = () => {
         </div>
       </Card>
 
-      {/* Личные данные */}
       <Card>
         <CardHeader>
           <CardTitle>Личные данные</CardTitle>
@@ -409,7 +406,6 @@ const ProfileSettingsPage: React.FC = () => {
         )}
       </Card>
 
-      {/* Пароль */}
       <Card>
         <CardHeader>
           <CardTitle>Безопасность</CardTitle>
@@ -480,7 +476,6 @@ const ProfileSettingsPage: React.FC = () => {
         )}
       </Card>
 
-      {/* Удаление аккаунта*/}
       <Card>
         <CardHeader>
           <CardTitle className="text-danger">Удаление аккаунта</CardTitle>
@@ -503,7 +498,6 @@ const ProfileSettingsPage: React.FC = () => {
         </div>
       </Card>
 
-      {/* Модальное окно подтверждения */}
       <ConfirmModal
         isOpen={isDeleteModalOpen}
         onClose={closeDeleteModal}

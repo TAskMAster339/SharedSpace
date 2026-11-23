@@ -11,7 +11,6 @@ export type FileIconType =
   | 'font'
   | 'file';
 
-// Человекочитаемые названия для типов файлов
 export const FILE_TYPE_LABELS: Record<FileIconType, string> = {
   img: 'Изображение',
   pdf: 'PDF документ',
@@ -26,7 +25,6 @@ export const FILE_TYPE_LABELS: Record<FileIconType, string> = {
   file: 'Файл',
 };
 
-// Маппинг расширений на типы иконок
 const EXTENSION_TO_ICON: Record<string, FileIconType> = {
   // Изображения
   jpg: 'img',
@@ -121,9 +119,7 @@ const EXTENSION_TO_ICON: Record<string, FileIconType> = {
   eot: 'font',
 };
 
-// Определение типа иконки по MIME-типу или расширению
 export function resolveFileIconType(mimeType: string, extension: string): FileIconType {
-  // Сначала пробуем по MIME-типу
   if (mimeType) {
     if (mimeType.startsWith('image/')) return 'img';
     if (mimeType.startsWith('video/')) return 'video';
@@ -139,18 +135,15 @@ export function resolveFileIconType(mimeType: string, extension: string): FileIc
     if (mimeType.includes('c++')) return 'code';
   }
 
-  // Потом по расширению
   const normalizedExt = extension.replace(/^\./, '').toLowerCase();
   return EXTENSION_TO_ICON[normalizedExt] || 'file';
 }
 
-// Получение человекочитаемого названия типа файла
 export function getFileTypeLabel(mimeType: string, extension: string): string {
   const iconType = resolveFileIconType(mimeType, extension);
   return FILE_TYPE_LABELS[iconType] || 'Файл';
 }
 
-// Форматирование для отображения: "Тип (расширение)"
 export function getFileTypeDisplay(mimeType: string, extension: string): string {
   const label = getFileTypeLabel(mimeType, extension);
   const ext = extension.replace(/^\./, '').toLowerCase();

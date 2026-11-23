@@ -1,4 +1,5 @@
 import React from 'react';
+import { preventModalContextMenu } from './preventModalContextMenu';
 import { AlertTriangle } from 'lucide-react';
 import { Button } from './Button';
 import { cn } from '../../utils/cn';
@@ -64,10 +65,12 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   const styles = variantStyles[variant];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+    <div
+      onContextMenu={preventModalContextMenu}
+      className="fixed inset-0 z-50 flex items-center justify-center px-4"
+    >
       <div className="fixed inset-0 bg-black/50" onClick={showCancel ? onClose : undefined} />
       <div className="relative bg-theme-secondary rounded-theme max-w-md w-full p-6 shadow-theme-dropdown border border-theme">
-        {/* Шапка: иконка и заголовок */}
         <div className="flex items-center gap-3">
           <div className={cn('p-2 rounded-theme shrink-0', styles.iconBg, styles.iconColor)}>
             {icon || <AlertTriangle size={20} />}

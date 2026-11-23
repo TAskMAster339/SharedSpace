@@ -146,7 +146,6 @@ export const EditShareLinkModal: React.FC<EditShareLinkModalProps> = ({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Изменить ссылку" maxWidth="lg">
       <div className="space-y-4">
-        {/* Ссылка */}
         {link && (
           <div className="space-y-1">
             <label className="text-xs text-theme-secondary font-medium">Ссылка</label>
@@ -174,7 +173,6 @@ export const EditShareLinkModal: React.FC<EditShareLinkModalProps> = ({
           </div>
         )}
 
-        {/* Тип доступа */}
         <div className="space-y-1">
           <label className="text-xs text-theme-secondary font-medium">Тип доступа</label>
           <div className="flex gap-2">
@@ -205,7 +203,6 @@ export const EditShareLinkModal: React.FC<EditShareLinkModalProps> = ({
           </div>
         </div>
 
-        {/* Срок действия */}
         <div className="space-y-1">
           <label className="text-xs text-theme-secondary font-medium">Срок действия</label>
           <div className="flex flex-wrap gap-2">
@@ -226,7 +223,6 @@ export const EditShareLinkModal: React.FC<EditShareLinkModalProps> = ({
           </div>
         </div>
 
-        {/* Пароль */}
         <div className="space-y-2">
           <label className="text-xs text-theme-secondary font-medium">Пароль (необязательно)</label>
 
@@ -276,7 +272,6 @@ export const EditShareLinkModal: React.FC<EditShareLinkModalProps> = ({
           </div>
         </div>
 
-        {/* Ошибка */}
         {error && (
           <div className="flex items-center gap-2 p-3 bg-danger-light border border-danger/20 rounded-theme text-sm text-danger">
             <AlertCircle size={14} className="shrink-0" />
@@ -284,7 +279,6 @@ export const EditShareLinkModal: React.FC<EditShareLinkModalProps> = ({
           </div>
         )}
 
-        {/* Кнопки */}
         <div className="flex gap-2 pt-1">
           <Button
             variant="secondary"

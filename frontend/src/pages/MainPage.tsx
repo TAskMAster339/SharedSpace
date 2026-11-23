@@ -77,7 +77,6 @@ const MainPage: React.FC = () => {
         title="Облачное хранилище"
         description="SharedSpace — бесплатное облачное хранилище для команд и личных файлов. Конвертация, просмотр PDF/фото/видео в браузере, общие папки."
       />
-      {/* Hero — на всю ширину экрана, заподлицо с шапкой, на полный экран */}
       <section className="relative left-1/2 right-1/2 -mx-[50vw] -mt-4 sm:-mt-6 w-screen min-h-[calc(100vh-4vh)] flex items-center overflow-hidden bg-brand-gradient">
         <div className="absolute inset-0 bg-starfield opacity-60" />
         <div className="absolute -top-10 -right-10 w-80 h-80 bg-white/10 rounded-theme blur-3xl" />
@@ -102,12 +101,10 @@ const MainPage: React.FC = () => {
             </Link>
           </div>
 
-          {/* «Планета»-лого с вращающейся орбитой возможностей */}
           <div className="relative hidden sm:flex items-center justify-center h-96">
             <div className="relative w-80 h-80">
               <div className="absolute inset-0 rounded-theme bg-white/15 blur-2xl" />
 
-              {/* Вращающееся кольцо со спутниками */}
               <div className="absolute inset-0 rounded-[50%] border-2 border-dashed border-white/40 animate-orbit">
                 {ORBIT.map(({ icon: Icon, position }, i) => (
                   // Внешний div отвечает за позицию (translate), внутренний — за контр-вращение,
@@ -120,7 +117,6 @@ const MainPage: React.FC = () => {
                 ))}
               </div>
 
-              {/* Центральное лого */}
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 rounded-[50%] bg-white shadow-theme-dropdown flex items-center justify-center p-6">
                 <img src={logo} alt="SharedSpace" className="w-full h-full object-contain" />
               </div>
@@ -129,7 +125,6 @@ const MainPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Возможности */}
       <section
         id="features"
         className="min-h-[calc(100vh-4vh)] flex flex-col justify-center space-y-8 py-12"
@@ -154,7 +149,6 @@ const MainPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Как это работает */}
       <section
         id="how-it-works"
         className="min-h-[calc(100vh-4vh)] flex flex-col justify-center space-y-10 py-12"

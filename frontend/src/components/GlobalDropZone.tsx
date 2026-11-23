@@ -99,7 +99,6 @@ export const GlobalDropZone: React.FC<GlobalDropZoneProps> = ({ children }) => {
     <div ref={dropZoneRef} className="relative w-full h-full flex flex-col">
       {children}
 
-      {/* Оверлей drag (пока файлы тащат) */}
       {isDragging && (
         <div
           className={cn(

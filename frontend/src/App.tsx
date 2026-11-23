@@ -53,7 +53,6 @@ const App: React.FC = () => {
   return (
     <Router>
       <Routes>
-        {/* Публичные маршруты */}
         <Route
           path="/"
           element={
@@ -99,7 +98,6 @@ const App: React.FC = () => {
           }
         />
 
-        {/* Только гостевые маршруты */}
         <Route
           element={
             <PublicRoute>
@@ -121,7 +119,6 @@ const App: React.FC = () => {
           }
         />
 
-        {/* Защищённые маршруты */}
         <Route
           element={
             <ProtectedRoute>
@@ -129,7 +126,6 @@ const App: React.FC = () => {
             </ProtectedRoute>
           }
         >
-          {/* Страницы с DropZone */}
           <Route
             path="/dashboard"
             element={
@@ -155,7 +151,6 @@ const App: React.FC = () => {
             }
           />
 
-          {/* Страницы без DropZone */}
           <Route path="/settings" element={<ProfileSettingsPage />} />
           <Route path="/directories" element={<SharedDirListPage />} />
           <Route path="/directories/:id/settings" element={<FolderSettingsPage />} />
@@ -166,7 +161,6 @@ const App: React.FC = () => {
           <Route path="/trash" element={<TrashPage />} />
         </Route>
 
-        {/* 404 без DropZone */}
         <Route
           path="*"
           element={

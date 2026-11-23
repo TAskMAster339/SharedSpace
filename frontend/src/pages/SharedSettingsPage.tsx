@@ -365,7 +365,6 @@ const SharedSettingsPage: React.FC = () => {
         </Card>
       )}
 
-      {/* Модалка приглашения */}
       <Modal
         isOpen={isInviteOpen}
         onClose={() => !isInviting && setIsInviteOpen(false)}
@@ -424,7 +423,6 @@ const SharedSettingsPage: React.FC = () => {
         onRename={handleRenameDirectory}
       />
 
-      {/* Подтверждение удаления директории */}
       <ConfirmModal
         isOpen={isDeleteOpen}
         onClose={() => !isDeleting && setIsDeleteOpen(false)}

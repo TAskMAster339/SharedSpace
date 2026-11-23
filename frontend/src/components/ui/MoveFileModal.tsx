@@ -18,7 +18,6 @@ import { moveFile } from '../../api/files';
 import { updateDirectory } from '../../api/directories';
 import { useToastStore } from '../../hooks/useToast';
 
-// Вспомогательный компонент для иконки папки
 const FolderIcon = ({ isShared, isRoot }: { isShared?: boolean; isRoot?: boolean }) => {
   if (isRoot) {
     return <Home size={18} className="text-brand" />;
@@ -87,7 +86,6 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
     return true;
   }, [isRoot, currentDirId, getUserRole]);
 
-  // Загружаем содержимое директории
   const loadDirectory = useCallback(
     async (dirId: string) => {
       if (!accessToken) return;
@@ -102,7 +100,6 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
         setDirectoryInfo(info);
         setContents(data);
 
-        // Строим breadcrumbs через бэкенд
         const { path: apiPath } = await getDirectoryPath(accessToken, dirId);
         const crumbs: BreadcrumbItem[] = apiPath.map((item) => ({
           id: item.id,
@@ -150,7 +147,6 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
     init();
   }, [isOpen, accessToken, currentDirectoryId, loadDirectory, showToast, onClose]);
 
-  // Навигация по breadcrumbs
   const navigateTo = useCallback(
     async (dirId: string) => {
       setCurrentDirId(dirId);
@@ -160,7 +156,6 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
     [loadDirectory],
   );
 
-  // Создание папки
   const handleCreateFolder = useCallback(async () => {
     if (!newFolderName.trim() || !accessToken || !currentDirId) return;
 
@@ -184,7 +179,6 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
     }
   }, [newFolderName, accessToken, currentDirId, loadDirectory, showToast]);
 
-  // Перемещение
   const handleMove = useCallback(async () => {
     if (!accessToken || !selectedDirectoryId || !fileId) return;
 
@@ -223,7 +217,6 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
     onClose,
   ]);
 
-  // Доступные корневые директории для навигации
   const rootDirectories = useMemo(() => {
     const dirs: { id: string; name: string; isRoot: boolean; isShared: boolean }[] = [];
 
@@ -283,7 +276,6 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
       maxWidth="lg"
     >
       <div className="space-y-4">
-        {/* Breadcrumbs */}
         <div className="flex items-center justify-between">
           <nav className="flex items-center gap-1 text-sm flex-wrap">
             {breadcrumbs.map((crumb, index) => {
@@ -316,7 +308,6 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
             })}
           </nav>
 
-          {/* Кнопка создания папки */}
           {canWrite && (
             <button
               onClick={() => setShowCreateFolder(!showCreateFolder)}
@@ -328,7 +319,6 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
           )}
         </div>
 
-        {/* Создание папки */}
         {showCreateFolder && canWrite && (
           <div className="flex items-center gap-2 bg-theme-tertiary rounded-theme p-2">
             <input
@@ -359,14 +349,12 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
           </div>
         )}
 
-        {/* Список папок */}
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-[50%] animate-spin" />
           </div>
         ) : (
           <div className="space-y-1 max-h-[400px] overflow-y-auto">
-            {/* Корневые директории */}
             {breadcrumbs.length <= 1 && rootDirectories.length > 0 && (
               <div className="space-y-1 mb-2">
                 <div className="text-xs font-medium text-theme-muted uppercase tracking-wider px-2 py-1">
@@ -403,7 +391,6 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
               </div>
             )}
 
-            {/* Папки внутри текущей директории */}
             {availableFolders.length > 0 && (
               <div className="space-y-1">
                 {breadcrumbs.length <= 1 && rootDirectories.length > 0 && (
@@ -459,7 +446,6 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
           </div>
         )}
 
-        {/* Кнопки */}
         <div className="flex gap-3 pt-4 border-t border-theme">
           <Button variant="secondary" onClick={onClose} disabled={isMoving} className="flex-1">
             Отмена

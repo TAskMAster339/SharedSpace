@@ -9,12 +9,10 @@ interface PublicRouteProps {
 const PublicRoute: React.FC<PublicRouteProps> = ({ children }) => {
   const { isAuthenticated } = useAuth();
 
-  // Если пользователь уже залогинен, отправляем его на Dashboard
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
   }
 
-  // Иначе показываем страницу (Login или Register)
   return <>{children}</>;
 };
 

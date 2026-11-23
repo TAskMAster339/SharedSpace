@@ -315,7 +315,6 @@ const DashboardPage: React.FC = () => {
         title="Панель управления"
         description="Быстрый доступ к недавним файлам, избранному и общим директориям."
       />
-      {/* Приветствие */}
       <div>
         <h1 className="text-2xl font-semibold text-theme-primary mb-1">
           С возвращением, {firstName} ✦
@@ -323,7 +322,6 @@ const DashboardPage: React.FC = () => {
         <p className="text-sm text-theme-muted">SharedSpace — просторный как космос</p>
       </div>
 
-      {/* Недавние файлы */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {recentFiles.length === 0 ? (
           <div className="lg:col-span-2">
@@ -379,7 +377,6 @@ const DashboardPage: React.FC = () => {
           </Card>
         )}
 
-        {/* Правая колонка: Общие директории (ограничение 5) */}
         <Card onContextMenu={(e) => e.preventDefault()}>
           <CardHeader>
             <CardTitle>Общие директории</CardTitle>

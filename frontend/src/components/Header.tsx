@@ -206,17 +206,14 @@ export const Header: React.FC<HeaderProps> = ({ workspace, sidebar }) => {
 
       {isAuthenticated ? (
         <>
-          {/* Строка поиска (по центру) */}
           <UserSearch className="mx-4 hidden min-w-0 max-w-2xl flex-1 md:block lg:mx-8" />
 
-          {/* Правая часть: Уведомления и Профиль */}
           <div
             className={cn(
               'flex shrink-0 items-center gap-1',
               workspace ? 'sm:gap-2 lg:gap-4' : 'sm:gap-4',
             )}
           >
-            {/* Кнопка поиска на мобильных */}
             <button
               type="button"
               ref={mobileSearchBtnRef}
@@ -239,7 +236,6 @@ export const Header: React.FC<HeaderProps> = ({ workspace, sidebar }) => {
             {workspace?.themeButton ?? <HeaderThemeButton />}
             {workspace?.actions}
 
-            {/* Профиль с выпадающим меню */}
             <div className="relative" ref={profileRef}>
               <button
                 type="button"
@@ -301,7 +297,6 @@ export const Header: React.FC<HeaderProps> = ({ workspace, sidebar }) => {
           )}
         </>
       ) : (
-        // Неавторизованный вид
         <div className="flex items-center gap-2 sm:gap-4 shrink-0">
           <HeaderThemeButton />
           <Link
