@@ -11,7 +11,6 @@ interface ModalProps {
   className?: string;
   showCloseButton?: boolean;
   native?: boolean;
-  blurBackdrop?: boolean;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -23,7 +22,6 @@ export const Modal: React.FC<ModalProps> = ({
   className,
   showCloseButton = true,
   native = false,
-  blurBackdrop = true,
 }) => {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -104,7 +102,6 @@ export const Modal: React.FC<ModalProps> = ({
         className={cn(
           panelClassName,
           'm-auto w-[calc(100%_-_2rem)] p-0 open:flex overscroll-contain backdrop:bg-black/50 backdrop:overflow-hidden backdrop:overscroll-contain',
-          blurBackdrop && 'backdrop:backdrop-blur-sm',
         )}
       >
         {content}
@@ -114,10 +111,7 @@ export const Modal: React.FC<ModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      <div
-        className={cn('fixed inset-0 bg-black/50', blurBackdrop && 'backdrop-blur-sm')}
-        onClick={onClose}
-      />
+      <div className="fixed inset-0 bg-black/50" onClick={onClose} />
       <div className={cn('relative flex w-full', panelClassName)}>{content}</div>
     </div>
   );

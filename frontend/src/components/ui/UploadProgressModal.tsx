@@ -166,7 +166,7 @@ export const UploadProgressModal: React.FC = () => {
   return (
     <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center sm:px-4">
       <div
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+        className="fixed inset-0 bg-black/50"
         onClick={() => {
           if (activeCount === 0) handleClose();
           else minimize();

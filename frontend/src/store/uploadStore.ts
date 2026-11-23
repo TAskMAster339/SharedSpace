@@ -17,6 +17,7 @@ export interface UploadTask {
 interface UploadState {
   tasks: Record<string, UploadTask>;
   order: string[];
+  enqueueVersion: number;
   isModalOpen: boolean;
   isMinimized: boolean;
 
@@ -25,6 +26,7 @@ interface UploadState {
   removeTask: (id: string) => void;
   retryFailed: (id?: string) => void;
   clearCompleted: () => void;
+  reset: () => void;
   openModal: () => void;
   closeModal: () => void;
   minimize: () => void;
@@ -41,6 +43,7 @@ function taskPatchChanges(task: UploadTask, patch: Partial<Omit<UploadTask, 'id'
 export const useUploadStore = create<UploadState>((set) => ({
   tasks: {},
   order: [],
+  enqueueVersion: 0,
   isModalOpen: false,
   isMinimized: false,
 
@@ -70,7 +73,13 @@ export const useUploadStore = create<UploadState>((set) => ({
         tasks[task.id] = task;
         order.push(task.id);
       }
-      return { tasks, order, isModalOpen: true, isMinimized: false };
+      return {
+        tasks,
+        order,
+        enqueueVersion: state.enqueueVersion + 1,
+        isModalOpen: true,
+        isMinimized: false,
+      };
     });
     return ids;
   },
@@ -107,7 +116,7 @@ export const useUploadStore = create<UploadState>((set) => ({
           changed = true;
         }
       }
-      return changed ? { tasks } : state;
+      return changed ? { tasks, enqueueVersion: state.enqueueVersion + 1 } : state;
     });
   },
 
@@ -129,6 +138,7 @@ export const useUploadStore = create<UploadState>((set) => ({
     });
   },
 
+  reset: () => set({ tasks: {}, order: [], isModalOpen: false, isMinimized: false }),
   openModal: () => set({ isModalOpen: true, isMinimized: false }),
   closeModal: () => set({ isModalOpen: false }),
   minimize: () => set({ isMinimized: true, isModalOpen: false }),

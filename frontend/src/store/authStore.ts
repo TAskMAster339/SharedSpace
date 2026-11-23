@@ -18,7 +18,6 @@ import {
 } from '../api/users';
 import { setAuthHandlers } from '../api/client';
 import { getCookie, setCookie, removeCookie } from '../utils/cookies';
-import { stopUploadManager } from '../services/uploadManager';
 
 const REFRESH_COOKIE = 'refresh_token';
 
@@ -93,14 +92,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   logout: async () => {
     const refreshToken = getCookie(REFRESH_COOKIE);
-    if (refreshToken) {
-      await logoutRequest(refreshToken).catch(() => undefined);
-    }
-    stopUploadManager();
     removeCookie(REFRESH_COOKIE);
     set({ user: null, accessToken: null, isAuthenticated: false, isActivated: false });
     useDirectoryStore.getState().reset();
     useFavoritesStore.getState().reset();
+    if (refreshToken) {
+      await logoutRequest(refreshToken).catch(() => undefined);
+    }
   },
 
   refreshUser: async () => {
@@ -181,7 +179,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
 
     await deleteAccountRequest(accessToken, { current_refresh_token: refreshToken });
-    stopUploadManager();
     removeCookie(REFRESH_COOKIE);
     set({ user: null, accessToken: null, isAuthenticated: false, isActivated: false });
   },
@@ -218,13 +215,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 }));
 
+let sessionVersion = 0;
+useAuthStore.subscribe((state, previous) => {
+  if (state.user?.id !== previous.user?.id) sessionVersion += 1;
+});
+
 setAuthHandlers({
+  getSessionVersion: () => sessionVersion,
+  getRefreshToken: () => getCookie(REFRESH_COOKIE),
+  getAccessToken: () => useAuthStore.getState().accessToken,
   refresh: async () => {
     const refreshToken = getCookie(REFRESH_COOKIE);
     if (!refreshToken) {
       throw new Error('No refresh token');
     }
+    const version = sessionVersion;
     const result = await refresh(refreshToken);
+    if (version !== sessionVersion || getCookie(REFRESH_COOKIE) !== refreshToken) {
+      throw new DOMException('Сеанс завершён', 'AbortError');
+    }
     setCookie(REFRESH_COOKIE, result.tokens.refresh_token, result.tokens.refresh_expires_in);
     useAuthStore.setState({
       accessToken: result.tokens.access_token,

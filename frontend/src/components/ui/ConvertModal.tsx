@@ -28,7 +28,7 @@ export const ConvertModal: React.FC<ConvertModalProps> = ({
   const supported = isConvertSupported(mimeType, extension);
 
   return (
-    <Modal native isOpen blurBackdrop={false} onClose={onClose} title="Конвертация файла">
+    <Modal native isOpen onClose={onClose} title="Конвертация файла">
       <form
         className="space-y-4"
         onSubmit={(event) => {

@@ -43,10 +43,15 @@ export function getFavorites(
   });
 }
 
-export function addFavorite(accessToken: string, fileId: string): Promise<void> {
+export function addFavorite(
+  accessToken: string,
+  fileId: string,
+  signal?: AbortSignal,
+): Promise<void> {
   return apiRequest<void>(`/files/${fileId}/favorite`, {
     method: 'POST',
     token: accessToken,
+    signal,
   });
 }
 
