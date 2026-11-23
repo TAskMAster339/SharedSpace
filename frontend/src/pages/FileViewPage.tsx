@@ -50,7 +50,6 @@ import { useToastStore } from '../hooks/useToast';
 import SEOHead from '../components/SEOHead';
 import { cn } from '../utils/cn';
 
-// Определяем типы файлов для предпросмотра
 type PreviewType =
   | 'image'
   | 'video'
@@ -93,7 +92,6 @@ const SUPPORTED_EXTENSIONS_FOR_VIEW = new Set([
   'yml',
 ]);
 
-// Расширения для кода
 const CODE_EXTENSIONS = new Set([
   'js',
   'ts',
@@ -186,7 +184,6 @@ const FileViewPage: React.FC = () => {
     if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) return 'presentation';
     if (mimeType.includes('word') || mimeType.includes('document')) return 'doc';
 
-    // Проверка по расширению
     if (SUPPORTED_EXTENSIONS_FOR_VIEW.has(ext)) {
       if (CODE_EXTENSIONS.has(ext)) return 'code';
       return 'text';
@@ -201,7 +198,6 @@ const FileViewPage: React.FC = () => {
     return PROBLEMATIC_EXTENSIONS.has(ext);
   }, []);
 
-  // Загрузка данных файла
   useEffect(() => {
     if (!accessToken || !id) return;
 
@@ -216,7 +212,6 @@ const FileViewPage: React.FC = () => {
 
     const loadFileData = async () => {
       try {
-        // Получаем метаданные файла
         const fileData = await getFileMetadata(accessToken, id);
         if (!isMounted) return;
         setFile(fileData);
@@ -234,7 +229,6 @@ const FileViewPage: React.FC = () => {
           }
         }
 
-        // Определяем тип для предпросмотра
         const preview = determinePreviewType(fileData.mime_type, fileData.extension);
         setPreviewType(preview);
 
@@ -255,7 +249,6 @@ const FileViewPage: React.FC = () => {
           }
         }
 
-        // Получаем информацию о директории
         try {
           const dir = await getDirectoryById(accessToken, fileData.directory_id);
           if (isMounted) {
@@ -285,7 +278,6 @@ const FileViewPage: React.FC = () => {
     };
   }, [accessToken, id, determinePreviewType, isProblematicForIframe, user?.id]);
 
-  // Функция для получения отображаемого имени владельца
   const getOwnerDisplayName = useCallback(() => {
     if (!file) return '';
     if (file.owner_id === user?.id) return 'Вы';
@@ -293,13 +285,11 @@ const FileViewPage: React.FC = () => {
     return `Пользователь ${file.owner_id.slice(0, 8)}`;
   }, [file, user, ownerUsername]);
 
-  // Получаем расширение файла без точки
   const getFileExtension = (filename: string): string => {
     const ext = filename.split('.').pop() || '';
     return ext.toLowerCase();
   };
 
-  // Функция для скачивания файла с правильным именем
   const downloadFile = useCallback(async () => {
     if (!accessToken || !id || !file) return;
     try {
@@ -309,7 +299,6 @@ const FileViewPage: React.FC = () => {
       const response = await fetch(content.url);
       const blob = await response.blob();
 
-      // Создаём ссылку для скачивания
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
       link.download = file.filename;
@@ -317,11 +306,9 @@ const FileViewPage: React.FC = () => {
       link.click();
       document.body.removeChild(link);
 
-      // Освобождаем URL объект
       setTimeout(() => URL.revokeObjectURL(link.href), 100);
     } catch (err) {
       console.error('Ошибка скачивания:', err);
-      // Fallback: открыть в новой вкладке
       try {
         const content = await getFileContentUrl(accessToken, id);
         window.open(content.url, '_blank');
@@ -331,14 +318,12 @@ const FileViewPage: React.FC = () => {
     }
   }, [accessToken, id, file]);
 
-  // Обработчик переключения избранного
   const handleToggleFavorite = useCallback(() => {
     if (file) {
       toggleFavorite(file.id);
     }
   }, [file, toggleFavorite]);
 
-  // Обработчик перехода назад
   const handleGoBack = useCallback(() => {
     if (directory) {
       navigate(`/directories/${directory.id}`, {
@@ -352,7 +337,6 @@ const FileViewPage: React.FC = () => {
     }
   }, [directory, navigate]);
 
-  // Обработчик удаления файла
   const handleDeleteFile = useCallback(async () => {
     if (!accessToken || !id) return;
 
@@ -373,7 +357,6 @@ const FileViewPage: React.FC = () => {
     }
   }, [accessToken, id, directory, navigate]);
 
-  // Обработчик ошибки iframe
   const handleIframeError = useCallback(() => {
     setIframeError(true);
     setCanPreview(false);
@@ -386,7 +369,6 @@ const FileViewPage: React.FC = () => {
     showToast(`Файл переименован в «${newName}»`, 'success');
   };
 
-  // Функция для рендера сообщения о недоступности просмотра
   const renderUnavailableMessage = (message?: string, subMessage?: string) => {
     return (
       <div className="bg-theme-tertiary rounded-theme py-16 flex flex-col items-center gap-4 text-theme-muted">
@@ -404,7 +386,6 @@ const FileViewPage: React.FC = () => {
     );
   };
 
-  // Функция для рендера предпросмотра
   const renderPreview = () => {
     if (!file) return null;
 
@@ -661,14 +642,12 @@ const FileViewPage: React.FC = () => {
         </Button>
       </div>
 
-      {/* Основной контент: 2 колонки (предпросмотр) + 1 колонка (информация) */}
       <div
         className={cn(
           'grid grid-cols-1 gap-4',
           showDetails && 'xl:grid-cols-[minmax(0,1fr)_18rem]',
         )}
       >
-        {/* Левая часть: предпросмотр (2/3) */}
         <div className="min-w-0">
           <div className="bg-theme-secondary border border-theme rounded-theme p-4 shadow-theme-card">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -723,11 +702,9 @@ const FileViewPage: React.FC = () => {
           aria-label="Сведения о файле"
           className="min-w-0 space-y-4"
         >
-          {/* Информация о файле */}
           <div className="bg-theme-secondary border border-theme rounded-theme p-5 shadow-theme-card">
             <h3 className="font-medium text-theme-primary mb-3">Информация о файле</h3>
 
-            {/* Отображение файла с возможностью переименовать */}
             <button
               onClick={() => setIsRenameModalOpen(true)}
               className="group flex items-center gap-3 p-3 bg-theme-tertiary hover:bg-theme-hover rounded-theme border border-theme transition-colors w-full text-left"
@@ -748,10 +725,8 @@ const FileViewPage: React.FC = () => {
               </div>
             </button>
 
-            {/* Разделитель */}
             <div className="my-4 border-t border-theme" />
 
-            {/* Характеристики */}
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-theme-secondary">Тип</span>
@@ -782,7 +757,6 @@ const FileViewPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Действия */}
           <div className="bg-theme-secondary border border-theme rounded-theme p-5 shadow-theme-card">
             <h3 className="font-medium text-theme-primary mb-3">Действия</h3>
             <div className="space-y-2">
@@ -821,7 +795,6 @@ const FileViewPage: React.FC = () => {
               </button>
             </div>
 
-            {/* Конвертация файла */}
             <div className="mt-4 pt-4 border-t border-theme">
               <button
                 onClick={() => setIsConvertModalOpen(true)}

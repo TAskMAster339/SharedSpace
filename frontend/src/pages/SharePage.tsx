@@ -629,7 +629,6 @@ const SharedFile = ({ token, mode, setMode }: SharedFileProps) => {
         </div>
 
         <div className={expanded ? 'hidden' : 'space-y-4'}>
-          {/* Информация о файле */}
           <div className="bg-theme-secondary border border-theme rounded-theme p-5 shadow-theme-card">
             <h3 className="font-medium text-theme-primary mb-3">Информация о файле</h3>
 

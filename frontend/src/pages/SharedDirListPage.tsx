@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { preventModalContextMenu } from '../components/ui/preventModalContextMenu';
 import { Users, Plus, X, Check, UserPlus, Pencil } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import {
@@ -254,8 +255,11 @@ const SharedDirListPage: React.FC = () => {
       )}
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={closeModal} />
+        <div
+          onContextMenu={preventModalContextMenu}
+          className="fixed inset-0 z-50 flex items-center justify-center px-4"
+        >
+          <div className="fixed inset-0 bg-black/50" onClick={closeModal} />
           <div className="relative bg-theme-secondary rounded-theme max-w-md w-full p-6 shadow-theme-dropdown border border-theme">
             <h3 className="text-lg font-semibold text-theme-primary mb-4">
               Новая общая директория

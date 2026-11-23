@@ -497,7 +497,6 @@ const SharedDirectoryPage: React.FC = () => {
     );
   }
 
-  // File preview mode
   if (previewFile) {
     const previewType = determinePreviewType(previewFile.mime_type, previewFile.extension);
     const ext = previewFile.extension.replace(/^\./, '').toLowerCase();
@@ -684,7 +683,6 @@ const SharedDirectoryPage: React.FC = () => {
     );
   }
 
-  // Directory listing mode
   const crumbs = breadcrumbs.length > 0 ? breadcrumbs : data ? [{ id: '', name: data.name }] : [];
 
   const fileCount = allFiles.length + allSubdirs.length;
@@ -696,7 +694,6 @@ const SharedDirectoryPage: React.FC = () => {
         description={`Общая папка · ${fileCount} элементов · Владелец: ${data.owner_username}`}
         canonical={`https://shared-space.ru/share/dir/${token}`}
       />
-      {/* Title */}
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold text-theme-primary flex items-center gap-2 min-w-0">
           <Folder size={28} className="text-brand shrink-0" />
@@ -705,7 +702,6 @@ const SharedDirectoryPage: React.FC = () => {
         <p className="text-sm text-theme-muted mt-0.5">Директория, полученная по ссылке</p>
       </div>
 
-      {/* Breadcrumbs */}
       <nav className="flex items-center gap-1 text-sm min-w-0 flex-wrap" aria-label="Breadcrumb">
         <div className="flex items-center gap-1 min-w-0 flex-wrap">
           <Link
@@ -742,7 +738,6 @@ const SharedDirectoryPage: React.FC = () => {
         </div>
       </nav>
 
-      {/* Empty state */}
       {allSubdirs.length === 0 && allFiles.length === 0 && (
         <EmptyState icon={<Folder size={24} />} description="Директория пуста" />
       )}

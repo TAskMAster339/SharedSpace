@@ -82,7 +82,6 @@ const DirectoryPage: React.FC = () => {
   const { isShared: checkIsShared, isLoading: isLoadingShared } = useSharedDirectories();
   const { setTargetDirectoryId, setOnUploadComplete } = useDragDropStore();
 
-  // Состояния
   const [directoryContents, setDirectoryContents] = useState<DirectoryContents | null>(null);
   const [directoryInfo, setDirectoryInfo] = useState<Directory | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -122,7 +121,6 @@ const DirectoryPage: React.FC = () => {
     extension: string;
   } | null>(null);
 
-  // Контекстное меню страницы
   const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
@@ -135,7 +133,6 @@ const DirectoryPage: React.FC = () => {
     setContextMenuPos(null);
   }, []);
 
-  // Pagination
   const PAGE_LIMIT = 20;
   const [allSubdirectories, setAllSubdirectories] = useState<Directory[]>([]);
   const [allFiles, setAllFiles] = useState<DirectoryFile[]>([]);
@@ -146,7 +143,6 @@ const DirectoryPage: React.FC = () => {
   const [isLoadingMoreDirs, setIsLoadingMoreDirs] = useState(false);
   const [isLoadingMoreFiles, setIsLoadingMoreFiles] = useState(false);
 
-  // Breadcrumbs
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([]);
   const location = useLocation();
 
@@ -226,7 +222,6 @@ const DirectoryPage: React.FC = () => {
         const shared = info.shared_directory_id != null;
         setIsDirectlyShared(checkIsShared(dirId));
 
-        // Загружаем breadcrumbs
         try {
           await loadBreadcrumbs(dirId);
           setIsShared(shared);
@@ -354,7 +349,7 @@ const DirectoryPage: React.FC = () => {
     });
 
     return () => {
-      setOnUploadComplete(null); // <-- меняем undefined на null
+      setOnUploadComplete(null);
     };
   }, [actualId, loadDirectory, setOnUploadComplete]);
 
@@ -362,7 +357,7 @@ const DirectoryPage: React.FC = () => {
   useEffect(() => {
     return () => {
       setTargetDirectoryId(null);
-      setOnUploadComplete(null); // <-- меняем undefined на null
+      setOnUploadComplete(null);
     };
   }, [setTargetDirectoryId, setOnUploadComplete]);
 
@@ -384,12 +379,10 @@ const DirectoryPage: React.FC = () => {
     }
   }, [accessToken, id, location.state, location.pathname, navigate, loadDirectory]);
 
-  // --- Сохраняем режим просмотра ---
   useEffect(() => {
     localStorage.setItem('directoryViewMode', viewMode);
   }, [viewMode]);
 
-  // --- Вычисляемые значения ---
   const isPersonal = useMemo(() => directoryInfo?.type === 'root', [directoryInfo]);
   const isOwner = useMemo(() => directoryInfo?.owner_id === user?.id, [directoryInfo, user]);
   const perms = useMemo(() => directoryInfo?.permissions, [directoryInfo]);
@@ -423,7 +416,6 @@ const DirectoryPage: React.FC = () => {
     }));
   }, [allFiles, isFavorite]);
 
-  // --- Обработчики ---
   const handleViewModeChange = useCallback((mode: ViewMode) => {
     setViewMode(mode);
   }, []);
@@ -805,7 +797,6 @@ const DirectoryPage: React.FC = () => {
     [accessToken, actualId, loadDirectory, showToast],
   );
 
-  // --- Рендер breadcrumbs ---
   const renderBreadcrumbs = () => {
     if (isLoadingShared) {
       return (
@@ -874,7 +865,6 @@ const DirectoryPage: React.FC = () => {
     );
   };
 
-  // --- Рендер ---
   if (isLoading || isLoadingShared) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -912,7 +902,6 @@ const DirectoryPage: React.FC = () => {
         }
       />
       <div className="space-y-6">
-        {/* Назад к списку общих директорий */}
         {isSharedDirectory && (
           <button
             onClick={() => navigate('/directories')}
@@ -923,7 +912,6 @@ const DirectoryPage: React.FC = () => {
           </button>
         )}
 
-        {/* Заголовок и кнопки действий */}
         <div className="flex flex-col md:flex-row md:flex-wrap md:items-start justify-between gap-4">
           <div className="min-w-0 w-full md:flex-1 md:min-w-[250px]">
             <h1 className="text-2xl font-semibold text-theme-primary flex items-center gap-2 min-w-0">
@@ -992,7 +980,6 @@ const DirectoryPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Содержимое */}
         {isEmpty ? (
           <div className="mt-4">
             {perms?.upload ? (
@@ -1218,7 +1205,6 @@ const DirectoryPage: React.FC = () => {
       {/* Заполнитель для ПКМ в пустом пространстве */}
       <div className="flex-1" />
 
-      {/* Контекстное меню страницы */}
       <ContextMenu isOpen={!!contextMenuPos} onClose={closeContextMenu} position={contextMenuPos}>
         <div>
           <button
@@ -1285,7 +1271,6 @@ const DirectoryPage: React.FC = () => {
         </div>
       </ContextMenu>
 
-      {/* Модальное окно загрузки */}
       <Modal
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
@@ -1295,7 +1280,6 @@ const DirectoryPage: React.FC = () => {
         <DropZone onFilesDrop={handleFilesDrop} />
       </Modal>
 
-      {/* Модальное окно создания папки */}
       <Modal
         isOpen={isCreateFolderModalOpen}
         onClose={() => !isCreatingFolder && setIsCreateFolderModalOpen(false)}
@@ -1444,8 +1428,6 @@ const DirectoryPage: React.FC = () => {
           extension={convertFileData.extension}
         />
       )}
-
-      {/* Уведомления — удалены, используется глобальный ToastContainer */}
     </div>
   );
 };

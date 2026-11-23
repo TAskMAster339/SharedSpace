@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
-import { startUploadManager } from './services/uploadManager';
+import { startUploadManager, stopUploadManager } from './services/uploadManager';
 import { Layout } from './components/Layout';
 import { ToastContainer } from './components/ui/ToastContainer';
 import { DropZoneWrapper } from './components/DropZoneWrapper';
@@ -43,6 +43,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     startUploadManager();
+    return stopUploadManager;
   }, []);
 
   if (isHydrating) {
@@ -52,7 +53,6 @@ const App: React.FC = () => {
   return (
     <Router>
       <Routes>
-        {/* Публичные маршруты */}
         <Route
           path="/"
           element={
@@ -98,7 +98,6 @@ const App: React.FC = () => {
           }
         />
 
-        {/* Только гостевые маршруты */}
         <Route
           element={
             <PublicRoute>
@@ -120,7 +119,6 @@ const App: React.FC = () => {
           }
         />
 
-        {/* Защищённые маршруты */}
         <Route
           element={
             <ProtectedRoute>
@@ -128,7 +126,6 @@ const App: React.FC = () => {
             </ProtectedRoute>
           }
         >
-          {/* Страницы с DropZone */}
           <Route
             path="/dashboard"
             element={
@@ -154,7 +151,6 @@ const App: React.FC = () => {
             }
           />
 
-          {/* Страницы без DropZone */}
           <Route path="/settings" element={<ProfileSettingsPage />} />
           <Route path="/directories" element={<SharedDirListPage />} />
           <Route path="/directories/:id/settings" element={<FolderSettingsPage />} />
@@ -165,7 +161,6 @@ const App: React.FC = () => {
           <Route path="/trash" element={<TrashPage />} />
         </Route>
 
-        {/* 404 без DropZone */}
         <Route
           path="*"
           element={

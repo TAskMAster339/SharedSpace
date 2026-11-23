@@ -1,4 +1,4 @@
-import { ApiError, apiRequest } from './client';
+import { ApiError, apiRequest, refreshAccessToken } from './client';
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api/v1';
 
 export interface FileUploadResponse {
@@ -45,7 +45,6 @@ export function getRecentFiles(accessToken: string, limit?: number): Promise<Rec
 }
 
 export class NonRetryableUploadError extends Error {
-  readonly retryable = false;
   constructor(message: string) {
     super(message);
     this.name = 'NonRetryableUploadError';
@@ -53,11 +52,11 @@ export class NonRetryableUploadError extends Error {
 }
 
 const maxUploadBytes = 512 * 1024 * 1024;
-const uploadLimitMessage = 'Общий размер файлов в одной загрузке не должен превышать 512 МиБ';
+const uploadLimitMessage = 'Размер файла не должен превышать 512 МиБ';
 
 const PROGRESS_MIN_INTERVAL_MS = 100;
 
-export function uploadSingleFile(
+export async function uploadSingleFile(
   token: string,
   directoryId: string,
   file: File,
@@ -65,8 +64,24 @@ export function uploadSingleFile(
   signal?: AbortSignal,
 ): Promise<FileUploadResponse> {
   if (file.size > maxUploadBytes) {
-    return Promise.reject(new NonRetryableUploadError(uploadLimitMessage));
+    throw new NonRetryableUploadError(uploadLimitMessage);
   }
+  try {
+    return await sendUpload(token, directoryId, file, onProgress, signal);
+  } catch (error) {
+    if (!(error instanceof ApiError) || error.status !== 401 || signal?.aborted) throw error;
+    const newToken = await refreshAccessToken(token);
+    return sendUpload(newToken, directoryId, file, onProgress, signal);
+  }
+}
+
+function sendUpload(
+  token: string,
+  directoryId: string,
+  file: File,
+  onProgress: (progress: number) => void,
+  signal?: AbortSignal,
+): Promise<FileUploadResponse> {
   if (signal?.aborted) {
     return Promise.reject(new DOMException('Загрузка отменена', 'AbortError'));
   }
@@ -97,12 +112,8 @@ export function uploadSingleFile(
     };
 
     function onAbort() {
-      try {
-        xhr.abort();
-      } catch {
-        /* noop */
-      }
       fail(new DOMException('Загрузка отменена', 'AbortError'));
+      xhr.abort();
     }
 
     xhr.upload.addEventListener('progress', (event) => {
@@ -129,18 +140,23 @@ export function uploadSingleFile(
         } catch {
           fail(new Error('Некорректный ответ сервера'));
         }
-      } else {
-        try {
-          const error = JSON.parse(xhr.responseText);
-          fail(new Error(error.error || 'Не удалось загрузить файл'));
-        } catch {
-          fail(
-            xhr.status === 413
-              ? new NonRetryableUploadError(uploadLimitMessage)
-              : new Error(`Ошибка загрузки (${xhr.status})`),
-          );
-        }
+        return;
       }
+
+      let serverMessage: unknown;
+      try {
+        serverMessage = JSON.parse(xhr.responseText)?.error;
+      } catch {
+        serverMessage = undefined;
+      }
+
+      const fallback = xhr.status === 413 ? uploadLimitMessage : `Ошибка загрузки (${xhr.status})`;
+      const message = typeof serverMessage === 'string' && serverMessage ? serverMessage : fallback;
+      fail(
+        xhr.status === 413
+          ? new NonRetryableUploadError(message)
+          : new ApiError(message, xhr.status),
+      );
     });
 
     xhr.addEventListener('error', () => fail(new Error('Сетевая ошибка при загрузке')));

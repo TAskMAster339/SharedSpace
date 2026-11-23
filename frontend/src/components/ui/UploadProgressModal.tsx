@@ -1,4 +1,7 @@
 import React from 'react';
+import { Button } from './Button';
+import { FileIcon } from './FileIcon';
+import { preventModalContextMenu } from './preventModalContextMenu';
 import { AlertCircle, CheckCircle2, Loader2, Minimize2, RotateCcw, X } from 'lucide-react';
 import {
   useUploadStore,
@@ -11,6 +14,9 @@ import { formatFileSize, formatCountWord } from '../../utils/format';
 import { resolveFileIconType } from '../../utils/fileType';
 import { cn } from '../../utils/cn';
 import { usePhoneViewport } from '../../hooks/usePhoneViewport';
+
+const iconButtonClasses =
+  'inline-grid size-10 place-items-center p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand';
 
 interface TaskRowProps {
   id: string;
@@ -26,68 +32,64 @@ const TaskRow = React.memo<TaskRowProps>(({ id, onRemove, onRetry }) => {
   const iconType = resolveFileIconType(task.file.type, ext);
 
   return (
-    <div className="flex items-start gap-3 px-3 py-2.5 rounded-theme hover:bg-theme-hover">
-      <div className="w-9 h-9 shrink-0 rounded-theme bg-theme-tertiary flex items-center justify-center text-theme-secondary text-xs font-semibold uppercase">
-        {ext.slice(0, 4) || iconType}
+    <li className="flex items-center gap-3 px-3 py-2.5">
+      <div className="grid size-9 shrink-0 place-items-center rounded-theme bg-theme-tertiary">
+        <FileIcon type={iconType} />
       </div>
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <p className="text-sm text-theme-primary truncate flex-1">{task.file.name}</p>
-          <span className="shrink-0">
-            {task.status === 'uploading' && (
-              <Loader2 size={18} className="animate-spin text-brand" />
-            )}
-            {task.status === 'success' && <CheckCircle2 size={18} className="text-emerald-500" />}
-            {task.status === 'error' && <AlertCircle size={18} className="text-danger" />}
-          </span>
-        </div>
-        <p className="text-xs text-theme-muted mt-0.5 truncate">
+        <p className="truncate text-sm font-medium text-theme-primary" title={task.file.name}>
+          {task.file.name}
+        </p>
+        <p className="mt-0.5 text-xs text-theme-secondary">
           {formatFileSize(task.file.size)}
           {task.status === 'uploading' ? ` · ${task.progress}%` : ''}
-          {task.status === 'error' && task.error ? ` · ${task.error}` : ''}
         </p>
+        {task.status === 'error' && task.error && (
+          <p className="mt-0.5 break-words text-xs text-danger">{task.error}</p>
+        )}
         {task.status === 'uploading' && (
-          <div className="mt-1.5 w-full h-1 bg-theme-border rounded-theme overflow-hidden">
+          <div className="mt-1.5 h-1 overflow-hidden rounded-theme bg-theme-border">
             <div
-              className="h-full bg-brand transition-all duration-200"
-              style={{ width: `${task.progress}%` }}
+              className="h-full origin-left bg-brand transition-transform duration-200 motion-reduce:transition-none"
+              style={{ transform: `scaleX(${task.progress / 100})` }}
             />
           </div>
         )}
       </div>
-      <div className="flex shrink-0 items-center gap-0.5">
+      <div className="grid shrink-0 grid-cols-[auto_1.5rem_2.5rem] items-center gap-x-1">
         {task.status === 'error' && task.retryable && (
-          <button
+          <Button
             type="button"
+            variant="secondary"
+            size="sm"
             onClick={() => onRetry(id)}
-            aria-label="Повторить загрузку файла"
-            className="p-1 text-theme-muted hover:text-brand"
+            aria-label={`Повторить загрузку файла: ${task.file.name}`}
+            className={cn(iconButtonClasses, 'col-start-1 row-start-1')}
           >
-            <RotateCcw size={14} />
-          </button>
+            <RotateCcw size={16} />
+          </Button>
         )}
-        {task.status === 'error' && (
-          <button
+        <span className="col-start-2 row-start-1 grid place-items-center">
+          {task.status === 'uploading' && <Loader2 size={18} className="animate-spin text-brand" />}
+          {task.status === 'success' && (
+            <CheckCircle2 size={18} className="text-[color:var(--success)]" />
+          )}
+          {task.status === 'error' && <AlertCircle size={18} className="text-danger" />}
+        </span>
+        {(task.status === 'success' || task.status === 'error') && (
+          <Button
             type="button"
+            variant="secondary"
+            size="sm"
             onClick={() => onRemove(id)}
-            aria-label="Убрать из списка"
-            className="p-1 text-theme-muted hover:text-theme-primary"
+            aria-label={`Убрать из списка: ${task.file.name}`}
+            className={cn(iconButtonClasses, 'col-start-3 row-start-1')}
           >
-            <X size={14} />
-          </button>
-        )}
-        {task.status === 'success' && (
-          <button
-            type="button"
-            onClick={() => onRemove(id)}
-            aria-label="Убрать из списка"
-            className="p-1 text-theme-muted hover:text-theme-primary"
-          >
-            <X size={14} />
-          </button>
+            <X size={18} />
+          </Button>
         )}
       </div>
-    </div>
+    </li>
   );
 });
 TaskRow.displayName = 'TaskRow';
@@ -150,7 +152,7 @@ export const UploadProgressModal: React.FC = () => {
         ) : errorCount > 0 ? (
           <AlertCircle size={18} className="text-danger" />
         ) : (
-          <CheckCircle2 size={18} className="text-emerald-500" />
+          <CheckCircle2 size={18} className="text-[color:var(--success)]" />
         )}
         <span className="text-sm text-theme-primary">
           {activeCount > 0
@@ -164,9 +166,12 @@ export const UploadProgressModal: React.FC = () => {
   }
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center sm:px-4">
+    <div
+      onContextMenu={preventModalContextMenu}
+      className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center sm:px-4"
+    >
       <div
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+        className="fixed inset-0 bg-black/50"
         onClick={() => {
           if (activeCount === 0) handleClose();
           else minimize();
@@ -181,7 +186,7 @@ export const UploadProgressModal: React.FC = () => {
       >
         <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-theme">
           <div className="min-w-0">
-            <h2 className="text-base font-semibold text-theme-primary truncate">{headerTitle}</h2>
+            <h2 className="text-lg font-semibold text-theme-primary truncate">{headerTitle}</h2>
             <p className="text-xs text-theme-muted mt-0.5">
               Успешно: {successCount} · Ошибки: {errorCount}
               {activeCount > 0 ? ` · В процессе: ${activeCount}` : ''}
@@ -189,44 +194,45 @@ export const UploadProgressModal: React.FC = () => {
           </div>
           <div className="flex items-center gap-1 shrink-0">
             {activeCount > 0 && (
-              <button
+              <Button
                 type="button"
+                variant="secondary"
+                size="sm"
                 onClick={minimize}
                 aria-label="Свернуть"
-                className="p-2 rounded-theme hover:bg-theme-hover text-theme-secondary"
+                className={iconButtonClasses}
               >
                 <Minimize2 size={18} />
-              </button>
+              </Button>
             )}
-            <button
+            <Button
               type="button"
+              variant="secondary"
+              size="sm"
               onClick={handleClose}
               disabled={!canClose}
               aria-label="Закрыть"
-              className={cn(
-                'p-2 rounded-theme text-theme-secondary',
-                canClose ? 'hover:bg-theme-hover' : 'opacity-40 cursor-not-allowed',
-              )}
+              className={iconButtonClasses}
             >
               <X size={18} />
-            </button>
+            </Button>
           </div>
         </div>
 
         <div className="px-5 pt-3">
           <div className="w-full h-1.5 bg-theme-border rounded-theme overflow-hidden">
             <div
-              className="h-full bg-brand transition-all duration-300"
-              style={{ width: `${overallProgress}%` }}
+              className="h-full origin-left bg-brand transition-transform duration-300 motion-reduce:transition-none"
+              style={{ transform: `scaleX(${overallProgress / 100})` }}
             />
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-2 py-2">
+        <ul className="min-h-0 flex-1 divide-y divide-theme overflow-y-auto px-2 py-2">
           {order.map((id) => (
             <TaskRow key={id} id={id} onRemove={removeTask} onRetry={retryFailed} />
           ))}
-        </div>
+        </ul>
 
         <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 border-t border-theme">
           <span className="text-xs text-theme-muted">
@@ -234,23 +240,26 @@ export const UploadProgressModal: React.FC = () => {
           </span>
           <div className="flex items-center gap-2">
             {retryableErrorCount > 0 && (
-              <button
+              <Button
                 type="button"
+                size="sm"
                 onClick={() => retryFailed()}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-theme bg-brand text-theme-on-brand hover:bg-brand-hover text-sm font-medium"
+                className="inline-flex items-center gap-1.5"
               >
                 <RotateCcw size={14} />
                 Повторить всё ({retryableErrorCount})
-              </button>
+              </Button>
             )}
             {successCount > 0 && activeCount === 0 && (
-              <button
+              <Button
                 type="button"
+                variant="secondary"
+                size="sm"
                 onClick={clearCompleted}
-                className="px-3 py-1.5 rounded-theme border border-theme text-theme-secondary hover:bg-theme-hover text-sm"
+                className="border border-theme"
               >
                 Очистить
-              </button>
+              </Button>
             )}
           </div>
         </div>
