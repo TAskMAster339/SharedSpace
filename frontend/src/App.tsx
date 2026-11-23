@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
+import { startUploadManager } from './services/uploadManager';
 import { Layout } from './components/Layout';
 import { ToastContainer } from './components/ui/ToastContainer';
 import { DropZoneWrapper } from './components/DropZoneWrapper';
@@ -39,6 +40,10 @@ const App: React.FC = () => {
   useEffect(() => {
     hydrate();
   }, [hydrate]);
+
+  useEffect(() => {
+    startUploadManager();
+  }, []);
 
   if (isHydrating) {
     return null;

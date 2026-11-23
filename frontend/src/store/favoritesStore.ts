@@ -8,6 +8,7 @@ interface FavoritesState {
   loadedToken: string | null;
   loadFavorites: (accessToken: string, force?: boolean) => Promise<void>;
   toggleFavorite: (accessToken: string, fileId: string) => Promise<boolean>;
+  addFavoriteId: (fileId: string) => void;
   reset: () => void;
 }
 
@@ -72,6 +73,18 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
     }
 
     return makeFavorite;
+  },
+
+  // Локально помечает файл избранным без похода в API.
+  // Используется фоновым uploadManager-ом: он уже вызвал addFavorite сам,
+  // и здесь нужно лишь синхронизировать Set, чтобы звёздочка загорелась.
+  addFavoriteId: (fileId) => {
+    set((state) => {
+      if (state.favoriteIds.has(fileId)) return state;
+      const next = new Set(state.favoriteIds);
+      next.add(fileId);
+      return { favoriteIds: next };
+    });
   },
 
   reset: () => {

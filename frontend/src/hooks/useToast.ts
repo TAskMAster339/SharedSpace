@@ -1,4 +1,3 @@
-// hooks/useToast.ts
 import { create } from 'zustand';
 import { ToastVariant, ToastItem } from '../components/ui/ToastContainer';
 
@@ -10,6 +9,7 @@ interface ToastStore {
     actionLabel?: string,
     onAction?: () => void,
   ) => string;
+  updateToast: (id: string, patch: Partial<Omit<ToastItem, 'id'>>) => void;
   removeToast: (id: string) => void;
   toastMobileBottomPx: number;
   setToastMobileBottomPx: (px: number) => void;
@@ -23,6 +23,11 @@ export const useToastStore = create<ToastStore>((set) => ({
       toasts: [...state.toasts, { id, message, variant, actionLabel, onAction }],
     }));
     return id;
+  },
+  updateToast: (id, patch) => {
+    set((state) => ({
+      toasts: state.toasts.map((toast) => (toast.id === id ? { ...toast, ...patch } : toast)),
+    }));
   },
   removeToast: (id) => {
     set((state) => ({

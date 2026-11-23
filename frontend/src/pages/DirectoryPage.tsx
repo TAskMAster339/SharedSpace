@@ -15,6 +15,7 @@ import {
 import { useAuthStore } from '../store/authStore';
 import { useDirectoryStore } from '../store/directoryStore';
 import { useDragDropStore } from '../store/dragDropStore';
+import { useUploadStore } from '../store/uploadStore';
 import { useSharedDirectories } from '../hooks/useSharedDirectories';
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 import { Modal } from '../components/ui/Modal';
@@ -49,7 +50,6 @@ import {
 import {
   getFileMetadata,
   type ConversionResponse,
-  uploadFilesWithProgress,
   softDeleteFile,
   restoreFile,
   moveFile,
@@ -61,7 +61,6 @@ import { formatFileSize, formatDate } from '../utils/format';
 import { useFavorites } from '../hooks/useFavorites';
 import { useToastStore } from '../hooks/useToast';
 import SEOHead from '../components/SEOHead';
-import { buildUploadSuccessMessage, buildUploadErrorMessage } from '../utils/uploadMessage';
 import { resolveFileIconType } from '../utils/fileType';
 
 interface BreadcrumbItem {
@@ -91,9 +90,7 @@ const DirectoryPage: React.FC = () => {
     return (localStorage.getItem('directoryViewMode') as ViewMode) || 'grid';
   });
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadError, setUploadError] = useState<string | null>(null);
+  const addUploadTasks = useUploadStore((s) => s.addTasks);
   const [isCreateFolderModalOpen, setIsCreateFolderModalOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
@@ -431,38 +428,12 @@ const DirectoryPage: React.FC = () => {
   }, []);
 
   const handleFilesDrop = useCallback(
-    async (files: FileList) => {
+    (files: FileList) => {
       if (!accessToken || !actualId) return;
-
-      setIsUploading(true);
-      setUploadProgress(0);
-      setUploadError(null);
-
-      try {
-        await uploadFilesWithProgress(accessToken, actualId, files, (progress: number) => {
-          setUploadProgress(progress);
-        });
-
-        await loadDirectory(actualId, true);
-
-        showToast(buildUploadSuccessMessage(files), 'success');
-
-        // Закрываем модалку после успешной загрузки
-        setTimeout(() => {
-          setIsUploadModalOpen(false);
-          setIsUploading(false);
-          setUploadProgress(0);
-        }, 500);
-      } catch (err) {
-        console.error('Upload failed:', err);
-        const reason = err instanceof Error ? err.message : undefined;
-        setUploadError(reason || 'Ошибка загрузки файлов');
-        showToast(buildUploadErrorMessage(files, reason), 'error');
-        setIsUploading(false);
-        setUploadProgress(0);
-      }
+      setIsUploadModalOpen(false);
+      addUploadTasks(Array.from(files), actualId, { toFavorites: false });
     },
-    [accessToken, actualId, loadDirectory, showToast],
+    [accessToken, actualId, addUploadTasks],
   );
 
   const handleCreateFolder = useCallback(async () => {
@@ -980,10 +951,7 @@ const DirectoryPage: React.FC = () => {
             <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} />
             {perms?.upload && (
               <button
-                onClick={() => {
-                  setUploadError(null);
-                  setIsUploadModalOpen(true);
-                }}
+                onClick={() => setIsUploadModalOpen(true)}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-brand text-theme-on-brand rounded-theme hover:bg-brand-hover transition-colors text-sm font-medium"
               >
                 <Upload size={16} />
@@ -1027,13 +995,7 @@ const DirectoryPage: React.FC = () => {
         {isEmpty ? (
           <div className="mt-4">
             {perms?.upload ? (
-              <DropZone
-                onFilesDrop={handleFilesDrop}
-                isUploading={isUploading}
-                uploadProgress={uploadProgress}
-                uploadError={uploadError}
-                className="min-h-[300px]"
-              />
+              <DropZone onFilesDrop={handleFilesDrop} className="min-h-[300px]" />
             ) : (
               <div className="min-h-[300px] flex items-center justify-center border-2 border-dashed border-theme-hover rounded-theme bg-theme-tertiary">
                 <p className="text-theme-muted">Директория пуста</p>
@@ -1262,7 +1224,6 @@ const DirectoryPage: React.FC = () => {
             type="button"
             role="menuitem"
             onClick={() => {
-              setUploadError(null);
               setIsUploadModalOpen(true);
               closeContextMenu();
             }}
@@ -1326,16 +1287,11 @@ const DirectoryPage: React.FC = () => {
       {/* Модальное окно загрузки */}
       <Modal
         isOpen={isUploadModalOpen}
-        onClose={() => !isUploading && setIsUploadModalOpen(false)}
+        onClose={() => setIsUploadModalOpen(false)}
         title="Загрузить файл"
         maxWidth="lg"
       >
-        <DropZone
-          onFilesDrop={handleFilesDrop}
-          isUploading={isUploading}
-          uploadProgress={uploadProgress}
-          uploadError={uploadError}
-        />
+        <DropZone onFilesDrop={handleFilesDrop} />
       </Modal>
 
       {/* Модальное окно создания папки */}

@@ -46,6 +46,8 @@ export function getRecentFiles(accessToken: string, limit?: number): Promise<Rec
 
 const maxUploadBytes = 512 * 1024 * 1024;
 const uploadLimitMessage = 'Общий размер файлов в одной загрузке не должен превышать 512 МиБ';
+export const MAX_UPLOAD_BYTES = maxUploadBytes;
+export const UPLOAD_LIMIT_MESSAGE = uploadLimitMessage;
 
 // Функция загрузки с прогрессом через XHR
 export function uploadFilesWithProgress(
@@ -108,6 +110,102 @@ export function uploadFilesWithProgress(
     xhr.open('POST', url);
     xhr.setRequestHeader('Authorization', `Bearer ${token}`);
     // Не устанавливаем Content-Type - браузер сам добавит с boundary
+    xhr.send(formData);
+  });
+}
+
+/**
+ * Загрузка одного файла с прогрессом.
+ * Используется фоновым менеджером загрузок — по одному файлу за запрос,
+ * чтобы можно было отслеживать прогресс, ретраить и показывать статус per-file.
+ */
+export function uploadSingleFile(
+  token: string,
+  directoryId: string,
+  file: File,
+  onProgress: (progress: number) => void,
+  signal?: AbortSignal,
+): Promise<FileUploadResponse> {
+  if (file.size > maxUploadBytes) {
+    return Promise.reject(new Error(uploadLimitMessage));
+  }
+  if (signal?.aborted) {
+    return Promise.reject(new DOMException('Загрузка отменена', 'AbortError'));
+  }
+  return new Promise((resolve, reject) => {
+    const formData = new FormData();
+    formData.append('directory_id', directoryId);
+    formData.append('files', file);
+
+    const xhr = new XMLHttpRequest();
+    let settled = false;
+
+    const cleanup = () => {
+      signal?.removeEventListener('abort', onAbort);
+    };
+    const fail = (err: Error) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(err);
+    };
+    const ok = (data: FileUploadResponse) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve(data);
+    };
+
+    function onAbort() {
+      try {
+        xhr.abort();
+      } catch {
+        /* noop */
+      }
+      fail(new DOMException('Загрузка отменена', 'AbortError'));
+    }
+
+    xhr.upload.addEventListener('progress', (event) => {
+      if (event.lengthComputable) {
+        onProgress(Math.round((event.loaded / event.total) * 100));
+      }
+    });
+
+    xhr.addEventListener('load', () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const response = JSON.parse(xhr.responseText) as UploadFilesResponse;
+          const uploaded = response.files?.[0];
+          if (!uploaded) {
+            fail(new Error('Сервер не вернул данные о загруженном файле'));
+            return;
+          }
+          ok(uploaded);
+        } catch {
+          fail(new Error('Некорректный ответ сервера'));
+        }
+      } else {
+        try {
+          const error = JSON.parse(xhr.responseText);
+          fail(new Error(error.error || 'Не удалось загрузить файл'));
+        } catch {
+          fail(
+            new Error(
+              xhr.status === 413 ? uploadLimitMessage : `Ошибка загрузки (${xhr.status})`,
+            ),
+          );
+        }
+      }
+    });
+
+    xhr.addEventListener('error', () => fail(new Error('Сетевая ошибка при загрузке')));
+    xhr.addEventListener('abort', () => fail(new DOMException('Загрузка отменена', 'AbortError')));
+
+    if (signal) signal.addEventListener('abort', onAbort, { once: true });
+
+    const url = `${API_BASE_URL}/files`;
+    xhr.open('POST', url);
+    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
     xhr.send(formData);
   });
 }
