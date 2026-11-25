@@ -74,7 +74,7 @@ export function PlaybackVolume() {
         step={0.05}
         value={muted ? 0 : volume}
         aria-label="Громкость"
-        aria-valuetext={`${Math.round((muted ? 0 : volume) * 100)}%`}
+        showPercentage
         onChange={(event) => setTrackVolume(event.currentTarget.valueAsNumber)}
       />
     </div>

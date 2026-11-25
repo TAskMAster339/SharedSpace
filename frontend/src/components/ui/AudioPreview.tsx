@@ -281,6 +281,7 @@ export function AudioPreview({
                   step={0.05}
                   value={localMuted ? 0 : localVolume}
                   aria-label="Громкость"
+                  showPercentage
                   onChange={(event) => {
                     const value = event.currentTarget.valueAsNumber;
                     if (audio.current) {

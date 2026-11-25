@@ -560,3 +560,12 @@
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-areas: 'track actions';
 }
+
+.playback-volume-value {
+  visibility: hidden;
+}
+
+.playback-volume:hover .playback-volume-value,
+.playback-volume input:is(:focus-visible, :active) + .playback-volume-value {
+  visibility: visible;
+}
