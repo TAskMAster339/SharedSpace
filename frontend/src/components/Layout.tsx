@@ -8,6 +8,7 @@ import React, {
 } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { GitFork } from 'lucide-react';
+import { DesktopAudioMiniPlayer } from './AudioMiniPlayer';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { ItemPropertiesProvider } from './ui/ItemProperties';
@@ -124,6 +125,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, fillViewport = false }
               </div>
             </>
           )}
+          {isAuthenticated && !workspace && <DesktopAudioMiniPlayer />}
         </div>
       </div>
 

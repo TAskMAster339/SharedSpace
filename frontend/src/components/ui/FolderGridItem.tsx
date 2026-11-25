@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Folder, Music } from 'lucide-react';
+import { Folder, ListMusic, AudioLines } from 'lucide-react';
 import { GridItemCaption } from './GridItemCaption';
 import { ItemStatusBadges } from './ItemStatusBadges';
 import { useGridItemMenu } from './useGridItemMenu';
@@ -16,6 +16,7 @@ interface FolderGridItemProps {
   className?: string;
   coverUrl?: string;
   isPlaylist?: boolean;
+  isMusicRoot?: boolean;
   hasShareLinks?: boolean;
   onClick?: (id: string) => void;
   showProperties?: boolean;
@@ -37,6 +38,7 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
   className,
   coverUrl,
   isPlaylist = false,
+  isMusicRoot = false,
   hasShareLinks = false,
   onClick,
   onContextMenu,
@@ -49,7 +51,7 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
   onDrop,
   onDragStart,
 }) => {
-  const FolderIcon = isPlaylist ? Music : Folder;
+  const FolderIcon = isMusicRoot ? AudioLines : isPlaylist ? ListMusic : Folder;
   const [isDragOver, setIsDragOver] = useState(false);
   const dragCounter = useRef(0);
   const menu = useGridItemMenu(onContextMenu && ((event) => onContextMenu(event, id)));
@@ -126,7 +128,11 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
             className="h-full w-full rounded-theme object-cover"
           />
         ) : (
-          <FolderIcon size={64} strokeWidth={1.5} />
+          <FolderIcon
+            size={64}
+            strokeWidth={1.5}
+            className={isMusicRoot ? 'text-brand' : undefined}
+          />
         )}
         <ItemStatusBadges grid shared={hasShareLinks} />
       </Link>

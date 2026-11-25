@@ -20,6 +20,7 @@ import {
 import { useAuthStore } from '../store/authStore';
 import SEOHead from '../components/SEOHead';
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
+import { AudioPreview } from '../components/ui/AudioPreview';
 import { FileIcon } from '../components/ui/FileIcon';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
@@ -548,28 +549,13 @@ const SharedDirectoryPage: React.FC = () => {
           );
         case 'audio':
           return (
-            <div className="bg-theme-tertiary rounded-theme p-8">
-              <div className="flex flex-col items-center gap-6 group">
-                <div className="w-24 h-24 rounded-theme bg-brand-light flex items-center justify-center text-brand group-hover:text-brand-hover transition-colors">
-                  {(previewFile.cover_url ?? data?.cover_url) ? (
-                    <img
-                      src={previewFile.cover_url ?? data?.cover_url}
-                      alt=""
-                      className="h-full w-full rounded-theme object-cover"
-                    />
-                  ) : (
-                    <FileIcon type="audio" size={40} />
-                  )}
-                </div>
-                <p className="text-lg font-medium text-theme-primary">{previewFile.filename}</p>
-                <audio
-                  src={previewFile.url}
-                  controls
-                  className="w-full max-w-md"
-                  onError={() => setIframeError(true)}
-                />
-              </div>
-            </div>
+            <AudioPreview
+              key={previewFile.id}
+              name={previewFile.filename}
+              cover={previewFile.cover_url ?? data?.cover_url}
+              src={previewFile.url}
+              onError={() => setIframeError(true)}
+            />
           );
         case 'pdf':
           return (
@@ -740,7 +726,7 @@ const SharedDirectoryPage: React.FC = () => {
           })}
         </div>
         <div className="ml-auto flex items-center gap-2">
-          {(allSubdirs.length > 0 || allFiles.length > 0) && (
+          {data.purpose !== 'audio' && (allSubdirs.length > 0 || allFiles.length > 0) && (
             <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} />
           )}
         </div>
@@ -753,13 +739,13 @@ const SharedDirectoryPage: React.FC = () => {
       {allSubdirs.length > 0 && (
         <ItemGroup
           title={data.purpose === 'audio' ? 'Плейлисты' : 'Папки'}
-          viewMode={viewMode}
+          viewMode={data.purpose === 'audio' ? 'grid' : viewMode}
           hasMore={hasMoreDirs}
           isLoadingMore={isLoadingMoreDirs}
           sentinelRef={dirsSentinelRef}
         >
           {allSubdirs.map((subdir) =>
-            viewMode === 'grid' ? (
+            data.purpose === 'audio' || viewMode === 'grid' ? (
               <FolderGridItem
                 key={subdir.id}
                 id={subdir.id}

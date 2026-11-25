@@ -323,10 +323,8 @@ const DirectoryPage: React.FC = () => {
     if (!isLoadingShared && actualId && accessToken && directoryInfo) {
       setIsDirectlyShared(checkIsShared(actualId));
       const shared = directoryInfo.shared_directory_id != null;
-      if (shared !== isShared) {
-        setIsShared(shared);
-        setCurrentSection(shared ? 'shared' : 'personal');
-      }
+      if (shared !== isShared) setIsShared(shared);
+      setCurrentSection(shared ? 'shared' : 'personal');
     }
   }, [
     isLoadingShared,
@@ -964,7 +962,9 @@ const DirectoryPage: React.FC = () => {
             <div className="mt-2">{renderBreadcrumbs()}</div>
           </div>
           <div className="flex items-center gap-2 mt-1 flex-wrap justify-end md:justify-start md:shrink-0">
-            <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} />
+            {!isAudioDirectory && (
+              <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} />
+            )}
             {perms?.upload && (
               <button
                 onClick={() => setIsUploadModalOpen(true)}
@@ -986,6 +986,7 @@ const DirectoryPage: React.FC = () => {
             {isAudioDirectory && perms?.upload && (
               <Button
                 variant="secondary"
+                className="inline-flex items-center gap-2 border border-theme bg-theme-secondary"
                 onClick={() =>
                   actualId && setCoverTarget({ id: actualId, url: directoryContents.cover_url })
                 }
@@ -1051,13 +1052,13 @@ const DirectoryPage: React.FC = () => {
             {filteredSubdirectories.length > 0 && (
               <ItemGroup
                 title={isAudioDirectory ? 'Плейлисты' : 'Папки'}
-                viewMode={viewMode}
+                viewMode={isAudioDirectory ? 'grid' : viewMode}
                 hasMore={hasMoreDirs}
                 isLoadingMore={isLoadingMoreDirs}
                 sentinelRef={dirsSentinelRef}
               >
                 {filteredSubdirectories.map((folder) =>
-                  viewMode === 'grid' ? (
+                  isAudioDirectory || viewMode === 'grid' ? (
                     <FolderGridItem
                       showProperties
                       key={folder.id}
@@ -1065,6 +1066,7 @@ const DirectoryPage: React.FC = () => {
                       sizeBytes={folder.size_bytes}
                       name={folder.name}
                       coverUrl={folder.cover_url}
+                      isMusicRoot={folder.is_music_root}
                       isPlaylist={folder.purpose === 'audio' && !folder.is_music_root}
                       onCover={
                         folder.purpose === 'audio' && (folder.permissions?.upload ?? perms?.upload)
@@ -1116,6 +1118,7 @@ const DirectoryPage: React.FC = () => {
                       id={folder.id}
                       name={folder.name}
                       coverUrl={folder.cover_url}
+                      isMusicRoot={folder.is_music_root}
                       isPlaylist={folder.purpose === 'audio' && !folder.is_music_root}
                       onCover={
                         folder.purpose === 'audio' && (folder.permissions?.upload ?? perms?.upload)
@@ -1361,15 +1364,18 @@ const DirectoryPage: React.FC = () => {
         maxWidth="sm"
       >
         <div className="space-y-3">
-          <label className="block text-sm">
-            Фото JPEG, PNG или GIF до 10 МиБ
+          <p className="text-sm text-theme-secondary">JPEG, PNG или GIF до 10 МиБ</p>
+          <label className="relative flex min-h-24 cursor-pointer flex-col items-center justify-center gap-2 rounded-theme border border-dashed border-theme bg-theme-tertiary p-4 text-sm text-brand transition-colors hover:bg-theme-hover focus-within:outline focus-within:outline-brand">
+            <Image size={22} aria-hidden="true" />
+            {isSavingCover ? 'Сохраняем обложку…' : 'Выбрать фото'}
             <input
-              className="mt-2 block w-full text-sm"
+              className="sr-only"
               type="file"
               accept="image/jpeg,image/png,image/gif"
               disabled={isSavingCover}
               onChange={(event) => {
                 const photo = event.currentTarget.files?.[0];
+                event.currentTarget.value = '';
                 if (photo) void changeCover(photo);
               }}
             />

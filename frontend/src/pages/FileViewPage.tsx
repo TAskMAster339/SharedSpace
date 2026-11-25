@@ -23,10 +23,10 @@ import {
   softDeleteFile,
   renameFile,
 } from '../api/files';
-import { getFavorites } from '../api/favorites';
 import { getDirectoryById, Directory } from '../api/directories';
 import { getUserById } from '../api/users';
 import { ApiError } from '../api/client';
+import { AudioPreview } from '../components/ui/AudioPreview';
 import { FileIcon } from '../components/ui/FileIcon';
 import { Button } from '../components/ui/Button';
 import { DocumentActions } from '../components/ui/DocumentActions';
@@ -281,37 +281,6 @@ const FileViewPage: React.FC = () => {
     };
   }, [accessToken, id, determinePreviewType, isProblematicForIframe, user?.id]);
 
-  const playNextFavorite = async (audio: HTMLAudioElement) => {
-    if (!accessToken || !id) return;
-    try {
-      let cursor = searchParams.get('cursor') ?? undefined;
-      if (!cursor) return;
-      while (audio.isConnected && cursor) {
-        const page = await getFavorites(accessToken, { purpose: 'audio', limit: 20, cursor });
-        for (const track of page.favorites) {
-          if (!audio.isConnected) return;
-          try {
-            await getFileContentUrl(accessToken, track.id);
-          } catch (err) {
-            if (err instanceof ApiError && (err.status === 403 || err.status === 404)) continue;
-            throw err;
-          }
-          if (audio.isConnected) {
-            const query = new URLSearchParams({
-              playlist: 'favorites',
-              cursor: `${track.favorited_at}|${track.id}`,
-            });
-            navigate(`/files/${track.id}?${query}`, { replace: true });
-          }
-          return;
-        }
-        cursor = page.next_cursor;
-      }
-    } catch {
-      if (audio.isConnected) showToast('Не удалось открыть следующий трек', 'error');
-    }
-  };
-
   const getOwnerDisplayName = useCallback(() => {
     if (!file) return '';
     if (file.owner_id === user?.id) return 'Вы';
@@ -502,39 +471,41 @@ const FileViewPage: React.FC = () => {
 
       case 'audio':
         return (
-          <div className="bg-theme-tertiary rounded-theme p-8">
-            <div className="flex flex-col items-center gap-6">
-              <div className="w-24 h-24 rounded-theme bg-brand-light flex items-center justify-center text-brand">
-                {file.cover_url ? (
-                  <img
-                    src={file.cover_url}
-                    alt=""
-                    className="h-full w-full rounded-theme object-cover"
-                  />
-                ) : (
-                  <FileIcon type="audio" size={40} />
-                )}
-              </div>
-              <p className="text-lg font-medium text-theme-primary">{file.filename}</p>
-              {fileUrl ? (
-                <audio
-                  src={fileUrl}
-                  controls
-                  autoPlay={isFavoritesPlaylist}
-                  onEnded={
-                    isFavoritesPlaylist
-                      ? (event) => void playNextFavorite(event.currentTarget)
-                      : undefined
+          <AudioPreview
+            key={file.id}
+            name={file.filename}
+            cover={file.cover_url}
+            collection={
+              isFavoritesPlaylist
+                ? 'Избранная музыка'
+                : directory?.purpose === 'audio'
+                  ? directory.name
+                  : undefined
+            }
+            src={fileUrl ?? undefined}
+            session={
+              fileUrl
+                ? {
+                    id: file.id,
+                    name: file.filename,
+                    cover: file.cover_url,
+                    src: fileUrl,
+                    directoryId: directory?.purpose === 'audio' ? directory.id : undefined,
+                    collection: isFavoritesPlaylist
+                      ? 'Избранная музыка'
+                      : directory?.purpose === 'audio'
+                        ? directory.name
+                        : undefined,
+                    favoriteCursor: isFavoritesPlaylist
+                      ? (searchParams.get('cursor') ?? undefined)
+                      : undefined,
                   }
-                  className="w-full max-w-md"
-                  controlsList="nodownload"
-                  onError={handleIframeError}
-                />
-              ) : (
-                <p className="text-theme-muted">Загрузка аудио...</p>
-              )}
-            </div>
-          </div>
+                : undefined
+            }
+            autoPlay={isFavoritesPlaylist}
+            onCollapse={handleGoBack}
+            onError={handleIframeError}
+          />
         );
 
       case 'pdf':
@@ -596,7 +567,7 @@ const FileViewPage: React.FC = () => {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || (file && file.id !== id && !error)) {
     return (
       <div className="flex items-center justify-center py-20">
         <SEOHead title="Загрузка..." description="Загрузка информации о файле..." />

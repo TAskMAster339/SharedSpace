@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { Fragment } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Star, Trash2, Share2 } from 'lucide-react';
+import { Star, Trash2, Share2, AudioLines, Film, Images } from 'lucide-react';
 import { useStorageUsageStore } from '../store/storageUsageStore';
 import { StorageIndicator } from './ui/StorageIndicator';
 import { QuotaIndicator } from './ui/QuotaIndicator';
@@ -17,6 +17,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ id, collapsed }) => {
   const location = useLocation();
   const openStorage = useStorageUsageStore((s) => s.open);
   const currentPath = location.pathname;
+  const musicDirectoryId = useDirectoryStore((s) => s.musicDirectoryId);
   const currentSection = useDirectoryStore((s) => s.currentSection);
   const { menuItems, storageUsed, storageQuota, shareLinksUsed, shareLinksQuota, isLoading } =
     useSidebarMenu();
@@ -49,44 +50,95 @@ export const Sidebar: React.FC<SidebarProps> = ({ id, collapsed }) => {
         <>
           <div className="mt-2 flex flex-1 flex-col space-y-1">
             {menuItems.map((item) => {
-              const isActive = isSidebarItemActive(item.path, currentPath, currentSection);
+              const personal = item.path.startsWith('/directories/');
+              const musicPath = musicDirectoryId ? `/directories/${musicDirectoryId}` : undefined;
+              const isActive =
+                currentPath === item.path ||
+                (personal && currentPath === musicPath) ||
+                isSidebarItemActive(item.path, currentPath, currentSection);
+              const showStorageChildren = personal && !collapsed && isActive;
               return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  title={collapsed ? item.label : undefined}
-                  aria-current={isActive ? 'page' : undefined}
-                  className={cn(
-                    'group flex min-h-10 items-center gap-3 overflow-hidden whitespace-nowrap rounded-theme px-[14px] py-2.5 text-sm font-medium transition-colors',
-                    isActive
-                      ? 'bg-brand-light text-brand dark:bg-brand-light'
-                      : 'text-theme-secondary hover:bg-theme-hover',
-                  )}
-                >
-                  <item.icon
-                    size={18}
-                    aria-hidden="true"
+                <Fragment key={item.path}>
+                  <Link
+                    to={item.path}
+                    title={collapsed ? item.label : undefined}
+                    aria-current={
+                      isActive && (!personal || currentPath === item.path) ? 'page' : undefined
+                    }
                     className={cn(
-                      'size-[18px] shrink-0 transition-colors',
-                      isActive && item.icon === Star
-                        ? 'text-yellow-400'
-                        : isActive && item.icon === Trash2
-                          ? 'text-red-500'
-                          : isActive && item.icon === Share2
-                            ? 'text-green-500'
-                            : isActive
-                              ? 'text-brand'
-                              : item.icon === Star
-                                ? 'text-theme-muted group-hover:text-yellow-400'
-                                : item.icon === Trash2
-                                  ? 'text-theme-muted group-hover:text-red-500'
-                                  : item.icon === Share2
-                                    ? 'text-theme-muted group-hover:text-green-500'
-                                    : 'text-theme-muted group-hover:text-brand',
+                      'group flex min-h-10 items-center gap-3 overflow-hidden whitespace-nowrap rounded-theme px-[14px] py-2.5 text-sm font-medium transition-colors',
+                      isActive
+                        ? 'bg-brand-light text-brand dark:bg-brand-light'
+                        : 'text-theme-secondary hover:bg-theme-hover',
                     )}
-                  />
-                  <span className={collapsed ? 'sr-only' : undefined}>{item.label}</span>
-                </Link>
+                  >
+                    <item.icon
+                      size={18}
+                      aria-hidden="true"
+                      className={cn(
+                        'size-[18px] shrink-0 transition-colors',
+                        isActive && item.icon === Star
+                          ? 'text-yellow-400'
+                          : isActive && item.icon === Trash2
+                            ? 'text-red-500'
+                            : isActive && item.icon === Share2
+                              ? 'text-green-500'
+                              : isActive
+                                ? 'text-brand'
+                                : item.icon === Star
+                                  ? 'text-theme-muted group-hover:text-yellow-400'
+                                  : item.icon === Trash2
+                                    ? 'text-theme-muted group-hover:text-red-500'
+                                    : item.icon === Share2
+                                      ? 'text-theme-muted group-hover:text-green-500'
+                                      : 'text-theme-muted group-hover:text-brand',
+                      )}
+                    />
+                    <span className={collapsed ? 'sr-only' : undefined}>{item.label}</span>
+                  </Link>
+                  {personal && (
+                    <div
+                      className={cn(
+                        'grid motion-safe:transition-[grid-template-rows,opacity] motion-safe:duration-300 motion-safe:ease-out',
+                        showStorageChildren
+                          ? 'grid-rows-[1fr] opacity-100'
+                          : 'grid-rows-[0fr] opacity-0',
+                      )}
+                      inert={!showStorageChildren}
+                    >
+                      <ul className="min-h-0 overflow-hidden pl-7 pr-1 text-sm">
+                        {musicPath && (
+                          <li>
+                            <Link
+                              to={musicPath}
+                              aria-current={currentPath === musicPath ? 'page' : undefined}
+                              className={cn(
+                                'flex min-h-9 items-center gap-2 rounded-theme px-3 hover:bg-theme-hover',
+                                currentPath === musicPath ? 'text-brand' : 'text-theme-secondary',
+                              )}
+                            >
+                              <AudioLines size={16} aria-hidden="true" />
+                              Музыка
+                            </Link>
+                          </li>
+                        )}
+                        {[
+                          { icon: Film, label: 'Видео' },
+                          { icon: Images, label: 'Картинки' },
+                        ].map(({ icon: Icon, label }) => (
+                          <li
+                            key={label}
+                            className="flex min-h-9 items-center gap-2 px-3 text-theme-muted"
+                          >
+                            <Icon size={16} aria-hidden="true" />
+                            {label}
+                            <span className="ml-auto text-xs">Скоро</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </Fragment>
               );
             })}
           </div>

@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Folder, Music } from 'lucide-react';
+import { Folder, ListMusic, AudioLines } from 'lucide-react';
 import { ItemStatusBadges } from './ItemStatusBadges';
 import { ItemActionsMenu } from './ItemActionsMenu';
 import { formatFileSize } from '../../utils/format';
@@ -14,6 +14,7 @@ interface FolderItemProps {
   className?: string;
   coverUrl?: string;
   isPlaylist?: boolean;
+  isMusicRoot?: boolean;
   hasShareLinks?: boolean;
   onClick?: (id: string) => void;
   showProperties?: boolean;
@@ -35,6 +36,7 @@ export const FolderItem: React.FC<FolderItemProps> = ({
   className,
   coverUrl,
   isPlaylist = false,
+  isMusicRoot = false,
   hasShareLinks = false,
   onClick,
   onContextMenu,
@@ -47,7 +49,7 @@ export const FolderItem: React.FC<FolderItemProps> = ({
   onDrop,
   onDragStart,
 }) => {
-  const FolderIcon = isPlaylist ? Music : Folder;
+  const FolderIcon = isMusicRoot ? AudioLines : isPlaylist ? ListMusic : Folder;
   const [isDragOver, setIsDragOver] = useState(false);
   const dragCounter = useRef(0);
   const [contextMenuOpen, setContextMenuOpen] = useState<{ x: number; y: number } | null>(null);
@@ -140,7 +142,9 @@ export const FolderItem: React.FC<FolderItemProps> = ({
         </div>
         <div className="min-w-0">
           <p className="text-sm text-theme-primary font-medium truncate">{name}</p>
-          <p className="text-xs text-theme-muted">{isPlaylist ? 'Плейлист' : 'Папка'}</p>
+          <p className="text-xs text-theme-muted">
+            {isMusicRoot ? 'Аудиопапка' : isPlaylist ? 'Плейлист-папка' : 'Папка'}
+          </p>
         </div>
       </div>
       <div className="flex items-center gap-3 shrink-0">

@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import { startUploadManager, stopUploadManager } from './services/uploadManager';
+import { AudioEngine } from './components/AudioEngine';
 import { Layout } from './components/Layout';
 import { ToastContainer } from './components/ui/ToastContainer';
 import { DropZoneWrapper } from './components/DropZoneWrapper';
@@ -52,6 +53,7 @@ const App: React.FC = () => {
 
   return (
     <Router>
+      <AudioEngine />
       <Routes>
         <Route
           path="/"
