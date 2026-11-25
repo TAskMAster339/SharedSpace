@@ -36,7 +36,7 @@ export const ScrollToTopButton: React.FC<{ desktopPlayerVisible?: boolean }> = (
       aria-label="Наверх"
       className={cn(
         'fixed right-6 z-40 w-11 h-11 flex items-center justify-center rounded-theme bg-brand text-theme-on-brand shadow-theme-dropdown hover:bg-brand-hover transition-all duration-200 animate-in fade-in hidden md:flex',
-        desktopPlayerVisible ? 'bottom-36 lg:bottom-24' : nearBottom ? 'bottom-24' : 'bottom-6',
+        desktopPlayerVisible ? 'bottom-44 xl:bottom-32' : nearBottom ? 'bottom-24' : 'bottom-6',
       )}
     >
       <ArrowUp size={20} />

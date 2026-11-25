@@ -98,9 +98,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, fillViewport = false }
               </ReaderLayout.Provider>
             </div>
           </div>
+          {showMiniPlayer && !workspace && <DesktopAudioMiniPlayer />}
         </div>
       </div>
-      {isAuthenticated && !workspace && <DesktopAudioMiniPlayer />}
       {!workspace && (
         <>
           <div

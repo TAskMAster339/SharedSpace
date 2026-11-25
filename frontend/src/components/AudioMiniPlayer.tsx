@@ -135,25 +135,28 @@ export function DesktopAudioMiniPlayer() {
   return (
     <aside
       aria-label="Мини-плеер"
-      className="sticky bottom-0 z-30 hidden w-full shrink-0 border-y border-theme bg-theme-secondary shadow-theme-card md:block"
+      className="audio-mini-player sticky bottom-4 z-30 mx-4 mb-4 hidden shrink-0 rounded-theme border border-theme bg-theme-secondary shadow-theme-dropdown md:block lg:mx-6"
     >
-      <div className="grid w-full grid-cols-[minmax(8rem,1fr)_auto] items-center gap-x-4 px-4 py-2 lg:grid-cols-[minmax(12rem,1fr)_minmax(16rem,1.2fr)_minmax(12rem,1fr)] lg:px-6">
-        <div className="col-start-1 row-start-1 min-w-0">
+      <div
+        className="audio-mini-layout grid items-center gap-x-3 px-3 py-2 sm:px-4"
+        data-compact={compact}
+      >
+        <div className="min-w-0 [grid-area:track]">
           <TrackLink />
         </div>
         {!compact && (
-          <div className="col-span-full row-start-2 grid min-w-0 justify-items-center gap-0.5 lg:col-span-1 lg:col-start-2 lg:row-start-1">
+          <div className="grid min-w-0 justify-items-center gap-0.5 [grid-area:transport]">
             <Transport />
             <PlaybackProgress />
           </div>
         )}
-        <div className="col-start-2 row-start-1 flex items-center justify-end gap-1 lg:col-start-3">
-          {!compact && (
-            <>
-              <PlaybackModes hasPlaylist={hasPlaylist} />
-              <PlaybackVolume />
-            </>
-          )}
+        {!compact && (
+          <div className="flex items-center justify-end [grid-area:options]">
+            <PlaybackModes hasPlaylist={hasPlaylist} />
+            <PlaybackVolume />
+          </div>
+        )}
+        <div className="flex items-center justify-end [grid-area:actions]">
           <Link
             to="/player"
             state={{ returnPath: location.pathname + location.search }}

@@ -527,3 +527,36 @@
     height: 2.75rem;
   }
 }
+
+.audio-mini-player {
+  container-type: inline-size;
+}
+
+.audio-mini-layout {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'track actions'
+    'transport transport'
+    'options options';
+}
+
+@container (min-width: 38rem) {
+  .audio-mini-layout {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      'track options actions'
+      'transport transport transport';
+  }
+}
+
+@container (min-width: 55rem) {
+  .audio-mini-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(14rem, 1.2fr) minmax(0, 1fr) auto;
+    grid-template-areas: 'track transport options actions';
+  }
+}
+
+.audio-mini-layout[data-compact='true'] {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: 'track actions';
+}
