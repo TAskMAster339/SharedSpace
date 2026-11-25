@@ -81,6 +81,7 @@ type txWrapper struct{ pgx.Tx }
 
 type directoryRecord struct {
 	ID        string
+	Purpose   string
 	OwnerID   string
 	DeletedAt *time.Time
 }

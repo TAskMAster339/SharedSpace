@@ -33,11 +33,11 @@ func (m *mockRepo) Delete(_ context.Context, _ dbTX, _, _ string) error {
 	return m.deleteErr
 }
 
-func (m *mockRepo) FindAllByUserID(_ context.Context, _ dbTX, _ string, _ int) ([]favoriteFileRecord, error) {
+func (m *mockRepo) FindAllByUserID(_ context.Context, _ dbTX, _ string, _ int, _ ...string) ([]favoriteFileRecord, error) {
 	return m.findAllRes, m.findAllErr
 }
 
-func (m *mockRepo) FindAllByUserIDAfterCursor(_ context.Context, _ dbTX, _ string, _ time.Time, _ string, _ int) ([]favoriteFileRecord, error) {
+func (m *mockRepo) FindAllByUserIDAfterCursor(_ context.Context, _ dbTX, _ string, _ time.Time, _ string, _ int, _ ...string) ([]favoriteFileRecord, error) {
 	return m.findAllAfterCursorRes, m.findAllAfterCursorErr
 }
 

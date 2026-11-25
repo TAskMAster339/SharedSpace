@@ -15,6 +15,7 @@ interface FileItemProps {
   type: FileIconType | string;
   to: string;
   className?: string;
+  coverUrl?: string;
   isFavorite?: boolean;
   hasShareLinks?: boolean;
   onClick?: (id: string) => void;
@@ -38,6 +39,7 @@ export const FileItem: React.FC<FileItemProps> = ({
   type,
   to,
   className,
+  coverUrl,
   isFavorite = false,
   hasShareLinks = false,
   onClick,
@@ -84,13 +86,22 @@ export const FileItem: React.FC<FileItemProps> = ({
       <div className="flex items-center gap-3 min-w-0">
         <div className="relative shrink-0 [--badge-preview-width:3rem]">
           <div className="item-list-thumbnail bg-theme-secondary shadow-theme-card">
-            <FilePreview
-              fileId={id}
-              type={type}
-              size={20}
-              fill
-              className="file-item-icon transition-colors"
-            />
+            {coverUrl ? (
+              <img
+                src={coverUrl}
+                alt=""
+                loading="lazy"
+                className="h-full w-full rounded-theme object-cover"
+              />
+            ) : (
+              <FilePreview
+                fileId={id}
+                type={type}
+                size={20}
+                fill
+                className="file-item-icon transition-colors"
+              />
+            )}
           </div>
           <ItemStatusBadges favorite={isFavorite} shared={hasShareLinks} />
         </div>

@@ -755,6 +755,58 @@
                 }
             }
         },
+        "/api/v1/directories/{id}/cover": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "directories"
+                ],
+                "summary": "Upload a playlist cover",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Playlist ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "directories"
+                ],
+                "summary": "Remove a playlist cover",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Playlist ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
         "/api/v1/directories/{id}/path": {
             "get": {
                 "security": [
@@ -1226,6 +1278,16 @@
                         "type": "string",
                         "description": "Pagination cursor from previous response",
                         "name": "cursor",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "general",
+                            "audio"
+                        ],
+                        "type": "string",
+                        "description": "Directory purpose",
+                        "name": "purpose",
                         "in": "query"
                     }
                 ],
@@ -4394,6 +4456,9 @@
         "internal_dirs.DirectoryContentsResponse": {
             "type": "object",
             "properties": {
+                "cover_url": {
+                    "type": "string"
+                },
                 "files": {
                     "type": "array",
                     "items": {
@@ -4434,6 +4499,9 @@
         "internal_dirs.DirectoryResponse": {
             "type": "object",
             "properties": {
+                "cover_url": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -4445,6 +4513,9 @@
                 },
                 "id": {
                     "type": "string"
+                },
+                "is_music_root": {
+                    "type": "boolean"
                 },
                 "name": {
                     "type": "string"
@@ -4460,6 +4531,9 @@
                 },
                 "permissions": {
                     "$ref": "#/definitions/sharedspace_internal_access.Permissions"
+                },
+                "purpose": {
+                    "type": "string"
                 },
                 "shared_directory_id": {
                     "type": "string"
@@ -4478,6 +4552,9 @@
         "internal_dirs.FileItem": {
             "type": "object",
             "properties": {
+                "cover_url": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -4526,6 +4603,9 @@
         "internal_favorites.FavoriteFileResponse": {
             "type": "object",
             "properties": {
+                "cover_url": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -4703,6 +4783,9 @@
         "internal_files.FileMetadataResponse": {
             "type": "object",
             "properties": {
+                "cover_url": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -4921,6 +5004,9 @@
         "internal_sharelinks.DirectoryContentResponse": {
             "type": "object",
             "properties": {
+                "cover_url": {
+                    "type": "string"
+                },
                 "files": {
                     "type": "array",
                     "items": {
@@ -4942,6 +5028,9 @@
                 "owner_username": {
                     "type": "string"
                 },
+                "purpose": {
+                    "type": "string"
+                },
                 "subdirectories": {
                     "type": "array",
                     "items": {
@@ -4956,6 +5045,9 @@
         "internal_sharelinks.DirectoryFileItem": {
             "type": "object",
             "properties": {
+                "cover_url": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -4982,6 +5074,9 @@
         "internal_sharelinks.DirectorySubdir": {
             "type": "object",
             "properties": {
+                "cover_url": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -4996,6 +5091,9 @@
         "internal_sharelinks.FileContentResponse": {
             "type": "object",
             "properties": {
+                "cover_url": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useId, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
   BookOpen,
@@ -23,6 +23,7 @@ import {
   softDeleteFile,
   renameFile,
 } from '../api/files';
+import { getFavorites } from '../api/favorites';
 import { getDirectoryById, Directory } from '../api/directories';
 import { getUserById } from '../api/users';
 import { ApiError } from '../api/client';
@@ -123,6 +124,8 @@ const PROBLEMATIC_EXTENSIONS = new Set(['go']);
 const FileViewPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isFavoritesPlaylist = searchParams.get('playlist') === 'favorites';
   const officeTheme = useRootTheme();
   const [showDetails, setShowDetails] = useState(true);
   const detailsId = useId();
@@ -278,6 +281,37 @@ const FileViewPage: React.FC = () => {
     };
   }, [accessToken, id, determinePreviewType, isProblematicForIframe, user?.id]);
 
+  const playNextFavorite = async (audio: HTMLAudioElement) => {
+    if (!accessToken || !id) return;
+    try {
+      let cursor = searchParams.get('cursor') ?? undefined;
+      if (!cursor) return;
+      while (audio.isConnected && cursor) {
+        const page = await getFavorites(accessToken, { purpose: 'audio', limit: 20, cursor });
+        for (const track of page.favorites) {
+          if (!audio.isConnected) return;
+          try {
+            await getFileContentUrl(accessToken, track.id);
+          } catch (err) {
+            if (err instanceof ApiError && (err.status === 403 || err.status === 404)) continue;
+            throw err;
+          }
+          if (audio.isConnected) {
+            const query = new URLSearchParams({
+              playlist: 'favorites',
+              cursor: `${track.favorited_at}|${track.id}`,
+            });
+            navigate(`/files/${track.id}?${query}`, { replace: true });
+          }
+          return;
+        }
+        cursor = page.next_cursor;
+      }
+    } catch {
+      if (audio.isConnected) showToast('Не удалось открыть следующий трек', 'error');
+    }
+  };
+
   const getOwnerDisplayName = useCallback(() => {
     if (!file) return '';
     if (file.owner_id === user?.id) return 'Вы';
@@ -325,6 +359,10 @@ const FileViewPage: React.FC = () => {
   }, [file, toggleFavorite]);
 
   const handleGoBack = useCallback(() => {
+    if (isFavoritesPlaylist) {
+      navigate('/favorites?tab=music');
+      return;
+    }
     if (directory) {
       navigate(`/directories/${directory.id}`, {
         state: {
@@ -335,7 +373,7 @@ const FileViewPage: React.FC = () => {
     } else {
       navigate(-1);
     }
-  }, [directory, navigate]);
+  }, [directory, isFavoritesPlaylist, navigate]);
 
   const handleDeleteFile = useCallback(async () => {
     if (!accessToken || !id) return;
@@ -467,13 +505,27 @@ const FileViewPage: React.FC = () => {
           <div className="bg-theme-tertiary rounded-theme p-8">
             <div className="flex flex-col items-center gap-6">
               <div className="w-24 h-24 rounded-theme bg-brand-light flex items-center justify-center text-brand">
-                <FileIcon type="audio" size={40} />
+                {file.cover_url ? (
+                  <img
+                    src={file.cover_url}
+                    alt=""
+                    className="h-full w-full rounded-theme object-cover"
+                  />
+                ) : (
+                  <FileIcon type="audio" size={40} />
+                )}
               </div>
               <p className="text-lg font-medium text-theme-primary">{file.filename}</p>
               {fileUrl ? (
                 <audio
                   src={fileUrl}
                   controls
+                  autoPlay={isFavoritesPlaylist}
+                  onEnded={
+                    isFavoritesPlaylist
+                      ? (event) => void playNextFavorite(event.currentTarget)
+                      : undefined
+                  }
                   className="w-full max-w-md"
                   controlsList="nodownload"
                   onError={handleIframeError}

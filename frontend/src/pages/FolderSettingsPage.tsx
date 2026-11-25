@@ -44,8 +44,12 @@ const FolderSettingsPage: React.FC = () => {
         getDirectoryPath(accessToken, directoryId),
       ]);
 
-      if (dir.type === 'root') {
-        setError('Настройки личного хранилища недоступны.');
+      if (dir.type === 'root' || dir.is_music_root) {
+        setError(
+          dir.is_music_root
+            ? 'Настройки системной папки «Музыка» недоступны.'
+            : 'Настройки личного хранилища недоступны.',
+        );
         return;
       }
 

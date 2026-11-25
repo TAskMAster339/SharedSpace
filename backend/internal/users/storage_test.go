@@ -80,7 +80,7 @@ func TestStorageUsageOwnershipAndTrash(t *testing.T) {
 	if result.UsedBytes != 1000 || result.QuotaBytes != 2000 || result.TrashBytes != 400 || result.RootFilesBytes != 100 || result.OtherFilesBytes != 150 {
 		t.Fatalf("wrong usage: %+v", result)
 	}
-	if len(result.Folders) != 3 || result.Folders[0].Name != "Zulu" || result.Folders[0].SizeBytes != 300 || result.Folders[1].SizeBytes != 50 {
+	if len(result.Folders) != 4 || result.Folders[0].Name != "Zulu" || result.Folders[0].SizeBytes != 300 || result.Folders[1].SizeBytes != 50 || result.Folders[3].Name != "Музыка" || result.Folders[3].SizeBytes != 0 {
 		t.Fatalf("wrong folder allocation: %+v", result.Folders)
 	}
 	sum := result.TrashBytes + result.RootFilesBytes + result.OtherFilesBytes
@@ -101,7 +101,7 @@ func TestStorageUsageOwnershipAndTrash(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(other.Folders) != 0 || other.OtherFilesBytes != 900 || other.RootFilesBytes != 0 || other.TrashBytes != 0 {
+	if len(other.Folders) != 1 || other.Folders[0].Name != "Музыка" || other.Folders[0].SizeBytes != 0 || other.OtherFilesBytes != 900 || other.RootFilesBytes != 0 || other.TrashBytes != 0 {
 		t.Fatalf("other user's files leaked: %+v", other)
 	}
 	_, err = pool.Exec(ctx, `DELETE FROM files WHERE object_key='usage/trash'; UPDATE users SET storage_used=storage_used-400 WHERE id=md5('1')::uuid;`)
@@ -123,7 +123,7 @@ func TestStorageUsageOwnershipAndTrash(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.FolderCount != 108 || len(result.Folders) != 100 {
+	if result.FolderCount != 109 || len(result.Folders) != 100 {
 		t.Fatalf("unbounded response: %d folders, count %d", len(result.Folders), result.FolderCount)
 	}
 	_, err = pool.Exec(ctx, `

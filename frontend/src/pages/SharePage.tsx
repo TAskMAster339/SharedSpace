@@ -348,7 +348,15 @@ const SharedFile = ({ token, mode, setMode }: SharedFileProps) => {
           <div className="bg-theme-tertiary rounded-theme p-8">
             <div className="flex flex-col items-center gap-6">
               <div className="w-24 h-24 rounded-theme bg-brand-light flex items-center justify-center text-brand">
-                <FileIcon type="audio" size={40} />
+                {file.cover_url ? (
+                  <img
+                    src={file.cover_url}
+                    alt=""
+                    className="h-full w-full rounded-theme object-cover"
+                  />
+                ) : (
+                  <FileIcon type="audio" size={40} />
+                )}
               </div>
               <p className="text-lg font-medium text-theme-primary">{file.filename}</p>
               <audio

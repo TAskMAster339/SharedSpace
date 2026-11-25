@@ -4,6 +4,8 @@ import {
   Upload,
   Folder,
   FolderPlus,
+  Music,
+  Image,
   Settings,
   ChevronRight,
   Home,
@@ -42,6 +44,8 @@ import {
   renameDirectory,
   updateDirectory,
   restoreDirectory,
+  setDirectoryCover,
+  removeDirectoryCover,
   DirectoryContents,
   Directory,
   DirectoryPaginationParams,
@@ -83,6 +87,8 @@ const DirectoryPage: React.FC = () => {
   const { setTargetDirectoryId, setOnUploadComplete } = useDragDropStore();
 
   const [directoryContents, setDirectoryContents] = useState<DirectoryContents | null>(null);
+  const [isSavingCover, setIsSavingCover] = useState(false);
+  const [coverTarget, setCoverTarget] = useState<{ id: string; url?: string }>();
   const [directoryInfo, setDirectoryInfo] = useState<Directory | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -408,6 +414,7 @@ const DirectoryPage: React.FC = () => {
     return allFiles.map((f) => ({
       id: f.id,
       name: f.filename,
+      coverUrl: f.cover_url,
       date: formatDate(f.created_at),
       size: formatFileSize(f.size),
       type: resolveFileIconType(f.mime_type, f.extension),
@@ -889,6 +896,26 @@ const DirectoryPage: React.FC = () => {
   const isEmpty = filteredSubdirectories.length === 0 && allFiles.length === 0;
   const isSharedRootDirectory = isDirectlyShared;
 
+  const isAudioDirectory = directoryInfo?.purpose === 'audio';
+  const createFolderLabel = isAudioDirectory ? 'Новый плейлист' : 'Новая папка';
+  const DirectoryIcon = isAudioDirectory ? Music : Folder;
+  const changeCover = async (photo?: globalThis.File) => {
+    if (!accessToken || !actualId || !coverTarget) return;
+    setIsSavingCover(true);
+    try {
+      if (photo) {
+        await setDirectoryCover(accessToken, coverTarget.id, photo);
+      } else {
+        await removeDirectoryCover(accessToken, coverTarget.id);
+      }
+      await loadDirectory(actualId, true);
+      setCoverTarget(undefined);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Не удалось сохранить обложку', 'error');
+    } finally {
+      setIsSavingCover(false);
+    }
+  };
   const titleName = isPersonal ? 'Личное хранилище' : directoryContents.name;
 
   return (
@@ -915,7 +942,7 @@ const DirectoryPage: React.FC = () => {
         <div className="flex flex-col md:flex-row md:flex-wrap md:items-start justify-between gap-4">
           <div className="min-w-0 w-full md:flex-1 md:min-w-[250px]">
             <h1 className="text-2xl font-semibold text-theme-primary flex items-center gap-2 min-w-0">
-              <Folder size={28} className="text-brand shrink-0" />
+              <DirectoryIcon size={28} className="text-brand shrink-0" />
               <span className="truncate min-w-0">{titleName}</span>
               {isSharedDirectory && (
                 <span className="text-xs font-medium px-2 py-0.5 bg-brand/10 text-brand rounded-theme">
@@ -953,10 +980,21 @@ const DirectoryPage: React.FC = () => {
                 className="inline-flex items-center gap-2 px-4 py-2 border border-theme bg-theme-secondary text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-theme transition-colors text-sm font-medium"
               >
                 <FolderPlus size={16} />
-                <span className="hidden sm:inline">Новая папка</span>
+                <span className="hidden sm:inline">{createFolderLabel}</span>
               </button>
             )}
-            {!isPersonal && (
+            {isAudioDirectory && perms?.upload && (
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  actualId && setCoverTarget({ id: actualId, url: directoryContents.cover_url })
+                }
+              >
+                <Image size={16} aria-hidden="true" />
+                Обложка
+              </Button>
+            )}
+            {!isPersonal && !directoryInfo?.is_music_root && (
               <button
                 onClick={() =>
                   navigate(
@@ -1012,7 +1050,7 @@ const DirectoryPage: React.FC = () => {
           <div className="space-y-6">
             {filteredSubdirectories.length > 0 && (
               <ItemGroup
-                title="Папки"
+                title={isAudioDirectory ? 'Плейлисты' : 'Папки'}
                 viewMode={viewMode}
                 hasMore={hasMoreDirs}
                 isLoadingMore={isLoadingMoreDirs}
@@ -1026,10 +1064,17 @@ const DirectoryPage: React.FC = () => {
                       id={folder.id}
                       sizeBytes={folder.size_bytes}
                       name={folder.name}
+                      coverUrl={folder.cover_url}
+                      isPlaylist={folder.purpose === 'audio' && !folder.is_music_root}
+                      onCover={
+                        folder.purpose === 'audio' && (folder.permissions?.upload ?? perms?.upload)
+                          ? () => setCoverTarget({ id: folder.id, url: folder.cover_url })
+                          : undefined
+                      }
                       to={`/directories/${folder.id}`}
                       hasShareLinks={folder.has_share_links}
                       onRename={
-                        (folder.permissions?.rename ?? perms?.rename)
+                        !folder.is_music_root && (folder.permissions?.rename ?? perms?.rename)
                           ? (id: string) => {
                               const f = filteredSubdirectories.find((d) => d.id === id);
                               if (f) setRenameState({ id: f.id, name: f.name, type: 'directory' });
@@ -1037,26 +1082,32 @@ const DirectoryPage: React.FC = () => {
                           : undefined
                       }
                       onMove={
-                        (folder.permissions?.delete ?? perms?.delete)
+                        !folder.is_music_root && (folder.permissions?.delete ?? perms?.delete)
                           ? handleMoveDirectory
                           : undefined
                       }
                       onDelete={
-                        (folder.permissions?.delete ?? perms?.delete) && !checkIsShared(folder.id)
+                        !folder.is_music_root &&
+                        (folder.permissions?.delete ?? perms?.delete) &&
+                        !checkIsShared(folder.id)
                           ? handleDeleteFolder
                           : undefined
                       }
-                      onShare={(id) => {
-                        const f = filteredSubdirectories.find((d) => d.id === id);
-                        if (f)
-                          setShareModalState({
-                            itemId: f.id,
-                            itemName: f.name,
-                            itemType: 'directory',
-                          });
-                      }}
+                      onShare={
+                        folder.is_music_root
+                          ? undefined
+                          : (id) => {
+                              const f = filteredSubdirectories.find((d) => d.id === id);
+                              if (f)
+                                setShareModalState({
+                                  itemId: f.id,
+                                  itemName: f.name,
+                                  itemType: 'directory',
+                                });
+                            }
+                      }
                       onDrop={handleFolderDrop}
-                      onDragStart={handleDirectoryDragStart}
+                      onDragStart={folder.is_music_root ? undefined : handleDirectoryDragStart}
                     />
                   ) : (
                     <FolderItem
@@ -1064,11 +1115,18 @@ const DirectoryPage: React.FC = () => {
                       key={folder.id}
                       id={folder.id}
                       name={folder.name}
+                      coverUrl={folder.cover_url}
+                      isPlaylist={folder.purpose === 'audio' && !folder.is_music_root}
+                      onCover={
+                        folder.purpose === 'audio' && (folder.permissions?.upload ?? perms?.upload)
+                          ? () => setCoverTarget({ id: folder.id, url: folder.cover_url })
+                          : undefined
+                      }
                       sizeBytes={folder.size_bytes}
                       to={`/directories/${folder.id}`}
                       hasShareLinks={folder.has_share_links}
                       onRename={
-                        (folder.permissions?.rename ?? perms?.rename)
+                        !folder.is_music_root && (folder.permissions?.rename ?? perms?.rename)
                           ? (id: string) => {
                               const f = filteredSubdirectories.find((d) => d.id === id);
                               if (f) setRenameState({ id: f.id, name: f.name, type: 'directory' });
@@ -1076,26 +1134,32 @@ const DirectoryPage: React.FC = () => {
                           : undefined
                       }
                       onMove={
-                        (folder.permissions?.delete ?? perms?.delete)
+                        !folder.is_music_root && (folder.permissions?.delete ?? perms?.delete)
                           ? handleMoveDirectory
                           : undefined
                       }
                       onDelete={
-                        (folder.permissions?.delete ?? perms?.delete) && !checkIsShared(folder.id)
+                        !folder.is_music_root &&
+                        (folder.permissions?.delete ?? perms?.delete) &&
+                        !checkIsShared(folder.id)
                           ? handleDeleteFolder
                           : undefined
                       }
-                      onShare={(id) => {
-                        const f = filteredSubdirectories.find((d) => d.id === id);
-                        if (f)
-                          setShareModalState({
-                            itemId: f.id,
-                            itemName: f.name,
-                            itemType: 'directory',
-                          });
-                      }}
+                      onShare={
+                        folder.is_music_root
+                          ? undefined
+                          : (id) => {
+                              const f = filteredSubdirectories.find((d) => d.id === id);
+                              if (f)
+                                setShareModalState({
+                                  itemId: f.id,
+                                  itemName: f.name,
+                                  itemType: 'directory',
+                                });
+                            }
+                      }
                       onDrop={handleFolderDrop}
-                      onDragStart={handleDirectoryDragStart}
+                      onDragStart={folder.is_music_root ? undefined : handleDirectoryDragStart}
                     />
                   ),
                 )}
@@ -1104,19 +1168,24 @@ const DirectoryPage: React.FC = () => {
 
             {allFiles.length > 0 && (
               <ItemGroup
-                title="Файлы"
-                viewMode={viewMode}
+                title={isAudioDirectory ? 'Треки' : 'Файлы'}
+                viewMode={isAudioDirectory ? 'list' : viewMode}
                 hasMore={hasMoreFiles}
                 isLoadingMore={isLoadingMoreFiles}
                 sentinelRef={filesSentinelRef}
               >
                 {formattedFiles.map((file) =>
-                  viewMode === 'grid' ? (
+                  !isAudioDirectory && viewMode === 'grid' ? (
                     <FileGridItem
                       showProperties
                       key={file.id}
                       id={file.id}
                       name={file.name}
+                      coverUrl={
+                        isAudioDirectory
+                          ? (file.coverUrl ?? directoryContents.cover_url)
+                          : undefined
+                      }
                       size={file.size}
                       type={file.type}
                       to={`/files/${file.id}`}
@@ -1158,6 +1227,11 @@ const DirectoryPage: React.FC = () => {
                       key={file.id}
                       id={file.id}
                       name={file.name}
+                      coverUrl={
+                        isAudioDirectory
+                          ? (file.coverUrl ?? directoryContents.cover_url)
+                          : undefined
+                      }
                       date={file.date}
                       size={file.size}
                       type={file.type}
@@ -1281,15 +1355,43 @@ const DirectoryPage: React.FC = () => {
       </Modal>
 
       <Modal
+        isOpen={!!coverTarget}
+        onClose={() => !isSavingCover && setCoverTarget(undefined)}
+        title="Обложка плейлиста"
+        maxWidth="sm"
+      >
+        <div className="space-y-3">
+          <label className="block text-sm">
+            Фото JPEG, PNG или GIF до 10 МиБ
+            <input
+              className="mt-2 block w-full text-sm"
+              type="file"
+              accept="image/jpeg,image/png,image/gif"
+              disabled={isSavingCover}
+              onChange={(event) => {
+                const photo = event.currentTarget.files?.[0];
+                if (photo) void changeCover(photo);
+              }}
+            />
+          </label>
+          {coverTarget?.url && (
+            <Button variant="secondary" disabled={isSavingCover} onClick={() => void changeCover()}>
+              Убрать обложку
+            </Button>
+          )}
+        </div>
+      </Modal>
+
+      <Modal
         isOpen={isCreateFolderModalOpen}
         onClose={() => !isCreatingFolder && setIsCreateFolderModalOpen(false)}
-        title="Новая папка"
+        title={createFolderLabel}
         maxWidth="sm"
       >
         <div className="space-y-4">
           <div>
             <label className="text-xs font-medium text-theme-secondary mb-1.5 block">
-              Название папки
+              {isAudioDirectory ? 'Название плейлиста' : 'Название папки'}
             </label>
             <input
               type="text"

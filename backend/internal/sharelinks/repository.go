@@ -143,9 +143,11 @@ func (r *Repository) DecrementShareLinksCount(ctx context.Context, db dbTX, user
 func (r *Repository) GetFileByID(ctx context.Context, db dbTX, fileID string) (fileRecord, error) {
 	var f fileRecord
 	err := db.QueryRow(ctx, `
-		SELECT id, directory_id, owner_id, object_key, filename, extension, mime_type, size, created_at
+		SELECT id, directory_id, owner_id, object_key, filename, extension, mime_type, size, created_at,
+		       CASE WHEN mime_type LIKE 'audio/%' THEN COALESCE((SELECT object_key FROM file_previews p
+		         WHERE p.file_id = files.id AND p.source_object_key = files.object_key), '') ELSE '' END
 		FROM files WHERE id = $1 AND deleted_at IS NULL
-	`, fileID).Scan(&f.ID, &f.DirectoryID, &f.OwnerID, &f.ObjectKey, &f.Filename, &f.Extension, &f.MimeType, &f.Size, &f.CreatedAt)
+	`, fileID).Scan(&f.ID, &f.DirectoryID, &f.OwnerID, &f.ObjectKey, &f.Filename, &f.Extension, &f.MimeType, &f.Size, &f.CreatedAt, &f.CoverKey)
 	return f, err
 }
 
@@ -158,14 +160,18 @@ func (r *Repository) GetUsernameByID(ctx context.Context, db dbTX, userID string
 func (r *Repository) GetDirectoryByID(ctx context.Context, db dbTX, dirID string) (directoryRecord, error) {
 	var d directoryRecord
 	err := db.QueryRow(ctx, `
-		SELECT id, name, owner_id FROM directories WHERE id = $1 AND deleted_at IS NULL
-	`, dirID).Scan(&d.ID, &d.Name, &d.OwnerID)
+		SELECT id, name, owner_id, purpose, is_music_root,
+		       COALESCE((SELECT preview_key FROM directory_covers WHERE directory_id = directories.id), '')
+		FROM directories WHERE id = $1 AND deleted_at IS NULL
+	`, dirID).Scan(&d.ID, &d.Name, &d.OwnerID, &d.Purpose, &d.IsMusicRoot, &d.CoverKey)
 	return d, err
 }
 
 func (r *Repository) GetDirectorySubdirs(ctx context.Context, db dbTX, dirID string) ([]dirSubdirRecord, error) {
 	rows, err := db.Query(ctx, `
-		SELECT id, name, size_bytes FROM directories WHERE parent_id = $1 AND deleted_at IS NULL AND type = 'regular'
+		SELECT id, name, size_bytes,
+		       COALESCE((SELECT preview_key FROM directory_covers WHERE directory_id = directories.id), '')
+		FROM directories WHERE parent_id = $1 AND deleted_at IS NULL AND type = 'regular' AND NOT is_music_root
 		ORDER BY name ASC
 	`, dirID)
 	if err != nil {
@@ -176,7 +182,7 @@ func (r *Repository) GetDirectorySubdirs(ctx context.Context, db dbTX, dirID str
 	var subdirs []dirSubdirRecord
 	for rows.Next() {
 		var sd dirSubdirRecord
-		if err := rows.Scan(&sd.ID, &sd.Name, &sd.SizeBytes); err != nil {
+		if err := rows.Scan(&sd.ID, &sd.Name, &sd.SizeBytes, &sd.CoverKey); err != nil {
 			return nil, err
 		}
 		subdirs = append(subdirs, sd)
@@ -186,8 +192,10 @@ func (r *Repository) GetDirectorySubdirs(ctx context.Context, db dbTX, dirID str
 
 func (r *Repository) GetDirectorySubdirsAfterCursor(ctx context.Context, db dbTX, dirID string, cursorName string, cursorID string, limit int) ([]dirSubdirRecord, bool, string, error) {
 	query := `
-		SELECT id, name, size_bytes FROM directories
-		WHERE parent_id = $1 AND deleted_at IS NULL AND type = 'regular'`
+		SELECT id, name, size_bytes,
+		       COALESCE((SELECT preview_key FROM directory_covers WHERE directory_id = directories.id), '')
+		FROM directories
+		WHERE parent_id = $1 AND deleted_at IS NULL AND type = 'regular' AND NOT is_music_root`
 	args := []any{dirID}
 
 	if cursorName != "" && cursorID != "" {
@@ -209,7 +217,7 @@ func (r *Repository) GetDirectorySubdirsAfterCursor(ctx context.Context, db dbTX
 	var subdirs []dirSubdirRecord
 	for rows.Next() {
 		var sd dirSubdirRecord
-		if err := rows.Scan(&sd.ID, &sd.Name, &sd.SizeBytes); err != nil {
+		if err := rows.Scan(&sd.ID, &sd.Name, &sd.SizeBytes, &sd.CoverKey); err != nil {
 			return nil, false, "", err
 		}
 		subdirs = append(subdirs, sd)
@@ -234,7 +242,8 @@ func (r *Repository) GetDirectorySubdirsAfterCursor(ctx context.Context, db dbTX
 
 func (r *Repository) GetDirectoryFiles(ctx context.Context, db dbTX, dirID string) ([]dirFileRecord, error) {
 	rows, err := db.Query(ctx, `
-		SELECT id, filename, extension, mime_type, size, object_key, created_at
+		SELECT id, filename, extension, mime_type, size, object_key, created_at,
+		       COALESCE((SELECT object_key FROM file_previews WHERE file_id = files.id AND source_object_key = files.object_key), '')
 		FROM files WHERE directory_id = $1 AND deleted_at IS NULL
 		ORDER BY filename ASC
 	`, dirID)
@@ -246,7 +255,7 @@ func (r *Repository) GetDirectoryFiles(ctx context.Context, db dbTX, dirID strin
 	var files []dirFileRecord
 	for rows.Next() {
 		var f dirFileRecord
-		if err := rows.Scan(&f.ID, &f.Filename, &f.Extension, &f.MimeType, &f.Size, &f.ObjectKey, &f.CreatedAt); err != nil {
+		if err := rows.Scan(&f.ID, &f.Filename, &f.Extension, &f.MimeType, &f.Size, &f.ObjectKey, &f.CreatedAt, &f.CoverKey); err != nil {
 			return nil, err
 		}
 		files = append(files, f)
@@ -256,7 +265,8 @@ func (r *Repository) GetDirectoryFiles(ctx context.Context, db dbTX, dirID strin
 
 func (r *Repository) GetDirectoryFilesAfterCursor(ctx context.Context, db dbTX, dirID string, cursorFilename string, cursorID string, limit int) ([]dirFileRecord, bool, string, error) {
 	query := `
-		SELECT id, filename, extension, mime_type, size, object_key, created_at
+		SELECT id, filename, extension, mime_type, size, object_key, created_at,
+		       COALESCE((SELECT object_key FROM file_previews WHERE file_id = files.id AND source_object_key = files.object_key), '')
 		FROM files WHERE directory_id = $1 AND deleted_at IS NULL`
 	args := []any{dirID}
 
@@ -279,7 +289,7 @@ func (r *Repository) GetDirectoryFilesAfterCursor(ctx context.Context, db dbTX, 
 	var files []dirFileRecord
 	for rows.Next() {
 		var f dirFileRecord
-		if err := rows.Scan(&f.ID, &f.Filename, &f.Extension, &f.MimeType, &f.Size, &f.ObjectKey, &f.CreatedAt); err != nil {
+		if err := rows.Scan(&f.ID, &f.Filename, &f.Extension, &f.MimeType, &f.Size, &f.ObjectKey, &f.CreatedAt, &f.CoverKey); err != nil {
 			return nil, false, "", err
 		}
 		files = append(files, f)
@@ -423,11 +433,11 @@ func (r *Repository) IsSubdirectory(ctx context.Context, db dbTX, parentID, chil
 	var count int
 	err := db.QueryRow(ctx, `
 		WITH RECURSIVE dir_tree AS (
-			SELECT id, parent_id FROM directories WHERE id = $2 AND deleted_at IS NULL
+			SELECT id, parent_id FROM directories WHERE id = $2 AND deleted_at IS NULL AND NOT is_music_root
 			UNION ALL
 			SELECT d.id, d.parent_id FROM directories d
 			INNER JOIN dir_tree dt ON d.id = dt.parent_id
-			WHERE d.deleted_at IS NULL
+			WHERE d.deleted_at IS NULL AND NOT d.is_music_root
 		)
 		SELECT COUNT(*) FROM dir_tree WHERE id = $1
 	`, parentID, childID).Scan(&count)

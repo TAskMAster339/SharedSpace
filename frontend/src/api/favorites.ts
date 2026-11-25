@@ -1,6 +1,7 @@
 import { apiRequest } from './client';
 
 export interface FavoriteFile {
+  cover_url?: string;
   id: string;
   filename: string;
   extension: string;
@@ -20,6 +21,7 @@ interface FavoritesListResponse {
 }
 
 export interface FavoritesPaginationParams {
+  purpose?: 'general' | 'audio';
   limit?: number;
   cursor?: string;
 }
@@ -27,6 +29,7 @@ export interface FavoritesPaginationParams {
 function buildFavoritesQuery(params?: FavoritesPaginationParams): string {
   if (!params) return '';
   const parts: string[] = [];
+  if (params.purpose) parts.push(`purpose=${params.purpose}`);
   if (params.limit !== undefined) parts.push(`limit=${params.limit}`);
   if (params.cursor) parts.push(`cursor=${encodeURIComponent(params.cursor)}`);
   return parts.length ? `?${parts.join('&')}` : '';

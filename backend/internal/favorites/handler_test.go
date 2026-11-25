@@ -34,7 +34,7 @@ func (m *mockService) Remove(_ context.Context, userID, fileID string) error {
 	return nil
 }
 
-func (m *mockService) List(_ context.Context, userID string, limit int, cursor string) (FavoritesListResponse, error) {
+func (m *mockService) List(_ context.Context, userID string, limit int, cursor string, purpose ...string) (FavoritesListResponse, error) {
 	if m.listFn != nil {
 		return m.listFn(userID, limit, cursor)
 	}

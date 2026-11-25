@@ -17,6 +17,7 @@ export interface ShareLink {
 
 export interface ShareLinkResolveResult {
   file_id: string;
+  cover_url?: string;
   filename: string;
   extension: string;
   mime_type: string;
@@ -113,6 +114,7 @@ export function startSharedOfficePreview(
 // ---- Directory share links ----
 
 export interface DirectoryShareLinkFile {
+  cover_url?: string;
   id: string;
   filename: string;
   extension: string;
@@ -123,12 +125,15 @@ export interface DirectoryShareLinkFile {
 }
 
 export interface DirectoryShareLinkSubdir {
+  cover_url?: string;
   id: string;
   name: string;
   size_bytes?: number;
 }
 
 export interface DirectoryShareLinkResolveResult {
+  cover_url?: string;
+  purpose?: 'general' | 'audio';
   id: string;
   name: string;
   token: string;

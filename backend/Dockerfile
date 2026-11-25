@@ -18,7 +18,7 @@ ENV MEDIA_WORK_DIR=/app/media-work
 CMD ["/app/media-worker"]
 
 FROM alpine:latest AS api
-RUN apk --no-cache add ca-certificates
+RUN apk --no-cache add ca-certificates ffmpeg
 WORKDIR /app
 COPY --from=api-builder /app/api /app/api
 COPY --from=api-builder /app/internal/database/migrations /app/migrations

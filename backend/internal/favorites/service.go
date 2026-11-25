@@ -18,9 +18,10 @@ type Service struct {
 	db            dbTX
 	repo          RepositoryInterface
 	accessChecker access.AccessChecker
+	storage       CoverStorage
 }
 
-func NewService(pool *pgxpool.Pool, repo RepositoryInterface, accessChecker access.AccessChecker) *Service {
+func NewService(pool *pgxpool.Pool, repo RepositoryInterface, accessChecker access.AccessChecker, storage CoverStorage) *Service {
 	beginTx := func(ctx context.Context, opts pgx.TxOptions) (transaction, error) {
 		tx, err := pool.BeginTx(ctx, opts)
 		if err != nil {
@@ -28,7 +29,7 @@ func NewService(pool *pgxpool.Pool, repo RepositoryInterface, accessChecker acce
 		}
 		return txWrapper{Tx: tx}, nil
 	}
-	return &Service{beginTx: beginTx, db: pool, repo: repo, accessChecker: accessChecker}
+	return &Service{beginTx: beginTx, db: pool, repo: repo, accessChecker: accessChecker, storage: storage}
 }
 
 func (s *Service) Add(ctx context.Context, userID, fileID string) error {
@@ -70,13 +71,13 @@ func (s *Service) Remove(ctx context.Context, userID, fileID string) error {
 	return nil
 }
 
-func (s *Service) List(ctx context.Context, userID string, limit int, cursor string) (FavoritesListResponse, error) {
+func (s *Service) List(ctx context.Context, userID string, limit int, cursor string, purpose ...string) (FavoritesListResponse, error) {
 	if limit == 0 {
-		records, err := s.repo.FindAllByUserID(ctx, s.db, userID, 0)
+		records, err := s.repo.FindAllByUserID(ctx, s.db, userID, 0, purpose...)
 		if err != nil {
 			return FavoritesListResponse{}, apperror.WrapInternal("получение списка избранного", err)
 		}
-		favorites := s.enrichWithShareLinks(ctx, records)
+		favorites := s.enrichWithShareLinks(ctx, userID, records, requestedPurpose(purpose))
 		return FavoritesListResponse{Favorites: favorites}, nil
 	}
 
@@ -84,7 +85,7 @@ func (s *Service) List(ctx context.Context, userID string, limit int, cursor str
 	var err error
 
 	if cursor == "" {
-		records, err = s.repo.FindAllByUserID(ctx, s.db, userID, limit+1)
+		records, err = s.repo.FindAllByUserID(ctx, s.db, userID, limit+1, purpose...)
 	} else {
 		parts := strings.SplitN(cursor, "|", 2)
 		if len(parts) != 2 {
@@ -94,7 +95,7 @@ func (s *Service) List(ctx context.Context, userID string, limit int, cursor str
 		if err != nil {
 			return FavoritesListResponse{}, apperror.Validation("некорректный курсор")
 		}
-		records, err = s.repo.FindAllByUserIDAfterCursor(ctx, s.db, userID, cursorTime, parts[1], limit)
+		records, err = s.repo.FindAllByUserIDAfterCursor(ctx, s.db, userID, cursorTime, parts[1], limit, purpose...)
 	}
 	if err != nil {
 		return FavoritesListResponse{}, apperror.WrapInternal("получение списка избранного", err)
@@ -105,7 +106,7 @@ func (s *Service) List(ctx context.Context, userID string, limit int, cursor str
 		records = records[:limit]
 	}
 
-	favorites := s.enrichWithShareLinks(ctx, records)
+	favorites := s.enrichWithShareLinks(ctx, userID, records, requestedPurpose(purpose))
 
 	resp := FavoritesListResponse{Favorites: favorites}
 
@@ -118,28 +119,29 @@ func (s *Service) List(ctx context.Context, userID string, limit int, cursor str
 	return resp, nil
 }
 
-func (s *Service) enrichWithShareLinks(ctx context.Context, records []favoriteFileRecord) []FavoriteFileResponse {
+func (s *Service) enrichWithShareLinks(ctx context.Context, userID string, records []favoriteFileRecord, purpose string) []FavoriteFileResponse {
 	if len(records) == 0 {
 		return nil
 	}
-
 	fileIDs := make([]string, len(records))
 	for i, rec := range records {
 		fileIDs[i] = rec.ID
 	}
-
-	links, err := s.repo.HasShareLinks(ctx, s.db, fileIDs)
-	if err != nil {
-		favorites := make([]FavoriteFileResponse, len(records))
-		for i, rec := range records {
-			favorites[i] = toFavoriteResponse(rec, false)
+	links, _ := s.repo.HasShareLinks(ctx, s.db, fileIDs)
+	favorites := make([]FavoriteFileResponse, 0, len(records))
+	for _, rec := range records {
+		response := toFavoriteResponse(rec, links[rec.ID])
+		if purpose == "audio" || rec.CoverKey != "" {
+			allowed, err := s.accessChecker.Can(ctx, userID, rec.DirectoryID, access.ActionView)
+			if err != nil || !allowed {
+				if purpose == "audio" {
+					continue
+				}
+			} else if rec.CoverKey != "" {
+				response.CoverURL, _ = s.storage.PresignedGetURL(ctx, rec.CoverKey, time.Hour)
+			}
 		}
-		return favorites
-	}
-
-	favorites := make([]FavoriteFileResponse, len(records))
-	for i, rec := range records {
-		favorites[i] = toFavoriteResponse(rec, links[rec.ID])
+		favorites = append(favorites, response)
 	}
 	return favorites
 }

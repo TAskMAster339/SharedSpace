@@ -1,9 +1,11 @@
 package files
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"path/filepath"
@@ -76,6 +78,31 @@ func (s *Service) Upload(ctx context.Context, userID, directoryID string, upload
 		return UploadFilesResponse{}, apperror.Forbidden("доступ запрещён")
 	}
 
+	directory, err := s.repo.FindDirectoryByID(ctx, s.db, directoryID)
+	if err != nil {
+		return UploadFilesResponse{}, apperror.WrapInternal("поиск директории назначения", err)
+	}
+	var audioCovers [][]byte
+	if directory.Purpose == "audio" {
+		audioCovers = make([][]byte, len(uploads))
+		uploads = append([]FileUpload(nil), uploads...)
+		for i := range uploads {
+			input, ok := uploads[i].Content.(io.ReadSeeker)
+			if !ok {
+				return UploadFilesResponse{}, apperror.Internal("загруженный файл не поддерживает перемотку")
+			}
+			info, err := probeAudio(ctx, input)
+			if err != nil {
+				return UploadFilesResponse{}, err
+			}
+			if _, err := input.Seek(0, io.SeekStart); err != nil {
+				return UploadFilesResponse{}, apperror.WrapInternal("подготовка загрузки аудиофайла", err)
+			}
+			uploads[i].MimeType = info.MIME
+			audioCovers[i] = info.Cover
+		}
+	}
+
 	used, quota, err := s.repo.GetUserStorage(ctx, s.db, userID)
 	if err != nil {
 		return UploadFilesResponse{}, apperror.WrapInternal("получение данных о хранилище", err)
@@ -128,11 +155,19 @@ func (s *Service) Upload(ctx context.Context, userID, directoryID string, upload
 
 	filesPerDir := make(map[string]int, len(records))
 	results := make([]UploadResponse, 0, len(records))
-	for _, rec := range records {
+	for i, rec := range records {
 		saved, err := s.repo.Save(ctx, tx, rec)
 		if err != nil {
 			s.cleanupObjects(uploadedKeys)
 			return UploadFilesResponse{}, apperror.WrapInternal("сохранение метаданных файла", err)
+		}
+		if audioCovers != nil && len(audioCovers[i]) > 0 {
+			previewKey := previewPrefix + uuid.NewString() + ".jpg"
+			uploadedKeys = append(uploadedKeys, previewKey)
+			if err := s.saveAudioCover(ctx, tx, saved, previewKey, audioCovers[i]); err != nil {
+				s.cleanupObjects(uploadedKeys)
+				return UploadFilesResponse{}, err
+			}
 		}
 		filesPerDir[rec.DirectoryID]++
 		results = append(results, toUploadResponse(saved))
@@ -180,6 +215,9 @@ func (s *Service) GetMetadata(ctx context.Context, userID, fileID string) (FileM
 	}
 	response := toMetadataResponse(file, links[file.ID])
 	response.OwnerUsername = file.OwnerUsername
+	if file.CoverKey != "" {
+		response.CoverURL, _ = s.storage.PresignedGetURL(ctx, file.CoverKey, time.Hour)
+	}
 	return response, nil
 }
 
@@ -315,6 +353,7 @@ func (s *Service) Update(ctx context.Context, userID, fileID string, req UpdateF
 		return FileMetadataResponse{}, apperror.Forbidden("доступ запрещён")
 	}
 
+	var verifiedAudio audioInfo
 	targetParent := file.DirectoryID
 	if req.ParentID != nil {
 		targetParent = *req.ParentID
@@ -325,7 +364,7 @@ func (s *Service) Update(ctx context.Context, userID, fileID string, req UpdateF
 	}
 
 	if req.ParentID != nil {
-		_, err := s.repo.FindDirectoryByID(ctx, s.db, *req.ParentID)
+		directory, err := s.repo.FindDirectoryByID(ctx, s.db, *req.ParentID)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return FileMetadataResponse{}, apperror.NotFound("целевая директория не найдена")
@@ -338,6 +377,12 @@ func (s *Service) Update(ctx context.Context, userID, fileID string, req UpdateF
 		}
 		if !ok {
 			return FileMetadataResponse{}, apperror.Forbidden("доступ к целевой директории запрещён")
+		}
+		if directory.Purpose == "audio" && targetParent != file.DirectoryID {
+			verifiedAudio, err = s.probeStoredAudio(ctx, file.ObjectKey)
+			if err != nil {
+				return FileMetadataResponse{}, err
+			}
 		}
 	}
 
@@ -356,9 +401,29 @@ func (s *Service) Update(ctx context.Context, userID, fileID string, req UpdateF
 		return FileMetadataResponse{}, apperror.WrapInternal("проверка дубликата имени", err)
 	}
 
+	if verifiedAudio.MIME != "" && verifiedAudio.MIME != file.MimeType {
+		tag, err := tx.Exec(ctx, `UPDATE files SET mime_type = $2 WHERE id = $1 AND object_key = $3`, file.ID, verifiedAudio.MIME, file.ObjectKey)
+		if err != nil {
+			return FileMetadataResponse{}, apperror.WrapInternal("обновление типа аудиофайла", err)
+		}
+		if tag.RowsAffected() == 0 {
+			return FileMetadataResponse{}, apperror.Conflict("исходный файл изменился")
+		}
+	}
+
 	updated, err := s.repo.MoveFile(ctx, tx, fileID, targetParent, req.Filename)
 	if err != nil {
 		return FileMetadataResponse{}, apperror.WrapInternal("перемещение файла", err)
+	}
+	if verifiedAudio.MIME != "" && updated.ObjectKey != file.ObjectKey {
+		return FileMetadataResponse{}, apperror.Conflict("исходный файл изменился")
+	}
+
+	if len(verifiedAudio.Cover) > 0 {
+		key := previewPrefix + uuid.NewString() + ".jpg"
+		if err := s.saveAudioCover(ctx, tx, updated, key, verifiedAudio.Cover); err != nil {
+			return FileMetadataResponse{}, err
+		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -482,6 +547,12 @@ func (s *Service) Restore(ctx context.Context, userID, fileID string) error {
 		return apperror.Conflict("сначала восстановите родительскую директорию")
 	}
 
+	if dir.Purpose == "audio" {
+		if _, err := s.probeStoredAudio(ctx, file.ObjectKey); err != nil {
+			return err
+		}
+	}
+
 	if err := s.repo.RestoreFile(ctx, s.db, fileID); err != nil {
 		return apperror.WrapInternal("восстановление файла", err)
 	}
@@ -583,4 +654,21 @@ func toConversionResponse(c conversionRecord) ConversionResponse {
 		CreatedBy:    c.CreatedBy,
 		CreatedAt:    c.CreatedAt,
 	}
+}
+
+func (s *Service) saveAudioCover(ctx context.Context, tx dbTX, file fileRecord, key string, cover []byte) error {
+	size := int64(len(cover))
+	if err := s.storage.Upload(ctx, key, bytes.NewReader(cover), size, "image/jpeg"); err != nil {
+		return apperror.WrapInternal("сохранение обложки трека", err)
+	}
+	_, err := tx.Exec(ctx, `
+		INSERT INTO file_previews (file_id, object_key, size, source_object_key)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (file_id) DO UPDATE
+		SET object_key=EXCLUDED.object_key, size=EXCLUDED.size, source_object_key=EXCLUDED.source_object_key
+	`, file.ID, key, size, file.ObjectKey)
+	if err != nil {
+		return apperror.WrapInternal("сохранение ссылки на обложку трека", err)
+	}
+	return nil
 }

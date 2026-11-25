@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Star, List, LayoutGrid } from 'lucide-react';
+import { Star, List, LayoutGrid, Play } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useDragDropStore } from '../store/dragDropStore';
 import { useFavorites } from '../hooks/useFavorites';
@@ -24,6 +25,16 @@ import { resolveFileIconType } from '../utils/fileType';
 const PAGE_LIMIT = 20;
 
 const FavoritesPage: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const purpose = searchParams.get('tab') === 'music' ? 'audio' : 'general';
+  const trackPath = (file: FavoriteFile) => {
+    const path = `/files/${file.id}`;
+    if (purpose !== 'audio') return path;
+    return `${path}?${new URLSearchParams({
+      playlist: 'favorites',
+      cursor: `${file.favorited_at}|${file.id}`,
+    })}`;
+  };
   const accessToken = useAuthStore((state) => state.accessToken);
   const refreshUser = useAuthStore((state) => state.refreshUser);
   const { toggleFavorite } = useFavorites();
@@ -67,7 +78,7 @@ const FavoritesPage: React.FC = () => {
     setHasMore(false);
 
     try {
-      const data = await getFavorites(accessToken, { limit: PAGE_LIMIT });
+      const data = await getFavorites(accessToken, { purpose, limit: PAGE_LIMIT });
       setFiles(data.favorites);
       setItemsWithLinks(new Set(data.favorites.filter((f) => f.has_share_links).map((f) => f.id)));
       setCursor(data.next_cursor);
@@ -77,7 +88,7 @@ const FavoritesPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [accessToken]);
+  }, [accessToken, purpose]);
 
   useEffect(() => {
     loadFavorites();
@@ -96,7 +107,7 @@ const FavoritesPage: React.FC = () => {
   const loadMore = useCallback(() => {
     if (!accessToken || !cursor || isLoadingMore) return;
     setIsLoadingMore(true);
-    getFavorites(accessToken, { limit: PAGE_LIMIT, cursor })
+    getFavorites(accessToken, { purpose, limit: PAGE_LIMIT, cursor })
       .then((data) => {
         setFiles((prev) => [...prev, ...data.favorites]);
         setCursor(data.next_cursor);
@@ -104,7 +115,7 @@ const FavoritesPage: React.FC = () => {
       })
       .catch((err) => console.error('Failed to load more favorites:', err))
       .finally(() => setIsLoadingMore(false));
-  }, [accessToken, cursor, isLoadingMore]);
+  }, [accessToken, cursor, isLoadingMore, purpose]);
 
   const { sentinelRef } = useInfiniteScroll(loadMore, hasMore && !isLoadingMore);
 
@@ -146,7 +157,7 @@ const FavoritesPage: React.FC = () => {
         }
       });
     } catch {
-      const data = await getFavorites(accessToken, { limit: PAGE_LIMIT });
+      const data = await getFavorites(accessToken, { purpose, limit: PAGE_LIMIT });
       setFiles(data.favorites);
       setCursor(data.next_cursor);
       setHasMore(!!data.next_cursor);
@@ -176,7 +187,7 @@ const FavoritesPage: React.FC = () => {
       });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Не удалось удалить файл.');
-      const data = await getFavorites(accessToken, { limit: PAGE_LIMIT });
+      const data = await getFavorites(accessToken, { purpose, limit: PAGE_LIMIT });
       setFiles(data.favorites);
       setCursor(data.next_cursor);
       setHasMore(!!data.next_cursor);
@@ -246,11 +257,39 @@ const FavoritesPage: React.FC = () => {
         <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} className="mt-1" />
       </div>
 
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          aria-pressed={purpose === 'general'}
+          className="rounded-theme border border-theme px-3 py-1.5 text-sm aria-pressed:bg-brand/10 aria-pressed:text-brand"
+          onClick={() => setSearchParams({})}
+        >
+          Файлы
+        </button>
+        <button
+          type="button"
+          aria-pressed={purpose === 'audio'}
+          className="rounded-theme border border-theme px-3 py-1.5 text-sm aria-pressed:bg-brand/10 aria-pressed:text-brand"
+          onClick={() => setSearchParams({ tab: 'music' })}
+        >
+          Музыка
+        </button>
+        {purpose === 'audio' && !isLoading && files.length > 0 && (
+          <Link
+            to={trackPath(files[0])}
+            className="ml-auto inline-flex items-center gap-2 rounded-theme bg-brand px-4 py-2 text-sm font-medium text-theme-on-brand"
+          >
+            <Play size={16} aria-hidden="true" />
+            Слушать
+          </Link>
+        )}
+      </div>
+
       {isLoading ? (
         <p className="text-sm text-theme-muted py-8 text-center">Загрузка...</p>
       ) : error ? (
         <p className="text-danger text-sm py-8 text-center">{error}</p>
-      ) : files.length === 0 ? (
+      ) : files.length === 0 && !hasMore ? (
         <EmptyState
           icon={<Star size={24} />}
           description="Здесь появятся файлы, отмеченные звёздочкой."
@@ -258,7 +297,7 @@ const FavoritesPage: React.FC = () => {
       ) : (
         <div className="space-y-6">
           <ItemGroup
-            title="Файлы"
+            title={purpose === 'audio' ? 'Избранная музыка' : 'Файлы'}
             viewMode={viewMode}
             hasMore={hasMore}
             isLoadingMore={isLoadingMore}
@@ -271,9 +310,10 @@ const FavoritesPage: React.FC = () => {
                   key={file.id}
                   id={file.id}
                   name={file.filename}
+                  coverUrl={file.cover_url}
                   size={formatFileSize(file.size)}
                   type={resolveFileIconType(file.mime_type, file.extension)}
-                  to={`/files/${file.id}`}
+                  to={trackPath(file)}
                   isFavorite={true}
                   hasShareLinks={itemsWithLinks.has(file.id)}
                   onToggleFavorite={handleToggleFavorite}
@@ -301,10 +341,11 @@ const FavoritesPage: React.FC = () => {
                   key={file.id}
                   id={file.id}
                   name={file.filename}
+                  coverUrl={file.cover_url}
                   date={formatDate(file.favorited_at)}
                   size={formatFileSize(file.size)}
                   type={resolveFileIconType(file.mime_type, file.extension)}
-                  to={`/files/${file.id}`}
+                  to={trackPath(file)}
                   isFavorite={true}
                   hasShareLinks={itemsWithLinks.has(file.id)}
                   onToggleFavorite={handleToggleFavorite}

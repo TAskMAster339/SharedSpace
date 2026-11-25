@@ -91,6 +91,7 @@ func (h *Handler) Remove(w http.ResponseWriter, r *http.Request) error {
 // @Produce json
 // @Param limit query int false "Page size"
 // @Param cursor query string false "Pagination cursor from previous response"
+// @Param purpose query string false "Directory purpose" Enums(general,audio)
 // @Success 200 {object} FavoritesListResponse
 // @Failure 401 {object} apperror.Response
 // @Router /api/v1/files/favorites [get]
@@ -110,11 +111,15 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	cursor := r.URL.Query().Get("cursor")
+	purpose := r.URL.Query().Get("purpose")
+	if purpose != "" && purpose != "general" && purpose != "audio" {
+		return apperror.Validation("неизвестный тип директории")
+	}
 
 	// Добавьте логирование
 	log.Printf("List favorites: userID=%s, limit=%d, cursor=%s", claims.UserID, limit, cursor)
 
-	resp, err := h.service.List(r.Context(), claims.UserID, limit, cursor)
+	resp, err := h.service.List(r.Context(), claims.UserID, limit, cursor, purpose)
 	if err != nil {
 		log.Printf("List favorites error: %v", err) // Добавьте это
 		return err

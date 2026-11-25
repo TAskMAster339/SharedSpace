@@ -137,6 +137,7 @@ func (s *Service) loadContentsPaginated(ctx context.Context, userID string, dir 
 	fileItems := make([]FileItem, 0, len(files))
 	for _, f := range files {
 		fileItems = append(fileItems, FileItem{
+			CoverURL:  s.trackCoverURL(ctx, dir, f),
 			ID:        f.ID,
 			Filename:  f.Filename,
 			Extension: f.Extension,
@@ -167,6 +168,7 @@ func (s *Service) loadContentsPaginated(ctx context.Context, userID string, dir 
 	}
 
 	resp := &DirectoryContentsResponse{
+		CoverURL:       s.directoryCoverURL(ctx, dir),
 		ID:             dir.ID,
 		Name:           dir.Name,
 		Subdirectories: subdirResponses,
@@ -317,7 +319,7 @@ func (s *Service) Update(ctx context.Context, userID, dirID string, req UpdateDi
 	if !ok {
 		return DirectoryResponse{}, apperror.Forbidden("доступ запрещён")
 	}
-	if dir.Type == "root" {
+	if dir.Type == "root" || dir.IsMusicRoot {
 		return DirectoryResponse{}, apperror.Forbidden("нельзя переименовать или переместить корневую директорию")
 	}
 
@@ -334,7 +336,7 @@ func (s *Service) Update(ctx context.Context, userID, dirID string, req UpdateDi
 	}
 
 	if req.ParentID != nil && targetParent != nil {
-		_, err := s.repo.FindByID(ctx, s.db, *targetParent)
+		parent, err := s.repo.FindByID(ctx, s.db, *targetParent)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return DirectoryResponse{}, apperror.NotFound("целевая родительская директория не найдена")
@@ -358,6 +360,9 @@ func (s *Service) Update(ctx context.Context, userID, dirID string, req UpdateDi
 		}
 		if !ok {
 			return DirectoryResponse{}, apperror.Forbidden("доступ к целевой родительской директории запрещён")
+		}
+		if parent.Purpose != dir.Purpose {
+			return DirectoryResponse{}, apperror.Validation("нельзя переместить папку между разделами разных типов")
 		}
 	}
 
@@ -411,6 +416,7 @@ func (s *Service) loadContents(ctx context.Context, userID string, dir directory
 	fileItems := make([]FileItem, 0, len(files))
 	for _, f := range files {
 		fileItems = append(fileItems, FileItem{
+			CoverURL:  s.trackCoverURL(ctx, dir, f),
 			ID:        f.ID,
 			Filename:  f.Filename,
 			Extension: f.Extension,
@@ -441,6 +447,7 @@ func (s *Service) loadContents(ctx context.Context, userID string, dir directory
 	}
 
 	return DirectoryContentsResponse{
+		CoverURL:       s.directoryCoverURL(ctx, dir),
 		ID:             dir.ID,
 		Name:           dir.Name,
 		Subdirectories: subdirResponses,
@@ -494,12 +501,19 @@ func (s *Service) GetPath(ctx context.Context, userID, dirID string) (DirectoryP
 func (s *Service) toDirectoryResponse(ctx context.Context, userID string, d directoryRecord) DirectoryResponse {
 	perms, _ := s.accessChecker.GetPermissions(ctx, userID, d.ID)
 	sharedDirID, _ := s.accessChecker.GetSharedDirectoryID(ctx, userID, d.ID)
+	var coverURL string
+	if perms != nil && perms.View {
+		coverURL = s.directoryCoverURL(ctx, d)
+	}
 	return DirectoryResponse{
+		CoverURL:          coverURL,
 		ID:                d.ID,
 		Name:              d.Name,
 		OwnerID:           d.OwnerID,
 		ParentID:          d.ParentID,
 		Type:              d.Type,
+		Purpose:           d.Purpose,
+		IsMusicRoot:       d.IsMusicRoot,
 		FilesCount:        d.FilesCount,
 		SizeBytes:         d.SizeBytes,
 		CreatedAt:         d.CreatedAt,
@@ -529,7 +543,7 @@ func (s *Service) SoftDelete(ctx context.Context, userID, dirID string) error {
 	if !ok {
 		return apperror.Forbidden("доступ запрещён")
 	}
-	if dir.Type == "root" {
+	if dir.Type == "root" || dir.IsMusicRoot {
 		return apperror.Forbidden("нельзя удалить корневую директорию")
 	}
 	if dir.DeletedAt != nil {
@@ -701,7 +715,7 @@ func (s *Service) PermanentDelete(ctx context.Context, userID, dirID string) err
 	if !ok {
 		return apperror.Forbidden("доступ запрещён")
 	}
-	if dir.Type == "root" {
+	if dir.Type == "root" || dir.IsMusicRoot {
 		return apperror.Forbidden("нельзя удалить корневую директорию")
 	}
 

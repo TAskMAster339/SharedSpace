@@ -16,6 +16,7 @@ interface ItemActionsMenuProps {
   onShare?: () => void;
   onDownload?: () => void;
   onConvert?: () => void;
+  onCover?: () => void;
   properties?: PropertiesTarget;
   documentId?: string;
   className?: string;
@@ -74,6 +75,7 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
   onShare,
   onDownload,
   onConvert,
+  onCover,
   properties,
   documentId,
   className,
@@ -113,7 +115,14 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
   }, [menuPosition, isOpen]);
 
   const hasOtherActions =
-    onToggleFavorite || onRename || onDelete || onMove || onShare || onDownload || onConvert;
+    onToggleFavorite ||
+    onRename ||
+    onDelete ||
+    onMove ||
+    onShare ||
+    onDownload ||
+    onConvert ||
+    onCover;
   if (!hasOtherActions && !properties) return null;
 
   const handleSelect = (e: React.MouseEvent, action: () => void) => {
@@ -152,6 +161,21 @@ export const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
         (onRename || onShare || onMove || onToggleFavorite || onDelete) && (
           <div className="border-t border-theme my-1" />
         )}
+      {onCover && (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={(e) => handleSelect(e, onCover)}
+          className="group flex items-center gap-3 w-full px-4 py-3.5 text-base text-theme-secondary hover:bg-theme-hover transition-colors sm:px-3 sm:py-2 sm:text-sm"
+        >
+          <Image
+            size={18}
+            aria-hidden="true"
+            className="group-hover:text-brand transition-colors"
+          />
+          Обложка
+        </button>
+      )}
       {onShare && (
         <button
           type="button"

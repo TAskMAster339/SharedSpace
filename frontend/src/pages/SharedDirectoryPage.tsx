@@ -551,7 +551,15 @@ const SharedDirectoryPage: React.FC = () => {
             <div className="bg-theme-tertiary rounded-theme p-8">
               <div className="flex flex-col items-center gap-6 group">
                 <div className="w-24 h-24 rounded-theme bg-brand-light flex items-center justify-center text-brand group-hover:text-brand-hover transition-colors">
-                  <FileIcon type="audio" size={40} />
+                  {(previewFile.cover_url ?? data?.cover_url) ? (
+                    <img
+                      src={previewFile.cover_url ?? data?.cover_url}
+                      alt=""
+                      className="h-full w-full rounded-theme object-cover"
+                    />
+                  ) : (
+                    <FileIcon type="audio" size={40} />
+                  )}
                 </div>
                 <p className="text-lg font-medium text-theme-primary">{previewFile.filename}</p>
                 <audio
@@ -744,7 +752,7 @@ const SharedDirectoryPage: React.FC = () => {
 
       {allSubdirs.length > 0 && (
         <ItemGroup
-          title="Папки"
+          title={data.purpose === 'audio' ? 'Плейлисты' : 'Папки'}
           viewMode={viewMode}
           hasMore={hasMoreDirs}
           isLoadingMore={isLoadingMoreDirs}
@@ -757,6 +765,8 @@ const SharedDirectoryPage: React.FC = () => {
                 id={subdir.id}
                 sizeBytes={subdir.size_bytes}
                 name={subdir.name}
+                coverUrl={subdir.cover_url}
+                isPlaylist={data.purpose === 'audio'}
                 to="#"
                 onClick={handleNavigate}
                 onContextMenu={(e, id) => handleContextMenu(e, id, 'dir')}
@@ -768,6 +778,8 @@ const SharedDirectoryPage: React.FC = () => {
                 id={subdir.id}
                 sizeBytes={subdir.size_bytes}
                 name={subdir.name}
+                coverUrl={subdir.cover_url}
+                isPlaylist={data.purpose === 'audio'}
                 to="#"
                 onClick={handleNavigate}
                 onContextMenu={(e, id) => handleContextMenu(e, id, 'dir')}
@@ -780,19 +792,20 @@ const SharedDirectoryPage: React.FC = () => {
 
       {allFiles.length > 0 && (
         <ItemGroup
-          title="Файлы"
-          viewMode={viewMode}
+          title={data.purpose === 'audio' ? 'Треки' : 'Файлы'}
+          viewMode={data.purpose === 'audio' ? 'list' : viewMode}
           hasMore={hasMoreFiles}
           isLoadingMore={isLoadingMoreFiles}
           sentinelRef={filesSentinelRef}
         >
           {allFiles.map((file) => {
             const iconType = resolveFileIconType(file.mime_type, file.extension);
-            return viewMode === 'grid' ? (
+            return data.purpose !== 'audio' && viewMode === 'grid' ? (
               <FileGridItem
                 key={file.id}
                 id={file.id}
                 name={file.filename}
+                coverUrl={file.cover_url ?? data.cover_url}
                 size={formatFileSize(file.size)}
                 type={iconType}
                 to="#"
@@ -812,6 +825,7 @@ const SharedDirectoryPage: React.FC = () => {
                 key={file.id}
                 id={file.id}
                 name={file.filename}
+                coverUrl={file.cover_url ?? data.cover_url}
                 type={iconType}
                 date={formatDate(file.created_at)}
                 size={formatFileSize(file.size)}

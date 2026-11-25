@@ -2,6 +2,7 @@ package dirs
 
 import (
 	"context"
+	"io"
 	"slices"
 	"strings"
 	"testing"
@@ -1090,4 +1091,42 @@ func TestServiceRestore(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
+}
+
+func (m *mockStorage) Upload(context.Context, string, io.Reader, int64, string) error { return nil }
+func (m *mockStorage) PresignedGetURL(context.Context, string, time.Duration) (string, error) {
+	return "", nil
+}
+
+func TestMusicRootRejectsChanges(t *testing.T) {
+	root := directoryRecord{
+		ID: "music", OwnerID: "owner", Name: "Музыка",
+		Type: "regular", Purpose: "audio", IsMusicRoot: true,
+	}
+	ctx := context.Background()
+	tests := map[string]func(*Service) error{
+		"rename": func(svc *Service) error {
+			_, err := svc.Update(ctx, "owner", root.ID, UpdateDirectoryRequest{Name: strPtr("Другое имя")})
+			return err
+		},
+		"move": func(svc *Service) error {
+			_, err := svc.Update(ctx, "owner", root.ID, UpdateDirectoryRequest{ParentID: strPtr("another")})
+			return err
+		},
+		"trash":  func(svc *Service) error { return svc.SoftDelete(ctx, "owner", root.ID) },
+		"delete": func(svc *Service) error { return svc.PermanentDelete(ctx, "owner", root.ID) },
+	}
+	for name, action := range tests {
+		t.Run(name, func(t *testing.T) {
+			svc, tx := newTestService(&mockRepo{findByIDResult: root, findByIDAnyStateResult: root})
+			err := action(svc)
+			appErr, ok := apperror.From(err)
+			if !ok || appErr.Code() != apperror.CodeForbidden {
+				t.Fatalf("expected forbidden, got %v", err)
+			}
+			if tx.commitCount != 0 {
+				t.Fatalf("unexpected commits: %d", tx.commitCount)
+			}
+		})
+	}
 }

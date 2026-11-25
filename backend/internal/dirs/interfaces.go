@@ -2,6 +2,7 @@ package dirs
 
 import (
 	"context"
+	"io"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -9,6 +10,8 @@ import (
 )
 
 type ServiceInterface interface {
+	SetCover(context.Context, string, string, io.Reader) error
+	RemoveCover(context.Context, string, string) error
 	GetRootContents(ctx context.Context, userID string, params ContentsPaginationParams) (*DirectoryContentsResponse, error)
 	GetContents(ctx context.Context, userID, dirID string, params ContentsPaginationParams) (*DirectoryContentsResponse, error)
 	GetByID(ctx context.Context, userID, dirID string) (DirectoryResponse, error)
@@ -76,5 +79,7 @@ type transaction interface {
 type txWrapper struct{ pgx.Tx }
 
 type StorageClient interface {
+	Upload(context.Context, string, io.Reader, int64, string) error
+	PresignedGetURL(context.Context, string, time.Duration) (string, error)
 	Delete(ctx context.Context, objectKey string) error
 }

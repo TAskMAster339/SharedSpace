@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Folder } from 'lucide-react';
+import { Folder, Music } from 'lucide-react';
 import { ItemStatusBadges } from './ItemStatusBadges';
 import { ItemActionsMenu } from './ItemActionsMenu';
 import { formatFileSize } from '../../utils/format';
@@ -12,6 +12,8 @@ interface FolderItemProps {
   sizeBytes?: number;
   to: string;
   className?: string;
+  coverUrl?: string;
+  isPlaylist?: boolean;
   hasShareLinks?: boolean;
   onClick?: (id: string) => void;
   showProperties?: boolean;
@@ -20,6 +22,7 @@ interface FolderItemProps {
   onMove?: (id: string) => void;
   onDelete?: (id: string) => void;
   onShare?: (id: string) => void;
+  onCover?: (id: string) => void;
   onDrop?: (e: React.DragEvent, id: string) => void;
   onDragStart?: (e: React.DragEvent, id: string, name: string) => void;
 }
@@ -30,6 +33,8 @@ export const FolderItem: React.FC<FolderItemProps> = ({
   sizeBytes,
   to,
   className,
+  coverUrl,
+  isPlaylist = false,
   hasShareLinks = false,
   onClick,
   onContextMenu,
@@ -38,9 +43,11 @@ export const FolderItem: React.FC<FolderItemProps> = ({
   onMove,
   onDelete,
   onShare,
+  onCover,
   onDrop,
   onDragStart,
 }) => {
+  const FolderIcon = isPlaylist ? Music : Folder;
   const [isDragOver, setIsDragOver] = useState(false);
   const dragCounter = useRef(0);
   const [contextMenuOpen, setContextMenuOpen] = useState<{ x: number; y: number } | null>(null);
@@ -115,16 +122,25 @@ export const FolderItem: React.FC<FolderItemProps> = ({
       <div className="flex items-center gap-3 min-w-0">
         <div className="relative shrink-0 [--badge-preview-width:3rem]">
           <div className="item-list-thumbnail bg-theme-secondary shadow-theme-card">
-            <Folder
-              size={20}
-              className="text-theme-muted group-hover:text-brand transition-colors"
-            />
+            {coverUrl ? (
+              <img
+                src={coverUrl}
+                alt=""
+                loading="lazy"
+                className="h-full w-full rounded-theme object-cover"
+              />
+            ) : (
+              <FolderIcon
+                size={20}
+                className="text-theme-muted group-hover:text-brand transition-colors"
+              />
+            )}
           </div>
           <ItemStatusBadges shared={hasShareLinks} />
         </div>
         <div className="min-w-0">
           <p className="text-sm text-theme-primary font-medium truncate">{name}</p>
-          <p className="text-xs text-theme-muted">Папка</p>
+          <p className="text-xs text-theme-muted">{isPlaylist ? 'Плейлист' : 'Папка'}</p>
         </div>
       </div>
       <div className="flex items-center gap-3 shrink-0">
@@ -138,6 +154,7 @@ export const FolderItem: React.FC<FolderItemProps> = ({
           onRename={onRename ? () => onRename(id) : undefined}
           onMove={onMove ? () => onMove(id) : undefined}
           onShare={onShare ? () => onShare(id) : undefined}
+          onCover={onCover ? () => onCover(id) : undefined}
           onDelete={onDelete ? () => onDelete(id) : undefined}
           className="shrink-0"
           openMenu={!!contextMenuOpen}

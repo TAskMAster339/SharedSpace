@@ -396,3 +396,40 @@ func writeJSON(w http.ResponseWriter, status int, payload any) error {
 	}
 	return nil
 }
+
+// @Summary Upload a playlist cover
+// @Tags directories
+// @Security BearerAuth
+// @Param id path string true "Playlist ID"
+// @Success 204
+// @Router /api/v1/directories/{id}/cover [put]
+func (h *Handler) SetCover(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := auth.ClaimsFromCtx(r.Context())
+	if !ok {
+		return apperror.Unauthorized("не авторизован")
+	}
+	body := http.MaxBytesReader(w, r.Body, maxCoverBytes+1)
+	if err := h.service.SetCover(r.Context(), claims.UserID, chi.URLParam(r, "id"), body); err != nil {
+		return err
+	}
+	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
+
+// @Summary Remove a playlist cover
+// @Tags directories
+// @Security BearerAuth
+// @Param id path string true "Playlist ID"
+// @Success 204
+// @Router /api/v1/directories/{id}/cover [delete]
+func (h *Handler) RemoveCover(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := auth.ClaimsFromCtx(r.Context())
+	if !ok {
+		return apperror.Unauthorized("не авторизован")
+	}
+	if err := h.service.RemoveCover(r.Context(), claims.UserID, chi.URLParam(r, "id")); err != nil {
+		return err
+	}
+	w.WriteHeader(http.StatusNoContent)
+	return nil
+}

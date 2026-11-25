@@ -16,6 +16,7 @@ interface FileGridItemProps {
   type: FileIconType | string;
   to: string;
   className?: string;
+  coverUrl?: string;
   isFavorite?: boolean;
   hasShareLinks?: boolean;
   onClick?: (id: string) => void;
@@ -38,6 +39,7 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
   type,
   to,
   className,
+  coverUrl,
   isFavorite = false,
   hasShareLinks = false,
   onClick,
@@ -75,13 +77,22 @@ export const FileGridItem: React.FC<FileGridItemProps> = ({
         {...menu.handlers}
         className="file-item-link item-grid-preview cursor-pointer p-3 [-webkit-touch-callout:none]"
       >
-        <FilePreview
-          fileId={id}
-          type={type}
-          size={64}
-          fill
-          className="file-item-icon transition-colors"
-        />
+        {coverUrl ? (
+          <img
+            src={coverUrl}
+            alt=""
+            loading="lazy"
+            className="h-full w-full rounded-theme object-cover"
+          />
+        ) : (
+          <FilePreview
+            fileId={id}
+            type={type}
+            size={64}
+            fill
+            className="file-item-icon transition-colors"
+          />
+        )}
         <ItemStatusBadges grid favorite={isFavorite} shared={hasShareLinks} />
       </Link>
       <GridItemCaption name={name} size={size} />
