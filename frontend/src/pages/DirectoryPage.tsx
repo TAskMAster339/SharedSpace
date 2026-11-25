@@ -5,6 +5,7 @@ import {
   Folder,
   FolderPlus,
   Music,
+  Play,
   Image,
   Settings,
   ChevronRight,
@@ -14,6 +15,7 @@ import {
   LayoutGrid,
   List,
 } from 'lucide-react';
+import { playTrack, resumeTrack, toggleTrack, useAudioPlayback } from '../store/audioPlaybackStore';
 import { useAuthStore } from '../store/authStore';
 import { useDirectoryStore } from '../store/directoryStore';
 import { useDragDropStore } from '../store/dragDropStore';
@@ -142,6 +144,11 @@ const DirectoryPage: React.FC = () => {
   const PAGE_LIMIT = 20;
   const [allSubdirectories, setAllSubdirectories] = useState<Directory[]>([]);
   const [allFiles, setAllFiles] = useState<DirectoryFile[]>([]);
+  const playbackTrackId = useAudioPlayback((state) => state.track?.id);
+  const playbackActive = useAudioPlayback((state) => state.playing);
+  const playbackRequest = useRef<AbortController>();
+  useEffect(() => () => playbackRequest.current?.abort(), [id]);
+
   const [filesCursor, setFilesCursor] = useState<string | undefined>();
   const [dirsCursor, setDirsCursor] = useState<string | undefined>();
   const [hasMoreFiles, setHasMoreFiles] = useState(false);
@@ -895,6 +902,40 @@ const DirectoryPage: React.FC = () => {
   const isSharedRootDirectory = isDirectlyShared;
 
   const isAudioDirectory = directoryInfo?.purpose === 'audio';
+  const firstTrack = isAudioDirectory
+    ? allFiles.find((file) => file.mime_type.startsWith('audio/'))
+    : undefined;
+  const startTrack = async (fileId: string, toggle: boolean) => {
+    if (!accessToken || !actualId || !isAudioDirectory) return;
+    const file = allFiles.find(
+      (entry) => entry.id === fileId && entry.mime_type.startsWith('audio/'),
+    );
+    if (!file) return;
+    playbackRequest.current?.abort();
+    if (useAudioPlayback.getState().track?.id === file.id) {
+      if (toggle) toggleTrack();
+      else resumeTrack();
+      return;
+    }
+    const controller = new AbortController();
+    playbackRequest.current = controller;
+    try {
+      const { url } = await getFileContentUrl(accessToken, file.id, controller.signal);
+      if (controller.signal.aborted) return;
+      playTrack({
+        id: file.id,
+        src: url,
+        name: file.filename,
+        cover: file.cover_url ?? directoryContents.cover_url,
+        directoryId: actualId,
+        collection: directoryContents.name,
+      });
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        showToast(error instanceof Error ? error.message : 'Не удалось запустить трек', 'error');
+      }
+    }
+  };
   const createFolderLabel = isAudioDirectory ? 'Новый плейлист' : 'Новая папка';
   const DirectoryIcon = isAudioDirectory ? Music : Folder;
   const changeCover = async (photo?: globalThis.File) => {
@@ -964,6 +1005,15 @@ const DirectoryPage: React.FC = () => {
           <div className="flex items-center gap-2 mt-1 flex-wrap justify-end md:justify-start md:shrink-0">
             {!isAudioDirectory && (
               <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} />
+            )}
+            {firstTrack && (
+              <Button
+                className="inline-flex items-center gap-2"
+                onClick={() => void startTrack(firstTrack.id, false)}
+              >
+                <Play size={16} fill="currentColor" aria-hidden="true" />
+                Слушать
+              </Button>
             )}
             {perms?.upload && (
               <button
@@ -1239,6 +1289,12 @@ const DirectoryPage: React.FC = () => {
                       size={file.size}
                       type={file.type}
                       to={`/files/${file.id}`}
+                      onPlaybackToggle={
+                        isAudioDirectory && file.type === 'audio'
+                          ? () => void startTrack(file.id, true)
+                          : undefined
+                      }
+                      playing={playbackActive && playbackTrackId === file.id}
                       isFavorite={file.isFavorite}
                       hasShareLinks={file.has_share_links}
                       onToggleFavorite={handleToggleFavorite}

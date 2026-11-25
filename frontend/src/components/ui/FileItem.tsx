@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Pause, Play } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { FilePreview } from './FilePreview';
 import { ItemStatusBadges } from './ItemStatusBadges';
@@ -19,6 +20,8 @@ interface FileItemProps {
   isFavorite?: boolean;
   hasShareLinks?: boolean;
   onClick?: (id: string) => void;
+  onPlaybackToggle?: () => void;
+  playing?: boolean;
   showProperties?: boolean;
   onContextMenu?: (e: React.MouseEvent, id: string) => void;
   onToggleFavorite?: (id: string) => void;
@@ -43,6 +46,8 @@ export const FileItem: React.FC<FileItemProps> = ({
   isFavorite = false,
   hasShareLinks = false,
   onClick,
+  onPlaybackToggle,
+  playing = false,
   onContextMenu,
   showProperties = false,
   onToggleFavorite,
@@ -56,7 +61,7 @@ export const FileItem: React.FC<FileItemProps> = ({
 }) => {
   const [contextMenuOpen, setContextMenuOpen] = useState<{ x: number; y: number } | null>(null);
 
-  return (
+  const row = (
     <Link
       key={id}
       to={to}
@@ -129,5 +134,25 @@ export const FileItem: React.FC<FileItemProps> = ({
         />
       </div>
     </Link>
+  );
+  if (!onPlaybackToggle) return row;
+
+  const PlaybackIcon = playing ? Pause : Play;
+  return (
+    <div className="relative">
+      {row}
+      <button
+        type="button"
+        aria-label={`${playing ? 'Пауза' : 'Воспроизвести'}: ${name}`}
+        className={cn(
+          'absolute left-[13px] top-1/2 z-10 grid size-12 -translate-y-1/2 place-items-center rounded-theme bg-brand text-theme-on-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2 motion-safe:transition-opacity',
+          !playing &&
+            '[@media(hover:hover)]:opacity-0 hover:!opacity-100 focus-visible:!opacity-100',
+        )}
+        onClick={onPlaybackToggle}
+      >
+        <PlaybackIcon size={20} fill="currentColor" aria-hidden="true" />
+      </button>
+    </div>
   );
 };
