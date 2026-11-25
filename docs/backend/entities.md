@@ -16,6 +16,7 @@
 | second_name | varchar(50) | Фамилия |
 | email | varchar(255) UNIQUE | Email |
 | password_hash | varchar(255) | Хэш пароля (bcrypt) |
+| role | account_role ENUM NOT NULL | Роль аккаунта `common`, `premium` или `admin`. По умолчанию `common` |
 | storage_quota | bigint | Квота хранилища (байты) |
 | storage_used | bigint | Использовано (байты) |
 | shared_dirs_count | int | Количество общих директорий |
