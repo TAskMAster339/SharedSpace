@@ -4,6 +4,7 @@ import { getDirectoryContents } from '../api/directories';
 import { getFavorites } from '../api/favorites';
 import { getFileContentUrl } from '../api/files';
 import { useToastStore } from '../hooks/useToast';
+import { shuffleTracks, trackCandidates } from './audioQueue';
 import { useAuthStore } from './authStore';
 
 export interface PlaybackTrack {
@@ -23,7 +24,8 @@ interface PlaybackState {
   duration: number;
   volume: number;
   muted: boolean;
-  repeat: boolean;
+  repeat: 'off' | 'playlist' | 'track';
+  shuffle: boolean;
   compact: boolean;
   loadingNext: boolean;
 }
@@ -34,13 +36,15 @@ export const useAudioPlayback = create<PlaybackState>(() => ({
   duration: 0,
   volume: 1,
   muted: false,
-  repeat: false,
+  repeat: 'off',
+  shuffle: false,
   compact: false,
   loadingNext: false,
 }));
 
 let player: HTMLAudioElement | null = null;
 let revision = 0;
+let shuffleOrder: string[] = [];
 
 export function bindAudioPlayer(element: HTMLAudioElement | null) {
   player = element;
@@ -57,7 +61,8 @@ export function resumeTrack() {
   });
 }
 
-export function playTrack(track: PlaybackTrack) {
+export function playTrack(track: PlaybackTrack, preserveOrder = false, autoplay = true) {
+  if (!preserveOrder) shuffleOrder = [];
   if (!player) return;
   const current = useAudioPlayback.getState();
   if (current.track?.id !== track.id) {
@@ -74,7 +79,7 @@ export function playTrack(track: PlaybackTrack) {
     useAudioPlayback.setState({ track });
     if (player.error) player.src = track.src;
   }
-  resumeTrack();
+  if (autoplay) resumeTrack();
 }
 
 export function toggleTrack(track?: PlaybackTrack) {
@@ -94,7 +99,11 @@ export function pauseTrack() {
 
 export function stopTrack() {
   revision++;
+  shuffleOrder = [];
+  if (player) player.loop = false;
   useAudioPlayback.setState({
+    repeat: 'off',
+    shuffle: false,
     track: undefined,
     playing: false,
     position: 0,
@@ -127,10 +136,23 @@ export function toggleTrackMute() {
   useAudioPlayback.setState({ muted });
 }
 
-export function toggleTrackRepeat() {
-  const repeat = !useAudioPlayback.getState().repeat;
-  if (player) player.loop = repeat;
+export function toggleTrackRepeat(hasPlaylist = true) {
+  const current = useAudioPlayback.getState().repeat;
+  const repeat =
+    current === 'off'
+      ? hasPlaylist
+        ? 'playlist'
+        : 'track'
+      : current === 'playlist'
+        ? 'track'
+        : 'off';
+  if (player) player.loop = repeat === 'track';
   useAudioPlayback.setState({ repeat });
+}
+
+export function toggleTrackShuffle() {
+  shuffleOrder = [];
+  useAudioPlayback.setState((state) => ({ shuffle: !state.shuffle }));
 }
 
 export function trackPath(track: PlaybackTrack) {
@@ -147,41 +169,66 @@ export async function advanceTrack(direction: -1 | 1) {
   const request = ++revision;
   useAudioPlayback.setState({ loadingNext: true });
   try {
+    const { repeat, shuffle } = useAudioPlayback.getState();
+    const playlistRepeat = repeat === 'playlist';
+    let entries: Omit<PlaybackTrack, 'src'>[];
     if (track.favoriteCursor) {
-      if (direction === 1) {
+      if (!shuffle && !playlistRepeat && direction === 1) {
         let cursor: string | undefined = track.favoriteCursor;
         while (cursor && revision === request) {
           const page = await getFavorites(accessToken, { purpose: 'audio', limit: 20, cursor });
-          if (await tryFavorites(page.favorites)) return;
+          if (await playCandidates(page.favorites.map(favoriteTrack))) return;
           cursor = page.next_cursor;
         }
-      } else {
-        const { favorites } = await getFavorites(accessToken, { purpose: 'audio' });
-        const index = favorites.findIndex((entry) => entry.id === track.id);
-        if (index > 0) await tryFavorites(favorites.slice(0, index).reverse());
+        return;
       }
+      const { favorites } = await getFavorites(accessToken, { purpose: 'audio' });
+      entries = favorites.map(favoriteTrack);
     } else if (track.directoryId) {
       const directory = await getDirectoryContents(accessToken, track.directoryId);
-      const index = directory.files.findIndex((entry) => entry.id === track.id);
-      if (index < 0) return;
-      const candidates =
-        direction === 1
-          ? directory.files.slice(index + 1)
-          : directory.files.slice(0, index).reverse();
-      const next = candidates.find((entry) => entry.mime_type.startsWith('audio/'));
-      if (next && revision === request) {
-        const { url } = await getFileContentUrl(accessToken, next.id);
-        if (revision === request) {
-          playTrack({
-            ...track,
-            id: next.id,
-            name: next.filename,
-            cover: next.cover_url ?? directory.cover_url,
-            src: url,
-          });
-        }
+      entries = directory.files
+        .filter((entry) => entry.mime_type.startsWith('audio/'))
+        .map((entry) => ({
+          id: entry.id,
+          name: entry.filename,
+          cover: entry.cover_url ?? directory.cover_url,
+          collection: directory.name,
+          directoryId: track.directoryId,
+        }));
+    } else {
+      return;
+    }
+
+    if (revision !== request) return;
+    const tracks = new Map(entries.map((entry) => [entry.id, entry]));
+    const ids = [...tracks.keys()];
+    let candidates = trackCandidates(ids, track.id, direction, playlistRepeat);
+    if (shuffle) {
+      if (!shuffleOrder.includes(track.id)) {
+        shuffleOrder = [track.id, ...shuffleTracks(ids.filter((id) => id !== track.id))];
+      }
+      const pending = ids.filter((id) => !shuffleOrder.includes(id));
+      shuffleOrder = [
+        ...shuffleOrder.filter((id) => id === track.id || tracks.has(id)),
+        ...shuffleTracks(pending),
+      ];
+      candidates = trackCandidates(
+        shuffleOrder,
+        track.id,
+        direction,
+        playlistRepeat && direction === -1,
+      );
+      if (playlistRepeat && direction === 1 && candidates.length === 0) {
+        shuffleOrder = shuffleTracks(ids, track.id);
+        candidates = shuffleOrder;
       }
     }
+    await playCandidates(
+      candidates.flatMap((id) => {
+        const candidate = tracks.get(id);
+        return candidate ? [candidate] : [];
+      }),
+    );
   } catch {
     if (revision === request)
       useToastStore.getState().showToast('Не удалось открыть соседний трек', 'error');
@@ -189,21 +236,25 @@ export async function advanceTrack(direction: -1 | 1) {
     if (revision === request) useAudioPlayback.setState({ loadingNext: false });
   }
 
-  async function tryFavorites(entries: Awaited<ReturnType<typeof getFavorites>>['favorites']) {
+  function favoriteTrack(entry: Awaited<ReturnType<typeof getFavorites>>['favorites'][number]) {
+    return {
+      id: entry.id,
+      name: entry.filename,
+      cover: entry.cover_url,
+      collection: 'Избранная музыка',
+      favoriteCursor: `${entry.favorited_at}|${entry.id}`,
+    };
+  }
+
+  async function playCandidates(entries: Omit<PlaybackTrack, 'src'>[]) {
     if (!accessToken) return false;
     for (const entry of entries) {
       if (revision !== request) return false;
       try {
         const { url } = await getFileContentUrl(accessToken, entry.id);
         if (revision !== request) return false;
-        playTrack({
-          id: entry.id,
-          name: entry.filename,
-          cover: entry.cover_url,
-          src: url,
-          collection: 'Избранная музыка',
-          favoriteCursor: `${entry.favorited_at}|${entry.id}`,
-        });
+        if (entry.id === track?.id) seekTrack(0);
+        playTrack({ ...entry, src: url }, true);
         return true;
       } catch (error) {
         if (!(error instanceof ApiError && (error.status === 403 || error.status === 404)))

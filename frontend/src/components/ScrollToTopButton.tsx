@@ -5,7 +5,9 @@ import { cn } from '../utils/cn';
 const SHOW_AFTER_PX = 300;
 const FOOTER_BUFFER = 100;
 
-export const ScrollToTopButton: React.FC = () => {
+export const ScrollToTopButton: React.FC<{ desktopPlayerVisible?: boolean }> = ({
+  desktopPlayerVisible = false,
+}) => {
   const [visible, setVisible] = useState(false);
   const [nearBottom, setNearBottom] = useState(false);
 
@@ -34,7 +36,7 @@ export const ScrollToTopButton: React.FC = () => {
       aria-label="Наверх"
       className={cn(
         'fixed right-6 z-40 w-11 h-11 flex items-center justify-center rounded-theme bg-brand text-theme-on-brand shadow-theme-dropdown hover:bg-brand-hover transition-all duration-200 animate-in fade-in hidden md:flex',
-        nearBottom ? 'bottom-24' : 'bottom-6',
+        desktopPlayerVisible ? 'bottom-36 lg:bottom-24' : nearBottom ? 'bottom-24' : 'bottom-6',
       )}
     >
       <ArrowUp size={20} />

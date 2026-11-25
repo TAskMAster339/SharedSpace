@@ -22,6 +22,7 @@ import ProfileSettingsPage from './pages/ProfileSettingsPage';
 import SharedDirListPage from './pages/SharedDirListPage';
 import DirectoryPage from './pages/DirectoryPage';
 import FileViewPage from './pages/FileViewPage';
+import AudioWorkspacePage from './pages/AudioWorkspacePage';
 import DocumentEditorPage from './pages/DocumentEditorPage';
 import SharedSettingsPage from './pages/SharedSettingsPage';
 import FolderSettingsPage from './pages/FolderSettingsPage';
@@ -111,6 +112,17 @@ const App: React.FC = () => {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         </Route>
+
+        <Route
+          path="/player"
+          element={
+            <ProtectedRoute>
+              <Layout fillViewport>
+                <AudioWorkspacePage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
 
         <Route
           path="/files/:id/edit"

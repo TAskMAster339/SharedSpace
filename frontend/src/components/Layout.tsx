@@ -19,6 +19,7 @@ import { ScrollToTopButton } from './ScrollToTopButton';
 import { useAuth } from '../hooks/useAuth';
 import { cn } from '../utils/cn';
 import { PRIVACY_POLICY_PATH } from '../constants/privacy';
+import { useAudioPlayback } from '../store/audioPlaybackStore';
 import { UploadProgressModal } from './ui/UploadProgressModal';
 
 const GITHUB_URL = 'https://github.com/TAskMAster339/SharedSpace';
@@ -54,6 +55,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, fillViewport = false }
   const location = useLocation();
   const showSidebar = isAuthenticated && !workspace;
   const isOnLandingPage = location.pathname === '/';
+  const audioTrackId = useAudioPlayback((state) => state.track?.id);
+  const showMiniPlayer =
+    isAuthenticated && !!audioTrackId && location.pathname !== `/files/${audioTrackId}`;
 
   return (
     <div className={cn('bg-theme-primary flex flex-col', workspace ? 'h-dvh' : 'min-h-screen')}>
@@ -94,45 +98,47 @@ export const Layout: React.FC<LayoutProps> = ({ children, fillViewport = false }
               </ReaderLayout.Provider>
             </div>
           </div>
-          {!workspace && (
-            <>
-              <div
-                className={`md:hidden shrink-0 border-t border-theme px-4 py-3 text-center${isAuthenticated ? ' pb-20' : ''}`}
-              >
-                <p className="text-xs text-theme-muted">
-                  &copy; {CURRENT_YEAR} SharedSpace. Учебный проект.
-                </p>
-                <div className="flex items-center justify-center gap-4 mt-2">
-                  <Link
-                    to={PRIVACY_POLICY_PATH}
-                    className="text-xs text-theme-muted hover:text-theme-secondary transition-colors"
-                  >
-                    Политика конфиденциальности
-                  </Link>
-                  <a
-                    href={GITHUB_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-theme-muted hover:text-theme-secondary transition-colors"
-                  >
-                    <GitFork size={12} />
-                    GitHub
-                  </a>
-                </div>
-              </div>
-              <div className="hidden md:block">
-                <Footer />
-              </div>
-            </>
-          )}
-          {isAuthenticated && !workspace && <DesktopAudioMiniPlayer />}
         </div>
       </div>
+      {isAuthenticated && !workspace && <DesktopAudioMiniPlayer />}
+      {!workspace && (
+        <>
+          <div
+            className={`md:hidden shrink-0 border-t border-theme px-4 py-3 text-center${isAuthenticated ? ' pb-20' : ''}`}
+          >
+            <p className="text-xs text-theme-muted">
+              &copy; {CURRENT_YEAR} SharedSpace. Учебный проект.
+            </p>
+            <div className="flex items-center justify-center gap-4 mt-2">
+              <Link
+                to={PRIVACY_POLICY_PATH}
+                className="text-xs text-theme-muted hover:text-theme-secondary transition-colors"
+              >
+                Политика конфиденциальности
+              </Link>
+              <a
+                href={GITHUB_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-theme-muted hover:text-theme-secondary transition-colors"
+              >
+                <GitFork size={12} />
+                GitHub
+              </a>
+            </div>
+          </div>
+          <div
+            className={cn('hidden md:block', showSidebar && (collapsed ? 'md:ml-16' : 'md:ml-64'))}
+          >
+            <Footer />
+          </div>
+        </>
+      )}
 
       {isAuthenticated && !workspace && <MobileBottomNav />}
       {isAuthenticated && !reader && <StorageUsageModal />}
       {isAuthenticated && <UploadProgressModal />}
-      {!workspace && <ScrollToTopButton />}
+      {!workspace && <ScrollToTopButton desktopPlayerVisible={showMiniPlayer} />}
     </div>
   );
 };

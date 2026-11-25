@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useId, useRef } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import {
   ArrowLeft,
   BookOpen,
@@ -26,6 +26,7 @@ import {
 import { getDirectoryById, Directory } from '../api/directories';
 import { getUserById } from '../api/users';
 import { ApiError } from '../api/client';
+import { playTrack, useAudioPlayback } from '../store/audioPlaybackStore';
 import { AudioPreview } from '../components/ui/AudioPreview';
 import { FileIcon } from '../components/ui/FileIcon';
 import { Button } from '../components/ui/Button';
@@ -124,6 +125,7 @@ const PROBLEMATIC_EXTENSIONS = new Set(['go']);
 const FileViewPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const isFavoritesPlaylist = searchParams.get('playlist') === 'favorites';
   const officeTheme = useRootTheme();
@@ -469,44 +471,50 @@ const FileViewPage: React.FC = () => {
           </div>
         );
 
-      case 'audio':
+      case 'audio': {
+        const collection = isFavoritesPlaylist
+          ? 'Избранная музыка'
+          : directory?.purpose === 'audio'
+            ? directory.name
+            : undefined;
+        const session = fileUrl
+          ? {
+              id: file.id,
+              name: file.filename,
+              cover: file.cover_url,
+              src: fileUrl,
+              directoryId: directory?.purpose === 'audio' ? directory.id : undefined,
+              collection,
+              favoriteCursor: isFavoritesPlaylist
+                ? (searchParams.get('cursor') ?? undefined)
+                : undefined,
+            }
+          : undefined;
         return (
           <AudioPreview
             key={file.id}
             name={file.filename}
             cover={file.cover_url}
-            collection={
-              isFavoritesPlaylist
-                ? 'Избранная музыка'
-                : directory?.purpose === 'audio'
-                  ? directory.name
-                  : undefined
-            }
+            collection={collection}
             src={fileUrl ?? undefined}
-            session={
-              fileUrl
-                ? {
-                    id: file.id,
-                    name: file.filename,
-                    cover: file.cover_url,
-                    src: fileUrl,
-                    directoryId: directory?.purpose === 'audio' ? directory.id : undefined,
-                    collection: isFavoritesPlaylist
-                      ? 'Избранная музыка'
-                      : directory?.purpose === 'audio'
-                        ? directory.name
-                        : undefined,
-                    favoriteCursor: isFavoritesPlaylist
-                      ? (searchParams.get('cursor') ?? undefined)
-                      : undefined,
+            session={session}
+            autoPlay={isFavoritesPlaylist}
+            onExpand={
+              session
+                ? () => {
+                    if (useAudioPlayback.getState().track?.id !== session.id)
+                      playTrack(session, false, false);
+                    navigate('/player', {
+                      state: { returnPath: location.pathname + location.search },
+                    });
                   }
                 : undefined
             }
-            autoPlay={isFavoritesPlaylist}
             onCollapse={handleGoBack}
             onError={handleIframeError}
           />
         );
+      }
 
       case 'pdf':
         return (

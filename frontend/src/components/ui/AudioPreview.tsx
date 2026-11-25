@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ChevronDown,
+  Maximize2,
   Music2,
   Pause,
   Play,
@@ -15,13 +16,15 @@ import {
   advanceTrack,
   playTrack,
   seekTrack,
-  setTrackVolume,
   toggleTrack,
-  toggleTrackMute,
-  toggleTrackRepeat,
   useAudioPlayback,
   PlaybackTrack,
 } from '../../store/audioPlaybackStore';
+
+import { PlaybackModes, PlaybackVolume } from './PlaybackOptions';
+import { cn } from '../../utils/cn';
+
+import { formatPlaybackTime, PlaybackSlider } from './PlaybackSlider';
 
 interface AudioPreviewProps {
   src?: string;
@@ -35,10 +38,9 @@ interface AudioPreviewProps {
   onNext?: () => void;
   session?: PlaybackTrack;
   onCollapse?: () => void;
+  onExpand?: () => void;
+  fullScreen?: boolean;
 }
-
-const clock = (seconds: number) =>
-  `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
 
 export function AudioPreview({
   src,
@@ -52,6 +54,8 @@ export function AudioPreview({
   onNext,
   session,
   onCollapse,
+  onExpand,
+  fullScreen = false,
 }: AudioPreviewProps) {
   const audio = useRef<HTMLAudioElement>(null);
   const [localPlaying, setPlaying] = useState(false);
@@ -65,9 +69,7 @@ export function AudioPreview({
   const playing = session ? active && playback.playing : localPlaying;
   const position = session ? (active ? playback.position : 0) : localPosition;
   const duration = session ? (active ? playback.duration : 0) : localDuration;
-  const volume = session ? playback.volume : localVolume;
-  const muted = session ? playback.muted : localMuted;
-  const repeat = session ? playback.repeat : localRepeat;
+
   const canAdvance = !!(session?.directoryId || session?.favoriteCursor);
 
   useEffect(() => {
@@ -77,21 +79,49 @@ export function AudioPreview({
 
   const control =
     'inline-grid size-11 place-items-center rounded-full text-theme-secondary transition-colors hover:bg-theme-hover hover:text-theme-primary disabled:opacity-40';
-  const range = 'h-5 w-full cursor-pointer accent-[var(--brand)] disabled:cursor-default';
 
   return (
-    <div className="relative flex flex-col items-center gap-5 rounded-theme border border-theme bg-theme-tertiary px-4 py-6 sm:px-8 sm:py-8">
-      {onCollapse && active && (
-        <button
-          type="button"
-          aria-label="Свернуть плеер"
-          className={`${control} absolute right-2 top-2 z-10 bg-theme-secondary`}
-          onClick={onCollapse}
-        >
-          <ChevronDown size={22} />
-        </button>
+    <div
+      className={cn(
+        'relative flex flex-col items-center justify-center gap-5 px-4 py-6 sm:px-8 sm:py-8',
+        fullScreen
+          ? 'mx-auto min-h-full w-full max-w-5xl gap-6 pb-8 pt-16'
+          : 'rounded-theme border border-theme bg-theme-tertiary',
       )}
-      <div className="grid aspect-square w-full max-w-[17rem] place-items-center overflow-hidden rounded-theme border border-theme bg-brand-light text-brand sm:max-w-[20rem]">
+    >
+      {(onExpand || (onCollapse && (active || fullScreen))) && (
+        <div className="absolute right-2 top-2 z-10 flex items-center gap-1">
+          {onExpand && (
+            <button
+              type="button"
+              aria-label="Открыть плеер на весь экран"
+              title="На весь экран"
+              className={cn(control, 'bg-theme-secondary')}
+              onClick={onExpand}
+            >
+              <Maximize2 size={20} />
+            </button>
+          )}
+          {onCollapse && (active || fullScreen) && (
+            <button
+              type="button"
+              aria-label={fullScreen ? 'Выйти из полноэкранного плеера' : 'Свернуть плеер'}
+              className={cn(control, 'bg-theme-secondary')}
+              onClick={onCollapse}
+            >
+              <ChevronDown size={22} />
+            </button>
+          )}
+        </div>
+      )}
+      <div
+        className={cn(
+          'grid aspect-square w-full place-items-center overflow-hidden rounded-theme border border-theme bg-brand-light text-brand',
+          fullScreen
+            ? 'max-w-[min(27rem,max(9rem,calc(100dvh-21rem)))] shadow-theme-card'
+            : 'max-w-[17rem] sm:max-w-[20rem]',
+        )}
+      >
         {cover ? (
           <img src={cover} alt="" className="size-full object-cover" />
         ) : (
@@ -99,7 +129,14 @@ export function AudioPreview({
         )}
       </div>
       <div className="min-w-0 max-w-full space-y-1 text-center">
-        <p className="break-words text-xl font-semibold text-theme-primary">{name}</p>
+        <p
+          className={cn(
+            'break-words font-semibold text-theme-primary',
+            fullScreen ? 'text-2xl sm:text-3xl' : 'text-xl',
+          )}
+        >
+          {name}
+        </p>
         {collection && <p className="text-sm text-theme-secondary">{collection}</p>}
       </div>
       {src && !session && (
@@ -108,7 +145,7 @@ export function AudioPreview({
           aria-label={name}
           src={src}
           autoPlay={autoPlay}
-          loop={repeat}
+          loop={localRepeat}
           preload="metadata"
           onPlay={() => {
             if (useAudioPlayback.getState().track) stopTrack();
@@ -128,16 +165,13 @@ export function AudioPreview({
       )}
       <div className="w-full max-w-xl space-y-3">
         <div className="flex items-center gap-3 text-xs tabular-nums text-theme-secondary">
-          <span>{clock(position)}</span>
-          <input
-            type="range"
-            min={0}
+          <span>{formatPlaybackTime(position)}</span>
+          <PlaybackSlider
             max={duration || 1}
             step={0.1}
             value={position}
             aria-label="Позиция воспроизведения"
             disabled={!duration}
-            className={range}
             onChange={(event) => {
               const value = event.currentTarget.valueAsNumber;
               if (session) seekTrack(value);
@@ -147,97 +181,119 @@ export function AudioPreview({
               }
             }}
           />
-          <span>{clock(duration)}</span>
+          <span>{formatPlaybackTime(duration)}</span>
         </div>
-        <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-3">
-          <button
-            type="button"
-            className={control}
-            aria-label="Предыдущий трек"
-            disabled={session ? !active || !canAdvance || playback.loadingNext : !onPrevious}
-            onClick={session ? () => void advanceTrack(-1) : onPrevious}
-          >
-            <SkipBack size={21} />
-          </button>
-          <button
-            type="button"
-            className="inline-grid size-14 shrink-0 place-items-center rounded-full bg-brand text-theme-on-brand transition-colors hover:bg-brand-hover disabled:opacity-40"
-            aria-label={playing ? 'Пауза' : 'Воспроизвести'}
-            disabled={!src}
-            onClick={() => {
-              if (session) {
-                toggleTrack(session);
-                return;
-              }
-              const player = audio.current;
-              if (!player) return;
-              if (player.paused) void player.play().catch(onError);
-              else player.pause();
-            }}
-          >
-            {playing ? (
-              <Pause size={26} fill="currentColor" />
-            ) : (
-              <Play size={26} fill="currentColor" />
+        <div
+          className={cn(
+            'flex flex-wrap items-center justify-center gap-1.5 sm:gap-3',
+            fullScreen && 'sm:grid sm:grid-cols-[1fr_auto_1fr]',
+          )}
+        >
+          <div
+            className={cn(
+              'flex items-center justify-center gap-2',
+              fullScreen && 'basis-full sm:col-start-2 sm:row-start-1',
             )}
-          </button>
-          <button
-            type="button"
-            className={control}
-            aria-label="Следующий трек"
-            disabled={session ? !active || !canAdvance || playback.loadingNext : !onNext}
-            onClick={session ? () => void advanceTrack(1) : onNext}
           >
-            <SkipForward size={21} />
-          </button>
-          <button
-            type="button"
-            className={control}
-            aria-label="Повторять трек"
-            aria-pressed={repeat}
-            onClick={session ? toggleTrackRepeat : () => setRepeat(!repeat)}
-          >
-            <Repeat1 size={20} className={repeat ? 'text-brand' : undefined} />
-          </button>
-          <div className="flex w-24 shrink-0 items-center gap-1">
             <button
               type="button"
               className={control}
-              aria-label={muted ? 'Включить звук' : 'Выключить звук'}
+              aria-label="Предыдущий трек"
+              disabled={session ? !active || !canAdvance || playback.loadingNext : !onPrevious}
+              onClick={session ? () => void advanceTrack(-1) : onPrevious}
+            >
+              <SkipBack size={21} />
+            </button>
+            <button
+              type="button"
+              className="inline-grid size-14 shrink-0 place-items-center rounded-full bg-brand text-theme-on-brand transition-colors hover:bg-brand-hover disabled:opacity-40"
+              aria-label={playing ? 'Пауза' : 'Воспроизвести'}
+              disabled={!src}
               onClick={() => {
                 if (session) {
-                  toggleTrackMute();
+                  toggleTrack(session);
                   return;
                 }
-                if (audio.current) audio.current.muted = !muted;
-                setMuted(!muted);
+                const player = audio.current;
+                if (!player) return;
+                if (player.paused) void player.play().catch(onError);
+                else player.pause();
               }}
             >
-              {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+              {playing ? (
+                <Pause size={26} fill="currentColor" />
+              ) : (
+                <Play size={26} fill="currentColor" />
+              )}
             </button>
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.05}
-              value={muted ? 0 : volume}
-              className={range}
-              aria-label="Громкость"
-              onChange={(event) => {
-                const value = event.currentTarget.valueAsNumber;
-                if (session) {
-                  setTrackVolume(value);
-                  return;
-                }
-                if (audio.current) {
-                  audio.current.volume = value;
-                  audio.current.muted = false;
-                }
-                setMuted(false);
-                setVolume(value);
-              }}
-            />
+            <button
+              type="button"
+              className={control}
+              aria-label="Следующий трек"
+              disabled={session ? !active || !canAdvance || playback.loadingNext : !onNext}
+              onClick={session ? () => void advanceTrack(1) : onNext}
+            >
+              <SkipForward size={21} />
+            </button>
           </div>
+          {session ? (
+            <>
+              <div
+                className={
+                  fullScreen ? 'sm:col-start-1 sm:row-start-1 sm:justify-self-start' : undefined
+                }
+              >
+                <PlaybackModes hasPlaylist={canAdvance} />
+              </div>
+              <div
+                className={
+                  fullScreen ? 'sm:col-start-3 sm:row-start-1 sm:justify-self-end' : undefined
+                }
+              >
+                <PlaybackVolume />
+              </div>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className={control}
+                aria-label="Повторять трек"
+                aria-pressed={localRepeat}
+                onClick={() => setRepeat(!localRepeat)}
+              >
+                <Repeat1 size={20} className={localRepeat ? 'text-brand' : undefined} />
+              </button>
+              <div className="flex w-24 shrink-0 items-center gap-1">
+                <button
+                  type="button"
+                  className={control}
+                  aria-label={localMuted ? 'Включить звук' : 'Выключить звук'}
+                  onClick={() => {
+                    if (audio.current) audio.current.muted = !localMuted;
+                    setMuted(!localMuted);
+                  }}
+                >
+                  {localMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                </button>
+                <PlaybackSlider
+                  max={1}
+                  step={0.05}
+                  value={localMuted ? 0 : localVolume}
+                  aria-label="Громкость"
+                  onChange={(event) => {
+                    const value = event.currentTarget.valueAsNumber;
+                    if (audio.current) {
+                      audio.current.volume = value;
+                      audio.current.muted = false;
+                    }
+                    setMuted(false);
+                    setVolume(value);
+                  }}
+                />
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

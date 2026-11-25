@@ -467,3 +467,63 @@
 .docx-reader .reader-centered {
   text-align: center;
 }
+
+.playback-slider {
+  appearance: none;
+  height: 1.75rem;
+  background: transparent;
+  cursor: pointer;
+}
+
+.playback-slider::-webkit-slider-runnable-track {
+  height: 0.25rem;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--brand) var(--playback-progress),
+    var(--border) var(--playback-progress)
+  );
+}
+
+.playback-slider::-moz-range-track {
+  height: 0.25rem;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--brand) var(--playback-progress),
+    var(--border) var(--playback-progress)
+  );
+}
+
+.playback-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 0.875rem;
+  height: 0.875rem;
+  margin-top: -0.3125rem;
+  border-radius: 50%;
+  background: var(--brand);
+}
+
+.playback-slider::-moz-range-thumb {
+  width: 0.875rem;
+  height: 0.875rem;
+  border: 0;
+  border-radius: 50%;
+  background: var(--brand);
+}
+
+.playback-slider:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.playback-slider:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+@media (pointer: coarse) {
+  .playback-slider {
+    height: 2.75rem;
+  }
+}

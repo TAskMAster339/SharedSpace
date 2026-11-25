@@ -2,6 +2,7 @@ import React from 'react';
 import {
   ChevronDown,
   ChevronUp,
+  Maximize2,
   Music2,
   Pause,
   Play,
@@ -15,9 +16,11 @@ import {
   seekTrack,
   stopTrack,
   toggleTrack,
-  trackPath,
   useAudioPlayback,
 } from '../store/audioPlaybackStore';
+import { PlaybackModes, PlaybackVolume } from './ui/PlaybackOptions';
+
+import { formatPlaybackTime, PlaybackSlider } from './ui/PlaybackSlider';
 
 const control =
   'inline-grid size-10 shrink-0 place-items-center rounded-theme text-theme-secondary transition-colors hover:bg-theme-hover hover:text-theme-primary disabled:opacity-40';
@@ -64,13 +67,14 @@ function Transport() {
   );
 }
 
-function TrackLink({ onClick }: { onClick?: () => void }) {
+function TrackLink() {
+  const location = useLocation();
   const track = useAudioPlayback((state) => state.track);
   if (!track) return null;
   return (
     <Link
-      to={trackPath(track)}
-      onClick={onClick}
+      to="/player"
+      state={{ returnPath: location.pathname + location.search }}
       className="flex min-w-0 items-center gap-3 rounded-theme text-left hover:text-brand"
     >
       <span className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-theme bg-brand-light text-brand">
@@ -94,31 +98,29 @@ function PlaybackProgress() {
   const duration = useAudioPlayback((state) => state.duration);
   const position = useAudioPlayback((state) => state.position);
   return (
-    <input
-      type="range"
-      min={0}
-      max={duration || 1}
-      step={0.1}
-      value={position}
-      aria-label="Позиция воспроизведения"
-      disabled={!duration}
-      className="h-5 min-w-0 w-full accent-[var(--brand)]"
-      onChange={(event) => seekTrack(event.currentTarget.valueAsNumber)}
-    />
+    <div className="flex w-full items-center gap-2 text-xs tabular-nums text-theme-secondary">
+      <span>{formatPlaybackTime(position)}</span>
+      <PlaybackSlider
+        max={duration || 1}
+        step={0.1}
+        value={position}
+        aria-label="Позиция воспроизведения"
+        disabled={!duration}
+        onChange={(event) => seekTrack(event.currentTarget.valueAsNumber)}
+      />
+      <span>{formatPlaybackTime(duration)}</span>
+    </div>
   );
 }
 
-function StopButton({ onStop }: { onStop?: () => void }) {
+function StopButton() {
   return (
     <button
       type="button"
       className={control}
       aria-label="Остановить и закрыть плеер"
       title="Остановить и закрыть"
-      onClick={() => {
-        stopTrack();
-        onStop?.();
-      }}
+      onClick={stopTrack}
     >
       <X size={20} />
     </button>
@@ -126,37 +128,52 @@ function StopButton({ onStop }: { onStop?: () => void }) {
 }
 
 export function DesktopAudioMiniPlayer() {
-  const { show, compact } = useMiniPlayback();
-  if (!show) return null;
+  const { show, compact, track } = useMiniPlayback();
+  const location = useLocation();
+  if (!show || !track) return null;
+  const hasPlaylist = !!(track.directoryId || track.favoriteCursor);
   return (
     <aside
       aria-label="Мини-плеер"
-      className="sticky bottom-0 z-30 hidden justify-end px-4 pb-3 md:flex"
+      className="sticky bottom-0 z-30 hidden w-full shrink-0 border-y border-theme bg-theme-secondary shadow-theme-card md:block"
     >
-      <div
-        className={`flex items-center gap-3 rounded-theme border border-theme bg-theme-secondary p-2 shadow-theme-card ${compact ? 'max-w-[21rem]' : 'w-full max-w-6xl'}`}
-      >
-        <div className={compact ? 'min-w-0 flex-1' : 'min-w-0 flex-1 basis-40'}>
+      <div className="grid w-full grid-cols-[minmax(8rem,1fr)_auto] items-center gap-x-4 px-4 py-2 lg:grid-cols-[minmax(12rem,1fr)_minmax(16rem,1.2fr)_minmax(12rem,1fr)] lg:px-6">
+        <div className="col-start-1 row-start-1 min-w-0">
           <TrackLink />
         </div>
         {!compact && (
-          <>
+          <div className="col-span-full row-start-2 grid min-w-0 justify-items-center gap-0.5 lg:col-span-1 lg:col-start-2 lg:row-start-1">
             <Transport />
-            <div className="min-w-16 flex-1">
-              <PlaybackProgress />
-            </div>
-          </>
+            <PlaybackProgress />
+          </div>
         )}
-        <button
-          type="button"
-          aria-expanded={!compact}
-          className={control}
-          aria-label={compact ? 'Развернуть мини-плеер' : 'Свернуть мини-плеер'}
-          onClick={() => useAudioPlayback.setState({ compact: !compact })}
-        >
-          {compact ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-        </button>
-        <StopButton />
+        <div className="col-start-2 row-start-1 flex items-center justify-end gap-1 lg:col-start-3">
+          {!compact && (
+            <>
+              <PlaybackModes hasPlaylist={hasPlaylist} />
+              <PlaybackVolume />
+            </>
+          )}
+          <Link
+            to="/player"
+            state={{ returnPath: location.pathname + location.search }}
+            aria-label="Открыть плеер на весь экран"
+            title="На весь экран"
+            className={control}
+          >
+            <Maximize2 size={19} />
+          </Link>
+          <button
+            type="button"
+            aria-expanded={!compact}
+            className={control}
+            aria-label={compact ? 'Развернуть мини-плеер' : 'Свернуть мини-плеер'}
+            onClick={() => useAudioPlayback.setState({ compact: !compact })}
+          >
+            {compact ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          </button>
+          <StopButton />
+        </div>
       </div>
     </aside>
   );
