@@ -9,6 +9,7 @@ import {
   SkipForward,
   X,
 } from 'lucide-react';
+import { useToastStore } from '../hooks/useToast';
 import { Link, useLocation } from 'react-router-dom';
 import {
   advanceTrack,
@@ -139,6 +140,31 @@ export function DesktopAudioMiniPlayer() {
 
   useLayoutEffect(() => {
     const element = panel.current;
+    if (!show || !element) return;
+    const updateToastOffset = () => {
+      const bounds = element.getBoundingClientRect();
+      const offset =
+        bounds.height && bounds.bottom > 0 && bounds.top < window.innerHeight
+          ? Math.ceil(window.innerHeight - bounds.top + 16)
+          : 16;
+      useToastStore.getState().setToastDesktopBottomPx(offset);
+    };
+    updateToastOffset();
+    const observer =
+      typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(updateToastOffset);
+    observer?.observe(element);
+    window.addEventListener('scroll', updateToastOffset, { passive: true });
+    window.addEventListener('resize', updateToastOffset);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('scroll', updateToastOffset);
+      window.removeEventListener('resize', updateToastOffset);
+      useToastStore.getState().setToastDesktopBottomPx(16);
+    };
+  }, [show]);
+
+  useLayoutEffect(() => {
+    const element = panel.current;
     const previous = previousBounds.current;
     previousBounds.current = undefined;
     runningAnimation.current?.cancel();
@@ -147,8 +173,8 @@ export function DesktopAudioMiniPlayer() {
     const next = element.getBoundingClientRect();
     runningAnimation.current = element.animate(
       [
-        { width: `${previous.width}px`, height: `${previous.height}px`, overflow: 'hidden' },
-        { width: `${next.width}px`, height: `${next.height}px`, overflow: 'hidden' },
+        { width: `${previous.width}px`, overflow: 'hidden' },
+        { width: `${next.width}px`, overflow: 'hidden' },
       ],
       { duration: 240, easing: 'cubic-bezier(0.2, 0.75, 0.25, 1)' },
     );
@@ -158,52 +184,54 @@ export function DesktopAudioMiniPlayer() {
   if (!show || !track) return null;
   const hasPlaylist = !!(track.directoryId || track.favoriteCursor || track.loadPublicPlaylist);
   return (
-    <aside
-      ref={panel}
-      aria-label="Мини-плеер"
-      className={`audio-mini-player sticky bottom-4 z-30 mr-4 ml-auto mb-4 hidden shrink-0 rounded-theme border border-theme bg-theme-secondary shadow-theme-dropdown md:block lg:mr-6 ${compact ? 'w-[21rem] max-w-[calc(100%-2rem)]' : 'w-[calc(100%-2rem)] lg:w-[calc(100%-3rem)]'}`}
-    >
-      <Link
-        to="/player"
-        state={{ returnPath: location.pathname + location.search }}
-        aria-label="Открыть плеер на весь экран"
-        className="absolute inset-0 rounded-theme motion-safe:transition-colors hover:bg-theme-hover/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"
-      />
-      <div
-        className="audio-mini-layout pointer-events-none relative grid items-center gap-x-3 px-3 py-2 sm:px-4 [&_a]:pointer-events-auto [&_button]:pointer-events-auto [&_input]:pointer-events-auto"
-        data-compact={compact}
+    <div className="audio-mini-container pointer-events-none sticky bottom-4 z-30 mx-4 mb-4 hidden shrink-0 md:block lg:mx-6">
+      <aside
+        ref={panel}
+        aria-label="Мини-плеер"
+        className={`audio-mini-player pointer-events-auto relative ml-auto rounded-theme border border-theme bg-theme-secondary shadow-theme-dropdown ${compact ? 'w-[21rem] max-w-full' : 'w-full'}`}
       >
-        <div className="min-w-0 [grid-area:track]">
-          <TrackLink />
-        </div>
-        {!compact && (
-          <div className="grid min-w-0 justify-items-center gap-0.5 [grid-area:transport]">
-            <PlaybackProgress />
-            <Transport />
+        <Link
+          to="/player"
+          state={{ returnPath: location.pathname + location.search }}
+          aria-label="Открыть плеер на весь экран"
+          className="absolute inset-0 rounded-theme motion-safe:transition-colors hover:bg-theme-hover/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"
+        />
+        <div
+          className="audio-mini-layout pointer-events-none relative grid h-full items-center gap-x-3 px-3 py-2 sm:px-4 [&_a]:pointer-events-auto [&_button]:pointer-events-auto [&_input]:pointer-events-auto"
+          data-compact={compact}
+        >
+          <div className="min-w-0 [grid-area:track]">
+            <TrackLink />
           </div>
-        )}
-        {!compact && (
-          <div className="flex items-center justify-end [grid-area:options]">
-            <PlaybackModes hasPlaylist={hasPlaylist} />
-            <PlaybackVolume />
+          {!compact && (
+            <div className="grid min-w-0 justify-items-center gap-0.5 [grid-area:transport]">
+              <PlaybackProgress />
+              <Transport />
+            </div>
+          )}
+          {!compact && (
+            <div className="flex items-center justify-end [grid-area:options]">
+              <PlaybackModes hasPlaylist={hasPlaylist} />
+              <PlaybackVolume />
+            </div>
+          )}
+          <div className="flex items-center justify-end [grid-area:actions]">
+            <button
+              type="button"
+              aria-expanded={!compact}
+              className={control}
+              aria-label={compact ? 'Развернуть мини-плеер' : 'Свернуть мини-плеер'}
+              onClick={() => {
+                previousBounds.current = panel.current?.getBoundingClientRect();
+                useAudioPlayback.setState({ compact: !compact });
+              }}
+            >
+              {compact ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </button>
+            <StopButton />
           </div>
-        )}
-        <div className="flex items-center justify-end [grid-area:actions]">
-          <button
-            type="button"
-            aria-expanded={!compact}
-            className={control}
-            aria-label={compact ? 'Развернуть мини-плеер' : 'Свернуть мини-плеер'}
-            onClick={() => {
-              previousBounds.current = panel.current?.getBoundingClientRect();
-              useAudioPlayback.setState({ compact: !compact });
-            }}
-          >
-            {compact ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-          </button>
-          <StopButton />
         </div>
-      </div>
-    </aside>
+      </aside>
+    </div>
   );
 }

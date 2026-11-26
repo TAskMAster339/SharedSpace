@@ -528,8 +528,42 @@
   }
 }
 
-.audio-mini-player {
+.audio-mini-container {
   container-type: inline-size;
+}
+
+.audio-mini-player {
+  height: 11rem;
+}
+
+@container (min-width: 38rem) {
+  .audio-mini-player {
+    height: 8.25rem;
+  }
+}
+
+@container (min-width: 55rem) {
+  .audio-mini-player {
+    height: 5.5rem;
+  }
+}
+
+@media (pointer: coarse) {
+  .audio-mini-player {
+    height: 12rem;
+  }
+
+  @container (min-width: 38rem) {
+    .audio-mini-player {
+      height: 9.25rem;
+    }
+  }
+
+  @container (min-width: 55rem) {
+    .audio-mini-player {
+      height: 6.5rem;
+    }
+  }
 }
 
 .audio-mini-layout {
