@@ -1,3 +1,4 @@
+import { playTrack, useAudioPlayback } from '../store/audioPlaybackStore';
 import React, { useEffect, useState, useCallback, useId, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
@@ -31,6 +32,7 @@ import { canPreviewOfficeFile, canUseMobileOfficeReader } from '../utils/officeF
 import { useAuthStore } from '../store/authStore';
 import { useToastStore } from '../hooks/useToast';
 import SEOHead from '../components/SEOHead';
+import { AudioPreview } from '../components/ui/AudioPreview';
 import { FileIcon } from '../components/ui/FileIcon';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
@@ -343,24 +345,33 @@ const SharedFile = ({ token, mode, setMode }: SharedFileProps) => {
           </div>
         );
 
-      case 'audio':
+      case 'audio': {
+        const session = {
+          id: file.file_id,
+          name: file.filename,
+          cover: file.cover_url,
+          src: file.url,
+          publicPath: `/share/${token}`,
+        };
         return (
-          <div className="bg-theme-tertiary rounded-theme p-8">
-            <div className="flex flex-col items-center gap-6">
-              <div className="w-24 h-24 rounded-theme bg-brand-light flex items-center justify-center text-brand">
-                <FileIcon type="audio" size={40} />
-              </div>
-              <p className="text-lg font-medium text-theme-primary">{file.filename}</p>
-              <audio
-                src={file.url}
-                controls
-                className="w-full max-w-md"
-                onError={handleIframeError}
-              />
-            </div>
-          </div>
+          <AudioPreview
+            key={file.file_id}
+            name={file.filename}
+            cover={file.cover_url}
+            session={file.directory_purpose === 'audio' ? session : undefined}
+            localSrc={file.directory_purpose !== 'audio' ? file.url : undefined}
+            onExpand={
+              file.directory_purpose === 'audio'
+                ? () => {
+                    if (useAudioPlayback.getState().track?.publicPath !== session.publicPath)
+                      playTrack(session, false, false);
+                    navigate('/player', { state: { returnPath: session.publicPath } });
+                  }
+                : undefined
+            }
+          />
         );
-
+      }
       case 'pdf':
         return (
           <div className="bg-theme-tertiary rounded-theme overflow-hidden min-h-[500px]">

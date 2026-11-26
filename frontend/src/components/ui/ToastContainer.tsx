@@ -21,11 +21,12 @@ type ToastPopover = HTMLDivElement & {
 export const ToastContainer: React.FC = () => {
   const toasts = useToastStore((state) => state.toasts);
   const onRemove = useToastStore((state) => state.removeToast);
+  const toastDesktopBottomPx = useToastStore((s) => s.toastDesktopBottomPx);
   const toastMobileBottomPx = useToastStore((s) => s.toastMobileBottomPx);
   const uploadsMinimized = useUploadStore((s) => s.isMinimized);
   const bottomClass = uploadsMinimized
-    ? 'bottom-[calc(var(--toast-bottom)+3.25rem)] md:bottom-[4.25rem]'
-    : 'bottom-[var(--toast-bottom)] md:bottom-4';
+    ? 'bottom-[calc(var(--toast-bottom)+3.25rem)] md:bottom-[max(var(--toast-desktop-bottom),4.25rem)]'
+    : 'bottom-[var(--toast-bottom)] md:bottom-[var(--toast-desktop-bottom)]';
 
   const stack = React.useRef<ToastPopover>(null);
   const shown = toasts.length > 0;
@@ -39,6 +40,28 @@ export const ToastContainer: React.FC = () => {
     if (!shown && element.matches(':popover-open')) element.hidePopover();
   }, [shown, supportsPopover]);
 
+  React.useLayoutEffect(() => {
+    const element = stack.current;
+    if (!element || !shown) return;
+    const update = () => {
+      const bounds = element.getBoundingClientRect();
+      useToastStore
+        .getState()
+        .setToastDesktopTopOffsetPx(
+          bounds.height ? Math.ceil(window.innerHeight - bounds.top + 12) : 0,
+        );
+    };
+    update();
+    const observer = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(update);
+    observer?.observe(element);
+    window.addEventListener('resize', update);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', update);
+      useToastStore.getState().setToastDesktopTopOffsetPx(0);
+    };
+  }, [shown, toastDesktopBottomPx, uploadsMinimized]);
+
   return (
     <>
       <div className="sr-only" role="status" aria-relevant="additions">
@@ -51,8 +74,13 @@ export const ToastContainer: React.FC = () => {
         {...(supportsPopover ? { popover: 'manual' } : {})}
         role="region"
         aria-label="Уведомления"
-        className={`pointer-events-none fixed m-0 max-w-none top-auto right-4 left-4 md:left-auto z-[60] flex-col gap-2 md:w-96 border-0 bg-transparent p-0 max-h-[min(50dvh,24rem)] overflow-y-auto ${bottomClass} ${shown ? 'flex' : 'hidden'}`}
-        style={{ '--toast-bottom': `${toastMobileBottomPx}px` } as React.CSSProperties}
+        className={`pointer-events-none fixed m-0 max-w-none top-auto right-4 left-4 md:left-auto lg:right-6 z-[60] flex-col gap-2 md:w-96 border-0 bg-transparent p-0 max-h-[min(50dvh,24rem)] overflow-y-auto ${bottomClass} ${shown ? 'flex' : 'hidden'}`}
+        style={
+          {
+            '--toast-bottom': `${toastMobileBottomPx}px`,
+            '--toast-desktop-bottom': `${toastDesktopBottomPx}px`,
+          } as React.CSSProperties
+        }
       >
         {toasts.map((toast) => (
           <div className="pointer-events-auto shrink-0" key={toast.id}>

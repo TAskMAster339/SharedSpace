@@ -14,31 +14,34 @@ func NewRepository() *Repository {
 func (r *Repository) FindDirectoryByID(ctx context.Context, db dbTX, id string) (directoryRecord, error) {
 	var d directoryRecord
 	err := db.QueryRow(ctx, `
-		SELECT id, owner_id, deleted_at FROM directories
+		SELECT id, owner_id, deleted_at, purpose FROM directories
 		WHERE id = $1 AND deleted_at IS NULL
-	`, id).Scan(&d.ID, &d.OwnerID, &d.DeletedAt)
+	`, id).Scan(&d.ID, &d.OwnerID, &d.DeletedAt, &d.Purpose)
 	return d, err
 }
 
 func (r *Repository) FindDirectoryByIDAnyState(ctx context.Context, db dbTX, id string) (directoryRecord, error) {
 	var d directoryRecord
 	err := db.QueryRow(ctx, `
-		SELECT id, owner_id, deleted_at FROM directories
+		SELECT id, owner_id, deleted_at, purpose FROM directories
 		WHERE id = $1
-	`, id).Scan(&d.ID, &d.OwnerID, &d.DeletedAt)
+	`, id).Scan(&d.ID, &d.OwnerID, &d.DeletedAt, &d.Purpose)
 	return d, err
 }
 
 func (r *Repository) FindByID(ctx context.Context, db dbTX, id string) (fileRecord, error) {
 	var f fileRecord
 	err := db.QueryRow(ctx, `
-		SELECT f.id, f.directory_id, f.owner_id, u.username, f.filename, f.extension, f.mime_type, f.size, f.object_key, f.created_at, f.updated_at
-		FROM files f JOIN users u ON u.id = f.owner_id
+		SELECT f.id, f.directory_id, f.owner_id, u.username, f.filename, f.extension, f.mime_type, f.size, f.object_key, f.created_at, f.updated_at,
+		       CASE WHEN d.purpose = 'audio' THEN COALESCE(
+		         (SELECT object_key FROM file_previews WHERE file_id = f.id AND source_object_key = f.object_key),
+		         (SELECT preview_key FROM directory_covers WHERE directory_id = d.id), '') ELSE '' END
+		FROM files f JOIN directories d ON d.id = f.directory_id JOIN users u ON u.id = f.owner_id
 		WHERE f.id = $1 AND f.deleted_at IS NULL
 	`, id).Scan(
 		&f.ID, &f.DirectoryID, &f.OwnerID, &f.OwnerUsername,
 		&f.Filename, &f.Extension, &f.MimeType,
-		&f.Size, &f.ObjectKey, &f.CreatedAt, &f.UpdatedAt,
+		&f.Size, &f.ObjectKey, &f.CreatedAt, &f.UpdatedAt, &f.CoverKey,
 	)
 	return f, err
 }

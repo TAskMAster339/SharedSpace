@@ -111,7 +111,7 @@ func main() {
 	sharingHandler := sharing.NewHandler(sharingService)
 	// favorites
 	favoritesRepository := favorites.NewRepository()
-	favoritesService := favorites.NewService(pool, favoritesRepository, accessChecker)
+	favoritesService := favorites.NewService(pool, favoritesRepository, accessChecker, store)
 	favoritesHandler := favorites.NewHandler(favoritesService)
 	// trash
 	trashRepository := trash.NewRepository()

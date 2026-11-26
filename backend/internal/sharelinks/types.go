@@ -28,17 +28,20 @@ type ShareLinkResponse struct {
 }
 
 type FileContentResponse struct {
-	URL           string    `json:"url"`
-	FileID        string    `json:"file_id"`
-	Filename      string    `json:"filename"`
-	Extension     string    `json:"extension"`
-	MimeType      string    `json:"mime_type"`
-	Size          int64     `json:"size"`
-	OwnerUsername string    `json:"owner_username"`
-	CreatedAt     time.Time `json:"created_at"`
+	DirectoryPurpose string    `json:"directory_purpose"`
+	CoverURL         string    `json:"cover_url,omitempty"`
+	URL              string    `json:"url"`
+	FileID           string    `json:"file_id"`
+	Filename         string    `json:"filename"`
+	Extension        string    `json:"extension"`
+	MimeType         string    `json:"mime_type"`
+	Size             int64     `json:"size"`
+	OwnerUsername    string    `json:"owner_username"`
+	CreatedAt        time.Time `json:"created_at"`
 }
 
 type DirectoryFileItem struct {
+	CoverURL  string    `json:"cover_url,omitempty"`
 	ID        string    `json:"id"`
 	Filename  string    `json:"filename"`
 	Extension string    `json:"extension"`
@@ -49,6 +52,8 @@ type DirectoryFileItem struct {
 }
 
 type DirectoryContentResponse struct {
+	CoverURL        string              `json:"cover_url,omitempty"`
+	Purpose         string              `json:"purpose"`
 	ID              string              `json:"id"`
 	Name            string              `json:"name"`
 	Token           string              `json:"token"`
@@ -68,6 +73,7 @@ type ResolveDirectoryParams struct {
 }
 
 type DirectorySubdir struct {
+	CoverURL  string `json:"cover_url,omitempty"`
 	ID        string `json:"id"`
 	Name      string `json:"name"`
 	SizeBytes int64  `json:"size_bytes"`
@@ -87,24 +93,30 @@ type shareLinkRecord struct {
 }
 
 type fileRecord struct {
-	ID          string
-	DirectoryID string
-	OwnerID     string
-	ObjectKey   string
-	Filename    string
-	Extension   string
-	MimeType    string
-	Size        int64
-	CreatedAt   time.Time
+	DirectoryPurpose string
+	CoverKey         string
+	ID               string
+	DirectoryID      string
+	OwnerID          string
+	ObjectKey        string
+	Filename         string
+	Extension        string
+	MimeType         string
+	Size             int64
+	CreatedAt        time.Time
 }
 
 type directoryRecord struct {
-	ID      string
-	Name    string
-	OwnerID string
+	CoverKey    string
+	Purpose     string
+	IsMusicRoot bool
+	ID          string
+	Name        string
+	OwnerID     string
 }
 
 type dirFileRecord struct {
+	CoverKey  string
 	ID        string
 	Filename  string
 	Extension string
@@ -115,6 +127,7 @@ type dirFileRecord struct {
 }
 
 type dirSubdirRecord struct {
+	CoverKey  string
 	ID        string
 	Name      string
 	SizeBytes int64

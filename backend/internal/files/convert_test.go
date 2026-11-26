@@ -12,6 +12,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -243,5 +245,63 @@ func TestRenderAudioConversionAndCancellation(t *testing.T) {
 	cancel()
 	if _, _, _, err := renderConversion(ctx, dir, input, "mp3", "wav"); !errors.Is(err, context.Canceled) {
 		t.Fatalf("canceled ffmpeg returned %v", err)
+	}
+}
+
+func TestConvertAACDurationAndCover(t *testing.T) {
+	for _, tool := range []string{"ffmpeg", "ffprobe"} {
+		if _, err := exec.LookPath(tool); err != nil {
+			t.Skipf("%s unavailable", tool)
+		}
+	}
+	for _, tc := range []struct {
+		name  string
+		cover bool
+	}{{"with cover", true}, {"without cover", false}} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			dir := t.TempDir()
+			input := filepath.Join(dir, "source.mp3")
+			args := []string{"-v", "error", "-f", "lavfi", "-i", "sine=duration=3"}
+			if tc.cover {
+				coverPath := filepath.Join(dir, "cover.png")
+				if err := os.WriteFile(coverPath, makePNG(t), 0600); err != nil {
+					t.Fatal(err)
+				}
+				args = append(args, "-i", coverPath, "-map", "0:a", "-map", "1:v", "-c:v", "copy", "-disposition:v", "attached_pic")
+			}
+			if log, err := exec.CommandContext(ctx, "ffmpeg", append(args, input)...).CombinedOutput(); err != nil {
+				t.Fatalf("generate MP3: %v: %s", err, log)
+			}
+
+			output, source, _, err := renderConversion(ctx, dir, input, "aac", "mp3")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if source != "mp3" || filepath.Ext(output) != ".m4a" {
+				t.Fatalf("unexpected conversion: %s -> %s", source, output)
+			}
+			audio, err := os.Open(output)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer audio.Close()
+			info, err := probeAudio(ctx, audio)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if info.MIME != "audio/mp4" || (len(info.Cover) > 0) != tc.cover {
+				t.Fatalf("MIME %s, cover bytes %d", info.MIME, len(info.Cover))
+			}
+			raw, err := exec.CommandContext(ctx, "ffprobe", "-v", "error", "-show_entries", "format=duration",
+				"-of", "default=nokey=1:noprint_wrappers=1", output).Output()
+			if err != nil {
+				t.Fatal(err)
+			}
+			duration, err := strconv.ParseFloat(strings.TrimSpace(string(raw)), 64)
+			if err != nil || duration < 2.99 || duration > 3.05 {
+				t.Fatalf("duration = %q, expected 3 seconds", raw)
+			}
+		})
 	}
 }

@@ -8,6 +8,7 @@ import React, {
 } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { GitFork } from 'lucide-react';
+import { DesktopAudioMiniPlayer } from './AudioMiniPlayer';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { ItemPropertiesProvider } from './ui/ItemProperties';
@@ -18,6 +19,7 @@ import { ScrollToTopButton } from './ScrollToTopButton';
 import { useAuth } from '../hooks/useAuth';
 import { cn } from '../utils/cn';
 import { PRIVACY_POLICY_PATH } from '../constants/privacy';
+import { useAudioPlayback } from '../store/audioPlaybackStore';
 import { UploadProgressModal } from './ui/UploadProgressModal';
 
 const GITHUB_URL = 'https://github.com/TAskMAster339/SharedSpace';
@@ -53,6 +55,13 @@ export const Layout: React.FC<LayoutProps> = ({ children, fillViewport = false }
   const location = useLocation();
   const showSidebar = isAuthenticated && !workspace;
   const isOnLandingPage = location.pathname === '/';
+  const audioTrack = useAudioPlayback((state) => state.track);
+  const showMiniPlayer =
+    !!audioTrack &&
+    (isAuthenticated || !!audioTrack.publicPath) &&
+    (audioTrack.publicPath
+      ? location.pathname + location.search !== audioTrack.publicPath
+      : location.pathname !== `/files/${audioTrack.id}`);
 
   return (
     <div className={cn('bg-theme-primary flex flex-col', workspace ? 'h-dvh' : 'min-h-screen')}>
@@ -93,6 +102,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, fillViewport = false }
               </ReaderLayout.Provider>
             </div>
           </div>
+          {showMiniPlayer && !workspace && <DesktopAudioMiniPlayer />}
           {!workspace && (
             <>
               <div

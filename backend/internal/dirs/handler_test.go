@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -411,3 +412,6 @@ func TestPropertiesResponse(t *testing.T) {
 		})
 	}
 }
+
+func (m *mockService) SetCover(context.Context, string, string, io.Reader) error { return nil }
+func (m *mockService) RemoveCover(context.Context, string, string) error         { return nil }

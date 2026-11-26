@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -250,7 +251,7 @@ func (s *Service) mediaResponse(ctx context.Context, j jobqueue.Job, payload med
 		if ttl < time.Second {
 			return resp, apperror.New("Время скачивания истекло", "media_expired", http.StatusGone)
 		}
-		filename := replaceExt(file.Filename, payload.Target)
+		filename := replaceExt(file.Filename, strings.TrimPrefix(filepath.Ext(result.ObjectKey), "."))
 		url, err := s.tmpStorage.PresignedDownloadURL(ctx, result.ObjectKey, ttl, filename)
 		resp.Download = &ConversionDownloadResponse{DownloadURL: url, Filename: filename}
 		return resp, err

@@ -1,5 +1,11 @@
+import {
+  PlaybackTrack,
+  playTrack,
+  toggleTrack,
+  useAudioPlayback,
+} from '../store/audioPlaybackStore';
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
-import { useParams, useSearchParams, Link } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft,
   Folder,
@@ -20,6 +26,7 @@ import {
 import { useAuthStore } from '../store/authStore';
 import SEOHead from '../components/SEOHead';
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
+import { AudioPreview } from '../components/ui/AudioPreview';
 import { FileIcon } from '../components/ui/FileIcon';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
@@ -125,7 +132,10 @@ function encodePath(ids: string[]): string {
 
 const SharedDirectoryPage: React.FC = () => {
   const { token } = useParams<{ token: string }>();
+  const playbackTrack = useAudioPlayback((state) => state.track);
+  const playbackActive = useAudioPlayback((state) => state.playing);
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const accessToken = useAuthStore((state) => state.accessToken);
 
   const pathParam = searchParams.get('path') || '';
@@ -268,6 +278,7 @@ const SharedDirectoryPage: React.FC = () => {
       .finally(() => setIsLoadingMoreDirs(false));
   }, [token, subDirId, accessToken, savedPassword, dirsCursor, isLoadingMoreDirs]);
 
+  const deepPreviewAttempt = useRef('');
   const loadMoreFiles = useCallback(() => {
     if (!token || !filesCursor || isLoadingMoreFiles) return;
     setIsLoadingMoreFiles(true);
@@ -400,6 +411,55 @@ const SharedDirectoryPage: React.FC = () => {
       window.open(url, '_blank');
     }
   }, []);
+
+  const publicTrack = (file: DirectoryShareLinkFile): PlaybackTrack => ({
+    id: file.id,
+    name: file.filename,
+    cover: file.cover_url ?? data?.cover_url,
+    src: file.url,
+    collection: data?.name,
+    publicPath: `/share/dir/${token}?${new URLSearchParams({
+      ...(pathParam ? { path: pathParam } : {}),
+      file: file.id,
+    })}`,
+    publicPlaylistPath:
+      data?.purpose === 'audio'
+        ? `/share/dir/${token}${pathParam ? `?${new URLSearchParams({ path: pathParam })}` : ''}`
+        : undefined,
+    loadPublicPlaylist: data?.purpose === 'audio' ? loadPublicPlaylist : undefined,
+  });
+
+  async function loadPublicPlaylist() {
+    if (!token) return [];
+    const files: DirectoryShareLinkFile[] = [];
+    let cursor: string | undefined;
+    do {
+      const result = await resolveDirectoryShareLink(
+        token,
+        { subDirId: subDirId || undefined, filesCursor: cursor, filesLimit: 100 },
+        accessToken,
+        savedPassword,
+      );
+      files.push(...result.files);
+      cursor = result.next_files_cursor;
+    } while (cursor);
+    return files.filter((file) => file.mime_type.startsWith('audio/')).map(publicTrack);
+  }
+
+  useEffect(() => {
+    const attempt = `${previewFileId}|${filesCursor}`;
+    if (
+      previewFileId &&
+      filesCursor &&
+      hasMoreFiles &&
+      !isLoadingMoreFiles &&
+      deepPreviewAttempt.current !== attempt &&
+      !allFiles.some((file) => file.id === previewFileId)
+    ) {
+      deepPreviewAttempt.current = attempt;
+      loadMoreFiles();
+    }
+  }, [previewFileId, filesCursor, hasMoreFiles, isLoadingMoreFiles, allFiles, loadMoreFiles]);
 
   const previewFile =
     previewFileId && data ? allFiles.find((f) => f.id === previewFileId) || null : null;
@@ -546,23 +606,28 @@ const SharedDirectoryPage: React.FC = () => {
               />
             </div>
           );
-        case 'audio':
+        case 'audio': {
+          const session = data?.purpose === 'audio' ? publicTrack(previewFile) : undefined;
           return (
-            <div className="bg-theme-tertiary rounded-theme p-8">
-              <div className="flex flex-col items-center gap-6 group">
-                <div className="w-24 h-24 rounded-theme bg-brand-light flex items-center justify-center text-brand group-hover:text-brand-hover transition-colors">
-                  <FileIcon type="audio" size={40} />
-                </div>
-                <p className="text-lg font-medium text-theme-primary">{previewFile.filename}</p>
-                <audio
-                  src={previewFile.url}
-                  controls
-                  className="w-full max-w-md"
-                  onError={() => setIframeError(true)}
-                />
-              </div>
-            </div>
+            <AudioPreview
+              key={previewFile.id}
+              name={previewFile.filename}
+              collection={session?.collection}
+              cover={session?.cover ?? previewFile.cover_url}
+              session={session}
+              localSrc={!session ? previewFile.url : undefined}
+              onExpand={
+                session
+                  ? () => {
+                      if (useAudioPlayback.getState().track?.publicPath !== session.publicPath)
+                        playTrack(session, false, false);
+                      navigate('/player', { state: { returnPath: session.publicPath } });
+                    }
+                  : undefined
+              }
+            />
           );
+        }
         case 'pdf':
           return (
             <div className="bg-theme-tertiary rounded-theme overflow-hidden min-h-[500px]">
@@ -732,7 +797,21 @@ const SharedDirectoryPage: React.FC = () => {
           })}
         </div>
         <div className="ml-auto flex items-center gap-2">
-          {(allSubdirs.length > 0 || allFiles.length > 0) && (
+          {data.purpose === 'audio' &&
+            allFiles.some((file) => file.mime_type.startsWith('audio/')) && (
+              <button
+                type="button"
+                className="rounded-theme bg-brand px-4 py-2 text-sm font-medium text-theme-on-brand hover:bg-brand-hover motion-safe:transition-transform motion-safe:active:scale-95"
+                onClick={() => {
+                  const first = allFiles.find((file) => file.mime_type.startsWith('audio/'));
+                  if (first) playTrack(publicTrack(first));
+                }}
+              >
+                Слушать
+              </button>
+            )}
+
+          {data.purpose !== 'audio' && (allSubdirs.length > 0 || allFiles.length > 0) && (
             <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} />
           )}
         </div>
@@ -744,19 +823,21 @@ const SharedDirectoryPage: React.FC = () => {
 
       {allSubdirs.length > 0 && (
         <ItemGroup
-          title="Папки"
-          viewMode={viewMode}
+          title={data.purpose === 'audio' ? 'Плейлисты' : 'Папки'}
+          viewMode={data.purpose === 'audio' ? 'grid' : viewMode}
           hasMore={hasMoreDirs}
           isLoadingMore={isLoadingMoreDirs}
           sentinelRef={dirsSentinelRef}
         >
           {allSubdirs.map((subdir) =>
-            viewMode === 'grid' ? (
+            data.purpose === 'audio' || viewMode === 'grid' ? (
               <FolderGridItem
                 key={subdir.id}
                 id={subdir.id}
                 sizeBytes={subdir.size_bytes}
                 name={subdir.name}
+                coverUrl={subdir.cover_url}
+                isPlaylist={data.purpose === 'audio'}
                 to="#"
                 onClick={handleNavigate}
                 onContextMenu={(e, id) => handleContextMenu(e, id, 'dir')}
@@ -768,6 +849,8 @@ const SharedDirectoryPage: React.FC = () => {
                 id={subdir.id}
                 sizeBytes={subdir.size_bytes}
                 name={subdir.name}
+                coverUrl={subdir.cover_url}
+                isPlaylist={data.purpose === 'audio'}
                 to="#"
                 onClick={handleNavigate}
                 onContextMenu={(e, id) => handleContextMenu(e, id, 'dir')}
@@ -780,19 +863,20 @@ const SharedDirectoryPage: React.FC = () => {
 
       {allFiles.length > 0 && (
         <ItemGroup
-          title="Файлы"
-          viewMode={viewMode}
+          title={data.purpose === 'audio' ? 'Треки' : 'Файлы'}
+          viewMode={data.purpose === 'audio' ? 'list' : viewMode}
           hasMore={hasMoreFiles}
           isLoadingMore={isLoadingMoreFiles}
           sentinelRef={filesSentinelRef}
         >
           {allFiles.map((file) => {
             const iconType = resolveFileIconType(file.mime_type, file.extension);
-            return viewMode === 'grid' ? (
+            return data.purpose !== 'audio' && viewMode === 'grid' ? (
               <FileGridItem
                 key={file.id}
                 id={file.id}
                 name={file.filename}
+                coverUrl={file.cover_url ?? data.cover_url}
                 size={formatFileSize(file.size)}
                 type={iconType}
                 to="#"
@@ -812,10 +896,19 @@ const SharedDirectoryPage: React.FC = () => {
                 key={file.id}
                 id={file.id}
                 name={file.filename}
+                coverUrl={file.cover_url ?? data.cover_url}
                 type={iconType}
                 date={formatDate(file.created_at)}
                 size={formatFileSize(file.size)}
                 to="#"
+                onPlaybackToggle={
+                  data.purpose === 'audio' && iconType === 'audio'
+                    ? () => toggleTrack(publicTrack(file))
+                    : undefined
+                }
+                playing={
+                  playbackActive && playbackTrack?.id === file.id && !!playbackTrack.publicPath
+                }
                 onClick={(id) => {
                   const f = allFiles.find((x) => x.id === id);
                   if (f) handleFileClick(f);

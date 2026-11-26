@@ -67,7 +67,7 @@ func (s *Service) CreateForDirectory(ctx context.Context, userID, dirID string, 
 		return ShareLinkResponse{}, apperror.Validation("access_type должен быть 'public' или 'authenticated'")
 	}
 
-	_, err := s.repo.GetDirectoryByID(ctx, s.db, dirID)
+	directory, err := s.repo.GetDirectoryByID(ctx, s.db, dirID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ShareLinkResponse{}, apperror.NotFound("директория не найдена")
@@ -83,6 +83,9 @@ func (s *Service) CreateForDirectory(ctx context.Context, userID, dirID string, 
 		return ShareLinkResponse{}, apperror.Forbidden("доступ запрещён")
 	}
 
+	if directory.IsMusicRoot {
+		return ShareLinkResponse{}, apperror.Forbidden("нельзя создать ссылку на системную папку «Музыка»")
+	}
 	return s.createLink(ctx, userID, nil, &dirID, req)
 }
 
@@ -406,14 +409,16 @@ func (s *Service) Resolve(ctx context.Context, token, password string, authentic
 	}
 
 	return FileContentResponse{
-		URL:           url,
-		FileID:        file.ID,
-		Filename:      file.Filename,
-		Extension:     file.Extension,
-		MimeType:      file.MimeType,
-		Size:          file.Size,
-		OwnerUsername: username,
-		CreatedAt:     file.CreatedAt,
+		DirectoryPurpose: file.DirectoryPurpose,
+		CoverURL:         s.coverURL(ctx, file.CoverKey),
+		URL:              url,
+		FileID:           file.ID,
+		Filename:         file.Filename,
+		Extension:        file.Extension,
+		MimeType:         file.MimeType,
+		Size:             file.Size,
+		OwnerUsername:    username,
+		CreatedAt:        file.CreatedAt,
 	}, nil
 }
 
@@ -494,7 +499,7 @@ func (s *Service) ResolveDirectory(ctx context.Context, token, password string, 
 		_ = dirsHasMore
 		subdirItems = make([]DirectorySubdir, 0, len(subdirs))
 		for _, sd := range subdirs {
-			subdirItems = append(subdirItems, DirectorySubdir{ID: sd.ID, Name: sd.Name, SizeBytes: sd.SizeBytes})
+			subdirItems = append(subdirItems, DirectorySubdir{ID: sd.ID, Name: sd.Name, SizeBytes: sd.SizeBytes, CoverURL: s.coverURL(ctx, sd.CoverKey)})
 		}
 	} else {
 		var subdirs []dirSubdirRecord
@@ -506,7 +511,7 @@ func (s *Service) ResolveDirectory(ctx context.Context, token, password string, 
 		}
 		subdirItems = make([]DirectorySubdir, 0, len(subdirs))
 		for _, sd := range subdirs {
-			subdirItems = append(subdirItems, DirectorySubdir{ID: sd.ID, Name: sd.Name, SizeBytes: sd.SizeBytes})
+			subdirItems = append(subdirItems, DirectorySubdir{ID: sd.ID, Name: sd.Name, SizeBytes: sd.SizeBytes, CoverURL: s.coverURL(ctx, sd.CoverKey)})
 		}
 		if dirsHasMore {
 			nextDirsCursor = dirsNextCursor
@@ -534,8 +539,13 @@ func (s *Service) ResolveDirectory(ctx context.Context, token, password string, 
 			if urlErr != nil {
 				continue
 			}
+			coverURL := ""
+			if dir.Purpose == "audio" {
+				coverURL = s.coverURL(ctx, f.CoverKey)
+			}
 			fileItems = append(fileItems, DirectoryFileItem{
-				ID: f.ID, Filename: f.Filename, Extension: f.Extension,
+				CoverURL: coverURL,
+				ID:       f.ID, Filename: f.Filename, Extension: f.Extension,
 				MimeType: f.MimeType, Size: f.Size, URL: url, CreatedAt: f.CreatedAt,
 			})
 		}
@@ -553,8 +563,13 @@ func (s *Service) ResolveDirectory(ctx context.Context, token, password string, 
 			if urlErr != nil {
 				continue
 			}
+			coverURL := ""
+			if dir.Purpose == "audio" {
+				coverURL = s.coverURL(ctx, f.CoverKey)
+			}
 			fileItems = append(fileItems, DirectoryFileItem{
-				ID: f.ID, Filename: f.Filename, Extension: f.Extension,
+				CoverURL: coverURL,
+				ID:       f.ID, Filename: f.Filename, Extension: f.Extension,
 				MimeType: f.MimeType, Size: f.Size, URL: url, CreatedAt: f.CreatedAt,
 			})
 		}
@@ -564,6 +579,8 @@ func (s *Service) ResolveDirectory(ctx context.Context, token, password string, 
 	}
 
 	return DirectoryContentResponse{
+		CoverURL:        s.coverURL(ctx, dir.CoverKey),
+		Purpose:         dir.Purpose,
 		ID:              dir.ID,
 		Name:            dir.Name,
 		Token:           link.Token,
@@ -624,4 +641,12 @@ func toResponse(l shareLinkRecord) ShareLinkResponse {
 		IsActive:    l.IsActive,
 		CreatedAt:   l.CreatedAt,
 	}
+}
+
+func (s *Service) coverURL(ctx context.Context, key string) string {
+	if key == "" {
+		return ""
+	}
+	url, _ := s.storage.PresignedGetURL(ctx, key, time.Hour)
+	return url
 }

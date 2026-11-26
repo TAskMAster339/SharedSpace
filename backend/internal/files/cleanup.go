@@ -48,7 +48,9 @@ func (s *Service) cleanupMediaObjects(ctx context.Context, prefix, cursor string
 		}
 		if len(keys) > 0 {
 			var liveKeys []string
-			query := `SELECT ARRAY(SELECT object_key FROM file_previews WHERE object_key = ANY($1::text[]))`
+			query := `SELECT ARRAY(SELECT object_key FROM file_previews WHERE object_key = ANY($1::text[])
+                UNION SELECT original_key FROM directory_covers WHERE original_key = ANY($1::text[])
+                UNION SELECT preview_key FROM directory_covers WHERE preview_key = ANY($1::text[]))`
 			if prefix == savedMediaPrefix {
 				query = `SELECT ARRAY(SELECT object_key FROM files WHERE object_key = ANY($1::text[])
                     UNION SELECT object_key FROM file_versions WHERE object_key = ANY($1::text[]))`

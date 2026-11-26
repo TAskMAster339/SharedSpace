@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Folder } from 'lucide-react';
+import { Folder, ListMusic, AudioLines } from 'lucide-react';
 import { GridItemCaption } from './GridItemCaption';
 import { ItemStatusBadges } from './ItemStatusBadges';
 import { useGridItemMenu } from './useGridItemMenu';
@@ -14,6 +14,9 @@ interface FolderGridItemProps {
   sizeBytes?: number;
   to: string;
   className?: string;
+  coverUrl?: string;
+  isPlaylist?: boolean;
+  isMusicRoot?: boolean;
   hasShareLinks?: boolean;
   onClick?: (id: string) => void;
   showProperties?: boolean;
@@ -22,6 +25,7 @@ interface FolderGridItemProps {
   onMove?: (id: string) => void;
   onDelete?: (id: string) => void;
   onShare?: (id: string) => void;
+  onCover?: (id: string) => void;
   onDrop?: (e: React.DragEvent, id: string) => void;
   onDragStart?: (e: React.DragEvent, id: string, name: string) => void;
 }
@@ -32,6 +36,9 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
   sizeBytes,
   to,
   className,
+  coverUrl,
+  isPlaylist = false,
+  isMusicRoot = false,
   hasShareLinks = false,
   onClick,
   onContextMenu,
@@ -40,9 +47,11 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
   onMove,
   onDelete,
   onShare,
+  onCover,
   onDrop,
   onDragStart,
 }) => {
+  const FolderIcon = isMusicRoot ? AudioLines : isPlaylist ? ListMusic : Folder;
   const [isDragOver, setIsDragOver] = useState(false);
   const dragCounter = useRef(0);
   const menu = useGridItemMenu(onContextMenu && ((event) => onContextMenu(event, id)));
@@ -111,7 +120,20 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
           isDragOver && '!border-brand !bg-brand/20 !shadow-lg !ring-2 !ring-brand/40',
         )}
       >
-        <Folder size={64} strokeWidth={1.5} />
+        {coverUrl ? (
+          <img
+            src={coverUrl}
+            alt=""
+            loading="lazy"
+            className="h-full w-full rounded-theme object-cover"
+          />
+        ) : (
+          <FolderIcon
+            size={64}
+            strokeWidth={1.5}
+            className={isMusicRoot ? 'text-brand' : undefined}
+          />
+        )}
         <ItemStatusBadges grid shared={hasShareLinks} />
       </Link>
       <GridItemCaption
@@ -124,6 +146,7 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
         onRename={onRename ? () => onRename(id) : undefined}
         onMove={onMove ? () => onMove(id) : undefined}
         onShare={onShare ? () => onShare(id) : undefined}
+        onCover={onCover ? () => onCover(id) : undefined}
         onDelete={onDelete ? () => onDelete(id) : undefined}
         iconSize={16}
         openMenu={!!menu.position}

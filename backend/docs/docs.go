@@ -759,6 +759,58 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/directories/{id}/cover": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "directories"
+                ],
+                "summary": "Upload a playlist cover",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Playlist ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "directories"
+                ],
+                "summary": "Remove a playlist cover",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Playlist ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
         "/api/v1/directories/{id}/path": {
             "get": {
                 "security": [
@@ -1230,6 +1282,16 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Pagination cursor from previous response",
                         "name": "cursor",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "general",
+                            "audio"
+                        ],
+                        "type": "string",
+                        "description": "Directory purpose",
+                        "name": "purpose",
                         "in": "query"
                     }
                 ],
@@ -4398,6 +4460,9 @@ const docTemplate = `{
         "internal_dirs.DirectoryContentsResponse": {
             "type": "object",
             "properties": {
+                "cover_url": {
+                    "type": "string"
+                },
                 "files": {
                     "type": "array",
                     "items": {
@@ -4438,6 +4503,9 @@ const docTemplate = `{
         "internal_dirs.DirectoryResponse": {
             "type": "object",
             "properties": {
+                "cover_url": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -4449,6 +4517,9 @@ const docTemplate = `{
                 },
                 "id": {
                     "type": "string"
+                },
+                "is_music_root": {
+                    "type": "boolean"
                 },
                 "name": {
                     "type": "string"
@@ -4464,6 +4535,9 @@ const docTemplate = `{
                 },
                 "permissions": {
                     "$ref": "#/definitions/sharedspace_internal_access.Permissions"
+                },
+                "purpose": {
+                    "type": "string"
                 },
                 "shared_directory_id": {
                     "type": "string"
@@ -4482,6 +4556,9 @@ const docTemplate = `{
         "internal_dirs.FileItem": {
             "type": "object",
             "properties": {
+                "cover_url": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -4530,6 +4607,9 @@ const docTemplate = `{
         "internal_favorites.FavoriteFileResponse": {
             "type": "object",
             "properties": {
+                "cover_url": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -4707,6 +4787,9 @@ const docTemplate = `{
         "internal_files.FileMetadataResponse": {
             "type": "object",
             "properties": {
+                "cover_url": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -4925,6 +5008,9 @@ const docTemplate = `{
         "internal_sharelinks.DirectoryContentResponse": {
             "type": "object",
             "properties": {
+                "cover_url": {
+                    "type": "string"
+                },
                 "files": {
                     "type": "array",
                     "items": {
@@ -4946,6 +5032,9 @@ const docTemplate = `{
                 "owner_username": {
                     "type": "string"
                 },
+                "purpose": {
+                    "type": "string"
+                },
                 "subdirectories": {
                     "type": "array",
                     "items": {
@@ -4960,6 +5049,9 @@ const docTemplate = `{
         "internal_sharelinks.DirectoryFileItem": {
             "type": "object",
             "properties": {
+                "cover_url": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -4986,6 +5078,9 @@ const docTemplate = `{
         "internal_sharelinks.DirectorySubdir": {
             "type": "object",
             "properties": {
+                "cover_url": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -5000,7 +5095,13 @@ const docTemplate = `{
         "internal_sharelinks.FileContentResponse": {
             "type": "object",
             "properties": {
+                "cover_url": {
+                    "type": "string"
+                },
                 "created_at": {
+                    "type": "string"
+                },
+                "directory_purpose": {
                     "type": "string"
                 },
                 "extension": {

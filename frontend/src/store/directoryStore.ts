@@ -5,6 +5,7 @@ export type DirectorySection = 'personal' | 'shared' | null;
 
 interface DirectoryState {
   personalStorageId: string;
+  musicDirectoryId?: string;
   isLoading: boolean;
   // В каком разделе находится открытая директория: личное хранилище или общая.
   // Определить это по URL нельзя (обе — /directories/<id>), поэтому значение
@@ -27,16 +28,20 @@ export const useDirectoryStore = create<DirectoryState>((set) => ({
       const contents = await getRootDirectoryContents(accessToken);
       const rootId = contents.id;
       localStorage.setItem('rootDirectoryId', rootId);
-      set({ personalStorageId: rootId, isLoading: false });
+      set({
+        personalStorageId: rootId,
+        musicDirectoryId: contents.subdirectories.find((directory) => directory.is_music_root)?.id,
+        isLoading: false,
+      });
     } catch (error) {
       console.error('Failed to get root directory:', error);
       localStorage.removeItem('rootDirectoryId');
-      set({ personalStorageId: 'personal', isLoading: false });
+      set({ personalStorageId: 'personal', musicDirectoryId: undefined, isLoading: false });
     }
   },
 
   reset: () => {
-    set({ personalStorageId: 'personal', isLoading: true });
+    set({ personalStorageId: 'personal', musicDirectoryId: undefined, isLoading: true });
     localStorage.removeItem('rootDirectoryId');
   },
 }));

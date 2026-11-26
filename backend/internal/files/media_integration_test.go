@@ -133,7 +133,7 @@ func TestMediaWorkerIntegration(t *testing.T) {
 	j, err := queue.Get(ctx, owner, accepted.JobID)
 	mustDocument(t, err)
 	payload := mediaPayload{FileID: file.ID, ObjectKey: key, Target: "jpg", Save: true}
-	if err := svc.publishMedia(ctx, pool, j, payload, mediaResult{ObjectKey: orphan}, int64(len(data)), "png"); !errors.Is(err, jobqueue.ErrLeaseLost) {
+	if err := svc.publishMedia(ctx, pool, j, payload, mediaResult{ObjectKey: orphan}, int64(len(data)), "png", nil); !errors.Is(err, jobqueue.ErrLeaseLost) {
 		t.Fatalf("expired lease published: %v", err)
 	}
 

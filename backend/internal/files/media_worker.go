@@ -55,10 +55,11 @@ func (s *Service) processMedia(ctx context.Context, pool *pgxpool.Pool, dir stri
 	result := mediaResult{}
 	var size int64
 	var sourceFormat string
+	var cover []byte
 	if j.Kind == mediaPreview {
 		err = s.db.QueryRow(ctx, `SELECT object_key FROM file_previews WHERE file_id=$1 AND (source_object_key IS NULL OR source_object_key=$2)`, file.ID, file.ObjectKey).Scan(&result.ObjectKey)
 		if err == nil {
-			return s.publishMedia(ctx, pool, j, payload, result, 0, "")
+			return s.publishMedia(ctx, pool, j, payload, result, 0, "", nil)
 		}
 		if !errors.Is(err, pgx.ErrNoRows) {
 			return err
@@ -100,8 +101,11 @@ func (s *Service) processMedia(ctx context.Context, pool *pgxpool.Pool, dir stri
 		bucket, prefix := s.tmpStorage, tmpPrefix
 		if payload.Save {
 			bucket, prefix = s.storage, savedMediaPrefix
+			if payload.Target == "aac" {
+				cover, _ = renderPreviewFile(ctx, output)
+			}
 		}
-		result.ObjectKey = prefix + j.Token + "." + payload.Target
+		result.ObjectKey = prefix + j.Token + "." + conversionExtension(payload.Target)
 		uploadedAt := time.Now()
 		if err := bucket.Upload(ctx, result.ObjectKey, data, n, mimeMap[payload.Target]); err != nil {
 			return err
@@ -110,10 +114,10 @@ func (s *Service) processMedia(ctx context.Context, pool *pgxpool.Pool, dir stri
 			result.DownloadUntil = uploadedAt.Add(tmpMaxAge)
 		}
 	}
-	return s.publishMedia(ctx, pool, j, payload, result, size, sourceFormat)
+	return s.publishMedia(ctx, pool, j, payload, result, size, sourceFormat, cover)
 }
 
-func (s *Service) publishMedia(ctx context.Context, pool *pgxpool.Pool, j jobqueue.Job, payload mediaPayload, result mediaResult, size int64, sourceFormat string) error {
+func (s *Service) publishMedia(ctx context.Context, pool *pgxpool.Pool, j jobqueue.Job, payload mediaPayload, result mediaResult, size int64, sourceFormat string, cover []byte) error {
 	tx, err := pool.Begin(ctx)
 	if err != nil {
 		return err
@@ -161,11 +165,17 @@ func (s *Service) publishMedia(ctx context.Context, pool *pgxpool.Pool, j jobque
 		if size > quota-used {
 			return apperror.Validation("превышен лимит хранилища")
 		}
+		ext := conversionExtension(payload.Target)
 		newFile, err := s.repo.Save(ctx, tx, fileRecord{DirectoryID: file.DirectoryID, OwnerID: j.Owner,
-			Filename: replaceExt(file.Filename, payload.Target), Extension: payload.Target, MimeType: mimeMap[payload.Target],
+			Filename: replaceExt(file.Filename, ext), Extension: ext, MimeType: mimeMap[payload.Target],
 			Size: size, ObjectKey: result.ObjectKey})
 		if err != nil {
 			return err
+		}
+		if len(cover) > 0 {
+			if err := s.saveAudioCover(ctx, tx, newFile, previewPrefix+j.Token+".jpg", cover); err != nil {
+				return err
+			}
 		}
 		if err := s.repo.AddUserStorageUsed(ctx, tx, j.Owner, size); err != nil {
 			return err

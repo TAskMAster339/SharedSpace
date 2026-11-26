@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useId, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import {
   ArrowLeft,
   BookOpen,
@@ -26,6 +26,8 @@ import {
 import { getDirectoryById, Directory } from '../api/directories';
 import { getUserById } from '../api/users';
 import { ApiError } from '../api/client';
+import { playTrack, useAudioPlayback } from '../store/audioPlaybackStore';
+import { AudioPreview } from '../components/ui/AudioPreview';
 import { FileIcon } from '../components/ui/FileIcon';
 import { Button } from '../components/ui/Button';
 import { DocumentActions } from '../components/ui/DocumentActions';
@@ -123,6 +125,9 @@ const PROBLEMATIC_EXTENSIONS = new Set(['go']);
 const FileViewPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const isFavoritesPlaylist = searchParams.get('playlist') === 'favorites';
   const officeTheme = useRootTheme();
   const [showDetails, setShowDetails] = useState(true);
   const detailsId = useId();
@@ -325,6 +330,10 @@ const FileViewPage: React.FC = () => {
   }, [file, toggleFavorite]);
 
   const handleGoBack = useCallback(() => {
+    if (isFavoritesPlaylist) {
+      navigate('/favorites?tab=music');
+      return;
+    }
     if (directory) {
       navigate(`/directories/${directory.id}`, {
         state: {
@@ -335,7 +344,7 @@ const FileViewPage: React.FC = () => {
     } else {
       navigate(-1);
     }
-  }, [directory, navigate]);
+  }, [directory, isFavoritesPlaylist, navigate]);
 
   const handleDeleteFile = useCallback(async () => {
     if (!accessToken || !id) return;
@@ -462,28 +471,48 @@ const FileViewPage: React.FC = () => {
           </div>
         );
 
-      case 'audio':
+      case 'audio': {
+        const collection = isFavoritesPlaylist
+          ? 'Избранная музыка'
+          : directory?.purpose === 'audio'
+            ? directory.name
+            : undefined;
+        const session =
+          fileUrl && directory?.purpose === 'audio'
+            ? {
+                id: file.id,
+                name: file.filename,
+                cover: file.cover_url,
+                src: fileUrl,
+                directoryId: directory?.purpose === 'audio' ? directory.id : undefined,
+                collection,
+                favoriteCursor: isFavoritesPlaylist
+                  ? (searchParams.get('cursor') ?? undefined)
+                  : undefined,
+              }
+            : undefined;
         return (
-          <div className="bg-theme-tertiary rounded-theme p-8">
-            <div className="flex flex-col items-center gap-6">
-              <div className="w-24 h-24 rounded-theme bg-brand-light flex items-center justify-center text-brand">
-                <FileIcon type="audio" size={40} />
-              </div>
-              <p className="text-lg font-medium text-theme-primary">{file.filename}</p>
-              {fileUrl ? (
-                <audio
-                  src={fileUrl}
-                  controls
-                  className="w-full max-w-md"
-                  controlsList="nodownload"
-                  onError={handleIframeError}
-                />
-              ) : (
-                <p className="text-theme-muted">Загрузка аудио...</p>
-              )}
-            </div>
-          </div>
+          <AudioPreview
+            key={file.id}
+            name={file.filename}
+            cover={file.cover_url}
+            collection={collection}
+            session={session}
+            localSrc={!session ? (fileUrl ?? undefined) : undefined}
+            onExpand={
+              session
+                ? () => {
+                    if (useAudioPlayback.getState().track?.id !== session.id)
+                      playTrack(session, false, false);
+                    navigate('/player', {
+                      state: { returnPath: location.pathname + location.search },
+                    });
+                  }
+                : undefined
+            }
+          />
         );
+      }
 
       case 'pdf':
         return (
@@ -544,7 +573,7 @@ const FileViewPage: React.FC = () => {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || (file && file.id !== id && !error)) {
     return (
       <div className="flex items-center justify-center py-20">
         <SEOHead title="Загрузка..." description="Загрузка информации о файле..." />

@@ -66,7 +66,7 @@ var mimeMap = map[string]string{
 	"wav":  "audio/wav",
 	"flac": "audio/flac",
 	"ogg":  "audio/ogg",
-	"aac":  "audio/aac",
+	"aac":  "audio/mp4",
 }
 
 func renderConversion(ctx context.Context, dir, input, target, extension string) (string, string, int64, error) {
@@ -88,7 +88,7 @@ func renderConversion(ctx context.Context, dir, input, target, extension string)
 		return "", "", 0, invalidMedia("неподдерживаемая пара форматов")
 	}
 
-	out, err := os.CreateTemp(dir, "media-output-*."+target)
+	out, err := os.CreateTemp(dir, "media-output-*."+conversionExtension(target))
 	if err != nil {
 		return "", "", 0, err
 	}
@@ -106,7 +106,10 @@ func renderConversion(ctx context.Context, dir, input, target, extension string)
 	if codec, ok := audioCodecMap[target]; ok {
 		args = append(args, "-c:a", codec)
 	}
-	if audioTargets[target] {
+	if target == "aac" {
+		args = append(args, "-map", "0:a:0", "-map", "0:v:disp:attached_pic:0?",
+			"-c:v", "mjpeg", "-disposition:v", "attached_pic", "-movflags", "+faststart")
+	} else if audioTargets[target] {
 		args = append(args, "-vn")
 	}
 	if err := exec.CommandContext(ctx, "ffmpeg", append(args, output)...).Run(); err != nil {
@@ -200,6 +203,13 @@ func detectFormat(data []byte, ext string) string {
 		return "mp4"
 	}
 	return ""
+}
+
+func conversionExtension(target string) string {
+	if target == "aac" {
+		return "m4a"
+	}
+	return target
 }
 
 func replaceExt(filename, newExt string) string {

@@ -134,7 +134,14 @@ function PropertiesContent({
               ]
             : [
                 { label: 'Имя', value: entry.name },
-                { label: 'Тип', value: 'Папка' },
+                {
+                  label: 'Тип',
+                  value: entry.is_music_root
+                    ? 'Системная аудиопапка'
+                    : entry.purpose === 'audio'
+                      ? 'Плейлист-папка'
+                      : 'Папка',
+                },
                 {
                   label: 'Размер',
                   value:

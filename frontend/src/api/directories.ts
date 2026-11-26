@@ -14,6 +14,7 @@ export interface Permissions {
 }
 
 export interface Directory {
+  cover_url?: string;
   size_bytes: number;
   id: string;
   name: string;
@@ -21,6 +22,8 @@ export interface Directory {
   owner_username?: string;
   parent_id: string | null;
   type: 'root' | 'regular';
+  purpose?: 'general' | 'audio';
+  is_music_root?: boolean;
   created_at: string;
   updated_at: string;
   has_share_links?: boolean;
@@ -40,6 +43,7 @@ export interface DirectoryPathResponse {
 }
 
 export interface File {
+  cover_url?: string;
   id: string;
   filename: string;
   extension: string;
@@ -51,6 +55,7 @@ export interface File {
 }
 
 export interface DirectoryContents {
+  cover_url?: string;
   id: string;
   name: string;
   subdirectories: Directory[];
@@ -178,4 +183,17 @@ export function permanentDeleteDirectory(token: string, directoryId: string): Pr
     method: 'DELETE',
     token,
   });
+}
+
+export function setDirectoryCover(token: string, id: string, photo: Blob): Promise<void> {
+  return apiRequest(`/directories/${id}/cover`, {
+    method: 'PUT',
+    token,
+    headers: { 'Content-Type': photo.type || 'application/octet-stream' },
+    body: photo,
+  });
+}
+
+export function removeDirectoryCover(token: string, id: string): Promise<void> {
+  return apiRequest(`/directories/${id}/cover`, { method: 'DELETE', token });
 }

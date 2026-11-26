@@ -467,3 +467,196 @@
 .docx-reader .reader-centered {
   text-align: center;
 }
+
+.playback-slider {
+  appearance: none;
+  height: 1.75rem;
+  background: transparent;
+  cursor: pointer;
+}
+
+.playback-slider::-webkit-slider-runnable-track {
+  height: 0.25rem;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--brand) var(--playback-progress),
+    var(--border) var(--playback-progress)
+  );
+}
+
+.playback-slider::-moz-range-track {
+  height: 0.25rem;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--brand) var(--playback-progress),
+    var(--border) var(--playback-progress)
+  );
+}
+
+.playback-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 0.875rem;
+  height: 0.875rem;
+  margin-top: -0.3125rem;
+  border-radius: 50%;
+  background: var(--brand);
+}
+
+.playback-slider::-moz-range-thumb {
+  width: 0.875rem;
+  height: 0.875rem;
+  border: 0;
+  border-radius: 50%;
+  background: var(--brand);
+}
+
+.playback-slider:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.playback-slider:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+@media (pointer: coarse) {
+  .playback-slider {
+    height: 2.75rem;
+  }
+}
+
+.audio-mini-container {
+  container-type: inline-size;
+}
+
+.audio-mini-player {
+  height: 11rem;
+}
+
+@container (min-width: 38rem) {
+  .audio-mini-player {
+    height: 8.25rem;
+  }
+}
+
+@container (min-width: 55rem) {
+  .audio-mini-player {
+    height: 5.5rem;
+  }
+}
+
+@media (pointer: coarse) {
+  .audio-mini-player {
+    height: 12rem;
+  }
+
+  @container (min-width: 38rem) {
+    .audio-mini-player {
+      height: 9.25rem;
+    }
+  }
+
+  @container (min-width: 55rem) {
+    .audio-mini-player {
+      height: 6.5rem;
+    }
+  }
+}
+
+.audio-mini-layout {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'track actions'
+    'transport transport'
+    'options options';
+}
+
+@container (min-width: 38rem) {
+  .audio-mini-layout {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      'track options actions'
+      'transport transport transport';
+  }
+}
+
+@container (min-width: 55rem) {
+  .audio-mini-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(14rem, 1.2fr) minmax(0, 1fr) auto;
+    grid-template-areas: 'track transport options actions';
+  }
+}
+
+.audio-mini-layout[data-compact='true'] {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas: 'track transport actions';
+}
+
+.playback-volume-value {
+  visibility: hidden;
+}
+
+.playback-volume:hover .playback-volume-value,
+.playback-volume input:is(:focus-visible, :active) + .playback-volume-value {
+  visibility: visible;
+}
+
+@keyframes mini-track-in {
+  from {
+    opacity: 0;
+    transform: translateX(-0.75rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes mini-track-out {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(0.75rem);
+  }
+}
+
+.mini-playback-input::-webkit-slider-runnable-track,
+.mini-playback-input::-webkit-slider-thumb {
+  background: transparent;
+}
+
+.mini-playback-input::-moz-range-track,
+.mini-playback-input::-moz-range-thumb {
+  background: transparent;
+}
+
+.audio-preview-controls {
+  container-type: inline-size;
+}
+
+.audio-preview-actions {
+  grid-template-columns: 1fr 1fr;
+  grid-template-areas:
+    'transport transport'
+    'modes volume';
+}
+
+@container (min-width: 26rem) {
+  .audio-preview-actions {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-areas: 'modes transport volume';
+  }
+}
+
+@keyframes audio-preview-enter {
+  from {
+    opacity: 0;
+    transform: translateX(-0.75rem);
+  }
+}

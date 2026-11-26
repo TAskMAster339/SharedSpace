@@ -22,12 +22,15 @@ type RenameDirectoryRequest struct {
 }
 
 type DirectoryResponse struct {
+	CoverURL          string              `json:"cover_url,omitempty"`
 	ID                string              `json:"id"`
 	Name              string              `json:"name"`
 	OwnerID           string              `json:"owner_id"`
 	OwnerUsername     string              `json:"owner_username,omitempty"`
 	ParentID          *string             `json:"parent_id"`
 	Type              string              `json:"type"`
+	Purpose           string              `json:"purpose"`
+	IsMusicRoot       bool                `json:"is_music_root"`
 	FilesCount        int                 `json:"files_count"`
 	SizeBytes         int64               `json:"size_bytes"`
 	CreatedAt         time.Time           `json:"created_at"`
@@ -49,6 +52,7 @@ type DirectoryPathResponse struct {
 }
 
 type FileItem struct {
+	CoverURL      string    `json:"cover_url,omitempty"`
 	ID            string    `json:"id"`
 	Filename      string    `json:"filename"`
 	Extension     string    `json:"extension"`
@@ -60,6 +64,7 @@ type FileItem struct {
 }
 
 type DirectoryContentsResponse struct {
+	CoverURL        string              `json:"cover_url,omitempty"`
 	ID              string              `json:"id"`
 	Name            string              `json:"name"`
 	Subdirectories  []DirectoryResponse `json:"subdirectories"`
@@ -75,6 +80,8 @@ type directoryRecord struct {
 	OwnerUsername string
 	ParentID      *string
 	Type          string
+	Purpose       string
+	IsMusicRoot   bool
 	FilesCount    int
 	SizeBytes     int64
 	DeletedAt     *time.Time
@@ -83,6 +90,7 @@ type directoryRecord struct {
 }
 
 type fileRecord struct {
+	CoverKey  string
 	ID        string
 	Filename  string
 	Extension string

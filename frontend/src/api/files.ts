@@ -19,6 +19,7 @@ export interface UploadFilesResponse {
 }
 
 export interface FileMetadata {
+  cover_url?: string;
   id: string;
   filename: string;
   extension: string;

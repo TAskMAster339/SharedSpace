@@ -160,6 +160,8 @@ func NewRouter(authHandler *auth.Handler, authService auth.AuthService, usersHan
 						r.Get("/root/contents", middleware.AppError(dirsHandler.GetRootContents))
 						r.Get("/{id}/contents", middleware.AppError(dirsHandler.GetContents))
 						r.Get("/{id}/path", middleware.AppError(dirsHandler.GetPath))
+						r.Put("/{id}/cover", middleware.AppError(dirsHandler.SetCover))
+						r.Delete("/{id}/cover", middleware.AppError(dirsHandler.RemoveCover))
 						r.Get("/{id}", middleware.AppError(dirsHandler.GetByID))
 						r.Post("/", middleware.AppError(dirsHandler.Create))
 						r.Patch("/{id}", middleware.AppError(dirsHandler.Update))

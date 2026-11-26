@@ -3,6 +3,7 @@ package favorites
 import "time"
 
 type FavoriteFileResponse struct {
+	CoverURL      string    `json:"cover_url,omitempty"`
 	ID            string    `json:"id"`
 	Filename      string    `json:"filename"`
 	Extension     string    `json:"extension"`
@@ -22,6 +23,7 @@ type FavoritesListResponse struct {
 }
 
 type favoriteFileRecord struct {
+	CoverKey    string
 	ID          string
 	Filename    string
 	Extension   string

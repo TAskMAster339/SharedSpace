@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import { startUploadManager, stopUploadManager } from './services/uploadManager';
+import { AudioEngine } from './components/AudioEngine';
 import { Layout } from './components/Layout';
 import { ToastContainer } from './components/ui/ToastContainer';
 import { DropZoneWrapper } from './components/DropZoneWrapper';
@@ -21,6 +22,7 @@ import ProfileSettingsPage from './pages/ProfileSettingsPage';
 import SharedDirListPage from './pages/SharedDirListPage';
 import DirectoryPage from './pages/DirectoryPage';
 import FileViewPage from './pages/FileViewPage';
+import AudioWorkspacePage from './pages/AudioWorkspacePage';
 import DocumentEditorPage from './pages/DocumentEditorPage';
 import SharedSettingsPage from './pages/SharedSettingsPage';
 import FolderSettingsPage from './pages/FolderSettingsPage';
@@ -52,6 +54,7 @@ const App: React.FC = () => {
 
   return (
     <Router>
+      <AudioEngine />
       <Routes>
         <Route
           path="/"
@@ -109,6 +112,15 @@ const App: React.FC = () => {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         </Route>
+
+        <Route
+          path="/player"
+          element={
+            <Layout fillViewport>
+              <AudioWorkspacePage />
+            </Layout>
+          }
+        />
 
         <Route
           path="/files/:id/edit"

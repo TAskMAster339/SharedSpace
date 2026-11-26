@@ -20,6 +20,7 @@ type UploadFilesResponse struct {
 }
 
 type FileMetadataResponse struct {
+	CoverURL      string    `json:"cover_url,omitempty"`
 	ID            string    `json:"id"`
 	Filename      string    `json:"filename"`
 	Extension     string    `json:"extension"`
@@ -52,6 +53,7 @@ type RecentFilesResponse struct {
 }
 
 type fileRecord struct {
+	CoverKey      string
 	ID            string
 	Filename      string
 	Extension     string

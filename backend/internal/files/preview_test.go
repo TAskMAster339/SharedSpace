@@ -183,7 +183,10 @@ func TestCleanupPreviewsIntegration(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close(context.Background())
-	if _, err := db.Exec(ctx, "CREATE TEMP TABLE file_previews (object_key text PRIMARY KEY)"); err != nil {
+	if _, err := db.Exec(ctx, `
+		CREATE TEMP TABLE file_previews (object_key text PRIMARY KEY);
+		CREATE TEMP TABLE directory_covers (original_key text NOT NULL UNIQUE, preview_key text NOT NULL UNIQUE);
+	`); err != nil {
 		t.Fatal(err)
 	}
 
@@ -194,13 +197,17 @@ func TestCleanupPreviewsIntegration(t *testing.T) {
 		t.Fatal(err)
 	}
 	live, orphan := previewPrefix+uuid.NewString()+".jpg", previewPrefix+uuid.NewString()+".jpg"
-	for _, key := range []string{live, orphan} {
+	originalCover, previewCover := previewPrefix+uuid.NewString()+".png", previewPrefix+uuid.NewString()+".jpg"
+	for _, key := range []string{live, originalCover, previewCover, orphan} {
 		if err := store.Upload(ctx, key, bytes.NewBufferString("test"), 4, "image/jpeg"); err != nil {
 			t.Fatal(err)
 		}
 		defer store.Delete(ctx, key)
 	}
 	if _, err := db.Exec(ctx, "INSERT INTO file_previews VALUES ($1)", live); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(ctx, "INSERT INTO directory_covers VALUES ($1, $2)", originalCover, previewCover); err != nil {
 		t.Fatal(err)
 	}
 
@@ -217,9 +224,11 @@ func TestCleanupPreviewsIntegration(t *testing.T) {
 		obj.Close()
 		t.Fatal("old orphan should have been deleted")
 	}
-	if obj, err := store.Get(ctx, live); err != nil {
-		t.Fatalf("live preview should remain: %v", err)
-	} else {
+	for _, key := range []string{live, originalCover, previewCover} {
+		obj, err := store.Get(ctx, key)
+		if err != nil {
+			t.Fatalf("referenced object %s should remain: %v", key, err)
+		}
 		obj.Close()
 	}
 }

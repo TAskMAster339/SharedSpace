@@ -11,6 +11,10 @@ interface ToastStore {
   ) => string;
   updateToast: (id: string, patch: Partial<Omit<ToastItem, 'id'>>) => void;
   removeToast: (id: string) => void;
+  toastDesktopBottomPx: number;
+  toastDesktopTopOffsetPx: number;
+  setToastDesktopTopOffsetPx: (px: number) => void;
+  setToastDesktopBottomPx: (px: number) => void;
   toastMobileBottomPx: number;
   setToastMobileBottomPx: (px: number) => void;
 }
@@ -34,6 +38,14 @@ export const useToastStore = create<ToastStore>((set) => ({
       toasts: state.toasts.filter((toast) => toast.id !== id),
     }));
   },
+  toastDesktopBottomPx: 16,
+  toastDesktopTopOffsetPx: 0,
+  setToastDesktopTopOffsetPx: (px) =>
+    set((state) =>
+      state.toastDesktopTopOffsetPx === px ? state : { toastDesktopTopOffsetPx: px },
+    ),
+  setToastDesktopBottomPx: (px) =>
+    set((state) => (state.toastDesktopBottomPx === px ? state : { toastDesktopBottomPx: px })),
   toastMobileBottomPx: 80,
   setToastMobileBottomPx: (px) => set({ toastMobileBottomPx: px }),
 }));
