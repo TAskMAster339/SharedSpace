@@ -145,9 +145,10 @@ func (r *Repository) GetFileByID(ctx context.Context, db dbTX, fileID string) (f
 	err := db.QueryRow(ctx, `
 		SELECT id, directory_id, owner_id, object_key, filename, extension, mime_type, size, created_at,
 		       CASE WHEN mime_type LIKE 'audio/%' THEN COALESCE((SELECT object_key FROM file_previews p
-		         WHERE p.file_id = files.id AND p.source_object_key = files.object_key), '') ELSE '' END
+		         WHERE p.file_id = files.id AND p.source_object_key = files.object_key), '') ELSE '' END,
+		       (SELECT purpose FROM directories d WHERE d.id = files.directory_id)
 		FROM files WHERE id = $1 AND deleted_at IS NULL
-	`, fileID).Scan(&f.ID, &f.DirectoryID, &f.OwnerID, &f.ObjectKey, &f.Filename, &f.Extension, &f.MimeType, &f.Size, &f.CreatedAt, &f.CoverKey)
+	`, fileID).Scan(&f.ID, &f.DirectoryID, &f.OwnerID, &f.ObjectKey, &f.Filename, &f.Extension, &f.MimeType, &f.Size, &f.CreatedAt, &f.CoverKey, &f.DirectoryPurpose)
 	return f, err
 }
 

@@ -32,6 +32,7 @@ curl -fsS -X POST "http://localhost:8080/api/v1/s/${SHARE_TOKEN}/preview-session
 curl -fsS -X POST "http://localhost:8080/api/v1/s/${SHARE_TOKEN}/preview-session?layout=reader" \
   | jq -c '.config | {type, mode: .editorConfig.mode}'
 ```
+Ответ разрешения ссылки `GET /api/v1/s/{token}` содержит `directory_purpose` со значением `general` или `audio`. Поле отражает текущий тип папки файла и определяет доступность фонового плеера.
 
 ## Пользователи (`/api/v1/users`)
 

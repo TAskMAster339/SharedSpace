@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { ChevronDown, Maximize2, Music2, Pause, Play, SkipBack, SkipForward } from 'lucide-react';
 
 import {
   advanceTrack,
   seekTrack,
+  stopTrack,
   toggleTrack,
   useAudioPlayback,
   PlaybackTrack,
@@ -19,9 +20,35 @@ interface AudioPreviewProps {
   cover?: string;
   collection?: string;
   session?: PlaybackTrack;
+  localSrc?: string;
   onCollapse?: () => void;
   onExpand?: () => void;
   fullScreen?: boolean;
+}
+
+function FileAudioControls({ name, src }: { name: string; src: string }) {
+  const ref = useRef<HTMLAudioElement>(null);
+
+  useEffect(() => {
+    const audio = ref.current;
+    if (!audio) return;
+    audio.volume = useAudioPlayback.getState().volume;
+    return () => audio.pause();
+  }, []);
+
+  return (
+    <audio
+      ref={ref}
+      src={src}
+      controls
+      preload="metadata"
+      aria-label={name}
+      className="w-full max-w-xl"
+      onPlay={() => {
+        if (useAudioPlayback.getState().track) stopTrack();
+      }}
+    />
+  );
 }
 
 export function AudioPreview({
@@ -29,6 +56,7 @@ export function AudioPreview({
   cover,
   collection,
   session,
+  localSrc,
   onCollapse,
   onExpand,
   fullScreen = false,
@@ -115,61 +143,65 @@ export function AudioPreview({
         </p>
         {collection && <p className="text-sm text-theme-secondary">{collection}</p>}
       </div>
-      <div className="audio-preview-controls w-full max-w-xl space-y-3">
-        <div className="flex items-center gap-3 text-xs tabular-nums text-theme-secondary">
-          <span>{formatPlaybackTime(position)}</span>
-          <PlaybackSlider
-            max={duration || 1}
-            step={0.1}
-            value={position}
-            aria-label="Позиция воспроизведения"
-            disabled={!duration}
-            onChange={(event) => seekTrack(event.currentTarget.valueAsNumber)}
-          />
-          <span>{formatPlaybackTime(duration)}</span>
+      {localSrc ? (
+        <FileAudioControls key={localSrc} name={name} src={localSrc} />
+      ) : (
+        <div className="audio-preview-controls w-full max-w-xl space-y-3">
+          <div className="flex items-center gap-3 text-xs tabular-nums text-theme-secondary">
+            <span>{formatPlaybackTime(position)}</span>
+            <PlaybackSlider
+              max={duration || 1}
+              step={0.1}
+              value={position}
+              aria-label="Позиция воспроизведения"
+              disabled={!duration}
+              onChange={(event) => seekTrack(event.currentTarget.valueAsNumber)}
+            />
+            <span>{formatPlaybackTime(duration)}</span>
+          </div>
+          <div className="audio-preview-actions grid items-center gap-2">
+            <div className="flex items-center justify-center gap-2 [grid-area:transport]">
+              <button
+                type="button"
+                className={control}
+                aria-label="Предыдущий трек"
+                disabled={!active || !canAdvance || playback.loadingNext}
+                onClick={() => void advanceTrack(-1)}
+              >
+                <SkipBack size={21} />
+              </button>
+              <button
+                type="button"
+                className="inline-grid size-14 shrink-0 place-items-center rounded-theme bg-brand text-theme-on-brand transition-colors hover:bg-brand-hover disabled:opacity-40 motion-safe:transition motion-safe:active:scale-95"
+                aria-label={playing ? 'Пауза' : 'Воспроизвести'}
+                disabled={!session}
+                onClick={() => toggleTrack(session)}
+              >
+                {playing ? (
+                  <Pause size={26} fill="currentColor" />
+                ) : (
+                  <Play size={26} fill="currentColor" />
+                )}
+              </button>
+              <button
+                type="button"
+                className={control}
+                aria-label="Следующий трек"
+                disabled={!active || !canAdvance || playback.loadingNext}
+                onClick={() => void advanceTrack(1)}
+              >
+                <SkipForward size={21} />
+              </button>
+            </div>
+            <div className="justify-self-start [grid-area:modes]">
+              <PlaybackModes hasPlaylist={canAdvance} />
+            </div>
+            <div className="justify-self-end [grid-area:volume]">
+              <PlaybackVolume />
+            </div>
+          </div>
         </div>
-        <div className="audio-preview-actions grid items-center gap-2">
-          <div className="flex items-center justify-center gap-2 [grid-area:transport]">
-            <button
-              type="button"
-              className={control}
-              aria-label="Предыдущий трек"
-              disabled={!active || !canAdvance || playback.loadingNext}
-              onClick={() => void advanceTrack(-1)}
-            >
-              <SkipBack size={21} />
-            </button>
-            <button
-              type="button"
-              className="inline-grid size-14 shrink-0 place-items-center rounded-theme bg-brand text-theme-on-brand transition-colors hover:bg-brand-hover disabled:opacity-40 motion-safe:transition motion-safe:active:scale-95"
-              aria-label={playing ? 'Пауза' : 'Воспроизвести'}
-              disabled={!session}
-              onClick={() => toggleTrack(session)}
-            >
-              {playing ? (
-                <Pause size={26} fill="currentColor" />
-              ) : (
-                <Play size={26} fill="currentColor" />
-              )}
-            </button>
-            <button
-              type="button"
-              className={control}
-              aria-label="Следующий трек"
-              disabled={!active || !canAdvance || playback.loadingNext}
-              onClick={() => void advanceTrack(1)}
-            >
-              <SkipForward size={21} />
-            </button>
-          </div>
-          <div className="justify-self-start [grid-area:modes]">
-            <PlaybackModes hasPlaylist={canAdvance} />
-          </div>
-          <div className="justify-self-end [grid-area:volume]">
-            <PlaybackVolume />
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

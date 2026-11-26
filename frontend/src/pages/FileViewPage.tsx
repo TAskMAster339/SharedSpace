@@ -477,19 +477,20 @@ const FileViewPage: React.FC = () => {
           : directory?.purpose === 'audio'
             ? directory.name
             : undefined;
-        const session = fileUrl
-          ? {
-              id: file.id,
-              name: file.filename,
-              cover: file.cover_url,
-              src: fileUrl,
-              directoryId: directory?.purpose === 'audio' ? directory.id : undefined,
-              collection,
-              favoriteCursor: isFavoritesPlaylist
-                ? (searchParams.get('cursor') ?? undefined)
-                : undefined,
-            }
-          : undefined;
+        const session =
+          fileUrl && directory?.purpose === 'audio'
+            ? {
+                id: file.id,
+                name: file.filename,
+                cover: file.cover_url,
+                src: fileUrl,
+                directoryId: directory?.purpose === 'audio' ? directory.id : undefined,
+                collection,
+                favoriteCursor: isFavoritesPlaylist
+                  ? (searchParams.get('cursor') ?? undefined)
+                  : undefined,
+              }
+            : undefined;
         return (
           <AudioPreview
             key={file.id}
@@ -497,6 +498,7 @@ const FileViewPage: React.FC = () => {
             cover={file.cover_url}
             collection={collection}
             session={session}
+            localSrc={!session ? (fileUrl ?? undefined) : undefined}
             onExpand={
               session
                 ? () => {

@@ -358,12 +358,17 @@ const SharedFile = ({ token, mode, setMode }: SharedFileProps) => {
             key={file.file_id}
             name={file.filename}
             cover={file.cover_url}
-            session={session}
-            onExpand={() => {
-              if (useAudioPlayback.getState().track?.id !== session.id)
-                playTrack(session, false, false);
-              navigate('/player', { state: { returnPath: session.publicPath } });
-            }}
+            session={file.directory_purpose === 'audio' ? session : undefined}
+            localSrc={file.directory_purpose !== 'audio' ? file.url : undefined}
+            onExpand={
+              file.directory_purpose === 'audio'
+                ? () => {
+                    if (useAudioPlayback.getState().track?.publicPath !== session.publicPath)
+                      playTrack(session, false, false);
+                    navigate('/player', { state: { returnPath: session.publicPath } });
+                  }
+                : undefined
+            }
           />
         );
       }

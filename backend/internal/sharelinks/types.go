@@ -28,15 +28,16 @@ type ShareLinkResponse struct {
 }
 
 type FileContentResponse struct {
-	CoverURL      string    `json:"cover_url,omitempty"`
-	URL           string    `json:"url"`
-	FileID        string    `json:"file_id"`
-	Filename      string    `json:"filename"`
-	Extension     string    `json:"extension"`
-	MimeType      string    `json:"mime_type"`
-	Size          int64     `json:"size"`
-	OwnerUsername string    `json:"owner_username"`
-	CreatedAt     time.Time `json:"created_at"`
+	DirectoryPurpose string    `json:"directory_purpose"`
+	CoverURL         string    `json:"cover_url,omitempty"`
+	URL              string    `json:"url"`
+	FileID           string    `json:"file_id"`
+	Filename         string    `json:"filename"`
+	Extension        string    `json:"extension"`
+	MimeType         string    `json:"mime_type"`
+	Size             int64     `json:"size"`
+	OwnerUsername    string    `json:"owner_username"`
+	CreatedAt        time.Time `json:"created_at"`
 }
 
 type DirectoryFileItem struct {
@@ -92,16 +93,17 @@ type shareLinkRecord struct {
 }
 
 type fileRecord struct {
-	CoverKey    string
-	ID          string
-	DirectoryID string
-	OwnerID     string
-	ObjectKey   string
-	Filename    string
-	Extension   string
-	MimeType    string
-	Size        int64
-	CreatedAt   time.Time
+	DirectoryPurpose string
+	CoverKey         string
+	ID               string
+	DirectoryID      string
+	OwnerID          string
+	ObjectKey        string
+	Filename         string
+	Extension        string
+	MimeType         string
+	Size             int64
+	CreatedAt        time.Time
 }
 
 type directoryRecord struct {

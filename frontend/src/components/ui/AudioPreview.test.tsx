@@ -62,3 +62,16 @@ test.each([undefined, '/share/token'])(
     expect(screen.getByRole('button', { name: 'Воспроизвести' })).toBeTruthy();
   },
 );
+
+test('plays ordinary audio only in the file preview and pauses on exit', () => {
+  const pause = jest.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {});
+  const { unmount } = render(<AudioPreview name="Файл.mp3" localSrc="/file.mp3" />);
+  const audio = screen.getByLabelText<HTMLAudioElement>('Файл.mp3');
+
+  expect(audio.controls).toBe(true);
+  expect(screen.queryByRole('button', { name: 'Следующий трек' })).toBeNull();
+  fireEvent.play(audio);
+  expect(playback.useAudioPlayback.getState().track).toBeUndefined();
+  unmount();
+  expect(pause).toHaveBeenCalledTimes(1);
+});

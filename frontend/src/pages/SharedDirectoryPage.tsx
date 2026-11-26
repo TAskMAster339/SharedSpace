@@ -607,19 +607,24 @@ const SharedDirectoryPage: React.FC = () => {
             </div>
           );
         case 'audio': {
-          const session = publicTrack(previewFile);
+          const session = data?.purpose === 'audio' ? publicTrack(previewFile) : undefined;
           return (
             <AudioPreview
               key={previewFile.id}
               name={previewFile.filename}
-              collection={session.collection}
-              cover={session.cover}
+              collection={session?.collection}
+              cover={session?.cover ?? previewFile.cover_url}
               session={session}
-              onExpand={() => {
-                if (useAudioPlayback.getState().track?.id !== session.id)
-                  playTrack(session, false, false);
-                navigate('/player', { state: { returnPath: session.publicPath } });
-              }}
+              localSrc={!session ? previewFile.url : undefined}
+              onExpand={
+                session
+                  ? () => {
+                      if (useAudioPlayback.getState().track?.publicPath !== session.publicPath)
+                        playTrack(session, false, false);
+                      navigate('/player', { state: { returnPath: session.publicPath } });
+                    }
+                  : undefined
+              }
             />
           );
         }
@@ -897,7 +902,9 @@ const SharedDirectoryPage: React.FC = () => {
                 size={formatFileSize(file.size)}
                 to="#"
                 onPlaybackToggle={
-                  iconType === 'audio' ? () => toggleTrack(publicTrack(file)) : undefined
+                  data.purpose === 'audio' && iconType === 'audio'
+                    ? () => toggleTrack(publicTrack(file))
+                    : undefined
                 }
                 playing={
                   playbackActive && playbackTrack?.id === file.id && !!playbackTrack.publicPath

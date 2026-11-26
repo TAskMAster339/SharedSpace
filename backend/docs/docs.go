@@ -5101,6 +5101,9 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "directory_purpose": {
+                    "type": "string"
+                },
                 "extension": {
                     "type": "string"
                 },

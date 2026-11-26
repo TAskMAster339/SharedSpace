@@ -409,15 +409,16 @@ func (s *Service) Resolve(ctx context.Context, token, password string, authentic
 	}
 
 	return FileContentResponse{
-		CoverURL:      s.coverURL(ctx, file.CoverKey),
-		URL:           url,
-		FileID:        file.ID,
-		Filename:      file.Filename,
-		Extension:     file.Extension,
-		MimeType:      file.MimeType,
-		Size:          file.Size,
-		OwnerUsername: username,
-		CreatedAt:     file.CreatedAt,
+		DirectoryPurpose: file.DirectoryPurpose,
+		CoverURL:         s.coverURL(ctx, file.CoverKey),
+		URL:              url,
+		FileID:           file.ID,
+		Filename:         file.Filename,
+		Extension:        file.Extension,
+		MimeType:         file.MimeType,
+		Size:             file.Size,
+		OwnerUsername:    username,
+		CreatedAt:        file.CreatedAt,
 	}, nil
 }
 

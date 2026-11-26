@@ -16,6 +16,7 @@ export interface ShareLink {
 }
 
 export interface ShareLinkResolveResult {
+  directory_purpose?: 'general' | 'audio';
   file_id: string;
   cover_url?: string;
   filename: string;
