@@ -31,10 +31,8 @@ export default function AudioWorkspacePage() {
           name={track.name}
           cover={track.cover}
           collection={track.collection}
-          src={track.src}
           session={track}
           fullScreen
-          onError={() => {}}
           onCollapse={() => navigate(returnPath, { replace: true })}
         />
       ) : (

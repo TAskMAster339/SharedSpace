@@ -1,22 +1,9 @@
-import React, { useLayoutEffect, useRef, useState } from 'react';
-import {
-  ChevronDown,
-  Maximize2,
-  Music2,
-  Pause,
-  Play,
-  Repeat1,
-  SkipBack,
-  SkipForward,
-  Volume2,
-  VolumeX,
-} from 'lucide-react';
+import React from 'react';
+import { ChevronDown, Maximize2, Music2, Pause, Play, SkipBack, SkipForward } from 'lucide-react';
 
 import {
   advanceTrack,
   seekTrack,
-  setTrackVolume,
-  stopTrack,
   toggleTrack,
   useAudioPlayback,
   PlaybackTrack,
@@ -28,14 +15,9 @@ import { cn } from '../../utils/cn';
 import { formatPlaybackTime, PlaybackSlider } from './PlaybackSlider';
 
 interface AudioPreviewProps {
-  src?: string;
   name: string;
   cover?: string;
   collection?: string;
-  onError: () => void;
-  onEnded?: (audio: HTMLAudioElement) => void;
-  onPrevious?: () => void;
-  onNext?: () => void;
   session?: PlaybackTrack;
   onCollapse?: () => void;
   onExpand?: () => void;
@@ -43,34 +25,22 @@ interface AudioPreviewProps {
 }
 
 export function AudioPreview({
-  src,
   name,
   cover,
   collection,
-  onError,
-  onEnded,
-  onPrevious,
-  onNext,
   session,
   onCollapse,
   onExpand,
   fullScreen = false,
 }: AudioPreviewProps) {
-  const audio = useRef<HTMLAudioElement>(null);
-  const [localPlaying, setPlaying] = useState(false);
-  const [localPosition, setPosition] = useState(0);
-  const [localDuration, setDuration] = useState(0);
-  const [localMuted, setMuted] = useState(false);
-  const [localRepeat, setRepeat] = useState(false);
   const playback = useAudioPlayback();
-  const localVolume = playback.volume;
-  useLayoutEffect(() => {
-    if (audio.current) audio.current.volume = localVolume;
-  }, [localVolume, src]);
-  const active = !!session && playback.track?.id === session.id;
-  const playing = session ? active && playback.playing : localPlaying;
-  const position = session ? (active ? playback.position : 0) : localPosition;
-  const duration = session ? (active ? playback.duration : 0) : localDuration;
+  const active =
+    !!session &&
+    playback.track?.id === session.id &&
+    playback.track.publicPath === session.publicPath;
+  const playing = active && playback.playing;
+  const position = active ? playback.position : 0;
+  const duration = active ? playback.duration : 0;
 
   const canAdvance = !!(
     session?.directoryId ||
@@ -78,18 +48,7 @@ export function AudioPreview({
     session?.loadPublicPlaylist
   );
 
-  const togglePlayback = () => {
-    if (session) {
-      toggleTrack(session);
-      return;
-    }
-    const player = audio.current;
-    if (!player) return;
-    if (player.paused) void player.play().catch(onError);
-    else player.pause();
-  };
-
-  const trackKey = session?.id ?? src ?? name;
+  const trackKey = session?.id ?? name;
   const trackMotion = 'motion-safe:animate-[audio-preview-enter_200ms_ease-out_both]';
 
   return (
@@ -156,29 +115,6 @@ export function AudioPreview({
         </p>
         {collection && <p className="text-sm text-theme-secondary">{collection}</p>}
       </div>
-      {src && !session && (
-        <audio
-          ref={audio}
-          aria-label={name}
-          src={src}
-          loop={localRepeat}
-          preload="metadata"
-          onPlay={() => {
-            if (useAudioPlayback.getState().track) stopTrack();
-            setPlaying(true);
-          }}
-          onPause={() => setPlaying(false)}
-          onDurationChange={({ currentTarget }) =>
-            setDuration(Number.isFinite(currentTarget.duration) ? currentTarget.duration : 0)
-          }
-          onTimeUpdate={({ currentTarget }) => setPosition(currentTarget.currentTime)}
-          onEnded={({ currentTarget }) => {
-            setPlaying(false);
-            onEnded?.(currentTarget);
-          }}
-          onError={onError}
-        />
-      )}
       <div className="audio-preview-controls w-full max-w-xl space-y-3">
         <div className="flex items-center gap-3 text-xs tabular-nums text-theme-secondary">
           <span>{formatPlaybackTime(position)}</span>
@@ -188,14 +124,7 @@ export function AudioPreview({
             value={position}
             aria-label="Позиция воспроизведения"
             disabled={!duration}
-            onChange={(event) => {
-              const value = event.currentTarget.valueAsNumber;
-              if (session) seekTrack(value);
-              else {
-                if (audio.current) audio.current.currentTime = value;
-                setPosition(value);
-              }
-            }}
+            onChange={(event) => seekTrack(event.currentTarget.valueAsNumber)}
           />
           <span>{formatPlaybackTime(duration)}</span>
         </div>
@@ -205,8 +134,8 @@ export function AudioPreview({
               type="button"
               className={control}
               aria-label="Предыдущий трек"
-              disabled={session ? !active || !canAdvance || playback.loadingNext : !onPrevious}
-              onClick={session ? () => void advanceTrack(-1) : onPrevious}
+              disabled={!active || !canAdvance || playback.loadingNext}
+              onClick={() => void advanceTrack(-1)}
             >
               <SkipBack size={21} />
             </button>
@@ -214,8 +143,8 @@ export function AudioPreview({
               type="button"
               className="inline-grid size-14 shrink-0 place-items-center rounded-theme bg-brand text-theme-on-brand transition-colors hover:bg-brand-hover disabled:opacity-40 motion-safe:transition motion-safe:active:scale-95"
               aria-label={playing ? 'Пауза' : 'Воспроизвести'}
-              disabled={!src}
-              onClick={togglePlayback}
+              disabled={!session}
+              onClick={() => toggleTrack(session)}
             >
               {playing ? (
                 <Pause size={26} fill="currentColor" />
@@ -227,61 +156,17 @@ export function AudioPreview({
               type="button"
               className={control}
               aria-label="Следующий трек"
-              disabled={session ? !active || !canAdvance || playback.loadingNext : !onNext}
-              onClick={session ? () => void advanceTrack(1) : onNext}
+              disabled={!active || !canAdvance || playback.loadingNext}
+              onClick={() => void advanceTrack(1)}
             >
               <SkipForward size={21} />
             </button>
           </div>
           <div className="justify-self-start [grid-area:modes]">
-            {session ? (
-              <PlaybackModes hasPlaylist={canAdvance} />
-            ) : (
-              <button
-                type="button"
-                className={control}
-                aria-label="Повторять трек"
-                aria-pressed={localRepeat}
-                onClick={() => setRepeat(!localRepeat)}
-              >
-                <Repeat1 size={20} className={localRepeat ? 'text-brand' : undefined} />
-              </button>
-            )}
+            <PlaybackModes hasPlaylist={canAdvance} />
           </div>
           <div className="justify-self-end [grid-area:volume]">
-            {session ? (
-              <PlaybackVolume />
-            ) : (
-              <div className="flex w-24 shrink-0 items-center gap-1">
-                <button
-                  type="button"
-                  className={control}
-                  aria-label={localMuted ? 'Включить звук' : 'Выключить звук'}
-                  onClick={() => {
-                    if (audio.current) audio.current.muted = !localMuted;
-                    setMuted(!localMuted);
-                  }}
-                >
-                  {localMuted || localVolume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
-                </button>
-                <PlaybackSlider
-                  max={1}
-                  step={0.01}
-                  value={localMuted ? 0 : localVolume}
-                  aria-label="Громкость"
-                  showPercentage
-                  onChange={(event) => {
-                    const value = event.currentTarget.valueAsNumber;
-                    if (audio.current) {
-                      audio.current.volume = value;
-                      audio.current.muted = false;
-                    }
-                    setMuted(false);
-                    setTrackVolume(value);
-                  }}
-                />
-              </div>
-            )}
+            <PlaybackVolume />
           </div>
         </div>
       </div>

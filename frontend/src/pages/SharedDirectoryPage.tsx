@@ -614,14 +614,12 @@ const SharedDirectoryPage: React.FC = () => {
               name={previewFile.filename}
               collection={session.collection}
               cover={session.cover}
-              src={previewFile.url}
               session={session}
               onExpand={() => {
                 if (useAudioPlayback.getState().track?.id !== session.id)
                   playTrack(session, false, false);
                 navigate('/player', { state: { returnPath: session.publicPath } });
               }}
-              onError={() => setIframeError(true)}
             />
           );
         }

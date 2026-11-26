@@ -21,7 +21,7 @@ export const ALLOWED_CONVERT_FORMATS: Record<string, string[]> = {
   'audio/flac': ['mp3', 'wav', 'ogg', 'aac'],
   'audio/ogg': ['mp3', 'wav', 'flac', 'aac'],
   'audio/aac': ['mp3', 'wav', 'flac', 'ogg'],
-  'audio/mp4': ['mp3', 'wav', 'flac', 'ogg', 'aac'],
+  'audio/mp4': ['mp3', 'wav', 'flac', 'ogg'],
 };
 
 // Поддерживаемые форматы по расширению
@@ -43,7 +43,7 @@ export const ALLOWED_CONVERT_BY_EXTENSION: Record<string, string[]> = {
   flac: ['mp3', 'wav', 'ogg', 'aac'],
   ogg: ['mp3', 'wav', 'flac', 'aac'],
   aac: ['mp3', 'wav', 'flac', 'ogg'],
-  m4a: ['mp3', 'wav', 'flac', 'ogg', 'aac'],
+  m4a: ['mp3', 'wav', 'flac', 'ogg'],
 };
 
 export function isConvertSupported(mimeType: string, extension: string): boolean {

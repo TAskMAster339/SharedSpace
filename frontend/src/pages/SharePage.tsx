@@ -358,14 +358,12 @@ const SharedFile = ({ token, mode, setMode }: SharedFileProps) => {
             key={file.file_id}
             name={file.filename}
             cover={file.cover_url}
-            src={file.url}
             session={session}
             onExpand={() => {
               if (useAudioPlayback.getState().track?.id !== session.id)
                 playTrack(session, false, false);
               navigate('/player', { state: { returnPath: session.publicPath } });
             }}
-            onError={handleIframeError}
           />
         );
       }

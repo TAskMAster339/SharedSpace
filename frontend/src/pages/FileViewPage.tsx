@@ -496,7 +496,6 @@ const FileViewPage: React.FC = () => {
             name={file.filename}
             cover={file.cover_url}
             collection={collection}
-            src={fileUrl ?? undefined}
             session={session}
             onExpand={
               session
@@ -509,7 +508,6 @@ const FileViewPage: React.FC = () => {
                   }
                 : undefined
             }
-            onError={handleIframeError}
           />
         );
       }
