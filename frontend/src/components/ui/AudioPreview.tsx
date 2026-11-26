@@ -77,6 +77,17 @@ export function AudioPreview({
     session?.loadPublicPlaylist
   );
 
+  const togglePlayback = () => {
+    if (session) {
+      toggleTrack(session);
+      return;
+    }
+    const player = audio.current;
+    if (!player) return;
+    if (player.paused) void player.play().catch(onError);
+    else player.pause();
+  };
+
   const control =
     'inline-grid size-11 place-items-center rounded-theme text-theme-secondary transition-colors hover:bg-theme-hover hover:text-theme-primary disabled:opacity-40 motion-safe:transition motion-safe:active:scale-95';
 
@@ -116,7 +127,7 @@ export function AudioPreview({
       )}
       <div
         className={cn(
-          'grid aspect-square w-full place-items-center overflow-hidden rounded-theme border border-theme bg-brand-light text-brand',
+          'relative grid aspect-square w-full place-items-center overflow-hidden rounded-theme border border-theme bg-brand-light text-brand',
           fullScreen
             ? 'max-w-[min(27rem,max(9rem,calc(100dvh-21rem)))] shadow-theme-card'
             : 'max-w-[17rem] sm:max-w-[20rem]',
@@ -126,6 +137,26 @@ export function AudioPreview({
           <img src={cover} alt="" className="size-full object-cover" />
         ) : (
           <Music2 className="size-16" aria-hidden="true" strokeWidth={1.5} />
+        )}
+        {session?.publicPath && src && !fullScreen && (
+          <button
+            type="button"
+            aria-label={`${playing ? 'Пауза' : 'Воспроизвести'}: ${name}`}
+            onClick={togglePlayback}
+            className={cn(
+              'absolute inset-0 grid place-items-center bg-black/35 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-brand motion-safe:transition-opacity',
+              !playing &&
+                '[@media(hover:hover)]:opacity-0 hover:!opacity-100 focus-visible:!opacity-100',
+            )}
+          >
+            <span className="grid size-14 place-items-center rounded-theme bg-brand text-theme-on-brand">
+              {playing ? (
+                <Pause size={26} fill="currentColor" />
+              ) : (
+                <Play size={26} fill="currentColor" />
+              )}
+            </span>
+          </button>
         )}
       </div>
       <div className="min-w-0 max-w-full space-y-1 text-center">
@@ -208,16 +239,7 @@ export function AudioPreview({
               className="inline-grid size-14 shrink-0 place-items-center rounded-theme bg-brand text-theme-on-brand transition-colors hover:bg-brand-hover disabled:opacity-40 motion-safe:transition motion-safe:active:scale-95"
               aria-label={playing ? 'Пауза' : 'Воспроизвести'}
               disabled={!src}
-              onClick={() => {
-                if (session) {
-                  toggleTrack(session);
-                  return;
-                }
-                const player = audio.current;
-                if (!player) return;
-                if (player.paused) void player.play().catch(onError);
-                else player.pause();
-              }}
+              onClick={togglePlayback}
             >
               {playing ? (
                 <Pause size={26} fill="currentColor" />

@@ -1,5 +1,5 @@
-import { playTrack } from '../store/audioPlaybackStore';
-import React, { useEffect, useState, useCallback } from 'react';
+import { playTrack, resumeTrack, toggleTrack, useAudioPlayback } from '../store/audioPlaybackStore';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Star, List, LayoutGrid, Play } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
@@ -28,6 +28,11 @@ const PAGE_LIMIT = 20;
 const FavoritesPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const purpose = searchParams.get('tab') === 'music' ? 'audio' : 'general';
+  const playbackTrack = useAudioPlayback((state) => state.track);
+  const playbackActive = useAudioPlayback((state) => state.playing);
+  const playbackRequest = useRef<AbortController>();
+  useEffect(() => () => playbackRequest.current?.abort(), [purpose]);
+
   const trackPath = (file: FavoriteFile) => {
     const path = `/files/${file.id}`;
     if (purpose !== 'audio') return path;
@@ -244,6 +249,35 @@ const FavoritesPage: React.FC = () => {
     [accessToken, renameState, showToast, loadFavorites],
   );
 
+  const startFavorite = async (file: FavoriteFile, toggle: boolean) => {
+    if (!accessToken) return;
+    playbackRequest.current?.abort();
+    const cursor = `${file.favorited_at}|${file.id}`;
+    const active = useAudioPlayback.getState().track;
+    if (active?.id === file.id && active.favoriteCursor === cursor) {
+      if (toggle) toggleTrack();
+      else resumeTrack();
+      return;
+    }
+    const controller = new AbortController();
+    playbackRequest.current = controller;
+    try {
+      const { url } = await getFileContentUrl(accessToken, file.id, controller.signal);
+      if (!controller.signal.aborted) {
+        playTrack({
+          id: file.id,
+          src: url,
+          name: file.filename,
+          cover: file.cover_url,
+          collection: 'Избранная музыка',
+          favoriteCursor: cursor,
+        });
+      }
+    } catch {
+      if (!controller.signal.aborted) showToast('Не удалось запустить трек', 'error');
+    }
+  };
+
   return (
     <div className="flex flex-col flex-1 space-y-6" onContextMenu={handlePageContextMenu}>
       <SEOHead title="Избранное" description="Файлы, отмеченные звёздочкой для быстрого доступа." />
@@ -255,7 +289,13 @@ const FavoritesPage: React.FC = () => {
           </h1>
           <p className="text-sm text-theme-muted">Файлы, отмеченные звёздочкой</p>
         </div>
-        <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} className="mt-1" />
+        {purpose !== 'audio' && (
+          <ViewToggle
+            viewMode={viewMode}
+            onViewModeChange={handleViewModeChange}
+            className="mt-1"
+          />
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -278,23 +318,7 @@ const FavoritesPage: React.FC = () => {
         {purpose === 'audio' && !isLoading && files.length > 0 && (
           <button
             type="button"
-            onClick={async () => {
-              if (!accessToken) return;
-              const file = files[0];
-              try {
-                const { url } = await getFileContentUrl(accessToken, file.id);
-                playTrack({
-                  id: file.id,
-                  src: url,
-                  name: file.filename,
-                  cover: file.cover_url,
-                  collection: 'Избранная музыка',
-                  favoriteCursor: `${file.favorited_at}|${file.id}`,
-                });
-              } catch {
-                showToast('Не удалось запустить трек', 'error');
-              }
-            }}
+            onClick={() => void startFavorite(files[0], false)}
             className="ml-auto inline-flex items-center gap-2 rounded-theme bg-brand px-4 py-2 text-sm font-medium text-theme-on-brand motion-safe:transition-transform motion-safe:active:scale-95"
           >
             <Play size={16} aria-hidden="true" />
@@ -316,13 +340,13 @@ const FavoritesPage: React.FC = () => {
         <div className="space-y-6">
           <ItemGroup
             title={purpose === 'audio' ? 'Избранная музыка' : 'Файлы'}
-            viewMode={viewMode}
+            viewMode={purpose === 'audio' ? 'list' : viewMode}
             hasMore={hasMore}
             isLoadingMore={isLoadingMore}
             sentinelRef={sentinelRef}
           >
             {files.map((file) =>
-              viewMode === 'grid' ? (
+              purpose !== 'audio' && viewMode === 'grid' ? (
                 <FileGridItem
                   showProperties
                   key={file.id}
@@ -364,6 +388,14 @@ const FavoritesPage: React.FC = () => {
                   size={formatFileSize(file.size)}
                   type={resolveFileIconType(file.mime_type, file.extension)}
                   to={trackPath(file)}
+                  onPlaybackToggle={
+                    purpose === 'audio' ? () => void startFavorite(file, true) : undefined
+                  }
+                  playing={
+                    playbackActive &&
+                    playbackTrack?.id === file.id &&
+                    !!playbackTrack.favoriteCursor
+                  }
                   isFavorite={true}
                   hasShareLinks={itemsWithLinks.has(file.id)}
                   onToggleFavorite={handleToggleFavorite}

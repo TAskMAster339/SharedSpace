@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useLayoutEffect, useRef } from 'react';
 import {
   ChevronDown,
   ChevronUp,
@@ -7,13 +7,11 @@ import {
   Play,
   SkipBack,
   SkipForward,
-  Square,
   X,
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   advanceTrack,
-  pauseTrack,
   seekTrack,
   stopTrack,
   toggleTrack,
@@ -69,17 +67,6 @@ function Transport() {
         onClick={() => void advanceTrack(1)}
       >
         <SkipForward size={19} />
-      </button>
-      <button
-        type="button"
-        className={control}
-        aria-label="Остановить воспроизведение"
-        onClick={() => {
-          pauseTrack();
-          seekTrack(0);
-        }}
-      >
-        <Square size={16} />
       </button>
     </div>
   );
@@ -146,12 +133,35 @@ function StopButton() {
 export function DesktopAudioMiniPlayer() {
   const { show, compact, track } = useMiniPlayback();
   const location = useLocation();
+  const panel = useRef<HTMLElement>(null);
+  const previousBounds = useRef<DOMRect>();
+  const runningAnimation = useRef<Animation>();
+
+  useLayoutEffect(() => {
+    const element = panel.current;
+    const previous = previousBounds.current;
+    previousBounds.current = undefined;
+    runningAnimation.current?.cancel();
+    if (!element || !previous || window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+      return;
+    const next = element.getBoundingClientRect();
+    runningAnimation.current = element.animate(
+      [
+        { width: `${previous.width}px`, height: `${previous.height}px`, overflow: 'hidden' },
+        { width: `${next.width}px`, height: `${next.height}px`, overflow: 'hidden' },
+      ],
+      { duration: 240, easing: 'cubic-bezier(0.2, 0.75, 0.25, 1)' },
+    );
+    return () => runningAnimation.current?.cancel();
+  }, [compact]);
+
   if (!show || !track) return null;
   const hasPlaylist = !!(track.directoryId || track.favoriteCursor || track.loadPublicPlaylist);
   return (
     <aside
+      ref={panel}
       aria-label="Мини-плеер"
-      className={`audio-mini-player sticky bottom-4 z-30 mx-4 mb-4 hidden shrink-0 rounded-theme border border-theme bg-theme-secondary shadow-theme-dropdown md:block lg:mx-6 ${compact ? 'ml-auto w-[21rem] max-w-[calc(100%-2rem)] lg:ml-auto' : ''}`}
+      className={`audio-mini-player sticky bottom-4 z-30 mr-4 ml-auto mb-4 hidden shrink-0 rounded-theme border border-theme bg-theme-secondary shadow-theme-dropdown md:block lg:mr-6 ${compact ? 'w-[21rem] max-w-[calc(100%-2rem)]' : 'w-[calc(100%-2rem)] lg:w-[calc(100%-3rem)]'}`}
     >
       <Link
         to="/player"
@@ -184,7 +194,10 @@ export function DesktopAudioMiniPlayer() {
             aria-expanded={!compact}
             className={control}
             aria-label={compact ? 'Развернуть мини-плеер' : 'Свернуть мини-плеер'}
-            onClick={() => useAudioPlayback.setState({ compact: !compact })}
+            onClick={() => {
+              previousBounds.current = panel.current?.getBoundingClientRect();
+              useAudioPlayback.setState({ compact: !compact });
+            }}
           >
             {compact ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
           </button>

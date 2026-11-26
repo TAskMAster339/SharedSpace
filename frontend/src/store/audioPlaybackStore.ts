@@ -96,7 +96,7 @@ export function playTrack(track: PlaybackTrack, preserveOrder = false, autoplay 
       loadingNext: false,
     });
     player.src = track.src;
-  } else if (current.track.src !== track.src) {
+  } else {
     useAudioPlayback.setState({ track });
     if (player.error) player.src = track.src;
   }
@@ -269,11 +269,10 @@ export async function advanceTrack(direction: -1 | 1, finished = false) {
     if (revision === request)
       useToastStore.getState().showToast('Не удалось открыть соседний трек', 'error');
   } finally {
-    if (revision === request)
-      useAudioPlayback.setState({
-        loadingNext: false,
-        ...(finished && useAudioPlayback.getState().repeat === 'off' ? { compact: true } : {}),
-      });
+    if (revision === request) {
+      if (finished && useAudioPlayback.getState().repeat === 'off') stopTrack();
+      else useAudioPlayback.setState({ loadingNext: false });
+    }
   }
 
   function favoriteTrack(entry: Awaited<ReturnType<typeof getFavorites>>['favorites'][number]) {

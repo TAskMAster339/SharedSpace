@@ -1,4 +1,9 @@
-import { PlaybackTrack, playTrack, useAudioPlayback } from '../store/audioPlaybackStore';
+import {
+  PlaybackTrack,
+  playTrack,
+  toggleTrack,
+  useAudioPlayback,
+} from '../store/audioPlaybackStore';
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom';
 import {
@@ -127,6 +132,8 @@ function encodePath(ids: string[]): string {
 
 const SharedDirectoryPage: React.FC = () => {
   const { token } = useParams<{ token: string }>();
+  const playbackTrack = useAudioPlayback((state) => state.track);
+  const playbackActive = useAudioPlayback((state) => state.playing);
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const accessToken = useAuthStore((state) => state.accessToken);
@@ -887,6 +894,12 @@ const SharedDirectoryPage: React.FC = () => {
                 date={formatDate(file.created_at)}
                 size={formatFileSize(file.size)}
                 to="#"
+                onPlaybackToggle={
+                  iconType === 'audio' ? () => toggleTrack(publicTrack(file)) : undefined
+                }
+                playing={
+                  playbackActive && playbackTrack?.id === file.id && !!playbackTrack.publicPath
+                }
                 onClick={(id) => {
                   const f = allFiles.find((x) => x.id === id);
                   if (f) handleFileClick(f);
