@@ -603,3 +603,35 @@
 .playback-volume input:is(:focus-visible, :active) + .playback-volume-value {
   visibility: visible;
 }
+
+@keyframes mini-track-in {
+  from {
+    opacity: 0;
+    transform: translateX(-0.75rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes mini-track-out {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(0.75rem);
+  }
+}
+
+.mini-playback-input::-webkit-slider-runnable-track,
+.mini-playback-input::-webkit-slider-thumb {
+  background: transparent;
+}
+
+.mini-playback-input::-moz-range-track,
+.mini-playback-input::-moz-range-thumb {
+  background: transparent;
+}

@@ -140,7 +140,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, fillViewport = false }
       {isAuthenticated && !workspace && <MobileBottomNav />}
       {isAuthenticated && !reader && <StorageUsageModal />}
       {isAuthenticated && <UploadProgressModal />}
-      {!workspace && <ScrollToTopButton desktopPlayerVisible={showMiniPlayer} />}
+      {!workspace && <ScrollToTopButton />}
     </div>
   );
 };

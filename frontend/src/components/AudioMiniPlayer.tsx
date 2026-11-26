@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useRef } from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import {
   ChevronDown,
   ChevronUp,
@@ -13,6 +13,7 @@ import { useToastStore } from '../hooks/useToast';
 import { Link, useLocation } from 'react-router-dom';
 import {
   advanceTrack,
+  PlaybackTrack,
   seekTrack,
   stopTrack,
   toggleTrack,
@@ -73,14 +74,9 @@ function Transport() {
   );
 }
 
-function TrackLink() {
-  const track = useAudioPlayback((state) => state.track);
-  if (!track) return null;
+function TrackDetails({ track }: { track: PlaybackTrack }) {
   return (
-    <Link
-      to={trackPath(track)}
-      className="flex min-w-0 items-center gap-3 rounded-theme text-left hover:text-brand"
-    >
+    <>
       <span className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-theme bg-brand-light text-brand">
         {track.cover ? (
           <img src={track.cover} alt="" className="size-full object-cover" />
@@ -94,24 +90,122 @@ function TrackLink() {
           <span className="block truncate text-xs text-theme-secondary">{track.collection}</span>
         )}
       </span>
-    </Link>
+    </>
+  );
+}
+
+const trackDetailsClass = 'flex min-w-0 items-center gap-3 rounded-theme text-left';
+
+function TrackLink() {
+  const track = useAudioPlayback((state) => state.track);
+  const priorTrack = useRef(track);
+  const [leaving, setLeaving] = useState<PlaybackTrack>();
+  const trackId = track?.id;
+
+  useLayoutEffect(() => {
+    const previous = priorTrack.current;
+    priorTrack.current = useAudioPlayback.getState().track;
+    if (
+      !previous ||
+      !trackId ||
+      previous.id === trackId ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
+      setLeaving(undefined);
+      return;
+    }
+    setLeaving(previous);
+    const timer = window.setTimeout(() => setLeaving(undefined), 200);
+    return () => window.clearTimeout(timer);
+  }, [trackId]);
+
+  if (!track) return null;
+  return (
+    <div className="relative overflow-hidden rounded-theme">
+      {leaving && (
+        <div
+          key={leaving.id}
+          aria-hidden="true"
+          className={`${trackDetailsClass} pointer-events-none absolute inset-0 animate-[mini-track-out_200ms_ease-out_both]`}
+        >
+          <TrackDetails track={leaving} />
+        </div>
+      )}
+      <Link
+        key={track.id}
+        to={trackPath(track)}
+        className={`${trackDetailsClass} hover:text-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand ${leaving ? 'animate-[mini-track-in_200ms_ease-out_both]' : ''}`}
+      >
+        <TrackDetails track={track} />
+      </Link>
+    </div>
   );
 }
 
 function PlaybackProgress() {
+  const trackId = useAudioPlayback((state) => state.track?.id);
   const duration = useAudioPlayback((state) => state.duration);
   const position = useAudioPlayback((state) => state.position);
+  const progress = duration ? Math.min(1, Math.max(0, position / duration)) : 0;
+  const previous = useRef({ trackId, progress });
+  const trackFill = useRef<HTMLSpanElement>(null);
+  const thumb = useRef<HTMLSpanElement>(null);
+
+  useLayoutEffect(() => {
+    const prior = previous.current;
+    previous.current = { trackId, progress };
+    if (
+      prior.trackId === trackId ||
+      !prior.trackId ||
+      !trackId ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    )
+      return;
+    const motion = { duration: 200, easing: 'cubic-bezier(0.2, 0.7, 0.25, 1)' };
+    trackFill.current?.animate(
+      [{ transform: `scaleX(${prior.progress})` }, { transform: `scaleX(${progress})` }],
+      motion,
+    );
+    thumb.current?.animate(
+      [
+        { transform: `translateX(${prior.progress * 100}%)` },
+        { transform: `translateX(${progress * 100}%)` },
+      ],
+      motion,
+    );
+  }, [progress, trackId]);
+
   return (
     <div className="flex w-full items-center gap-2 text-xs tabular-nums text-theme-secondary">
       <span>{formatPlaybackTime(position)}</span>
-      <PlaybackSlider
-        max={duration || 1}
-        step={0.1}
-        value={position}
-        aria-label="Позиция воспроизведения"
-        disabled={!duration}
-        onChange={(event) => seekTrack(event.currentTarget.valueAsNumber)}
-      />
+      <div className="relative flex min-w-0 flex-1 items-center">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-[7px] h-1 rounded-full bg-[var(--border)]"
+        >
+          <span
+            ref={trackFill}
+            className="absolute inset-0 origin-left rounded-full bg-brand"
+            style={{ transform: `scaleX(${progress})` }}
+          />
+          <span
+            ref={thumb}
+            className="absolute inset-0"
+            style={{ transform: `translateX(${progress * 100}%)` }}
+          >
+            <span className="absolute left-0 top-1/2 size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand" />
+          </span>
+        </div>
+        <PlaybackSlider
+          className="mini-playback-input relative"
+          max={duration || 1}
+          step={0.1}
+          value={position}
+          aria-label="Позиция воспроизведения"
+          disabled={!duration}
+          onChange={(event) => seekTrack(event.currentTarget.valueAsNumber)}
+        />
+      </div>
       <span>{formatPlaybackTime(duration)}</span>
     </div>
   );

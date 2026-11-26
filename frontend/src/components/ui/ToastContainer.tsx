@@ -40,6 +40,28 @@ export const ToastContainer: React.FC = () => {
     if (!shown && element.matches(':popover-open')) element.hidePopover();
   }, [shown, supportsPopover]);
 
+  React.useLayoutEffect(() => {
+    const element = stack.current;
+    if (!element || !shown) return;
+    const update = () => {
+      const bounds = element.getBoundingClientRect();
+      useToastStore
+        .getState()
+        .setToastDesktopTopOffsetPx(
+          bounds.height ? Math.ceil(window.innerHeight - bounds.top + 12) : 0,
+        );
+    };
+    update();
+    const observer = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(update);
+    observer?.observe(element);
+    window.addEventListener('resize', update);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', update);
+      useToastStore.getState().setToastDesktopTopOffsetPx(0);
+    };
+  }, [shown, toastDesktopBottomPx, uploadsMinimized]);
+
   return (
     <>
       <div className="sr-only" role="status" aria-relevant="additions">
