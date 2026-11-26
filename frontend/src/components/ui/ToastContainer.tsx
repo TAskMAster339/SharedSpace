@@ -74,7 +74,7 @@ export const ToastContainer: React.FC = () => {
         {...(supportsPopover ? { popover: 'manual' } : {})}
         role="region"
         aria-label="Уведомления"
-        className={`pointer-events-none fixed m-0 max-w-none top-auto right-4 left-4 md:left-auto z-[60] flex-col gap-2 md:w-96 border-0 bg-transparent p-0 max-h-[min(50dvh,24rem)] overflow-y-auto ${bottomClass} ${shown ? 'flex' : 'hidden'}`}
+        className={`pointer-events-none fixed m-0 max-w-none top-auto right-4 left-4 md:left-auto lg:right-6 z-[60] flex-col gap-2 md:w-96 border-0 bg-transparent p-0 max-h-[min(50dvh,24rem)] overflow-y-auto ${bottomClass} ${shown ? 'flex' : 'hidden'}`}
         style={
           {
             '--toast-bottom': `${toastMobileBottomPx}px`,
