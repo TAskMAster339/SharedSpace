@@ -141,26 +141,6 @@ export function AudioPreview({
         ) : (
           <Music2 className="size-16" aria-hidden="true" strokeWidth={1.5} />
         )}
-        {session && src && !fullScreen && (
-          <button
-            type="button"
-            aria-label={`${playing ? 'Пауза' : 'Воспроизвести'}: ${name}`}
-            onClick={togglePlayback}
-            className={cn(
-              'absolute inset-0 grid place-items-center bg-black/35 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-brand motion-safe:transition-opacity',
-              !playing &&
-                '[@media(hover:hover)]:opacity-0 hover:!opacity-100 focus-visible:!opacity-100',
-            )}
-          >
-            <span className="grid size-14 place-items-center rounded-theme bg-brand text-theme-on-brand">
-              {playing ? (
-                <Pause size={26} fill="currentColor" />
-              ) : (
-                <Play size={26} fill="currentColor" />
-              )}
-            </span>
-          </button>
-        )}
       </div>
       <div
         key={`details-${trackKey}`}

@@ -34,3 +34,23 @@ test('keeps the fullscreen shortcut in preview and shows the return control only
   fireEvent.click(screen.getByRole('button', { name: 'Выйти из полноэкранного плеера' }));
   expect(onCollapse).toHaveBeenCalledTimes(1);
 });
+
+test.each([undefined, '/share/token'])(
+  'keeps the track cover non-interactive (%s)',
+  (publicPath) => {
+    const session = { id: 'track', name: 'Трек', src: '/track.mp3', publicPath };
+    render(
+      <AudioPreview
+        name={session.name}
+        src={session.src}
+        cover="/cover.jpg"
+        session={session}
+        onError={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByAltText('')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Воспроизвести: Трек' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Воспроизвести' })).toBeTruthy();
+  },
+);
