@@ -422,6 +422,10 @@ const SharedDirectoryPage: React.FC = () => {
       ...(pathParam ? { path: pathParam } : {}),
       file: file.id,
     })}`,
+    publicPlaylistPath:
+      data?.purpose === 'audio'
+        ? `/share/dir/${token}${pathParam ? `?${new URLSearchParams({ path: pathParam })}` : ''}`
+        : undefined,
     loadPublicPlaylist: data?.purpose === 'audio' ? loadPublicPlaylist : undefined,
   });
 
@@ -608,7 +612,8 @@ const SharedDirectoryPage: React.FC = () => {
             <AudioPreview
               key={previewFile.id}
               name={previewFile.filename}
-              cover={previewFile.cover_url ?? data?.cover_url}
+              collection={session.collection}
+              cover={session.cover}
               src={previewFile.url}
               session={session}
               onExpand={() => {

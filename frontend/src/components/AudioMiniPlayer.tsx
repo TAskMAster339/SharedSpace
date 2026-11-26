@@ -14,6 +14,7 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   advanceTrack,
   PlaybackTrack,
+  playlistPath,
   seekTrack,
   stopTrack,
   toggleTrack,
@@ -74,7 +75,17 @@ function Transport() {
   );
 }
 
-function TrackDetails({ track }: { track: PlaybackTrack }) {
+const trackLinkClass =
+  'block truncate rounded-theme hover:text-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand';
+
+function TrackDetails({
+  track,
+  interactive = false,
+}: {
+  track: PlaybackTrack;
+  interactive?: boolean;
+}) {
+  const collectionPath = interactive ? playlistPath(track) : undefined;
   return (
     <>
       <span className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-theme bg-brand-light text-brand">
@@ -85,10 +96,21 @@ function TrackDetails({ track }: { track: PlaybackTrack }) {
         )}
       </span>
       <span className="min-w-0">
-        <span className="block truncate text-sm font-medium">{track.name}</span>
-        {track.collection && (
-          <span className="block truncate text-xs text-theme-secondary">{track.collection}</span>
+        {interactive ? (
+          <Link to={trackPath(track)} className={`${trackLinkClass} text-sm font-medium`}>
+            {track.name}
+          </Link>
+        ) : (
+          <span className="block truncate text-sm font-medium">{track.name}</span>
         )}
+        {track.collection &&
+          (collectionPath ? (
+            <Link to={collectionPath} className={`${trackLinkClass} text-xs text-theme-secondary`}>
+              {track.collection}
+            </Link>
+          ) : (
+            <span className="block truncate text-xs text-theme-secondary">{track.collection}</span>
+          ))}
       </span>
     </>
   );
@@ -131,13 +153,12 @@ function TrackLink() {
           <TrackDetails track={leaving} />
         </div>
       )}
-      <Link
+      <div
         key={track.id}
-        to={trackPath(track)}
-        className={`${trackDetailsClass} hover:text-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand ${leaving ? 'animate-[mini-track-in_200ms_ease-out_both]' : ''}`}
+        className={`${trackDetailsClass} ${leaving ? 'animate-[mini-track-in_200ms_ease-out_both]' : ''}`}
       >
-        <TrackDetails track={track} />
-      </Link>
+        <TrackDetails track={track} interactive />
+      </div>
     </div>
   );
 }

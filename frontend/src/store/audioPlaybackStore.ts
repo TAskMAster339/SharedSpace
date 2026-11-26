@@ -16,6 +16,7 @@ export interface PlaybackTrack {
   directoryId?: string;
   favoriteCursor?: string;
   publicPath?: string;
+  publicPlaylistPath?: string;
   loadPublicPlaylist?: () => Promise<PlaybackTrack[]>;
 }
 
@@ -187,6 +188,13 @@ export function trackPath(track: PlaybackTrack) {
   const path = `/files/${track.id}`;
   if (!track.favoriteCursor) return path;
   return `${path}?${new URLSearchParams({ playlist: 'favorites', cursor: track.favoriteCursor })}`;
+}
+
+export function playlistPath(track: PlaybackTrack) {
+  if (track.publicPath) return track.publicPlaylistPath;
+  if (track.favoriteCursor) return '/favorites?tab=music';
+  if (track.directoryId) return `/directories/${track.directoryId}`;
+  return undefined;
 }
 
 export async function advanceTrack(direction: -1 | 1, finished = false) {

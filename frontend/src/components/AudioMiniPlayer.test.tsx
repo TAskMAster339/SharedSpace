@@ -8,7 +8,9 @@ jest.mock(
   'react-router-dom',
   () => ({
     useLocation: () => ({ pathname: '/dashboard', search: '' }),
-    Link: ({ children }: { children: React.ReactNode }) => <a href="/track">{children}</a>,
+    Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
+      <a href={to}>{children}</a>
+    ),
   }),
   { virtual: true },
 );
@@ -39,4 +41,34 @@ test('keeps pause and track navigation available in the compact player', () => {
   expect(toggle).toHaveBeenCalledTimes(1);
   expect(advance.mock.calls).toEqual([[-1], [1]]);
   expect(player.queryByRole('slider')).toBeNull();
+});
+
+test.each([
+  [{ directoryId: 'playlist' }, '/files/track', '/directories/playlist'],
+  [
+    { favoriteCursor: 'date|track', directoryId: 'playlist' },
+    '/files/track?playlist=favorites&cursor=date%7Ctrack',
+    '/favorites?tab=music',
+  ],
+  [
+    {
+      publicPath: '/share/dir/token?path=nested&file=track',
+      publicPlaylistPath: '/share/dir/token?path=nested',
+    },
+    '/share/dir/token?path=nested&file=track',
+    '/share/dir/token?path=nested',
+  ],
+  [{ publicPath: '/share/token', directoryId: 'private' }, '/share/token', undefined],
+] as const)('uses the playback queue for playlist navigation (%j)', (queue, file, playlist) => {
+  playback.useAudioPlayback.setState({
+    track: { id: 'track', name: 'Трек.mp3', src: '/audio.mp3', collection: 'Плейлист', ...queue },
+    compact: true,
+  });
+  render(<DesktopAudioMiniPlayer />);
+
+  const trackLink = screen.getByRole('link', { name: 'Трек.mp3' });
+  const playlistLink = screen.queryByRole('link', { name: 'Плейлист' });
+  expect(trackLink.getAttribute('href')).toBe(file);
+  expect(trackLink.contains(playlistLink)).toBe(false);
+  expect(playlistLink?.getAttribute('href')).toBe(playlist);
 });

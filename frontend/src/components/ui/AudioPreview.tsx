@@ -141,7 +141,7 @@ export function AudioPreview({
         ) : (
           <Music2 className="size-16" aria-hidden="true" strokeWidth={1.5} />
         )}
-        {session?.publicPath && src && !fullScreen && (
+        {session && src && !fullScreen && (
           <button
             type="button"
             aria-label={`${playing ? 'Пауза' : 'Воспроизвести'}: ${name}`}
