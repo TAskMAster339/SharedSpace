@@ -282,7 +282,7 @@ export function DesktopAudioMiniPlayer() {
       <aside
         ref={panel}
         aria-label="Мини-плеер"
-        className={`audio-mini-player pointer-events-auto relative ml-auto rounded-theme border border-theme bg-theme-secondary shadow-theme-dropdown ${compact ? 'w-[21rem] max-w-full' : 'w-full'}`}
+        className={`audio-mini-player pointer-events-auto relative ml-auto rounded-theme border border-theme bg-theme-secondary shadow-theme-dropdown ${compact ? 'w-[26rem] max-w-full' : 'w-full'}`}
       >
         <Link
           to="/player"
@@ -297,12 +297,10 @@ export function DesktopAudioMiniPlayer() {
           <div className="min-w-0 [grid-area:track]">
             <TrackLink />
           </div>
-          {!compact && (
-            <div className="grid min-w-0 justify-items-center gap-0.5 [grid-area:transport]">
-              <PlaybackProgress />
-              <Transport />
-            </div>
-          )}
+          <div className="grid min-w-0 justify-items-center gap-0.5 [grid-area:transport]">
+            {!compact && <PlaybackProgress />}
+            <Transport />
+          </div>
           {!compact && (
             <div className="flex items-center justify-end [grid-area:options]">
               <PlaybackModes hasPlaylist={hasPlaylist} />

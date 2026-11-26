@@ -591,8 +591,8 @@
 }
 
 .audio-mini-layout[data-compact='true'] {
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas: 'track actions';
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas: 'track transport actions';
 }
 
 .playback-volume-value {
