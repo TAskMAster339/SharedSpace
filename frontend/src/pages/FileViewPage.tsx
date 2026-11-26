@@ -498,7 +498,6 @@ const FileViewPage: React.FC = () => {
             collection={collection}
             src={fileUrl ?? undefined}
             session={session}
-            autoPlay={isFavoritesPlaylist}
             onExpand={
               session
                 ? () => {

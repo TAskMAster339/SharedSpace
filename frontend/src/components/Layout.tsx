@@ -55,9 +55,13 @@ export const Layout: React.FC<LayoutProps> = ({ children, fillViewport = false }
   const location = useLocation();
   const showSidebar = isAuthenticated && !workspace;
   const isOnLandingPage = location.pathname === '/';
-  const audioTrackId = useAudioPlayback((state) => state.track?.id);
+  const audioTrack = useAudioPlayback((state) => state.track);
   const showMiniPlayer =
-    isAuthenticated && !!audioTrackId && location.pathname !== `/files/${audioTrackId}`;
+    !!audioTrack &&
+    (isAuthenticated || !!audioTrack.publicPath) &&
+    (audioTrack.publicPath
+      ? location.pathname + location.search !== audioTrack.publicPath
+      : location.pathname !== `/files/${audioTrack.id}`);
 
   return (
     <div className={cn('bg-theme-primary flex flex-col', workspace ? 'h-dvh' : 'min-h-screen')}>

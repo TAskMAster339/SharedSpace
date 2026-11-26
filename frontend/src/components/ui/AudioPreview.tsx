@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import {
   ChevronDown,
   Maximize2,
@@ -14,8 +14,8 @@ import {
 
 import {
   advanceTrack,
-  playTrack,
   seekTrack,
+  setTrackVolume,
   toggleTrack,
   useAudioPlayback,
   PlaybackTrack,
@@ -31,7 +31,6 @@ interface AudioPreviewProps {
   name: string;
   cover?: string;
   collection?: string;
-  autoPlay?: boolean;
   onError: () => void;
   onEnded?: (audio: HTMLAudioElement) => void;
   onPrevious?: () => void;
@@ -47,7 +46,6 @@ export function AudioPreview({
   name,
   cover,
   collection,
-  autoPlay,
   onError,
   onEnded,
   onPrevious,
@@ -61,24 +59,26 @@ export function AudioPreview({
   const [localPlaying, setPlaying] = useState(false);
   const [localPosition, setPosition] = useState(0);
   const [localDuration, setDuration] = useState(0);
-  const [localVolume, setVolume] = useState(1);
   const [localMuted, setMuted] = useState(false);
   const [localRepeat, setRepeat] = useState(false);
   const playback = useAudioPlayback();
+  const localVolume = playback.volume;
+  useLayoutEffect(() => {
+    if (audio.current) audio.current.volume = localVolume;
+  }, [localVolume, src]);
   const active = !!session && playback.track?.id === session.id;
   const playing = session ? active && playback.playing : localPlaying;
   const position = session ? (active ? playback.position : 0) : localPosition;
   const duration = session ? (active ? playback.duration : 0) : localDuration;
 
-  const canAdvance = !!(session?.directoryId || session?.favoriteCursor);
-
-  useEffect(() => {
-    if (autoPlay && session && useAudioPlayback.getState().track?.id !== session.id)
-      playTrack(session);
-  }, [autoPlay, session]);
+  const canAdvance = !!(
+    session?.directoryId ||
+    session?.favoriteCursor ||
+    session?.loadPublicPlaylist
+  );
 
   const control =
-    'inline-grid size-11 place-items-center rounded-full text-theme-secondary transition-colors hover:bg-theme-hover hover:text-theme-primary disabled:opacity-40';
+    'inline-grid size-11 place-items-center rounded-theme text-theme-secondary transition-colors hover:bg-theme-hover hover:text-theme-primary disabled:opacity-40 motion-safe:transition motion-safe:active:scale-95';
 
   return (
     <div
@@ -144,7 +144,6 @@ export function AudioPreview({
           ref={audio}
           aria-label={name}
           src={src}
-          autoPlay={autoPlay}
           loop={localRepeat}
           preload="metadata"
           onPlay={() => {
@@ -206,7 +205,7 @@ export function AudioPreview({
             </button>
             <button
               type="button"
-              className="inline-grid size-14 shrink-0 place-items-center rounded-full bg-brand text-theme-on-brand transition-colors hover:bg-brand-hover disabled:opacity-40"
+              className="inline-grid size-14 shrink-0 place-items-center rounded-theme bg-brand text-theme-on-brand transition-colors hover:bg-brand-hover disabled:opacity-40 motion-safe:transition motion-safe:active:scale-95"
               aria-label={playing ? 'Пауза' : 'Воспроизвести'}
               disabled={!src}
               onClick={() => {
@@ -274,11 +273,11 @@ export function AudioPreview({
                     setMuted(!localMuted);
                   }}
                 >
-                  {localMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                  {localMuted || localVolume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
                 </button>
                 <PlaybackSlider
                   max={1}
-                  step={0.05}
+                  step={0.01}
                   value={localMuted ? 0 : localVolume}
                   aria-label="Громкость"
                   showPercentage
@@ -289,7 +288,7 @@ export function AudioPreview({
                       audio.current.muted = false;
                     }
                     setMuted(false);
-                    setVolume(value);
+                    setTrackVolume(value);
                   }}
                 />
               </div>

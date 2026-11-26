@@ -9,10 +9,12 @@ export function ItemStatusBadges({
   favorite = false,
   shared = false,
   grid = false,
+  className,
 }: {
   favorite?: boolean;
   shared?: boolean;
   grid?: boolean;
+  className?: string;
 }) {
   const position = grid ? 'top-2' : '-top-1.5';
   const sharedOnLeft = grid || favorite;
@@ -25,6 +27,7 @@ export function ItemStatusBadges({
         title={shared ? 'Есть ссылки общего доступа' : undefined}
         className={cn(
           badge,
+          className,
           position,
           grid ? 'left-2' : 'left-0',
           !grid &&
@@ -43,6 +46,7 @@ export function ItemStatusBadges({
         title={favorite ? 'В избранном' : undefined}
         className={cn(
           badge,
+          className,
           position,
           grid ? 'right-2' : '-right-1.5',
           favorite ? 'opacity-100' : '-translate-y-1 scale-75 opacity-0',

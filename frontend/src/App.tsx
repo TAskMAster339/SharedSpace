@@ -116,11 +116,9 @@ const App: React.FC = () => {
         <Route
           path="/player"
           element={
-            <ProtectedRoute>
-              <Layout fillViewport>
-                <AudioWorkspacePage />
-              </Layout>
-            </ProtectedRoute>
+            <Layout fillViewport>
+              <AudioWorkspacePage />
+            </Layout>
           }
         />
 

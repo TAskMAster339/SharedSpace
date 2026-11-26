@@ -15,6 +15,8 @@ export interface PlaybackTrack {
   collection?: string;
   directoryId?: string;
   favoriteCursor?: string;
+  publicPath?: string;
+  loadPublicPlaylist?: () => Promise<PlaybackTrack[]>;
 }
 
 interface PlaybackState {
@@ -30,11 +32,25 @@ interface PlaybackState {
   loadingNext: boolean;
 }
 
+const volumeStorageKey = 'sharedspace-audio-volume';
+const defaultVolume = 0.5;
+
+function readVolume() {
+  try {
+    const saved = localStorage.getItem(volumeStorageKey);
+    if (saved === null || saved.trim() === '') return defaultVolume;
+    const value = Number(saved);
+    return Number.isFinite(value) && value >= 0 && value <= 1 ? value : defaultVolume;
+  } catch {
+    return defaultVolume;
+  }
+}
+
 export const useAudioPlayback = create<PlaybackState>(() => ({
   playing: false,
   position: 0,
   duration: 0,
-  volume: 1,
+  volume: readVolume(),
   muted: false,
   repeat: 'off',
   shuffle: false,
@@ -48,6 +64,11 @@ let shuffleOrder: string[] = [];
 
 export function bindAudioPlayer(element: HTMLAudioElement | null) {
   player = element;
+  if (player) {
+    const { volume, muted } = useAudioPlayback.getState();
+    player.volume = volume;
+    player.muted = muted;
+  }
 }
 
 function reportPlaybackError() {
@@ -65,7 +86,7 @@ export function playTrack(track: PlaybackTrack, preserveOrder = false, autoplay 
   if (!preserveOrder) shuffleOrder = [];
   if (!player) return;
   const current = useAudioPlayback.getState();
-  if (current.track?.id !== track.id) {
+  if (current.track?.id !== track.id || current.track.publicPath !== track.publicPath) {
     revision++;
     useAudioPlayback.setState({
       track,
@@ -84,7 +105,8 @@ export function playTrack(track: PlaybackTrack, preserveOrder = false, autoplay 
 
 export function toggleTrack(track?: PlaybackTrack) {
   if (!player) return;
-  if (track && track.id !== useAudioPlayback.getState().track?.id) {
+  const active = useAudioPlayback.getState().track;
+  if (track && (track.id !== active?.id || track.publicPath !== active.publicPath)) {
     playTrack(track);
   } else if (player.paused) {
     resumeTrack();
@@ -128,6 +150,11 @@ export function setTrackVolume(volume: number) {
     player.muted = false;
   }
   useAudioPlayback.setState({ volume, muted: false });
+  try {
+    localStorage.setItem(volumeStorageKey, String(volume));
+  } catch {
+    return;
+  }
 }
 
 export function toggleTrackMute() {
@@ -156,23 +183,32 @@ export function toggleTrackShuffle() {
 }
 
 export function trackPath(track: PlaybackTrack) {
+  if (track.publicPath) return track.publicPath;
   const path = `/files/${track.id}`;
   if (!track.favoriteCursor) return path;
   return `${path}?${new URLSearchParams({ playlist: 'favorites', cursor: track.favoriteCursor })}`;
 }
 
-export async function advanceTrack(direction: -1 | 1) {
+export async function advanceTrack(direction: -1 | 1, finished = false) {
   const { track, loadingNext } = useAudioPlayback.getState();
   const accessToken = useAuthStore.getState().accessToken;
-  if (!track || !accessToken || loadingNext || (!track.directoryId && !track.favoriteCursor))
+  if (
+    !track ||
+    loadingNext ||
+    (!track.loadPublicPlaylist && (!accessToken || (!track.directoryId && !track.favoriteCursor)))
+  )
     return;
   const request = ++revision;
   useAudioPlayback.setState({ loadingNext: true });
+  let publicTracks: PlaybackTrack[] = [];
   try {
     const { repeat, shuffle } = useAudioPlayback.getState();
     const playlistRepeat = repeat === 'playlist';
     let entries: Omit<PlaybackTrack, 'src'>[];
-    if (track.favoriteCursor) {
+    if (track.loadPublicPlaylist) {
+      publicTracks = await track.loadPublicPlaylist();
+      entries = publicTracks;
+    } else if (track.favoriteCursor && accessToken) {
       if (!shuffle && !playlistRepeat && direction === 1) {
         let cursor: string | undefined = track.favoriteCursor;
         while (cursor && revision === request) {
@@ -184,7 +220,7 @@ export async function advanceTrack(direction: -1 | 1) {
       }
       const { favorites } = await getFavorites(accessToken, { purpose: 'audio' });
       entries = favorites.map(favoriteTrack);
-    } else if (track.directoryId) {
+    } else if (track.directoryId && accessToken) {
       const directory = await getDirectoryContents(accessToken, track.directoryId);
       entries = directory.files
         .filter((entry) => entry.mime_type.startsWith('audio/'))
@@ -233,7 +269,11 @@ export async function advanceTrack(direction: -1 | 1) {
     if (revision === request)
       useToastStore.getState().showToast('Не удалось открыть соседний трек', 'error');
   } finally {
-    if (revision === request) useAudioPlayback.setState({ loadingNext: false });
+    if (revision === request)
+      useAudioPlayback.setState({
+        loadingNext: false,
+        ...(finished && useAudioPlayback.getState().repeat === 'off' ? { compact: true } : {}),
+      });
   }
 
   function favoriteTrack(entry: Awaited<ReturnType<typeof getFavorites>>['favorites'][number]) {
@@ -247,11 +287,13 @@ export async function advanceTrack(direction: -1 | 1) {
   }
 
   async function playCandidates(entries: Omit<PlaybackTrack, 'src'>[]) {
-    if (!accessToken) return false;
     for (const entry of entries) {
       if (revision !== request) return false;
       try {
-        const { url } = await getFileContentUrl(accessToken, entry.id);
+        const publicTrack = publicTracks.find((item) => item.id === entry.id);
+        let url = publicTrack?.src;
+        if (!url && accessToken) ({ url } = await getFileContentUrl(accessToken, entry.id));
+        if (!url) return false;
         if (revision !== request) return false;
         if (entry.id === track?.id) seekTrack(0);
         playTrack({ ...entry, src: url }, true);

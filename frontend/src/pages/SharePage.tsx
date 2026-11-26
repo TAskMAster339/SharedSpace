@@ -1,3 +1,4 @@
+import { playTrack, useAudioPlayback } from '../store/audioPlaybackStore';
 import React, { useEffect, useState, useCallback, useId, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
@@ -344,16 +345,30 @@ const SharedFile = ({ token, mode, setMode }: SharedFileProps) => {
           </div>
         );
 
-      case 'audio':
+      case 'audio': {
+        const session = {
+          id: file.file_id,
+          name: file.filename,
+          cover: file.cover_url,
+          src: file.url,
+          publicPath: `/share/${token}`,
+        };
         return (
           <AudioPreview
             key={file.file_id}
             name={file.filename}
             cover={file.cover_url}
             src={file.url}
+            session={session}
+            onExpand={() => {
+              if (useAudioPlayback.getState().track?.id !== session.id)
+                playTrack(session, false, false);
+              navigate('/player', { state: { returnPath: session.publicPath } });
+            }}
             onError={handleIframeError}
           />
         );
+      }
       case 'pdf':
         return (
           <div className="bg-theme-tertiary rounded-theme overflow-hidden min-h-[500px]">

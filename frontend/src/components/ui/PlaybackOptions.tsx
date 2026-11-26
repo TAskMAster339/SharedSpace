@@ -12,7 +12,7 @@ import { cn } from '../../utils/cn';
 import { PlaybackSlider } from './PlaybackSlider';
 
 export const playbackControl =
-  'inline-grid size-11 shrink-0 place-items-center rounded-full text-theme-secondary transition-colors hover:bg-theme-hover hover:text-theme-primary focus-visible:outline focus-visible:outline-brand disabled:opacity-40';
+  'inline-grid size-11 shrink-0 place-items-center rounded-theme text-theme-secondary transition-colors hover:bg-theme-hover hover:text-theme-primary focus-visible:outline focus-visible:outline-brand disabled:opacity-40 motion-safe:transition motion-safe:active:scale-95';
 
 export function PlaybackModes({ hasPlaylist }: { hasPlaylist: boolean }) {
   const repeat = useAudioPlayback((state) => state.repeat);
@@ -67,11 +67,11 @@ export function PlaybackVolume() {
         title={label}
         onClick={toggleTrackMute}
       >
-        {muted ? <VolumeX size={19} /> : <Volume2 size={19} />}
+        {muted || volume === 0 ? <VolumeX size={19} /> : <Volume2 size={19} />}
       </button>
       <PlaybackSlider
         max={1}
-        step={0.05}
+        step={0.01}
         value={muted ? 0 : volume}
         aria-label="Громкость"
         showPercentage

@@ -102,7 +102,10 @@ const DirectoryPage: React.FC = () => {
   const [isCreateFolderModalOpen, setIsCreateFolderModalOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
-  const { isFavorite, toggleFavorite } = useFavorites();
+  const { isFavorite, toggleFavorite, loadFavorites } = useFavorites();
+  useEffect(() => {
+    if (accessToken) void loadFavorites(accessToken);
+  }, [accessToken, loadFavorites]);
   const showToast = useToastStore((state) => state.showToast);
   const [isShared, setIsShared] = useState(false);
   const [isDirectlyShared, setIsDirectlyShared] = useState(false);
@@ -1006,15 +1009,6 @@ const DirectoryPage: React.FC = () => {
             {!isAudioDirectory && (
               <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} />
             )}
-            {firstTrack && (
-              <Button
-                className="inline-flex items-center gap-2"
-                onClick={() => void startTrack(firstTrack.id, false)}
-              >
-                <Play size={16} fill="currentColor" aria-hidden="true" />
-                Слушать
-              </Button>
-            )}
             {perms?.upload && (
               <button
                 onClick={() => setIsUploadModalOpen(true)}
@@ -1065,6 +1059,15 @@ const DirectoryPage: React.FC = () => {
                     : 'Настройки папки'}
                 </span>
               </button>
+            )}
+            {firstTrack && (
+              <Button
+                className="inline-flex items-center gap-2"
+                onClick={() => void startTrack(firstTrack.id, false)}
+              >
+                <Play size={16} fill="currentColor" aria-hidden="true" />
+                Слушать
+              </Button>
             )}
           </div>
         </div>

@@ -108,7 +108,11 @@ export const FileItem: React.FC<FileItemProps> = ({
               />
             )}
           </div>
-          <ItemStatusBadges favorite={isFavorite} shared={hasShareLinks} />
+          <ItemStatusBadges
+            favorite={isFavorite}
+            shared={hasShareLinks}
+            className={onPlaybackToggle ? 'z-20' : undefined}
+          />
         </div>
         <div className="min-w-0">
           <p className="text-sm text-theme-primary font-medium truncate">{name}</p>
@@ -139,7 +143,7 @@ export const FileItem: React.FC<FileItemProps> = ({
 
   const PlaybackIcon = playing ? Pause : Play;
   return (
-    <div className="relative">
+    <div className="relative isolate">
       {row}
       <button
         type="button"

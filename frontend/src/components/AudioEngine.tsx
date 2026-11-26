@@ -16,8 +16,8 @@ import { useToastStore } from '../hooks/useToast';
 export function AudioEngine() {
   const userId = useAuthStore((state) => state.user?.id);
   const track = useAudioPlayback((state) => state.track);
-  const previousId = useRef<string | undefined>(undefined);
-  const { pathname } = useLocation();
+  const previous = useRef<typeof track>(undefined);
+  const { pathname, search } = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -25,12 +25,18 @@ export function AudioEngine() {
   }, [userId]);
 
   useEffect(() => {
-    const previous = previousId.current;
-    previousId.current = track?.id;
-    if (track && previous && previous !== track.id && pathname === `/files/${previous}`) {
+    const priorTrack = previous.current;
+    previous.current = track;
+    const priorPath = priorTrack?.publicPath;
+    if (
+      track &&
+      priorTrack &&
+      priorTrack.id !== track.id &&
+      (priorPath ? pathname + search === priorPath : pathname === `/files/${priorTrack.id}`)
+    ) {
       navigate(trackPath(track), { replace: true });
     }
-  }, [navigate, pathname, track]);
+  }, [navigate, pathname, search, track]);
 
   useEffect(() => {
     if (!('mediaSession' in navigator) || !track) return;
@@ -54,7 +60,7 @@ export function AudioEngine() {
         }
       },
     };
-    if (track.directoryId || track.favoriteCursor) {
+    if (track.directoryId || track.favoriteCursor || track.loadPublicPlaylist) {
       actions.previoustrack = () => void advanceTrack(-1);
       actions.nexttrack = () => void advanceTrack(1);
     }
@@ -111,7 +117,7 @@ export function AudioEngine() {
       }
       onEnded={() => {
         useAudioPlayback.setState({ playing: false });
-        void advanceTrack(1);
+        void advanceTrack(1, true);
       }}
       onError={() => {
         if (useAudioPlayback.getState().track)

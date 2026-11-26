@@ -1,6 +1,7 @@
+import { playTrack } from '../store/audioPlaybackStore';
 import React, { useEffect, useState, useCallback } from 'react';
 import { Star, List, LayoutGrid, Play } from 'lucide-react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useDragDropStore } from '../store/dragDropStore';
 import { useFavorites } from '../hooks/useFavorites';
@@ -275,13 +276,30 @@ const FavoritesPage: React.FC = () => {
           Музыка
         </button>
         {purpose === 'audio' && !isLoading && files.length > 0 && (
-          <Link
-            to={trackPath(files[0])}
-            className="ml-auto inline-flex items-center gap-2 rounded-theme bg-brand px-4 py-2 text-sm font-medium text-theme-on-brand"
+          <button
+            type="button"
+            onClick={async () => {
+              if (!accessToken) return;
+              const file = files[0];
+              try {
+                const { url } = await getFileContentUrl(accessToken, file.id);
+                playTrack({
+                  id: file.id,
+                  src: url,
+                  name: file.filename,
+                  cover: file.cover_url,
+                  collection: 'Избранная музыка',
+                  favoriteCursor: `${file.favorited_at}|${file.id}`,
+                });
+              } catch {
+                showToast('Не удалось запустить трек', 'error');
+              }
+            }}
+            className="ml-auto inline-flex items-center gap-2 rounded-theme bg-brand px-4 py-2 text-sm font-medium text-theme-on-brand motion-safe:transition-transform motion-safe:active:scale-95"
           >
             <Play size={16} aria-hidden="true" />
             Слушать
-          </Link>
+          </button>
         )}
       </div>
 

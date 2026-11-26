@@ -1,5 +1,6 @@
+import { PlaybackTrack, playTrack, useAudioPlayback } from '../store/audioPlaybackStore';
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
-import { useParams, useSearchParams, Link } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft,
   Folder,
@@ -127,6 +128,7 @@ function encodePath(ids: string[]): string {
 const SharedDirectoryPage: React.FC = () => {
   const { token } = useParams<{ token: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const accessToken = useAuthStore((state) => state.accessToken);
 
   const pathParam = searchParams.get('path') || '';
@@ -269,6 +271,7 @@ const SharedDirectoryPage: React.FC = () => {
       .finally(() => setIsLoadingMoreDirs(false));
   }, [token, subDirId, accessToken, savedPassword, dirsCursor, isLoadingMoreDirs]);
 
+  const deepPreviewAttempt = useRef('');
   const loadMoreFiles = useCallback(() => {
     if (!token || !filesCursor || isLoadingMoreFiles) return;
     setIsLoadingMoreFiles(true);
@@ -401,6 +404,51 @@ const SharedDirectoryPage: React.FC = () => {
       window.open(url, '_blank');
     }
   }, []);
+
+  const publicTrack = (file: DirectoryShareLinkFile): PlaybackTrack => ({
+    id: file.id,
+    name: file.filename,
+    cover: file.cover_url ?? data?.cover_url,
+    src: file.url,
+    collection: data?.name,
+    publicPath: `/share/dir/${token}?${new URLSearchParams({
+      ...(pathParam ? { path: pathParam } : {}),
+      file: file.id,
+    })}`,
+    loadPublicPlaylist: data?.purpose === 'audio' ? loadPublicPlaylist : undefined,
+  });
+
+  async function loadPublicPlaylist() {
+    if (!token) return [];
+    const files: DirectoryShareLinkFile[] = [];
+    let cursor: string | undefined;
+    do {
+      const result = await resolveDirectoryShareLink(
+        token,
+        { subDirId: subDirId || undefined, filesCursor: cursor, filesLimit: 100 },
+        accessToken,
+        savedPassword,
+      );
+      files.push(...result.files);
+      cursor = result.next_files_cursor;
+    } while (cursor);
+    return files.filter((file) => file.mime_type.startsWith('audio/')).map(publicTrack);
+  }
+
+  useEffect(() => {
+    const attempt = `${previewFileId}|${filesCursor}`;
+    if (
+      previewFileId &&
+      filesCursor &&
+      hasMoreFiles &&
+      !isLoadingMoreFiles &&
+      deepPreviewAttempt.current !== attempt &&
+      !allFiles.some((file) => file.id === previewFileId)
+    ) {
+      deepPreviewAttempt.current = attempt;
+      loadMoreFiles();
+    }
+  }, [previewFileId, filesCursor, hasMoreFiles, isLoadingMoreFiles, allFiles, loadMoreFiles]);
 
   const previewFile =
     previewFileId && data ? allFiles.find((f) => f.id === previewFileId) || null : null;
@@ -547,16 +595,25 @@ const SharedDirectoryPage: React.FC = () => {
               />
             </div>
           );
-        case 'audio':
+        case 'audio': {
+          const session = publicTrack(previewFile);
           return (
             <AudioPreview
               key={previewFile.id}
               name={previewFile.filename}
               cover={previewFile.cover_url ?? data?.cover_url}
               src={previewFile.url}
+              session={session}
+              onCollapse={handleGoBack}
+              onExpand={() => {
+                if (useAudioPlayback.getState().track?.id !== session.id)
+                  playTrack(session, false, false);
+                navigate('/player', { state: { returnPath: session.publicPath } });
+              }}
               onError={() => setIframeError(true)}
             />
           );
+        }
         case 'pdf':
           return (
             <div className="bg-theme-tertiary rounded-theme overflow-hidden min-h-[500px]">
@@ -726,6 +783,20 @@ const SharedDirectoryPage: React.FC = () => {
           })}
         </div>
         <div className="ml-auto flex items-center gap-2">
+          {data.purpose === 'audio' &&
+            allFiles.some((file) => file.mime_type.startsWith('audio/')) && (
+              <button
+                type="button"
+                className="rounded-theme bg-brand px-4 py-2 text-sm font-medium text-theme-on-brand hover:bg-brand-hover motion-safe:transition-transform motion-safe:active:scale-95"
+                onClick={() => {
+                  const first = allFiles.find((file) => file.mime_type.startsWith('audio/'));
+                  if (first) playTrack(publicTrack(first));
+                }}
+              >
+                Слушать
+              </button>
+            )}
+
           {data.purpose !== 'audio' && (allSubdirs.length > 0 || allFiles.length > 0) && (
             <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} />
           )}
