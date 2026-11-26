@@ -16,12 +16,13 @@ import {
   advanceTrack,
   seekTrack,
   setTrackVolume,
+  stopTrack,
   toggleTrack,
   useAudioPlayback,
   PlaybackTrack,
 } from '../../store/audioPlaybackStore';
 
-import { PlaybackModes, PlaybackVolume } from './PlaybackOptions';
+import { PlaybackModes, PlaybackVolume, playbackControl as control } from './PlaybackOptions';
 import { cn } from '../../utils/cn';
 
 import { formatPlaybackTime, PlaybackSlider } from './PlaybackSlider';
@@ -88,8 +89,8 @@ export function AudioPreview({
     else player.pause();
   };
 
-  const control =
-    'inline-grid size-11 place-items-center rounded-theme text-theme-secondary transition-colors hover:bg-theme-hover hover:text-theme-primary disabled:opacity-40 motion-safe:transition motion-safe:active:scale-95';
+  const trackKey = session?.id ?? src ?? name;
+  const trackMotion = 'motion-safe:animate-[audio-preview-enter_200ms_ease-out_both]';
 
   return (
     <div
@@ -100,7 +101,7 @@ export function AudioPreview({
           : 'rounded-theme border border-theme bg-theme-tertiary',
       )}
     >
-      {(onExpand || (onCollapse && (active || fullScreen))) && (
+      {(onExpand || (fullScreen && onCollapse)) && (
         <div className="absolute right-2 top-2 z-10 flex items-center gap-1">
           {onExpand && (
             <button
@@ -113,10 +114,10 @@ export function AudioPreview({
               <Maximize2 size={20} />
             </button>
           )}
-          {onCollapse && (active || fullScreen) && (
+          {fullScreen && onCollapse && (
             <button
               type="button"
-              aria-label={fullScreen ? 'Выйти из полноэкранного плеера' : 'Свернуть плеер'}
+              aria-label="Выйти из полноэкранного плеера"
               className={cn(control, 'bg-theme-secondary')}
               onClick={onCollapse}
             >
@@ -126,11 +127,13 @@ export function AudioPreview({
         </div>
       )}
       <div
+        key={`cover-${trackKey}`}
         className={cn(
+          trackMotion,
           'relative grid aspect-square w-full place-items-center overflow-hidden rounded-theme border border-theme bg-brand-light text-brand',
           fullScreen
             ? 'max-w-[min(27rem,max(9rem,calc(100dvh-21rem)))] shadow-theme-card'
-            : 'max-w-[17rem] sm:max-w-[20rem]',
+            : 'max-w-[14rem] sm:max-w-[20rem]',
         )}
       >
         {cover ? (
@@ -159,10 +162,13 @@ export function AudioPreview({
           </button>
         )}
       </div>
-      <div className="min-w-0 max-w-full space-y-1 text-center">
+      <div
+        key={`details-${trackKey}`}
+        className={cn(trackMotion, 'min-w-0 max-w-full space-y-1 text-center')}
+      >
         <p
           className={cn(
-            'break-words font-semibold text-theme-primary',
+            '[overflow-wrap:anywhere] font-semibold text-theme-primary',
             fullScreen ? 'text-2xl sm:text-3xl' : 'text-xl',
           )}
         >
@@ -193,7 +199,7 @@ export function AudioPreview({
           onError={onError}
         />
       )}
-      <div className="w-full max-w-xl space-y-3">
+      <div className="audio-preview-controls w-full max-w-xl space-y-3">
         <div className="flex items-center gap-3 text-xs tabular-nums text-theme-secondary">
           <span>{formatPlaybackTime(position)}</span>
           <PlaybackSlider
@@ -213,18 +219,8 @@ export function AudioPreview({
           />
           <span>{formatPlaybackTime(duration)}</span>
         </div>
-        <div
-          className={cn(
-            'flex flex-wrap items-center justify-center gap-1.5 sm:gap-3',
-            fullScreen && 'sm:grid sm:grid-cols-[1fr_auto_1fr]',
-          )}
-        >
-          <div
-            className={cn(
-              'flex items-center justify-center gap-2',
-              fullScreen && 'basis-full sm:col-start-2 sm:row-start-1',
-            )}
-          >
+        <div className="audio-preview-actions grid items-center gap-2">
+          <div className="flex items-center justify-center gap-2 [grid-area:transport]">
             <button
               type="button"
               className={control}
@@ -257,25 +253,10 @@ export function AudioPreview({
               <SkipForward size={21} />
             </button>
           </div>
-          {session ? (
-            <>
-              <div
-                className={
-                  fullScreen ? 'sm:col-start-1 sm:row-start-1 sm:justify-self-start' : undefined
-                }
-              >
-                <PlaybackModes hasPlaylist={canAdvance} />
-              </div>
-              <div
-                className={
-                  fullScreen ? 'sm:col-start-3 sm:row-start-1 sm:justify-self-end' : undefined
-                }
-              >
-                <PlaybackVolume />
-              </div>
-            </>
-          ) : (
-            <>
+          <div className="justify-self-start [grid-area:modes]">
+            {session ? (
+              <PlaybackModes hasPlaylist={canAdvance} />
+            ) : (
               <button
                 type="button"
                 className={control}
@@ -285,6 +266,12 @@ export function AudioPreview({
               >
                 <Repeat1 size={20} className={localRepeat ? 'text-brand' : undefined} />
               </button>
+            )}
+          </div>
+          <div className="justify-self-end [grid-area:volume]">
+            {session ? (
+              <PlaybackVolume />
+            ) : (
               <div className="flex w-24 shrink-0 items-center gap-1">
                 <button
                   type="button"
@@ -314,8 +301,8 @@ export function AudioPreview({
                   }}
                 />
               </div>
-            </>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>

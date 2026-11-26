@@ -611,7 +611,6 @@ const SharedDirectoryPage: React.FC = () => {
               cover={previewFile.cover_url ?? data?.cover_url}
               src={previewFile.url}
               session={session}
-              onCollapse={handleGoBack}
               onExpand={() => {
                 if (useAudioPlayback.getState().track?.id !== session.id)
                   playTrack(session, false, false);

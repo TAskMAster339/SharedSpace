@@ -509,7 +509,6 @@ const FileViewPage: React.FC = () => {
                   }
                 : undefined
             }
-            onCollapse={handleGoBack}
             onError={handleIframeError}
           />
         );

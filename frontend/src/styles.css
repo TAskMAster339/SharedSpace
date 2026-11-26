@@ -635,3 +635,28 @@
 .mini-playback-input::-moz-range-thumb {
   background: transparent;
 }
+
+.audio-preview-controls {
+  container-type: inline-size;
+}
+
+.audio-preview-actions {
+  grid-template-columns: 1fr 1fr;
+  grid-template-areas:
+    'transport transport'
+    'modes volume';
+}
+
+@container (min-width: 26rem) {
+  .audio-preview-actions {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-areas: 'modes transport volume';
+  }
+}
+
+@keyframes audio-preview-enter {
+  from {
+    opacity: 0;
+    transform: translateX(-0.75rem);
+  }
+}
